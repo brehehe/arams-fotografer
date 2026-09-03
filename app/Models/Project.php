@@ -124,4 +124,14 @@ class Project extends Model
     {
         return $this->hasMany(FileLink::class);
     }
+
+    public function highlights(): HasMany
+    {
+        return $this->hasMany(ProjectHighlight::class)->orderBy('sort_order');
+    }
+
+    public function testimonials(): HasMany
+    {
+        return $this->hasMany(Testimonial::class);
+    }
 }

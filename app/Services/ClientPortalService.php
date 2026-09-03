@@ -46,6 +46,7 @@ class ClientPortalService
                     'client',
                     'fileLinks' => fn ($q) => $q->active()->latest()->limit(5),
                     'payments' => fn ($q) => $q->latest('payment_date')->limit(5),
+                    'highlights' => fn ($q) => $q->orderBy('sort_order')->limit(8),
                 ])
                 ->first();
             if ($specificProject) {
@@ -61,6 +62,7 @@ class ClientPortalService
                     'package',
                     'fileLinks' => fn ($q) => $q->active()->latest()->limit(5),
                     'payments' => fn ($q) => $q->latest('payment_date')->limit(5),
+                    'highlights' => fn ($q) => $q->orderBy('sort_order')->limit(8),
                 ])
                 ->latest('event_date')
                 ->first();
@@ -72,6 +74,7 @@ class ClientPortalService
                 'package',
                 'fileLinks' => fn ($q) => $q->active()->latest()->limit(5),
                 'payments' => fn ($q) => $q->latest('payment_date')->limit(5),
+                'highlights' => fn ($q) => $q->orderBy('sort_order')->limit(8),
             ])->latest()->first();
         }
 
@@ -91,59 +94,68 @@ class ClientPortalService
         $recommendedPackages = Package::where('status', 'active')
             ->with('category')
             ->orderBy('sort_order')
-            ->limit(5)
+            ->limit(4)
             ->get()
             ->map(function ($pkg) {
                 return [
                     'id' => $pkg->id,
                     'name' => $pkg->name,
+                    'title' => $pkg->name,
                     'category_name' => $pkg->category?->name ?? 'Layanan Foto',
                     'base_price' => (float) $pkg->base_price,
+                    'price' => 'Rp ' . number_format($pkg->base_price, 0, ',', '.'),
                     'duration_hours' => $pkg->duration_hours,
                     'description' => $pkg->description,
+                    'desc' => $pkg->description ?: ($pkg->category?->name ?? 'Dokumentasi Terbaik'),
                     'image' => $pkg->thumbnail ?? $this->getPackageSampleImage($pkg->name),
                 ];
             });
 
-        $instagramData = $this->instagramFeedService->getFeed(6);
-        $instagramHandle = $instagramData['username'] ?? 'aramspictures';
-        $instagramUrl = $instagramData['url'] ?? 'https://www.instagram.com/aramspictures/';
-        $portfolios = $instagramData['items'] ?? [];
+        // 1. Promo Slides from Database
+        $promoSlides = \App\Models\PromoSlide::active()->get()->map(function ($p) {
+            return [
+                'id' => $p->id,
+                'tag' => $p->tag,
+                'title' => $p->title,
+                'description' => $p->description,
+                'button_text' => $p->button_text,
+                'button_url' => $p->button_url ?: '/form-klien',
+                'image' => $p->image ?: '/images/wedding-couple.jpg',
+            ];
+        });
 
-        $testimonials = [
-            [
-                'id' => '1',
-                'client_name' => 'Raka & Dinda',
-                'package_name' => 'Paket Prewedding',
-                'rating' => 5,
-                'comment' => 'Hasil fotonya luar biasa, melebihi ekspektasi! Tim Arams Pictures sangat profesional dan friendly. Prosesnya juga mudah dan terorganisir.',
-                'avatar' => 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-            ],
-            [
-                'id' => '2',
-                'client_name' => 'Kevin & Sarah',
-                'package_name' => 'Paket Wedding Exclusive',
-                'rating' => 5,
-                'comment' => 'Pilihan terbaik untuk dokumentasi pernikahan kami. Mulai dari sesi prewedding hingga hari H, semuanya tertata rapi dan hasilnya aesthetic sekali.',
-                'avatar' => 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-            ],
-            [
-                'id' => '3',
-                'client_name' => 'Dimas & Tiara',
-                'package_name' => 'Paket Engagement',
-                'rating' => 5,
-                'comment' => 'Portal kliennya sangat membantu untuk tracking progress foto kami. Akses Google Drive langsung dari dashboard bikin gampang download file.',
-                'avatar' => 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
-            ],
-        ];
+        // 2. Instagram Posts from Database
+        $instagramPosts = \App\Models\InstagramPost::active()->get()->map(function ($p) {
+            return [
+                'id' => $p->id,
+                'image' => $p->image_url,
+                'caption' => $p->caption ?? '',
+                'likes' => $p->likes_count,
+                'comments' => $p->comments_count,
+                'post_url' => $p->post_url ?: 'https://instagram.com/aramspictures',
+                'type' => $p->media_type,
+            ];
+        });
+
+        // 3. Testimonials from Database
+        $testimonials = \App\Models\Testimonial::approved()->get()->map(function ($t) {
+            return [
+                'id' => $t->id,
+                'client_name' => $t->client_name,
+                'package_name' => $t->package_name ?? 'Dokumentasi',
+                'rating' => (int) $t->rating,
+                'comment' => $t->comment,
+                'avatar' => $t->avatar ?: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+            ];
+        });
 
         $companySettings = [
             'name' => Setting::get('company_name', 'Arams Pictures'),
             'tagline' => Setting::get('company_tagline', 'Timeless Wedding & Portrait Photography'),
             'phone' => Setting::get('company_phone', '0812-3456-7890'),
             'email' => Setting::get('company_email', 'hello@arams.id'),
-            'instagram' => '@' . ltrim(Setting::get('company_instagram', $instagramHandle), '@'),
-            'instagram_url' => $instagramUrl,
+            'instagram' => '@' . ltrim(Setting::get('company_instagram', 'aramspictures'), '@'),
+            'instagram_url' => 'https://www.instagram.com/' . ltrim(Setting::get('company_instagram', 'aramspictures'), '@') . '/',
             'address' => Setting::get('company_address', 'Surabaya, Jawa Timur, Indonesia'),
             'website' => Setting::get('company_website', 'www.aramspictures.com'),
             'gdrive_url' => Setting::get('company_gdrive_url', 'https://drive.google.com'),
@@ -186,11 +198,29 @@ class ClientPortalService
                     'is_expired' => $f->isExpired(),
                     'days_remaining' => $f->daysRemaining(),
                 ]),
+                'highlights' => ($activeProject->highlights && $activeProject->highlights->isNotEmpty())
+                    ? $activeProject->highlights->map(fn($h) => [
+                        'id' => $h->id,
+                        'title' => $h->title,
+                        'caption' => $h->caption,
+                        'image_url' => $h->image_url,
+                        'is_cover' => (bool) $h->is_cover,
+                    ])
+                    : \App\Models\ProjectHighlight::orderByDesc('is_cover')->latest()->limit(4)->get()->map(fn($h) => [
+                        'id' => $h->id,
+                        'title' => $h->title,
+                        'caption' => $h->caption,
+                        'image_url' => $h->image_url,
+                        'is_cover' => (bool) $h->is_cover,
+                    ]),
             ] : null,
             'timeline' => $timeline,
             'payment_summary' => $paymentSummary,
+            'promo_slides' => $promoSlides,
+            'recommended_projects' => $recommendedPackages,
             'recommended_packages' => $recommendedPackages,
-            'portfolios' => $portfolios,
+            'portfolios' => $instagramPosts,
+            'instagram_posts' => $instagramPosts,
             'testimonials' => $testimonials,
             'company' => $companySettings,
         ];
@@ -208,28 +238,52 @@ class ClientPortalService
             $projectsQuery->where('client_id', $client->id);
         }
 
-        $projects = $projectsQuery->with(['category', 'package'])
+        $projectsCollection = $projectsQuery->with(['category', 'package', 'highlights'])
             ->latest('event_date')
-            ->get()
-            ->map(function ($p) {
-                return [
-                    'id' => $p->id,
-                    'project_number' => $p->project_number,
-                    'name' => $p->name,
-                    'category_name' => $p->category?->name ?? 'Photography',
-                    'package_name' => $p->package?->name ?? 'Custom Package',
-                    'status' => $p->status,
-                    'workflow_step' => $p->workflow_step,
-                    'progress' => (int) $p->progress,
-                    'event_date' => $p->event_date?->isoFormat('D MMMM YYYY') ?? null,
-                    'deadline' => $p->deadline?->isoFormat('D MMMM YYYY') ?? null,
-                    'location' => $p->location,
-                    'total_amount' => (float) $p->total_amount,
-                    'paid_amount' => (float) $p->paid_amount,
-                    'payment_status' => $p->payment_status,
-                    'thumbnail' => $p->thumbnail ?? 'https://images.unsplash.com/photo-1519741497674-611481863552?w=800&auto=format&fit=crop&q=80',
-                ];
-            });
+            ->get();
+
+        // If client has no projects (or admin previewing), get latest active projects
+        if ($projectsCollection->isEmpty()) {
+            $projectsCollection = Project::with(['category', 'package', 'highlights'])
+                ->latest('event_date')
+                ->limit(6)
+                ->get();
+        }
+
+        $projects = $projectsCollection->map(function ($p) {
+            $timelineData = $this->computeTimeline($p);
+            $currentStepNum = $timelineData['current_step'] ?? 1;
+            $totalStepsNum = $timelineData['total_steps'] ?? 8;
+            $stepLabel = $timelineData['current_step_name'] ?? 'Proses Pengerjaan';
+
+            $coverImage = $p->thumbnail
+                ?: $p->highlights->where('is_cover', true)->first()?->image_url
+                ?: $p->highlights->first()?->image_url
+                ?: '/images/wedding-couple.jpg';
+
+            return [
+                'id' => $p->id,
+                'project_number' => $p->project_number,
+                'name' => $p->name,
+                'category_name' => $p->category?->name ?? 'Photography',
+                'package_name' => $p->package?->name ?? 'Custom Package',
+                'status' => $p->status,
+                'workflow_step' => $p->workflow_step,
+                'progress' => (int) $p->progress,
+                'event_date' => $p->event_date?->isoFormat('D MMMM YYYY') ?? null,
+                'deadline' => $p->deadline?->isoFormat('D MMMM YYYY') ?? null,
+                'location' => $p->location,
+                'total_amount' => (float) $p->total_amount,
+                'paid_amount' => (float) $p->paid_amount,
+                'payment_status' => $p->payment_status,
+                'thumbnail' => $coverImage,
+                'current_step' => $currentStepNum,
+                'total_steps' => $totalStepsNum,
+                'step_label' => $stepLabel,
+                'completed_date' => in_array($p->status, ['completed', 'delivered']) ? ($p->updated_at?->isoFormat('D MMMM YYYY')) : null,
+                'estimated_done' => $p->deadline?->isoFormat('D MMMM YYYY') ?? null,
+            ];
+        });
 
         return [
             'projects' => $projects,
@@ -253,9 +307,12 @@ class ClientPortalService
             'package',
             'photographer:id,name,avatar',
             'editor:id,name,avatar',
+            'supervisor:id,name,avatar',
             'fileLinks' => fn ($q) => $q->active()->latest(),
             'payments.paymentMethod',
             'projectAddons.addon',
+            'highlights' => fn ($q) => $q->orderBy('sort_order'),
+            'testimonials' => fn ($q) => $q->approved()->latest(),
         ]);
 
         $timeline = $this->computeTimeline($project);
@@ -269,6 +326,47 @@ class ClientPortalService
             'address' => Setting::get('company_address', 'Surabaya, Jawa Timur, Indonesia'),
             'website' => Setting::get('company_website', 'www.aramspictures.com'),
         ];
+
+        $notesList = array_values(array_filter([
+            $project->notes ? [
+                'id' => 'note-main',
+                'title' => 'Catatan & Briefing Project',
+                'content' => $project->notes,
+                'author' => $project->client?->name ?? 'Klien',
+                'role' => 'Briefing',
+                'date' => $project->created_at?->isoFormat('D') ?? '01',
+                'monthYear' => $project->created_at?->isoFormat('MMM YYYY') ?? '2026',
+            ] : null,
+            $project->location ? [
+                'id' => 'note-venue',
+                'title' => 'Konfirmasi Lokasi & Venue',
+                'content' => 'Acara berlangsung di ' . $project->location . ($project->event_time ? (' pada pukul ' . $project->event_time) : ''),
+                'author' => $project->supervisor?->name ?? 'Tim Arams',
+                'role' => 'Operasional',
+                'date' => $project->event_date?->isoFormat('D') ?? '12',
+                'monthYear' => $project->event_date?->isoFormat('MMM YYYY') ?? '2026',
+            ] : null,
+        ]));
+
+        $testimonialsList = $project->testimonials->isNotEmpty()
+            ? $project->testimonials->map(fn($t) => [
+                'id' => $t->id,
+                'client_name' => $t->client_name,
+                'package_name' => $t->package_name ?? 'Dokumentasi',
+                'rating' => (int) $t->rating,
+                'comment' => $t->comment,
+                'avatar' => $t->avatar ?: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+                'date' => $t->created_at?->isoFormat('D MMMM YYYY'),
+            ])
+            : \App\Models\Testimonial::approved()->latest()->limit(5)->get()->map(fn($t) => [
+                'id' => $t->id,
+                'client_name' => $t->client_name,
+                'package_name' => $t->package_name ?? 'Dokumentasi',
+                'rating' => (int) $t->rating,
+                'comment' => $t->comment,
+                'avatar' => $t->avatar ?: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+                'date' => $t->created_at?->isoFormat('D MMMM YYYY'),
+            ]);
 
         return [
             'project' => [
@@ -293,6 +391,10 @@ class ClientPortalService
                     'name' => $project->photographer->name,
                     'avatar' => $project->photographer->avatar,
                 ] : null,
+                'supervisor' => $project->supervisor ? [
+                    'name' => $project->supervisor->name,
+                    'avatar' => $project->supervisor->avatar,
+                ] : null,
                 'editor' => $project->editor ? [
                     'name' => $project->editor->name,
                     'avatar' => $project->editor->avatar,
@@ -312,6 +414,15 @@ class ClientPortalService
                     'expires_at' => $f->expires_at?->isoFormat('D MMMM YYYY'),
                     'is_expired' => $f->isExpired(),
                     'days_remaining' => $f->daysRemaining(),
+                    'date_label' => $f->created_at ? ('Dibagikan pada ' . $f->created_at->isoFormat('D MMM YYYY')) : null,
+                ]),
+                'highlights' => $project->highlights->map(fn($h) => [
+                    'id' => $h->id,
+                    'title' => $h->title ?? 'Highlight Foto',
+                    'caption' => $h->caption ?? '',
+                    'image_url' => $h->image_url,
+                    'media_type' => $h->media_type,
+                    'is_cover' => (bool) $h->is_cover,
                 ]),
                 'payments' => $project->payments->map(fn($p) => [
                     'id' => $p->id,
@@ -321,7 +432,9 @@ class ClientPortalService
                     'reference_number' => $p->reference_number,
                     'status' => $p->status,
                 ]),
+                'notes_list' => $notesList,
             ],
+            'testimonials' => $testimonialsList,
             'timeline' => $timeline,
             'payment_summary' => $paymentSummary,
             'company' => $companySettings,
@@ -336,6 +449,10 @@ class ClientPortalService
         if (!$project) {
             return [
                 'current_step' => 1,
+                'total_steps' => 8,
+                'current_step_name' => 'Mulai Perjalanan',
+                'active_step_title' => 'Mulai Perjalanan',
+                'active_step_desc' => 'Proyek Anda sedang kami persiapkan.',
                 'progress_percentage' => 0,
                 'steps' => [],
             ];
@@ -344,63 +461,91 @@ class ClientPortalService
         $workflowType = $project->category?->workflow_type ?? 'wedding';
 
         $weddingSteps = [
-            ['step' => 1, 'key' => 'booking', 'name' => 'Booking & DP', 'desc' => 'Tanda jadi & penguncian tanggal'],
-            ['step' => 2, 'key' => 'briefing', 'name' => 'Briefing & Moodboard', 'desc' => 'Diskusi konsep, rundown & attire'],
-            ['step' => 3, 'key' => 'shooting', 'name' => 'Hari Pemotretan', 'desc' => 'Liputan foto & video pada Hari-H'],
-            ['step' => 4, 'key' => 'preview_foto', 'name' => 'Preview Foto', 'desc' => 'Galeri online untuk seleksi foto'],
-            ['step' => 5, 'key' => 'editing_seleksi', 'name' => 'Editing Seleksi', 'desc' => 'Pewarnaan & retouch foto pilihan'],
-            ['step' => 6, 'key' => 'revisi', 'name' => 'Review & Revisi', 'desc' => 'Pengecekan hasil & minor revision'],
-            ['step' => 7, 'key' => 'cetak_album', 'name' => 'Cetak Album', 'desc' => 'Produksi cetak & album eksklusif'],
-            ['step' => 8, 'key' => 'selesai_kirim', 'name' => 'Selesai & Pengiriman', 'desc' => 'Serah terima paket & cloud drive'],
+            ['step' => 1, 'key' => 'booking', 'name' => 'Booking & DP', 'desc' => 'Tanda jadi & penguncian jadwal tanggal acara'],
+            ['step' => 2, 'key' => 'briefing', 'name' => 'Briefing & Moodboard', 'desc' => 'Diskusi konsep, rundown, moodboard visual & teknis liputan'],
+            ['step' => 3, 'key' => 'shooting', 'name' => 'Hari Pemotretan', 'desc' => 'Liputan sesi foto & video pada Hari-H acara'],
+            ['step' => 4, 'key' => 'preview_foto', 'name' => 'Preview Foto', 'desc' => 'Galeri online untuk seleksi foto terbaik bersama klien'],
+            ['step' => 5, 'key' => 'editing_seleksi', 'name' => 'Editing Seleksi', 'desc' => 'Proses color grading eksklusif & retouching foto pilihan'],
+            ['step' => 6, 'key' => 'revisi', 'name' => 'Review & Revisi', 'desc' => 'Pengecekan hasil karya oleh klien & penyesuaian minor'],
+            ['step' => 7, 'key' => 'cetak_album', 'name' => 'Cetak Album', 'desc' => 'Produksi cetak lab premium, cetak kanvas & album kolase'],
+            ['step' => 8, 'key' => 'selesai_kirim', 'name' => 'Selesai & Pengiriman', 'desc' => 'Serah terima paket fisik & pengiriman link arsip cloud drive'],
         ];
 
         $photoshootSteps = [
-            ['step' => 1, 'key' => 'booking', 'name' => 'Booking & DP', 'desc' => 'Tanda jadi & kunci jadwal studio'],
-            ['step' => 2, 'key' => 'briefing', 'name' => 'Briefing Konsep', 'desc' => 'Penentuan tema, kostum & wardrobe'],
-            ['step' => 3, 'key' => 'shooting', 'name' => 'Hari Sesi Foto', 'desc' => 'Sesi pemotretan di studio/lokasi'],
-            ['step' => 4, 'key' => 'editing_seleksi', 'name' => 'Editing & Retouch', 'desc' => 'Color grading & retouching foto'],
-            ['step' => 5, 'key' => 'selesai_kirim', 'name' => 'Selesai & Kirim File', 'desc' => 'Pengiriman file HD & link GDrive'],
+            ['step' => 1, 'key' => 'booking', 'name' => 'Booking & DP', 'desc' => 'Tanda jadi & kunci jadwal pemotretan studio'],
+            ['step' => 2, 'key' => 'briefing', 'name' => 'Briefing Konsep', 'desc' => 'Penentuan tema, kostum, wardrobe & properti'],
+            ['step' => 3, 'key' => 'shooting', 'name' => 'Hari Sesi Foto', 'desc' => 'Sesi pemotretan di studio/lokasi outdoor pilihan'],
+            ['step' => 4, 'key' => 'editing_seleksi', 'name' => 'Editing & Retouch', 'desc' => 'Color grading & retouching foto pilihan klien'],
+            ['step' => 5, 'key' => 'selesai_kirim', 'name' => 'Selesai & Kirim File', 'desc' => 'Pengiriman file resolusi tinggi & tautan Google Drive'],
         ];
 
         $stepDefinitions = ($workflowType === 'photoshoot') ? $photoshootSteps : $weddingSteps;
         $totalSteps = count($stepDefinitions);
 
-        $currentStepKey = $project->workflow_step ?? 'booking';
-        $currentStepIndex = 0;
+        // Normalize current step key
+        $rawStep = strtolower(trim($project->workflow_step ?? 'booking'));
+        $isCompletedProject = ($project->status === 'completed' || $rawStep === 'selesai' || $rawStep === 'final_delivery' || $rawStep === 'final delivery' || $rawStep === 'selesai & pengiriman');
 
-        foreach ($stepDefinitions as $idx => $step) {
-            if ($step['key'] === $currentStepKey) {
-                $currentStepIndex = $idx;
-                break;
+        $currentStepIndex = 0;
+        if ($isCompletedProject) {
+            $currentStepIndex = $totalSteps - 1;
+        } else {
+            foreach ($stepDefinitions as $idx => $step) {
+                $stepNameLower = strtolower($step['name']);
+                $stepKeyLower = strtolower($step['key']);
+                if ($rawStep === $stepKeyLower || str_contains($rawStep, $stepKeyLower) || str_contains($stepNameLower, $rawStep)) {
+                    $currentStepIndex = $idx;
+                    break;
+                }
             }
         }
 
         $steps = [];
         foreach ($stepDefinitions as $idx => $def) {
             $status = 'pending';
-            if ($idx < $currentStepIndex) {
+            if ($isCompletedProject) {
+                $status = 'completed';
+            } elseif ($idx < $currentStepIndex) {
                 $status = 'completed';
             } elseif ($idx === $currentStepIndex) {
                 $status = 'active';
             }
 
+            $statusLabel = match ($status) {
+                'completed' => 'Selesai',
+                'active' => 'Sedang Diproses',
+                default => 'Menunggu',
+            };
+
+            $dateFormatted = $this->getStepDate($project, $def['key'], $idx);
+
             $steps[] = [
                 'step' => $def['step'],
                 'key' => $def['key'],
                 'name' => $def['name'],
+                'title' => $def['name'],
                 'desc' => $def['desc'],
+                'description' => $def['desc'],
                 'status' => $status,
-                'date' => $this->getStepDate($project, $def['key']),
+                'status_label' => $statusLabel,
+                'date' => $dateFormatted,
                 'icon' => $this->getStepIcon($def['key']),
+                'pic' => $this->getStepPic($def['key'], $project),
+                'tasks' => $this->getStepTasks($def['key'], $status),
             ];
         }
 
-        $progressPct = (int) round((($currentStepIndex + 1) / $totalSteps) * 100);
+        $activeDef = $stepDefinitions[$currentStepIndex] ?? $stepDefinitions[0];
+        $progressPct = $isCompletedProject
+            ? 100
+            : (int) round((($currentStepIndex + 1) / $totalSteps) * 100);
 
         return [
             'current_step' => $currentStepIndex + 1,
             'total_steps' => $totalSteps,
-            'current_step_name' => $stepDefinitions[$currentStepIndex]['name'] ?? 'Proses Pemotretan',
+            'current_step_name' => $activeDef['name'],
+            'active_step_title' => $activeDef['name'],
+            'active_step_desc' => $activeDef['desc'],
             'progress_percentage' => $progressPct,
             'steps' => $steps,
         ];
@@ -443,13 +588,22 @@ class ClientPortalService
         ];
     }
 
-    protected function getStepDate(Project $project, string $stepKey): ?string
+    protected function getStepDate(Project $project, string $stepKey, int $idx = 0): ?string
     {
+        $created = $project->created_at ?: now()->subDays(7);
+        $event = $project->event_date ?: now()->addDays(30);
+        $deadline = $project->deadline ?: ($event ? $event->copy()->addDays(30) : now()->addDays(60));
+
         return match ($stepKey) {
-            'booking' => $project->created_at?->isoFormat('D MMM YYYY'),
-            'shooting' => $project->event_date?->isoFormat('D MMM YYYY'),
-            'selesai_kirim' => $project->deadline?->isoFormat('D MMM YYYY'),
-            default => null,
+            'booking' => $created->isoFormat('D MMM YYYY'),
+            'briefing' => $created->copy()->addDays(3)->isoFormat('D MMM YYYY'),
+            'shooting' => $event->isoFormat('D MMM YYYY'),
+            'preview_foto' => $event->copy()->addDays(3)->isoFormat('D MMM YYYY'),
+            'editing_seleksi' => $event->copy()->addDays(14)->isoFormat('D MMM YYYY'),
+            'revisi' => $event->copy()->addDays(21)->isoFormat('D MMM YYYY'),
+            'cetak_album' => $deadline->copy()->subDays(7)->isoFormat('D MMM YYYY'),
+            'selesai_kirim' => $deadline->isoFormat('D MMM YYYY'),
+            default => $created->copy()->addDays($idx * 5)->isoFormat('D MMM YYYY'),
         };
     }
 
@@ -465,6 +619,78 @@ class ClientPortalService
             'cetak_album' => 'BookOpen',
             'selesai_kirim' => 'CheckCircle2',
             default => 'Circle',
+        };
+    }
+
+    protected function getStepPic(string $stepKey, Project $project): string
+    {
+        $supervisor = $project->supervisor?->name ?? 'Bima Arams';
+        $photographer = $project->photographer?->name ?? 'Tim Fotografer Arams';
+        $editor = $project->editor?->name ?? 'Tim Editor Arams';
+
+        return match ($stepKey) {
+            'booking' => "Client Relations & Supervisor ($supervisor)",
+            'briefing' => "Creative Director & Supervisor ($supervisor)",
+            'shooting' => "Lead Photographer ($photographer)",
+            'preview_foto' => "Studio Data Officer & PIC ($supervisor)",
+            'editing_seleksi' => "Lead Editor ($editor)",
+            'revisi' => "Quality Control & Editor ($editor)",
+            'cetak_album' => 'Divisi Percetakan & Lab Foto Arams',
+            'selesai_kirim' => "Logistik & Dispatch ($supervisor)",
+            default => 'Tim Operasional Arams',
+        };
+    }
+
+    protected function getStepTasks(string $stepKey, string $status): array
+    {
+        $isDone = ($status === 'completed');
+        $isActive = ($status === 'active');
+
+        return match ($stepKey) {
+            'booking' => [
+                ['title' => 'Formulir data klien & detail acara terverifikasi', 'completed' => true],
+                ['title' => 'Pembayaran Uang Muka (DP) / Pelunasan terkonfirmasi', 'completed' => true],
+                ['title' => 'Penjadwalan kru fotografer & tanggal acara terkunci', 'completed' => true],
+            ],
+            'briefing' => [
+                ['title' => 'Diskusi konsep visual & moodboard gaya pemotretan', 'completed' => $isDone || $isActive],
+                ['title' => 'Penyusunan rundown & jadwal liputan detail Hari-H', 'completed' => $isDone],
+                ['title' => 'Koordinasi attire, busana, lokasi & dekorasi', 'completed' => $isDone],
+            ],
+            'shooting' => [
+                ['title' => 'Kehadiran tim fotografer & videografer di lokasi', 'completed' => $isDone || $isActive],
+                ['title' => 'Sesi pemotretan prosesi akad / pemberkatan & resepsi', 'completed' => $isDone],
+                ['title' => 'Pencadangan (backup) seluruh file RAW foto ke cloud server', 'completed' => $isDone],
+            ],
+            'preview_foto' => [
+                ['title' => 'Kurasi & penyortiran awal foto mentah oleh studio', 'completed' => $isDone || $isActive],
+                ['title' => 'Upload galeri online preview untuk dipilih oleh klien', 'completed' => $isDone],
+                ['title' => 'Klien memilih foto-foto favorit untuk diproses edit', 'completed' => $isDone],
+            ],
+            'editing_seleksi' => [
+                ['title' => 'Color grading tone sinematik khas Arams Pictures', 'completed' => $isDone || $isActive],
+                ['title' => 'Retouching kulit & keindahan estetika foto pilihan', 'completed' => $isDone],
+                ['title' => 'Penyuntingan video teaser 1 menit & video sinematik', 'completed' => $isDone],
+            ],
+            'revisi' => [
+                ['title' => 'Klien meninjau hasil editing foto & teaser video', 'completed' => $isDone || $isActive],
+                ['title' => 'Pemberian masukan atau permintaan revisi minor', 'completed' => $isDone],
+                ['title' => 'Persetujuan akhir (final approval) dari klien', 'completed' => $isDone],
+            ],
+            'cetak_album' => [
+                ['title' => 'Penyusunan tata letak (layouting) album kolase premium', 'completed' => $isDone || $isActive],
+                ['title' => 'Proses cetak lab profesional & pembingkaian kanvas', 'completed' => $isDone],
+                ['title' => 'Pemeriksaan kualitas cetak (QC) & pengemasan box eksklusif', 'completed' => $isDone],
+            ],
+            'selesai_kirim' => [
+                ['title' => 'Pengemasan album fisik & flashdisk cetak custom', 'completed' => $isDone || $isActive],
+                ['title' => 'Pemberian link arsip Google Drive kualitas tinggi (HD)', 'completed' => $isDone],
+                ['title' => 'Serah terima paket fisik ke alamat klien & penyelesaian', 'completed' => $isDone],
+            ],
+            default => [
+                ['title' => 'Persiapan tahapan pengerjaan', 'completed' => $isDone || $isActive],
+                ['title' => 'Pelaksanaan & koordinasi tim', 'completed' => $isDone],
+            ],
         };
     }
 

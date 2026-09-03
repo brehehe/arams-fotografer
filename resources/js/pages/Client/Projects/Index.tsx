@@ -3,6 +3,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { ClientLayout } from '@/layouts/ClientLayout';
 import {
     Calendar,
+    Check,
     ChevronRight,
     MapPin,
     Search,
@@ -64,110 +65,7 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
 
-    // Rich sample projects matching Screenshot 3 if props are minimal
-    const sampleProjects: ProjectItem[] = [
-        {
-            id: '01a0473f-8eed-730c-a81b-3973c3d66eb3',
-            project_number: 'PRJ-2608-0001',
-            name: 'Wedding Andi & Sari',
-            category_name: 'Wedding',
-            package_name: 'Wedding Day',
-            status: 'in_progress',
-            workflow_step: 'preview_foto',
-            progress: 35,
-            event_date: '12 Desember 2026',
-            location: 'Gedung Graha Arams, Tangerang Selatan',
-            total_amount: 25000000,
-            paid_amount: 10000000,
-            payment_status: 'partial',
-            thumbnail: '/images/wedding-couple.jpg',
-            current_step: 3,
-            total_steps: 8,
-            step_label: 'Preview Foto',
-            estimated_done: '05 Juni 2026',
-        },
-        {
-            id: '01a0473f-8eed-730c-a81b-3973c3d66eb4',
-            project_number: 'PRJ-2505-0012',
-            name: 'Maternity Session',
-            category_name: 'Maternity',
-            package_name: 'Maternity Studio Gold',
-            status: 'completed',
-            workflow_step: 'selesai',
-            progress: 100,
-            event_date: '20 Mei 2025',
-            location: 'Studio Arams Pictures',
-            total_amount: 1500000,
-            paid_amount: 1500000,
-            payment_status: 'paid',
-            thumbnail: 'https://images.unsplash.com/photo-1544126592-807ade215a0b?w=600&auto=format&fit=crop&q=80',
-            current_step: 5,
-            total_steps: 5,
-            completed_date: '30 Mei 2025',
-        },
-        {
-            id: '01a0473f-8eed-730c-a81b-3973c3d66eb5',
-            project_number: 'PRJ-2502-0008',
-            name: 'Foto Keluarga',
-            category_name: 'Family',
-            package_name: 'Family Studio Package',
-            status: 'completed',
-            workflow_step: 'selesai',
-            progress: 100,
-            event_date: '15 Februari 2025',
-            location: 'Studio Arams Pictures',
-            total_amount: 2000000,
-            paid_amount: 2000000,
-            payment_status: 'paid',
-            thumbnail: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=600&auto=format&fit=crop&q=80',
-            current_step: 5,
-            total_steps: 5,
-            completed_date: '25 Februari 2025',
-        },
-        {
-            id: '01a0473f-8eed-730c-a81b-3973c3d66eb6',
-            project_number: 'PRJ-2501-0003',
-            name: 'Couple Session',
-            category_name: 'Couple',
-            package_name: 'Outdoor Couple Session',
-            status: 'completed',
-            workflow_step: 'selesai',
-            progress: 100,
-            event_date: '10 Januari 2025',
-            location: 'Puncak, Bogor',
-            total_amount: 1200000,
-            paid_amount: 1200000,
-            payment_status: 'paid',
-            thumbnail: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?w=600&auto=format&fit=crop&q=80',
-            current_step: 5,
-            total_steps: 5,
-            completed_date: '20 Januari 2025',
-        },
-        {
-            id: '01a0473f-8eed-730c-a81b-3973c3d66eb7',
-            project_number: 'PRJ-2412-0019',
-            name: 'Newborn Photography',
-            category_name: 'Newborn',
-            package_name: 'Baby Born Special',
-            status: 'completed',
-            workflow_step: 'selesai',
-            progress: 100,
-            event_date: '5 Desember 2024',
-            location: 'Studio Arams Pictures',
-            total_amount: 1800000,
-            paid_amount: 1800000,
-            payment_status: 'paid',
-            thumbnail: 'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=600&auto=format&fit=crop&q=80',
-            current_step: 5,
-            total_steps: 5,
-            completed_date: '12 Desember 2024',
-        },
-    ];
-
-    const displayProjects = projects.length > 0 ? projects.map(p => {
-        const found = sampleProjects.find(s => s.id === p.id || s.name === p.name);
-        return { ...found, ...p };
-    }) : sampleProjects;
+    const displayProjects = projects || [];
 
     const filteredProjects = displayProjects.filter((p) => {
         const matchesSearch =
@@ -178,7 +76,7 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
 
         let matchesStatus = true;
         if (statusFilter === 'in_progress') {
-            matchesStatus = p.status === 'in_progress' || p.status === 'confirmed' || p.status === 'shooting';
+            matchesStatus = p.status === 'in_progress' || p.status === 'confirmed' || p.status === 'shooting' || p.status === 'draft';
         } else if (statusFilter === 'completed') {
             matchesStatus = p.status === 'completed' || p.status === 'delivered';
         } else if (statusFilter === 'cancelled') {
@@ -306,16 +204,45 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
 
                 {/* ── 3. PROJECT LIST CARDS (MATCHING SCREENSHOT 3) ──────────── */}
                 <div className="space-y-4">
-                    {filteredProjects.map((p) => {
-                        const isWedding = (p.total_steps || 5) === 8 || p.category_name.toLowerCase().includes('wedding');
-                        const totalSteps = isWedding ? 8 : 5;
-                        const activeStep = p.current_step || (p.status === 'completed' ? totalSteps : 3);
-                        const isCompleted = p.status === 'completed' || p.workflow_step === 'selesai';
-                        const sisaTagihan = (p.total_amount || 0) - (p.paid_amount || 0);
+                    {filteredProjects.length === 0 ? (
+                        <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center space-y-4 shadow-2xs">
+                            <div className="w-16 h-16 rounded-2xl bg-rose-50 text-[#4A151B] flex items-center justify-center mx-auto">
+                                <FolderKanban className="w-8 h-8" />
+                            </div>
+                            <div className="space-y-1 max-w-md mx-auto">
+                                <h3 className="text-base font-bold text-slate-900">
+                                    {search || statusFilter !== 'all'
+                                        ? 'Tidak Ada Project yang Cocok'
+                                        : 'Belum Ada Project'}
+                                </h3>
+                                <p className="text-xs text-slate-500 leading-relaxed">
+                                    {search || statusFilter !== 'all'
+                                        ? 'Coba ganti kata kunci pencarian atau ubah filter status yang Anda pilih.'
+                                        : 'Anda belum memiliki riwayat project. Mulai abadikan momen spesial Anda bersama Arams Pictures.'}
+                                </p>
+                            </div>
+                            <div className="pt-2">
+                                <Link
+                                    href="/form-klien"
+                                    style={{ backgroundColor: portalPrimaryAccent, color: '#FFFFFF' }}
+                                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold shadow-xs hover:opacity-90 transition-opacity"
+                                >
+                                    <span>Booking Project Baru</span>
+                                    <ArrowRight className="w-3.5 h-3.5" />
+                                </Link>
+                            </div>
+                        </div>
+                    ) : (
+                        filteredProjects.map((p) => {
+                            const isWedding = (p.total_steps || 5) === 8 || p.category_name.toLowerCase().includes('wedding');
+                            const totalSteps = isWedding ? 8 : 5;
+                            const activeStep = p.current_step || (p.status === 'completed' ? totalSteps : 3);
+                            const isCompleted = p.status === 'completed' || p.workflow_step === 'selesai';
+                            const sisaTagihan = (p.total_amount || 0) - (p.paid_amount || 0);
 
-                        return (
-                            <div
-                                key={p.id}
+                            return (
+                                <div
+                                    key={p.id}
                                 style={{
                                     backgroundColor: portalCardBg,
                                     borderColor: portalCardBorder,
@@ -382,25 +309,34 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                                             {/* Background Line */}
                                             <div className="absolute left-3 right-3 top-1/2 -translate-y-1/2 h-0.5 bg-slate-200 -z-0" />
                                             {Array.from({ length: totalSteps }, (_, i) => i + 1).map((stepNum) => {
-                                                const isStepDone = stepNum <= activeStep;
+                                                const isStepDone = isCompleted || stepNum < activeStep;
+                                                const isCurrent = !isCompleted && stepNum === activeStep;
                                                 return (
                                                     <div
                                                         key={stepNum}
                                                         style={
-                                                            isStepDone
+                                                            isCurrent
                                                                 ? {
                                                                       backgroundColor: portalPrimaryAccent,
+                                                                      color: '#FFFFFF',
+                                                                      boxShadow: `0 0 0 3px ${portalPrimaryAccent}25`,
+                                                                  }
+                                                                : isStepDone
+                                                                ? {
+                                                                      backgroundColor: '#059669',
                                                                       color: '#FFFFFF',
                                                                   }
                                                                 : {}
                                                         }
                                                         className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold relative z-10 transition-all ${
-                                                            isStepDone
-                                                                ? 'shadow-2xs'
-                                                                : 'bg-slate-100 text-slate-400 border border-slate-200'
+                                                            isCurrent ? 'scale-110 ring-2 ring-rose-400 z-20' : ''
+                                                        } ${
+                                                            !isStepDone && !isCurrent
+                                                                ? 'bg-slate-100 text-slate-400 border border-slate-200'
+                                                                : 'shadow-2xs'
                                                         }`}
                                                     >
-                                                        {stepNum}
+                                                        {isStepDone ? <Check className="w-3 h-3 stroke-[3]" /> : stepNum}
                                                     </div>
                                                 );
                                             })}
@@ -458,12 +394,14 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                                 </div>
                             </div>
                         );
-                    })}
+                    }))}
                 </div>
 
                 {/* ── 4. PAGINATION (MATCHING SCREENSHOT 3) ──────────────────── */}
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 text-xs text-slate-500">
-                    <span>Menampilkan 1 - 5 dari 5 project</span>
+                    <span>
+                        Menampilkan {filteredProjects.length > 0 ? 1 : 0} - {filteredProjects.length} dari {projects.length} project
+                    </span>
                     <div className="flex items-center gap-1">
                         <button className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center hover:bg-slate-50 cursor-pointer text-slate-400">
                             <ChevronsLeft className="w-4 h-4" />

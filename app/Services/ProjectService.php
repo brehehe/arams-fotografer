@@ -226,6 +226,7 @@ class ProjectService
             'invoices.items',
             'payments.paymentMethod',
             'fileLinks.creator:id,name',
+            'highlights',
         ]);
 
         $teamMembers = User::where('status', 'active')->select('id', 'name', 'email', 'avatar')->get();

@@ -3,6 +3,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { ClientLayout } from '@/layouts/ClientLayout';
 import {
     Calendar,
+    Check,
     ChevronLeft,
     ChevronRight,
     Download,
@@ -49,10 +50,15 @@ interface FileLinkItem {
 
 interface TimelineStep {
     step: number;
-    title: string;
+    title?: string;
+    name?: string;
+    desc?: string;
+    description?: string;
     status: 'completed' | 'active' | 'upcoming' | 'pending';
-    status_label: string;
+    status_label?: string;
+    date?: string;
     target_date?: string;
+    tasks?: Array<{ title: string; completed: boolean }>;
 }
 
 interface RecommendedPackage {
@@ -61,6 +67,47 @@ interface RecommendedPackage {
     price: string;
     description: string;
     image: string;
+}
+
+interface PromoSlideItem {
+    id: string;
+    tag: string;
+    title: string;
+    description?: string;
+    button_text: string;
+    button_url?: string;
+    image: string;
+}
+
+interface TestimonialItem {
+    id: string;
+    client_name: string;
+    package_name?: string;
+    rating: number;
+    comment: string;
+    avatar?: string;
+}
+
+interface InstagramPostItem {
+    id: string;
+    image: string;
+    caption?: string;
+    likes?: number;
+    comments?: number;
+    post_url?: string;
+    type?: string;
+}
+
+interface RecommendedItem {
+    id: string;
+    name?: string;
+    title?: string;
+    desc?: string;
+    description?: string;
+    price?: string;
+    base_price?: number;
+    image?: string;
+    category_name?: string;
 }
 
 interface ClientDashboardProps {
@@ -86,6 +133,13 @@ interface ClientDashboardProps {
         total_amount: number;
         paid_amount: number;
         file_links?: FileLinkItem[];
+        highlights?: Array<{
+            id: string;
+            title?: string;
+            caption?: string;
+            image_url: string;
+            is_cover?: boolean;
+        }>;
     } | null;
     timeline?: {
         current_step: number;
@@ -101,51 +155,33 @@ interface ClientDashboardProps {
         last_payment_label?: string;
         last_payment_date?: string;
     };
+    promo_slides?: PromoSlideItem[];
+    recommended_projects?: RecommendedItem[];
+    instagram_posts?: InstagramPostItem[];
+    testimonials?: TestimonialItem[];
+    company?: any;
 }
 
 export default function ClientDashboard({
-    client = {
-        id: '1',
-        name: 'Andi Pratama',
-        email: 'andi.pratama@gmail.com',
-    },
-    active_project = {
-        id: '01a0473f-8eed-730c-a81b-3973c3d66eb3',
-        project_number: 'PRJ-2608-0001',
-        name: 'Wedding Andi & Sari',
-        category_name: 'Wedding',
-        package_name: 'Wedding Day',
-        status: 'in_progress',
-        workflow_step: 'preview_foto',
-        progress: 50,
-        event_date: '12 Desember 2026',
-        location: 'Gedung Graha Arams, Tangerang Selatan',
-        total_amount: 50000000,
-        paid_amount: 25000000,
-    },
+    client = null,
+    active_project = null,
     timeline = {
-        current_step: 3,
-        active_step_title: 'Preview Foto',
-        active_step_desc: 'Preview foto sedang kami siapkan untuk Anda. Kami akan update progress segera setelah tersedia.',
-        steps: [
-            { step: 1, title: 'Booking & DP', status: 'completed', status_label: 'Selesai' },
-            { step: 2, title: 'Hari H (Shooting)', status: 'completed', status_label: 'Selesai' },
-            { step: 3, title: 'Preview Foto', status: 'active', status_label: 'Sedang Dikerjakan' },
-            { step: 4, title: 'Editing & Seleksi', status: 'pending', status_label: 'Menunggu' },
-            { step: 5, title: 'Preview Hasil', status: 'pending', status_label: 'Menunggu' },
-            { step: 6, title: 'Revisi', status: 'pending', status_label: 'Menunggu' },
-            { step: 7, title: 'Finalisasi', status: 'pending', status_label: 'Menunggu' },
-            { step: 8, title: 'Selesai & Pengiriman', status: 'pending', status_label: 'Menunggu' },
-        ],
+        current_step: 1,
+        active_step_title: 'Mulai Perjalanan',
+        active_step_desc: 'Proyek Anda sedang kami persiapkan.',
+        steps: [],
     },
     payment_summary = {
-        total_amount: 50000000,
-        paid_amount: 25000000,
-        remaining_amount: 25000000,
-        paid_percentage: 50,
-        last_payment_label: 'DP (50%)',
-        last_payment_date: '26 Mei 2026',
+        total_amount: 0,
+        paid_amount: 0,
+        remaining_amount: 0,
+        paid_percentage: 0,
     },
+    promo_slides = [],
+    recommended_projects = [],
+    instagram_posts = [],
+    testimonials = [],
+    company = {},
 }: ClientDashboardProps) {
     const { props: pageProps } = usePage<any>();
     const appSettings = pageProps?.appSettings || {};
@@ -163,69 +199,43 @@ export default function ClientDashboard({
 
     const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
     const [currentTestimonialIndex, setCurrentTestimonialIndex] = useState(0);
+    const [selectedDashboardStepNum, setSelectedDashboardStepNum] = useState<number>(timeline.current_step || 1);
 
-    const promoSlides = [
-        {
-            id: 1,
-            tag: 'SPECIAL OFFER',
-            title: 'Abadikan Momen Terbaikmu dengan Arams Pictures',
-            description: 'Promo spesial untuk setiap momen berharga Anda. Dapatkan penawaran terbaik untuk paket pilihan Anda.',
-            buttonText: 'Lihat Promo Selengkapnya',
-            image: '/images/wedding-couple.jpg',
-        },
-        {
-            id: 2,
-            tag: 'EXCLUSIVE WEDDING',
-            title: 'Cinematic Drone & 4K Wedding Story',
-            description: 'Bonus video drone 4K dan album kanvas eksklusif untuk booking sesi pernikahan tahun ini.',
-            buttonText: 'Lihat Promo Selengkapnya',
-            image: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=1200&auto=format&fit=crop&q=85',
-        },
-    ];
+    const selectedDashboardStep = (timeline.steps && timeline.steps.length > 0)
+        ? (timeline.steps.find((s) => s.step === selectedDashboardStepNum) || timeline.steps[0])
+        : null;
 
-    const recommendedProjects = [
-        {
-            id: 'rec1',
-            title: 'Maternity Session',
-            desc: 'Abadikan keindahan masa menanti buah hati tercinta.',
-            price: 'Rp 1.500.000',
-            image: 'https://images.unsplash.com/photo-1544126592-807ade215a0b?w=500&auto=format&fit=crop&q=80',
-        },
-        {
-            id: 'rec2',
-            title: 'Newborn Photography',
-            desc: 'Momen pertama si kecil yang sangat berharga.',
-            price: 'Rp 1.800.000',
-            image: 'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=500&auto=format&fit=crop&q=80',
-        },
-        {
-            id: 'rec3',
-            title: 'Foto Keluarga',
-            desc: 'Ciptakan kenangan hangat bersama keluarga tercinta.',
-            price: 'Rp 2.000.000',
-            image: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=500&auto=format&fit=crop&q=80',
-        },
-        {
-            id: 'rec4',
-            title: 'Couple Session',
-            desc: 'Rayakan cinta Anda dengan sesi yang romantis.',
-            price: 'Rp 1.200.000',
-            image: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?w=500&auto=format&fit=crop&q=80',
-        },
-    ];
+    // Database content with seamless fallback
+    const promoSlides: PromoSlideItem[] = (promo_slides && promo_slides.length > 0)
+        ? promo_slides
+        : [
+            {
+                id: '1',
+                tag: 'SPECIAL OFFER',
+                title: 'Abadikan Momen Terbaikmu dengan Arams Pictures',
+                description: 'Promo spesial untuk setiap momen berharga Anda. Dapatkan penawaran terbaik untuk paket pilihan Anda.',
+                button_text: 'Lihat Promo Selengkapnya',
+                button_url: '/form-klien',
+                image: '/images/wedding-couple.jpg',
+            },
+        ];
 
-    const instagramPhotos = [
-        '/images/wedding-couple.jpg',
-        'https://images.unsplash.com/photo-1519741497674-611481863552?w=400&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=400&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=400&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?w=400&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1606800052052-a08af7148866?w=400&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1544126592-807ade215a0b?w=400&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=400&auto=format&fit=crop&q=80',
-    ];
+    const recommendedProjects: RecommendedItem[] = (recommended_projects && recommended_projects.length > 0)
+        ? recommended_projects
+        : [];
 
-    const activePromo = promoSlides[currentPromoIndex];
+    const instagramPhotos: InstagramPostItem[] = (instagram_posts && instagram_posts.length > 0)
+        ? instagram_posts
+        : [];
+
+    const testimonialList: TestimonialItem[] = (testimonials && testimonials.length > 0)
+        ? testimonials
+        : [];
+
+    const activePromo = promoSlides[currentPromoIndex % promoSlides.length] || promoSlides[0];
+    const activeTestimonial = testimonialList.length > 0
+        ? testimonialList[currentTestimonialIndex % testimonialList.length]
+        : null;
 
     return (
         <ClientLayout>
@@ -275,17 +285,17 @@ export default function ClientDashboard({
                             {activePromo.description}
                         </p>
                         <div className="pt-2">
-                            <button
-                                type="button"
+                            <Link
+                                href={activePromo.button_url || '/form-klien'}
                                 style={{
                                     backgroundColor: '#FFFFFF',
                                     color: portalHeroBg,
                                 }}
                                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold shadow-md hover:opacity-90 transition-all cursor-pointer"
                             >
-                                <span>{activePromo.buttonText}</span>
+                                <span>{activePromo.button_text}</span>
                                 <ArrowRight className="w-3.5 h-3.5" />
-                            </button>
+                            </Link>
                         </div>
                     </div>
 
@@ -562,34 +572,72 @@ export default function ClientDashboard({
                                     {timeline.steps.map((step) => {
                                         const isDone = step.status === 'completed';
                                         const isActive = step.status === 'active';
+                                        const isSelected = selectedDashboardStep?.step === step.step;
+
                                         return (
                                             <div key={step.step} className="flex flex-col items-center relative z-10 flex-1">
-                                                <div
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSelectedDashboardStepNum(step.step)}
+                                                    title={`Klik untuk melihat info tahap ${step.step}: ${step.title || step.name}`}
                                                     style={
-                                                        isDone || isActive
+                                                        isSelected
+                                                            ? {
+                                                                  backgroundColor: portalPrimaryAccent,
+                                                                  color: '#FFFFFF',
+                                                                  boxShadow: `0 0 0 4px ${portalPrimaryAccent}25`,
+                                                              }
+                                                            : isDone
+                                                            ? {
+                                                                  backgroundColor: '#059669',
+                                                                  color: '#FFFFFF',
+                                                              }
+                                                            : isActive
                                                             ? {
                                                                   backgroundColor: portalPrimaryAccent,
                                                                   color: '#FFFFFF',
                                                               }
                                                             : {}
                                                     }
-                                                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                                                        !isDone && !isActive ? 'bg-slate-100 text-slate-400 border border-slate-200' : 'shadow-xs'
+                                                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all cursor-pointer transform hover:scale-115 active:scale-95 ${
+                                                        isSelected ? 'scale-120 ring-2 ring-rose-400 z-20' : ''
+                                                    } ${
+                                                        !isDone && !isActive && !isSelected
+                                                            ? 'bg-slate-100 text-slate-400 border border-slate-200 hover:border-slate-300'
+                                                            : 'shadow-xs'
                                                     }`}
                                                 >
-                                                    {step.step}
-                                                </div>
-                                                <span
-                                                    style={isActive ? { color: portalPrimaryAccent } : {}}
-                                                    className={`text-[10px] font-bold mt-1 text-center hidden sm:block ${
-                                                        !isActive ? (isDone ? 'text-slate-700' : 'text-slate-400') : ''
-                                                    }`}
+                                                    {isDone ? (
+                                                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                                    ) : (
+                                                        step.step
+                                                    )}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSelectedDashboardStepNum(step.step)}
+                                                    className="text-left flex flex-col items-center cursor-pointer mt-1 group"
                                                 >
-                                                    {step.title}
-                                                </span>
-                                                <span className="text-[9px] text-slate-400 hidden sm:block">
-                                                    {step.status_label}
-                                                </span>
+                                                    <span
+                                                        style={isSelected || isActive ? { color: portalPrimaryAccent } : {}}
+                                                        className={`text-[10px] font-bold text-center hidden sm:block transition-colors group-hover:underline ${
+                                                            !isSelected && !isActive ? (isDone ? 'text-slate-700' : 'text-slate-400') : ''
+                                                        }`}
+                                                    >
+                                                        {step.title || step.name}
+                                                    </span>
+                                                    <span
+                                                        className={`text-[9px] font-semibold hidden sm:block ${
+                                                            isDone
+                                                                ? 'text-emerald-600'
+                                                                : isActive
+                                                                ? 'text-amber-600'
+                                                                : 'text-slate-400'
+                                                        }`}
+                                                    >
+                                                        {step.status_label || (isDone ? 'Selesai' : isActive ? 'Sedang Diproses' : 'Menunggu')}
+                                                    </span>
+                                                </button>
                                             </div>
                                         );
                                     })}
@@ -602,24 +650,50 @@ export default function ClientDashboard({
                                     backgroundColor: `${portalPrimaryAccent}08`,
                                     borderColor: `${portalPrimaryAccent}25`,
                                 }}
-                                className="border rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+                                className="border rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all"
                             >
-                                <div className="flex items-center gap-3 text-xs text-slate-700">
+                                <div className="flex items-start sm:items-center gap-3.5 text-xs text-slate-700">
                                     <div
                                         style={{
                                             backgroundColor: `${portalPrimaryAccent}20`,
                                             color: portalPrimaryAccent,
                                         }}
-                                        className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                                        className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs mt-0.5 sm:mt-0"
                                     >
-                                        <Compass className="w-4 h-4" />
+                                        <Compass className="w-5 h-5" />
                                     </div>
-                                    <span>{timeline.active_step_desc}</span>
+                                    <div className="space-y-1">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <strong className="text-sm font-bold text-slate-900">
+                                                Tahap {selectedDashboardStep?.step || 1}: {selectedDashboardStep?.title || selectedDashboardStep?.name || timeline.active_step_title || 'Proses Pengerjaan'}
+                                            </strong>
+                                            <span
+                                                className={`text-[9.5px] px-2.5 py-0.5 rounded-full font-bold ${
+                                                    selectedDashboardStep?.status === 'completed'
+                                                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                                        : selectedDashboardStep?.status === 'active'
+                                                        ? 'bg-amber-100 text-amber-900 border border-amber-200'
+                                                        : 'bg-slate-100 text-slate-600 border border-slate-200'
+                                                }`}
+                                            >
+                                                {selectedDashboardStep?.status_label || (selectedDashboardStep?.status === 'completed' ? 'Selesai' : selectedDashboardStep?.status === 'active' ? 'Sedang Diproses' : 'Menunggu')}
+                                            </span>
+                                            {selectedDashboardStep?.date && (
+                                                <span className="text-[10.5px] text-slate-400 font-medium inline-flex items-center gap-1">
+                                                    <Calendar className="w-3 h-3 text-slate-400" />
+                                                    <span>{selectedDashboardStep.date}</span>
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-slate-600 leading-relaxed max-w-xl">
+                                            {selectedDashboardStep?.desc || selectedDashboardStep?.description || timeline.active_step_desc || 'Tahap pengerjaan saat ini sedang diproses oleh tim kami.'}
+                                        </p>
+                                    </div>
                                 </div>
                                 <Link
                                     href={`/client/projects/${active_project?.id || '01a0473f-8eed-730c-a81b-3973c3d66eb3'}`}
                                     style={{ color: portalPrimaryAccent }}
-                                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold hover:bg-slate-50 transition-colors shrink-0 shadow-2xs"
+                                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-bold hover:bg-slate-50 transition-colors shrink-0 shadow-2xs hover:scale-[1.02]"
                                 >
                                     <span>Lihat Detail Project</span>
                                     <ArrowRight className="w-3.5 h-3.5" />
@@ -777,23 +851,26 @@ export default function ClientDashboard({
                             </div>
 
                             <div className="grid grid-cols-2 gap-2">
-                                <div className="aspect-square rounded-xl overflow-hidden bg-slate-100">
-                                    <img src="/images/wedding-couple.jpg" alt="Highlight 1" className="w-full h-full object-cover" />
-                                </div>
-                                <div className="aspect-square rounded-xl overflow-hidden bg-slate-100">
-                                    <img src="https://images.unsplash.com/photo-1519741497674-611481863552?w=300&auto=format&fit=crop&q=80" alt="Highlight 2" className="w-full h-full object-cover" />
-                                </div>
-                                <div className="aspect-square rounded-xl overflow-hidden bg-slate-100">
-                                    <img src="https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=300&auto=format&fit=crop&q=80" alt="Highlight 3" className="w-full h-full object-cover" />
-                                </div>
-                                <div className="aspect-square rounded-xl overflow-hidden bg-slate-100">
-                                    <img src="https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=300&auto=format&fit=crop&q=80" alt="Highlight 4" className="w-full h-full object-cover" />
-                                </div>
+                                {active_project?.highlights && active_project.highlights.length > 0 ? (
+                                    active_project.highlights.slice(0, 4).map((hl: any, idx: number) => (
+                                        <div key={hl.id || idx} className="aspect-square rounded-xl overflow-hidden bg-slate-100 relative group">
+                                            <img
+                                                src={hl.image_url}
+                                                alt={hl.title || `Highlight ${idx + 1}`}
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                            />
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="col-span-2 py-6 text-center text-slate-400 text-xs">
+                                        Belum ada foto highlight
+                                    </div>
+                                )}
                             </div>
                         </div>
 
                         <Link
-                            href={`/client/projects/${active_project?.id || '01a0473f-8eed-730c-a81b-3973c3d66eb3'}`}
+                            href={active_project?.id ? `/client/projects/${active_project.id}#section-highlight` : '/client/projects'}
                             style={{ color: portalPrimaryAccent }}
                             className="w-full py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-center transition-colors block"
                         >
@@ -820,48 +897,83 @@ export default function ClientDashboard({
                                 <p className="text-[10px] text-slate-400">Terima kasih atas kepercayaan Anda.</p>
                             </div>
 
-                            <div className="space-y-2">
-                                <div className="flex items-center gap-1 text-amber-500">
-                                    {Array.from({ length: 5 }).map((_, i) => (
-                                        <Star key={i} className="w-3.5 h-3.5 fill-amber-500" />
-                                    ))}
-                                    <span className="text-xs font-bold text-slate-900 ml-1">5.0</span>
-                                </div>
-
-                                <p className="text-xs text-slate-600 leading-relaxed italic">
-                                    "Pelayanan sangat profesional, hasil foto luar biasa, dan timnya ramah banget. Momen kami jadi sangat berkesan!"
-                                </p>
-
-                                <div className="flex items-center justify-between pt-1">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-7 h-7 rounded-full bg-slate-200 overflow-hidden">
-                                            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" alt="Budi & Rina" className="w-full h-full object-cover" />
-                                        </div>
-                                        <div>
-                                            <p className="text-[11px] font-bold text-slate-900 leading-none">Budi &amp; Rina</p>
-                                            <span className="text-[10px] text-slate-400">Wedding</span>
-                                        </div>
+                            {activeTestimonial ? (
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-1 text-amber-500">
+                                        {Array.from({ length: 5 }).map((_, i) => (
+                                            <Star
+                                                key={i}
+                                                className={`w-3.5 h-3.5 ${
+                                                    i < activeTestimonial.rating
+                                                        ? 'text-amber-500 fill-amber-500'
+                                                        : 'text-slate-200'
+                                                }`}
+                                            />
+                                        ))}
+                                        <span className="text-xs font-bold text-slate-900 ml-1">
+                                            {Number(activeTestimonial.rating).toFixed(1)}
+                                        </span>
                                     </div>
 
-                                    <div className="flex items-center gap-1">
-                                        <button className="w-6 h-6 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50">
-                                            <ChevronLeft className="w-3 h-3" />
-                                        </button>
-                                        <button className="w-6 h-6 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50">
-                                            <ChevronRight className="w-3 h-3" />
-                                        </button>
+                                    <p className="text-xs text-slate-600 leading-relaxed italic line-clamp-3">
+                                        "{activeTestimonial.comment}"
+                                    </p>
+
+                                    <div className="flex items-center justify-between pt-1">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-7 h-7 rounded-full bg-slate-200 overflow-hidden shrink-0">
+                                                <img
+                                                    src={activeTestimonial.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
+                                                    alt={activeTestimonial.client_name}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-[11px] font-bold text-slate-900 leading-none truncate">
+                                                    {activeTestimonial.client_name}
+                                                </p>
+                                                <span className="text-[10px] text-slate-400 truncate block">
+                                                    {activeTestimonial.package_name || 'Dokumentasi'}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {testimonialList.length > 1 && (
+                                            <div className="flex items-center gap-1 shrink-0">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setCurrentTestimonialIndex((prev) => (prev === 0 ? testimonialList.length - 1 : prev - 1))}
+                                                    className="w-6 h-6 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 cursor-pointer transition-colors"
+                                                    title="Ulasan sebelumnya"
+                                                >
+                                                    <ChevronLeft className="w-3 h-3" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setCurrentTestimonialIndex((prev) => (prev + 1) % testimonialList.length)}
+                                                    className="w-6 h-6 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 cursor-pointer transition-colors"
+                                                    title="Ulasan selanjutnya"
+                                                >
+                                                    <ChevronRight className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
-                            </div>
+                            ) : (
+                                <div className="py-6 text-center text-slate-400 text-xs">
+                                    Belum ada ulasan klien.
+                                </div>
+                            )}
                         </div>
 
-                        <button
-                            type="button"
+                        <Link
+                            href="/client/projects"
                             style={{ color: portalPrimaryAccent }}
                             className="w-full py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-center transition-colors block cursor-pointer"
                         >
                             Lihat Semua Ulasan →
-                        </button>
+                        </Link>
                     </div>
                 </section>
 
@@ -896,15 +1008,22 @@ export default function ClientDashboard({
                         {recommendedProjects.map((rec) => (
                             <div key={rec.id} className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-2xs hover:shadow-md transition-all flex flex-col justify-between">
                                 <div className="aspect-[4/3] bg-slate-100 overflow-hidden">
-                                    <img src={rec.image} alt={rec.title} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                                    <img src={rec.image} alt={rec.title || rec.name} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
                                 </div>
-                                <div className="p-4 space-y-2">
-                                    <h4 className="font-bold text-xs text-slate-900">{rec.title}</h4>
-                                    <p className="text-[11px] text-slate-500 leading-snug">{rec.desc}</p>
-                                    <p className="text-xs font-bold text-slate-900 pt-1">Mulai dari <span className="text-[#4A151B]">{rec.price}</span></p>
-                                    <button className="w-full py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-[11px] font-bold text-slate-700 transition-colors">
-                                        Lihat Detail
-                                    </button>
+                                <div className="p-4 space-y-2 flex flex-col flex-1 justify-between">
+                                    <div className="space-y-1">
+                                        <h4 className="font-bold text-xs text-slate-900">{rec.title || rec.name}</h4>
+                                        <p className="text-[11px] text-slate-500 leading-snug line-clamp-2">{rec.desc || rec.description}</p>
+                                    </div>
+                                    <div className="pt-2 space-y-2">
+                                        <p className="text-xs font-bold text-slate-900">Mulai dari <span className="text-[#4A151B]">{rec.price || (rec.base_price ? formatRupiah(rec.base_price) : '')}</span></p>
+                                        <Link
+                                            href={`/form-klien?package_id=${rec.id}`}
+                                            className="w-full py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-[11px] font-bold text-slate-700 transition-colors block text-center"
+                                        >
+                                            Pesan Paket Ini
+                                        </Link>
+                                    </div>
                                 </div>
                             </div>
                         ))}
@@ -923,9 +1042,9 @@ export default function ClientDashboard({
                             </p>
                         </div>
                         <div className="flex items-center gap-3">
-                            <span className="text-xs text-slate-500 font-medium">@aramspictures</span>
+                            <span className="text-xs text-slate-500 font-medium">{company?.instagram || '@aramspictures'}</span>
                             <a
-                                href="https://instagram.com/aramspictures"
+                                href={company?.instagram_url || 'https://instagram.com/aramspictures'}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#240B10] text-white text-xs font-bold hover:bg-[#380E13] transition-colors"
@@ -938,23 +1057,41 @@ export default function ClientDashboard({
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
                         {instagramPhotos.map((photo, i) => (
-                            <div key={i} className="aspect-square rounded-xl overflow-hidden bg-slate-100 relative group">
-                                <img src={photo} alt={`Instagram ${i + 1}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                                    <Instagram className="w-5 h-5" />
+                            <a
+                                key={photo.id || i}
+                                href={photo.post_url || 'https://instagram.com/aramspictures'}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="aspect-square rounded-xl overflow-hidden bg-slate-100 relative group block"
+                                title={photo.caption || 'Instagram Post'}
+                            >
+                                <img
+                                    src={photo.image}
+                                    alt={photo.caption || `Instagram ${i + 1}`}
+                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                />
+                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white p-1 text-center">
+                                    <Instagram className="w-5 h-5 mb-1" />
+                                    {photo.likes !== undefined && photo.likes > 0 && (
+                                        <span className="text-[10px] font-bold flex items-center gap-1">
+                                            <Heart className="w-2.5 h-2.5 fill-white" /> {photo.likes}
+                                        </span>
+                                    )}
                                 </div>
-                            </div>
+                            </a>
                         ))}
                     </div>
 
                     <div className="text-center pt-2">
-                        <button
-                            type="button"
+                        <a
+                            href={company?.instagram_url || 'https://instagram.com/aramspictures'}
+                            target="_blank"
+                            rel="noreferrer"
                             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs"
                         >
                             <span>Lihat Lebih Banyak di Instagram</span>
-                            <ChevronRight className="w-3.5 h-3.5 rotate-90" />
-                        </button>
+                            <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
                     </div>
                 </section>
             </div>

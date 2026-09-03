@@ -23,6 +23,10 @@ use App\Http\Controllers\ClientIntakeController;
 use App\Http\Controllers\ClientSourceController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\MasterData\InstagramPostController;
+use App\Http\Controllers\MasterData\PromoSlideController;
+use App\Http\Controllers\MasterData\TestimonialController;
+use App\Http\Controllers\ProjectHighlightController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -50,6 +54,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/dashboard', [ClientPortalController::class, 'dashboard'])->name('dashboard');
         Route::get('/projects', [ClientPortalController::class, 'projects'])->name('projects.index');
         Route::get('/projects/{project}', [ClientPortalController::class, 'projectDetail'])->name('projects.show');
+        Route::post('/projects/{project}/review', [ClientPortalController::class, 'submitReview'])->name('projects.review');
     });
 
     // 1. Admin Studio Dashboard
@@ -68,6 +73,10 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('projects', ProjectController::class);
     Route::patch('/projects/{project}/status', [ProjectController::class, 'updateStatus'])->name('projects.status');
     Route::post('/projects/{project}/file-links', [FileLinkController::class, 'storeForProject'])->name('projects.file-links.store');
+    Route::post('/projects/{project}/highlights', [ProjectHighlightController::class, 'store'])->name('projects.highlights.store');
+    Route::patch('/projects/{project}/highlights/{highlight}', [ProjectHighlightController::class, 'update'])->name('projects.highlights.update');
+    Route::post('/projects/{project}/highlights/{highlight}/cover', [ProjectHighlightController::class, 'setCover'])->name('projects.highlights.cover');
+    Route::delete('/projects/{project}/highlights/{highlight}', [ProjectHighlightController::class, 'destroy'])->name('projects.highlights.destroy');
 
     // 4. Master Data
     Route::prefix('master-data')->name('master-data.')->group(function () {
@@ -75,6 +84,9 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('services', ServiceController::class)->except(['create', 'edit', 'show']);
         Route::resource('packages', PackageController::class)->except(['create', 'edit', 'show']);
         Route::resource('addons', AddonController::class)->except(['create', 'edit', 'show']);
+        Route::resource('promo-slides', PromoSlideController::class)->except(['create', 'edit', 'show']);
+        Route::resource('testimonials', TestimonialController::class)->except(['create', 'edit', 'show']);
+        Route::resource('instagram-posts', InstagramPostController::class)->except(['create', 'edit', 'show']);
         Route::put('workflows/packages/{package}/deliverables', [WorkflowController::class, 'updatePackageDeliverables'])->name('workflows.packages.deliverables');
         Route::post('workflows/packages/{package}/deliverables', [WorkflowController::class, 'addPackageDeliverable'])->name('workflows.packages.deliverables.add');
         Route::delete('workflows/packages/{package}/deliverables/{deliverableId}', [WorkflowController::class, 'destroyPackageDeliverable'])->name('workflows.packages.deliverables.destroy');

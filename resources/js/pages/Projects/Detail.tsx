@@ -48,7 +48,7 @@ import {
     Trash2,
     Send,
     Tag,
-    Image,
+    Image as ImageIcon,
     Film,
     BookOpen,
     Disc,
@@ -101,7 +101,7 @@ export default function ProjectDetail({
     const user = auth?.user;
 
     // Active Navigation Tab
-    const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'files' | 'catatan' | 'invoice'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'files' | 'catatan' | 'invoice' | 'highlight'>('overview');
     const [actionDropdownOpen, setActionDropdownOpen] = useState(false);
     const [invoiceDropdownOpen, setInvoiceDropdownOpen] = useState(false);
 
@@ -138,6 +138,61 @@ export default function ProjectDetail({
 
     const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
     const [newNoteText, setNewNoteText] = useState('');
+
+    // Highlight Project Modal State & Handlers
+    const [isHighlightModalOpen, setIsHighlightModalOpen] = useState(false);
+    const [highlightSubmitting, setHighlightSubmitting] = useState(false);
+    const [highlightFormData, setHighlightFormData] = useState({
+        title: '',
+        caption: '',
+        image_url: '',
+        image_file: null as File | null,
+        is_cover: false,
+    });
+    const [highlightFilePreview, setHighlightFilePreview] = useState('');
+
+    const handleHighlightSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        setHighlightSubmitting(true);
+        const form = new FormData();
+        form.append('title', highlightFormData.title || 'Momen Acara');
+        form.append('caption', highlightFormData.caption);
+        form.append('is_cover', highlightFormData.is_cover ? '1' : '0');
+        if (highlightFormData.image_file) {
+            form.append('image_file', highlightFormData.image_file);
+        } else if (highlightFormData.image_url) {
+            form.append('image_url', highlightFormData.image_url);
+        }
+
+        router.post(`/projects/${project?.id}/highlights`, form, {
+            onSuccess: () => {
+                toast.success('Foto highlight berhasil ditambahkan ke project');
+                setIsHighlightModalOpen(false);
+                setHighlightSubmitting(false);
+                setHighlightFormData({ title: '', caption: '', image_url: '', image_file: null, is_cover: false });
+                setHighlightFilePreview('');
+            },
+            onError: (err) => {
+                toast.error(Object.values(err)[0] as string || 'Gagal menambahkan foto highlight');
+                setHighlightSubmitting(false);
+            },
+        });
+    };
+
+    const handleSetCover = (highlightId: string) => {
+        router.post(`/projects/${project?.id}/highlights/${highlightId}/cover`, {}, {
+            preserveScroll: true,
+            onSuccess: () => toast.success('Foto berhasil dijadikan cover utama project'),
+        });
+    };
+
+    const handleDeleteHighlight = (highlightId: string) => {
+        if (!confirm('Apakah Anda yakin ingin menghapus foto highlight ini?')) return;
+        router.delete(`/projects/${project?.id}/highlights/${highlightId}`, {
+            preserveScroll: true,
+            onSuccess: () => toast.success('Foto highlight berhasil dihapus'),
+        });
+    };
 
     const studioPhone = company_settings?.phone || '0812-3456-7890';
     const studioName = company_settings?.name || 'Arams Pictures';
@@ -803,6 +858,21 @@ export default function ProjectDetail({
                         }`}
                     >
                         Catatan &amp; Brief
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('highlight')}
+                        className={`py-3.5 border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                            activeTab === 'highlight'
+                                ? 'border-[#3B46F1] text-[#3B46F1]'
+                                : 'border-transparent text-slate-500 hover:text-slate-800'
+                        }`}
+                    >
+                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Highlight Project</span>
+                        <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-100 text-amber-800 font-bold">
+                            {project?.highlights?.length || 0}
+                        </span>
                     </button>
                     <Link
                         href={`/projects/${project?.id}/invoice`}
@@ -1550,6 +1620,139 @@ export default function ProjectDetail({
                 </div>
             )}
 
+            {/* ── HIGHLIGHT PROJECT TAB ───────────────────────────────────────── */}
+            {activeTab === 'highlight' && (
+                <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-2xs space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                                <Sparkles className="w-4 h-4 text-amber-500" />
+                                <span>Galeri Highlight &amp; Momen Terbaik Project</span>
+                            </h2>
+                            <p className="text-xs text-slate-500 mt-0.5">
+                                Foto-foto kurasi pilihan yang tampil eksklusif di galeri Portal Klien (/client/projects/{project?.id}).
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setHighlightFormData({ title: '', caption: '', image_url: '', image_file: null, is_cover: false });
+                                setHighlightFilePreview('');
+                                setIsHighlightModalOpen(true);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#3B46F1] text-white rounded-xl text-xs font-bold shadow-xs hover:bg-[#323BD8] cursor-pointer"
+                        >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Unggah Foto Highlight</span>
+                        </button>
+                    </div>
+
+                    {project?.highlights && project.highlights.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {project.highlights.map((item: any) => (
+                                <div
+                                    key={item.id}
+                                    className="rounded-2xl border border-slate-200/80 overflow-hidden bg-white shadow-2xs hover:shadow-md transition-all flex flex-col justify-between"
+                                >
+                                    <div className="aspect-[4/3] bg-slate-900 relative overflow-hidden group">
+                                        <img
+                                            src={item.image_url}
+                                            alt={item.title || 'Highlight'}
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                        />
+                                        {item.is_cover && (
+                                            <div className="absolute top-2.5 left-2.5">
+                                                <span className="px-2 py-0.5 rounded-md bg-amber-500 text-slate-950 font-black text-[9px] uppercase tracking-wider shadow-xs flex items-center gap-1">
+                                                    <Sparkles className="w-2.5 h-2.5" />
+                                                    Cover Utama
+                                                </span>
+                                            </div>
+                                        )}
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-2">
+                                            <a
+                                                href={item.image_url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="p-2 rounded-full bg-white/20 hover:bg-white/40 text-white backdrop-blur-xs transition-colors"
+                                                title="Lihat Foto Full Size"
+                                            >
+                                                <Eye className="w-4 h-4" />
+                                            </a>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDeleteHighlight(item.id)}
+                                                className="p-2 rounded-full bg-rose-600/80 hover:bg-rose-600 text-white transition-colors cursor-pointer"
+                                                title="Hapus Foto"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-3.5 space-y-1.5 flex-1 flex flex-col justify-between">
+                                        <div>
+                                            <h4 className="font-bold text-xs text-slate-900 leading-tight line-clamp-1">
+                                                {item.title || 'Momen Acara'}
+                                            </h4>
+                                            {item.caption && (
+                                                <p className="text-[11px] text-slate-500 line-clamp-2 mt-1">
+                                                    {item.caption}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                                            {!item.is_cover ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleSetCover(item.id)}
+                                                    className="text-[10px] font-bold text-slate-600 hover:text-indigo-600 cursor-pointer"
+                                                >
+                                                    Jadikan Cover
+                                                </button>
+                                            ) : (
+                                                <span className="text-[10px] font-bold text-amber-600 flex items-center gap-1">
+                                                    <CheckCircle2 className="w-3 h-3" />
+                                                    Cover Aktif
+                                                </span>
+                                            )}
+
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDeleteHighlight(item.id)}
+                                                className="text-[10px] font-bold text-rose-500 hover:text-rose-700 cursor-pointer"
+                                            >
+                                                Hapus
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="rounded-2xl border-2 border-dashed border-slate-200 p-12 text-center space-y-3">
+                            <ImageIcon className="w-10 h-10 text-slate-300 mx-auto" />
+                            <h3 className="font-bold text-sm text-slate-800">Belum Ada Foto Highlight</h3>
+                            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                                Unggah foto-foto terbaik acara klien ini agar dapat dinikmati langsung di galeri Portal Klien.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setHighlightFormData({ title: '', caption: '', image_url: '', image_file: null, is_cover: false });
+                                    setHighlightFilePreview('');
+                                    setIsHighlightModalOpen(true);
+                                }}
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-[#3B46F1] text-white rounded-xl text-xs font-bold hover:bg-[#323BD8] cursor-pointer"
+                            >
+                                <Plus className="w-4 h-4" />
+                                <span>Unggah Foto Pertama</span>
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* ── MODAL: CATAT PEMBAYARAN ───────────────────────────────────────── */}
             {isPaymentModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in">
@@ -1839,6 +2042,116 @@ export default function ProjectDetail({
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── MODAL: UNGGAH / TAMBAH FOTO HIGHLIGHT ────────────────────────── */}
+            {isHighlightModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in">
+                    <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                                <Sparkles className="w-4 h-4 text-amber-500" />
+                                <span>Tambah Foto Highlight Project</span>
+                            </h3>
+                            <button
+                                type="button"
+                                onClick={() => setIsHighlightModalOpen(false)}
+                                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 cursor-pointer"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                        <form onSubmit={handleHighlightSubmit} className="space-y-3.5 text-xs">
+                            <div className="space-y-1">
+                                <label className="font-bold text-slate-700 uppercase text-[10px]">Judul Foto / Momen</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={highlightFormData.title}
+                                    onChange={(e) => setHighlightFormData({ ...highlightFormData, title: e.target.value })}
+                                    placeholder="Contoh: First Look &amp; Tukar Cincin"
+                                    className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden"
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="font-bold text-slate-700 uppercase text-[10px]">Unggah Foto (WebP Optimized)</label>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            setHighlightFormData({ ...highlightFormData, image_file: file });
+                                            setHighlightFilePreview(URL.createObjectURL(file));
+                                        }
+                                    }}
+                                    className="w-full text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="font-bold text-slate-700 uppercase text-[10px]">Atau Gunakan URL Foto</label>
+                                <input
+                                    type="text"
+                                    value={highlightFormData.image_url}
+                                    onChange={(e) => {
+                                        setHighlightFormData({ ...highlightFormData, image_url: e.target.value });
+                                        setHighlightFilePreview(e.target.value);
+                                    }}
+                                    placeholder="https://... atau /images/..."
+                                    className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden"
+                                />
+                            </div>
+
+                            {highlightFilePreview && (
+                                <div className="aspect-[16/9] rounded-xl overflow-hidden bg-slate-100 border relative">
+                                    <img src={highlightFilePreview} alt="Preview" className="w-full h-full object-cover" />
+                                </div>
+                            )}
+
+                            <div className="space-y-1">
+                                <label className="font-bold text-slate-700 uppercase text-[10px]">Caption / Cerita Momen</label>
+                                <textarea
+                                    value={highlightFormData.caption}
+                                    onChange={(e) => setHighlightFormData({ ...highlightFormData, caption: e.target.value })}
+                                    placeholder="Tuliskan keterangan singkat foto highlight ini..."
+                                    rows={3}
+                                    className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden resize-none"
+                                />
+                            </div>
+
+                            <div className="flex items-center justify-between pt-1">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={highlightFormData.is_cover}
+                                        onChange={(e) => setHighlightFormData({ ...highlightFormData, is_cover: e.target.checked })}
+                                        className="w-4 h-4 rounded text-[#3B46F1] focus:ring-[#3B46F1]"
+                                    />
+                                    <span className="font-bold text-slate-800 text-xs">Jadikan Foto Cover Utama Project</span>
+                                </label>
+                            </div>
+
+                            <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsHighlightModalOpen(false)}
+                                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold cursor-pointer"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={highlightSubmitting}
+                                    className="px-4 py-2 bg-[#3B46F1] text-white rounded-xl font-bold hover:bg-[#323BD8] disabled:opacity-50 cursor-pointer"
+                                >
+                                    {highlightSubmitting ? 'Menyimpan...' : 'Simpan Foto Highlight'}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}
