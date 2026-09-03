@@ -19,7 +19,7 @@ class ProjectsShowcaseSeeder extends Seeder
 
         // 1. Ensure Supervisors
         $budi = User::firstOrCreate(
-            ['email' => 'budi.santoso@lensaria.com'],
+            ['email' => 'budi.santoso@arams.com'],
             [
                 'name' => 'Budi Santoso',
                 'phone' => '0812-9876-5432',
@@ -31,7 +31,7 @@ class ProjectsShowcaseSeeder extends Seeder
         $budi->assignRole($supervisorRole);
 
         $rizky = User::firstOrCreate(
-            ['email' => 'rizky.pratama@lensaria.com'],
+            ['email' => 'rizky.pratama@arams.com'],
             [
                 'name' => 'Rizky Pratama',
                 'phone' => '0813-1122-3344',

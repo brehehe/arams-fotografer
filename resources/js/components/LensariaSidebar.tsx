@@ -21,12 +21,12 @@ import {
     ExternalLink,
 } from 'lucide-react';
 
-interface LensariaSidebarProps {
+interface AramsSidebarProps {
     isOpen?: boolean;
     onClose?: () => void;
 }
 
-export default function LensariaSidebar({ isOpen = true, onClose }: LensariaSidebarProps) {
+export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarProps) {
     const { url, props: pageProps } = usePage<any>();
     const currentPath = (url || '').split('?')[0].split('#')[0];
     const isMasterData = currentPath.startsWith('/master-data');

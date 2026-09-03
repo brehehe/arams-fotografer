@@ -31,7 +31,7 @@ export default function ActivityLogIndex({
 
     return (
         <div className="space-y-6 pb-12">
-            <Head title="Audit Trail & Activity Log - Lensaria Photography" />
+            <Head title="Audit Trail & Activity Log - Arams Photography" />
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>

@@ -136,7 +136,7 @@ export default function FilesIndex({
             file_type: 'hasil_foto',
             project: { id: 'p1', name: 'Wedding', client: { name: 'Kevin & Jessica' } },
             project_category: 'Wedding',
-            sender_name: 'Admin Lensaria',
+            sender_name: 'Admin Arams',
             sender_role: 'admin',
             sent_at: '27 Mei 2026, 14:32',
             status: 'terkirim',
@@ -160,7 +160,7 @@ export default function FilesIndex({
             file_type: 'hasil_foto',
             project: { id: 'p2', name: 'Wedding', client: { name: 'Budi & Sarah' } },
             project_category: 'Wedding',
-            sender_name: 'Admin Lensaria',
+            sender_name: 'Admin Arams',
             sender_role: 'admin',
             sent_at: '24 Mei 2026, 16:20',
             status: 'terkirim',
@@ -184,7 +184,7 @@ export default function FilesIndex({
             file_type: 'hasil_foto',
             project: { id: 'p3', name: 'Prewedding', client: { name: 'Andi & Lestari' } },
             project_category: 'Prewedding',
-            sender_name: 'Admin Lensaria',
+            sender_name: 'Admin Arams',
             sender_role: 'admin',
             sent_at: '20 Mei 2026, 11:40',
             status: 'terkirim',
@@ -208,7 +208,7 @@ export default function FilesIndex({
             file_type: 'hasil_foto',
             project: { id: 'p4', name: 'Wedding', client: { name: 'Doni & Kartika' } },
             project_category: 'Wedding',
-            sender_name: 'Admin Lensaria',
+            sender_name: 'Admin Arams',
             sender_role: 'admin',
             sent_at: '18 Mei 2026, 13:10',
             status: 'terkirim',
@@ -232,7 +232,7 @@ export default function FilesIndex({
             file_type: 'hasil_foto',
             project: { id: 'p5', name: 'Engagement', client: { name: 'Rizky & Ayu' } },
             project_category: 'Engagement',
-            sender_name: 'Admin Lensaria',
+            sender_name: 'Admin Arams',
             sender_role: 'admin',
             sent_at: '16 Mei 2026, 17:30',
             status: 'dibuka',
@@ -627,7 +627,7 @@ export default function FilesIndex({
                             const statusMeta = getStatusBadge(file.status);
                             const clientName = file.project?.client?.name || file.client_name || 'Kevin & Jessica';
                             const projectName = file.project?.name || file.project_category || 'Wedding';
-                            const senderName = file.sender_name || 'Admin Lensaria';
+                            const senderName = file.sender_name || 'Admin Arams';
                             const isSupervisor = file.sender_role === 'supervisor' || senderName.toLowerCase().includes('supervisor');
 
                             return (
@@ -642,12 +642,12 @@ export default function FilesIndex({
                                         <div className="flex items-center gap-2.5">
                                             {/* Google Drive Triangle Icon */}
                                             <svg className="w-4 h-4 shrink-0" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
-                                                <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/>
-                                                <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.15z" fill="#ea4335"/>
-                                                <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>
-                                                <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
-                                                <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
+                                                <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da" />
+                                                <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47" />
+                                                <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.15z" fill="#ea4335" />
+                                                <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d" />
+                                                <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc" />
+                                                <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00" />
                                             </svg>
                                             <a
                                                 href={file.drive_url}

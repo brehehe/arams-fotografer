@@ -82,7 +82,7 @@ export default function UsersIndex({
         {
             id: 1,
             name: 'Andi Pratama',
-            email: 'andi.pratama@lensaria.com',
+            email: 'andi.pratama@arams.com',
             status: 'active',
             last_login_at: '2026-05-20 10:15:00',
             avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
@@ -91,7 +91,7 @@ export default function UsersIndex({
         {
             id: 2,
             name: 'Sinta Pratama',
-            email: 'sinta.pratama@lensaria.com',
+            email: 'sinta.pratama@arams.com',
             status: 'active',
             last_login_at: '2026-05-19 16:40:00',
             avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80',
@@ -99,8 +99,8 @@ export default function UsersIndex({
         },
         {
             id: 3,
-            name: 'Admin Lensaria',
-            email: 'admin@lensaria.com',
+            name: 'Admin Arams',
+            email: 'admin@arams.com',
             status: 'active',
             last_login_at: '2026-05-18 09:20:00',
             avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
@@ -614,7 +614,7 @@ export default function UsersIndex({
                             required
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            placeholder="nama@lensaria.com"
+                            placeholder="nama@arams.com"
                             className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-900 focus:bg-white focus:border-indigo-600 outline-hidden"
                         />
                     </div>

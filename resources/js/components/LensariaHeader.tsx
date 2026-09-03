@@ -25,7 +25,7 @@ import {
     Loader2,
 } from 'lucide-react';
 
-interface LensariaHeaderProps {
+interface AramsHeaderProps {
     onMenuToggle?: () => void;
     title?: string;
     breadcrumbs?: Array<{ label: string; href?: string }>;
@@ -56,15 +56,15 @@ interface NotificationItem {
     created_at: string;
 }
 
-export default function LensariaHeader({
+export default function AramsHeader({
     onMenuToggle,
     title = 'Dashboard',
     breadcrumbs,
-}: LensariaHeaderProps) {
+}: AramsHeaderProps) {
     const { auth, appSettings } = usePage().props as any;
     const user = auth?.user || {
-        name: 'Admin Lensaria',
-        email: 'admin@lensaria.com',
+        name: 'Admin Arams',
+        email: 'admin@arams.com',
         avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
         roles: [{ name: 'Administrator' }],
     };

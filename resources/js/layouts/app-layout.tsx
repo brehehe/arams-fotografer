@@ -1,5 +1,5 @@
 import React from 'react';
-import LensariaLayout from '@/layouts/LensariaLayout';
+import AramsLayout from '@/layouts/AramsLayout';
 
 interface AppLayoutProps {
     children: React.ReactNode;
@@ -13,8 +13,8 @@ export default function AppLayout({
     title,
 }: AppLayoutProps) {
     return (
-        <LensariaLayout breadcrumbs={breadcrumbs} title={title}>
+        <AramsLayout breadcrumbs={breadcrumbs} title={title}>
             {children}
-        </LensariaLayout>
+        </AramsLayout>
     );
 }

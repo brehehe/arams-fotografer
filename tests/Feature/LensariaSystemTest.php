@@ -12,7 +12,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
-class LensariaSystemTest extends TestCase
+class AramsSystemTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -27,8 +27,8 @@ class LensariaSystemTest extends TestCase
         Role::firstOrCreate(['name' => 'Photographer']);
 
         $this->adminUser = User::factory()->create([
-            'name' => 'Admin Lensaria',
-            'email' => 'admin@lensaria.com',
+            'name' => 'Admin Arams',
+            'email' => 'admin@arams.com',
         ]);
         $this->adminUser->assignRole('Admin');
     }

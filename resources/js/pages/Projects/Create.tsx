@@ -547,8 +547,8 @@ export default function ProjectsCreate({
             }));
         }
         return [
-            { value: 'Transfer BCA', label: 'Transfer BCA', subtitle: '8820192837 • PT Lensaria Kreatif Nusantara' },
-            { value: 'Transfer Mandiri', label: 'Transfer Mandiri', subtitle: '1370019283921 • PT Lensaria Kreatif Nusantara' },
+            { value: 'Transfer BCA', label: 'Transfer BCA', subtitle: '8820192837 • PT Arams Kreatif Nusantara' },
+            { value: 'Transfer Mandiri', label: 'Transfer Mandiri', subtitle: '1370019283921 • PT Arams Kreatif Nusantara' },
             { value: 'Kas Tunai', label: 'Kas Tunai / Cash', subtitle: 'Studio / Kantor' },
             { value: 'QRIS', label: 'QRIS / Instant', subtitle: 'Scan QRIS e-wallet' },
         ];
@@ -1653,11 +1653,10 @@ export default function ProjectsCreate({
                                                     [req.key]: !step2Requirements[req.key],
                                                 })
                                             }
-                                            className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 transition-colors ${
-                                                step2Requirements[req.key]
+                                            className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 transition-colors ${step2Requirements[req.key]
                                                     ? 'bg-[#4F46E5] text-white'
                                                     : 'bg-slate-100 border border-slate-300 text-transparent'
-                                            }`}
+                                                }`}
                                         >
                                             <Check className="w-3 h-3 stroke-[3]" />
                                         </div>
@@ -2015,11 +2014,10 @@ export default function ProjectsCreate({
                                                                 setTaxPercent(rate);
                                                                 setTaxType('percent');
                                                             }}
-                                                            className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-colors cursor-pointer ${
-                                                                taxType === 'percent' && taxPercent === rate
+                                                            className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-colors cursor-pointer ${taxType === 'percent' && taxPercent === rate
                                                                     ? 'bg-[#4F46E5] text-white'
                                                                     : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
-                                                            }`}
+                                                                }`}
                                                         >
                                                             {rate}%
                                                         </button>
@@ -2356,10 +2354,10 @@ export default function ProjectsCreate({
                                                     item.type === 'Video'
                                                         ? 'bg-cyan-50 text-cyan-700 border-cyan-200'
                                                         : item.type === 'Album'
-                                                        ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                                        : item.type === 'Special'
-                                                        ? 'bg-purple-50 text-purple-700 border-purple-200'
-                                                        : 'bg-sky-50 text-sky-700 border-sky-200';
+                                                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                                            : item.type === 'Special'
+                                                                ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                                                : 'bg-sky-50 text-sky-700 border-sky-200';
 
                                                 return (
                                                     <div key={item.id} className="p-2 rounded-lg bg-slate-50/80 border border-slate-100 space-y-1">
@@ -2388,54 +2386,54 @@ export default function ProjectsCreate({
                             </div>
                         </div>
 
-                            {/* Card Kanan: Alur Kerja & Tahapan Operasional Tim */}
-                            <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs space-y-4 flex flex-col justify-between h-full">
-                                <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
-                                    <div>
-                                        <h4 className="font-bold text-sm text-slate-900">
-                                            Alur Kerja &amp; Tahapan Operasional Tim
-                                        </h4>
-                                        <span className="text-[10px] text-slate-400">Proses kerja internal tim studio dari awal hingga akhir</span>
-                                    </div>
-                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 shrink-0">
-                                        {activeWorkflow.name}
-                                    </span>
+                        {/* Card Kanan: Alur Kerja & Tahapan Operasional Tim */}
+                        <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs space-y-4 flex flex-col justify-between h-full">
+                            <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
+                                <div>
+                                    <h4 className="font-bold text-sm text-slate-900">
+                                        Alur Kerja &amp; Tahapan Operasional Tim
+                                    </h4>
+                                    <span className="text-[10px] text-slate-400">Proses kerja internal tim studio dari awal hingga akhir</span>
                                 </div>
-
-                                <div className="overflow-x-auto flex-1">
-                                    <table className="w-full text-left text-xs">
-                                        <thead>
-                                            <tr className="text-[10px] uppercase font-bold text-slate-400 border-b border-slate-100">
-                                                <th className="py-2 px-1 text-center w-6">#</th>
-                                                <th className="py-2 px-2">Tahapan Kerja</th>
-                                                <th className="py-2 px-2">Aktivitas Tim</th>
-                                                <th className="py-2 px-2 text-right">Waktu Kerja</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100 text-[11px]">
-                                            {activeWorkflow.steps.map((w) => (
-                                                <tr key={w.num} className="hover:bg-slate-50/60">
-                                                    <td className="py-2 px-1 text-center">
-                                                        <span className="w-4 h-4 mx-auto rounded-full bg-[#4F46E5] text-white text-[9px] font-bold flex items-center justify-center">
-                                                            {w.num}
-                                                        </span>
-                                                    </td>
-                                                    <td className="py-2 px-2">
-                                                        <span className="font-semibold text-slate-800 block leading-tight break-words">{w.name}</span>
-                                                        <span className="text-[9px] font-bold text-slate-400 uppercase">{w.phase || 'Operasional'}</span>
-                                                    </td>
-                                                    <td className="py-2 px-2 text-slate-600 text-[10.5px] break-words min-w-[140px] leading-relaxed" title={w.activity || w.description}>
-                                                        {w.activity || w.description || '-'}
-                                                    </td>
-                                                    <td className="py-2 px-2 text-right font-mono font-bold text-indigo-700 text-[10px] whitespace-nowrap">
-                                                        {w.duration || w.dl || w.dur}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 shrink-0">
+                                    {activeWorkflow.name}
+                                </span>
                             </div>
+
+                            <div className="overflow-x-auto flex-1">
+                                <table className="w-full text-left text-xs">
+                                    <thead>
+                                        <tr className="text-[10px] uppercase font-bold text-slate-400 border-b border-slate-100">
+                                            <th className="py-2 px-1 text-center w-6">#</th>
+                                            <th className="py-2 px-2">Tahapan Kerja</th>
+                                            <th className="py-2 px-2">Aktivitas Tim</th>
+                                            <th className="py-2 px-2 text-right">Waktu Kerja</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 text-[11px]">
+                                        {activeWorkflow.steps.map((w) => (
+                                            <tr key={w.num} className="hover:bg-slate-50/60">
+                                                <td className="py-2 px-1 text-center">
+                                                    <span className="w-4 h-4 mx-auto rounded-full bg-[#4F46E5] text-white text-[9px] font-bold flex items-center justify-center">
+                                                        {w.num}
+                                                    </span>
+                                                </td>
+                                                <td className="py-2 px-2">
+                                                    <span className="font-semibold text-slate-800 block leading-tight break-words">{w.name}</span>
+                                                    <span className="text-[9px] font-bold text-slate-400 uppercase">{w.phase || 'Operasional'}</span>
+                                                </td>
+                                                <td className="py-2 px-2 text-slate-600 text-[10.5px] break-words min-w-[140px] leading-relaxed" title={w.activity || w.description}>
+                                                    {w.activity || w.description || '-'}
+                                                </td>
+                                                <td className="py-2 px-2 text-right font-mono font-bold text-indigo-700 text-[10px] whitespace-nowrap">
+                                                    {w.duration || w.dl || w.dur}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Row 3: 3 Bottom Summary Cards */}
@@ -2713,11 +2711,10 @@ export default function ProjectsCreate({
                             <button
                                 type="button"
                                 onClick={() => setAddonModalTab('database')}
-                                className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                                    addonModalTab === 'database'
+                                className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${addonModalTab === 'database'
                                         ? 'bg-white text-[#4F46E5] shadow-xs'
                                         : 'hover:text-slate-900'
-                                }`}
+                                    }`}
                             >
                                 <Database className="w-3.5 h-3.5" />
                                 <span>Master Data</span>
@@ -2725,11 +2722,10 @@ export default function ProjectsCreate({
                             <button
                                 type="button"
                                 onClick={() => setAddonModalTab('custom')}
-                                className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                                    addonModalTab === 'custom'
+                                className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${addonModalTab === 'custom'
                                         ? 'bg-white text-[#4F46E5] shadow-xs'
                                         : 'hover:text-slate-900'
-                                }`}
+                                    }`}
                             >
                                 <Sparkles className="w-3.5 h-3.5" />
                                 <span>Add-on Kustom</span>
@@ -2931,11 +2927,10 @@ export default function ProjectsCreate({
                             <button
                                 type="button"
                                 onClick={() => setExpenseModalTab('database')}
-                                className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                                    expenseModalTab === 'database'
+                                className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${expenseModalTab === 'database'
                                         ? 'bg-white text-emerald-600 shadow-xs'
                                         : 'hover:text-slate-900'
-                                }`}
+                                    }`}
                             >
                                 <Database className="w-3.5 h-3.5" />
                                 <span>Master Data</span>
@@ -2943,11 +2938,10 @@ export default function ProjectsCreate({
                             <button
                                 type="button"
                                 onClick={() => setExpenseModalTab('custom')}
-                                className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                                    expenseModalTab === 'custom'
+                                className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${expenseModalTab === 'custom'
                                         ? 'bg-white text-emerald-600 shadow-xs'
                                         : 'hover:text-slate-900'
-                                }`}
+                                    }`}
                             >
                                 <Sparkles className="w-3.5 h-3.5" />
                                 <span>Biaya Kustom</span>

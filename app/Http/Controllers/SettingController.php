@@ -49,7 +49,7 @@ class SettingController extends Controller
             ->log('Database snapshot backup berhasil diunduh');
 
         $data = [
-            'app' => 'Lensaria Photography Management System',
+            'app' => 'Arams Photography Management System',
             'version' => '1.0.0',
             'exported_at' => Carbon::now()->toIso8601String(),
             'exported_by' => auth()->user()?->name ?? 'Admin',
@@ -60,7 +60,7 @@ class SettingController extends Controller
             'invoices' => Invoice::all(),
         ];
 
-        $filename = 'lensaria_backup_' . date('Y-m-d_His') . '.json';
+        $filename = 'arams_backup_' . date('Y-m-d_His') . '.json';
 
         return response()->streamDownload(function () use ($data) {
             echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
@@ -76,7 +76,7 @@ class SettingController extends Controller
             ->event('data_exported')
             ->log("Data {$type} berhasil diexport ke CSV");
 
-        $filename = "lensaria_{$type}_" . date('Y-m-d') . '.csv';
+        $filename = "arams_{$type}_" . date('Y-m-d') . '.csv';
 
         return response()->streamDownload(function () use ($type) {
             $handle = fopen('php://output', 'w');

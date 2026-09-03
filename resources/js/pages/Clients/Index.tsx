@@ -946,11 +946,10 @@ export default function ClientsIndex({
                                     key={tab.id}
                                     type="button"
                                     onClick={() => handleStatusChange(tab.id)}
-                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer border ${
-                                        isTabActive
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer border ${isTabActive
                                             ? 'bg-[#380E13] text-white border-[#380E13] shadow-xs'
                                             : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200/60'
-                                    }`}
+                                        }`}
                                 >
                                     <span>{tab.label}</span>
                                     {tab.badge && (
@@ -995,11 +994,10 @@ export default function ClientsIndex({
                                 <button
                                     type="button"
                                     onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                                    className={`inline-flex items-center gap-1.5 px-3.5 py-2 border rounded-xl text-xs font-semibold shadow-2xs transition-colors cursor-pointer ${
-                                        status !== 'Semua' || city !== 'Semua' || source !== 'Semua'
+                                    className={`inline-flex items-center gap-1.5 px-3.5 py-2 border rounded-xl text-xs font-semibold shadow-2xs transition-colors cursor-pointer ${status !== 'Semua' || city !== 'Semua' || source !== 'Semua'
                                             ? 'bg-amber-50 border-amber-200 text-amber-900'
                                             : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-                                    }`}
+                                        }`}
                                 >
                                     <SlidersHorizontal className="w-3.5 h-3.5 text-slate-500" />
                                     <span>Filter</span>
@@ -1164,11 +1162,10 @@ export default function ClientsIndex({
                                                         <span className="font-bold text-xs text-slate-900 block font-mono">
                                                             {formatRupiah(totalVal)}
                                                         </span>
-                                                        <span className={`text-[11px] font-semibold block mt-0.5 ${
-                                                            isPaidOff || paidVal >= totalVal
+                                                        <span className={`text-[11px] font-semibold block mt-0.5 ${isPaidOff || paidVal >= totalVal
                                                                 ? 'text-emerald-600'
                                                                 : 'text-amber-600'
-                                                        }`}>
+                                                            }`}>
                                                             {isPaidOff || paidVal >= totalVal ? 'Lunas' : 'Belum Lunas'}
                                                         </span>
                                                     </div>
@@ -1176,13 +1173,12 @@ export default function ClientsIndex({
 
                                                 {/* Status Klien Badge */}
                                                 <TableCell className="py-4">
-                                                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-md border inline-block ${
-                                                        c.status === 'completed'
+                                                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-md border inline-block ${c.status === 'completed'
                                                             ? 'text-blue-700 bg-blue-50 border-blue-200'
                                                             : c.status === 'lead'
-                                                            ? 'text-amber-700 bg-amber-50 border-amber-200'
-                                                            : 'text-emerald-700 bg-emerald-50 border-emerald-200'
-                                                    }`}>
+                                                                ? 'text-amber-700 bg-amber-50 border-amber-200'
+                                                                : 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                                                        }`}>
                                                         {c.status === 'completed' ? 'Selesai' : c.status === 'lead' ? 'Lead' : 'Aktif'}
                                                     </span>
                                                 </TableCell>
@@ -1312,13 +1308,12 @@ export default function ClientsIndex({
                                                 </div>
                                             </div>
 
-                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${
-                                                c.status === 'completed'
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${c.status === 'completed'
                                                     ? 'text-blue-700 bg-blue-50 border-blue-200'
                                                     : c.status === 'lead'
-                                                    ? 'text-amber-700 bg-amber-50 border-amber-200'
-                                                    : 'text-emerald-700 bg-emerald-50 border-emerald-200'
-                                            }`}>
+                                                        ? 'text-amber-700 bg-amber-50 border-amber-200'
+                                                        : 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                                                }`}>
                                                 {c.status === 'completed' ? 'Selesai' : c.status === 'lead' ? 'Lead' : 'Aktif'}
                                             </span>
                                         </div>
@@ -1412,11 +1407,10 @@ export default function ClientsIndex({
                                         key={pg}
                                         type="button"
                                         onClick={() => handlePageChange(pg)}
-                                        className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center justify-center ${
-                                            (clients.current_page || 1) === pg
+                                        className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center justify-center ${(clients.current_page || 1) === pg
                                                 ? 'bg-slate-900 text-white'
                                                 : 'border border-slate-200 text-slate-700 hover:bg-slate-50'
-                                        }`}
+                                            }`}
                                     >
                                         {pg}
                                     </button>
@@ -1501,22 +1495,20 @@ export default function ClientsIndex({
                                         key={s.id}
                                         type="button"
                                         onClick={() => goToStep(s.id as any)}
-                                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex-1 justify-center ${
-                                            isActive
+                                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex-1 justify-center ${isActive
                                                 ? 'bg-white text-slate-900 shadow-2xs ring-1 ring-slate-200/80 font-extrabold'
                                                 : isPassed
-                                                ? 'text-emerald-700 hover:text-emerald-800 hover:bg-white/50'
-                                                : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'
-                                        }`}
+                                                    ? 'text-emerald-700 hover:text-emerald-800 hover:bg-white/50'
+                                                    : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'
+                                            }`}
                                     >
                                         <span
-                                            className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                                                isActive
+                                            className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${isActive
                                                     ? 'bg-[#C89445] text-white'
                                                     : isPassed
-                                                    ? 'bg-emerald-100 text-emerald-700'
-                                                    : 'bg-slate-200 text-slate-600'
-                                            }`}
+                                                        ? 'bg-emerald-100 text-emerald-700'
+                                                        : 'bg-slate-200 text-slate-600'
+                                                }`}
                                         >
                                             {isPassed ? <Check className="w-3 h-3 text-emerald-700 stroke-[3]" /> : s.stepNum}
                                         </span>
@@ -1547,11 +1539,10 @@ export default function ClientsIndex({
                                                 key={t.id}
                                                 type="button"
                                                 onClick={() => setFormData({ ...formData, client_type: t.id })}
-                                                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                                                    formData.client_type === t.id
+                                                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${formData.client_type === t.id
                                                         ? 'bg-amber-50/60 border-[#C89445] text-[#8C5D19] ring-2 ring-[#C89445]/20 font-bold'
                                                         : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
-                                                }`}
+                                                    }`}
                                             >
                                                 <span className="text-xs font-bold block">{t.label}</span>
                                                 <span className="text-[10px] text-slate-400 block mt-0.5">{t.desc}</span>
@@ -2090,7 +2081,7 @@ export default function ClientsIndex({
                                             <option value="Google">Google Search / SEO</option>
                                             <option value="Wedding Organizer">Vendor Partner / Wedding Organizer</option>
                                             <option value="Rekomendasi Teman">Rekomendasi Klien / Teman</option>
-                                            <option value="Website">Website Resmi Lensaria</option>
+                                            <option value="Website">Website Resmi Arams</option>
                                             <option value="Bridestory">Bridestory</option>
                                         </select>
                                     </div>
@@ -2166,11 +2157,10 @@ export default function ClientsIndex({
                                                         key={tag}
                                                         type="button"
                                                         onClick={() => toggleTag(tag)}
-                                                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                                                            isSelected
+                                                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${isSelected
                                                                 ? 'bg-amber-100 text-amber-800 border border-amber-300'
                                                                 : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {tag}
                                                     </button>
@@ -2199,134 +2189,134 @@ export default function ClientsIndex({
                     </div>
                 </Modal>
 
-            {/* ========================================================================= */}
-            {/* MODAL 2: DETAIL RINGKASAN KLIEN (Quick View) */}
-            {/* ========================================================================= */}
-            {detailModalClient && (
-                <Modal
-                    isOpen={!!detailModalClient}
-                    onClose={() => setDetailModalClient(null)}
-                    title={`Profil: ${detailModalClient.name}`}
-                    subtitle={`ID Klien: #${detailModalClient.id} • ${[detailModalClient.district, detailModalClient.city, detailModalClient.province].filter(Boolean).join(', ') || detailModalClient.city}`}
-                    maxWidth="2xl"
-                    icon={
-                        <img
-                            src={
-                                detailModalClient.avatar ||
-                                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
-                            }
-                            alt=""
-                            className="w-9 h-9 rounded-xl object-cover ring-1 ring-slate-200"
-                        />
-                    }
-                    footer={
-                        <Link
-                            href={`/clients/${detailModalClient.id}`}
-                            className="px-5 py-2 rounded-xl bg-[#0B1527] hover:bg-[#152238] text-white font-bold text-xs shadow-md flex items-center gap-1.5 cursor-pointer"
-                        >
-                            <span>Buka Halaman Detail Penuh</span>
-                            <ExternalLink className="w-3.5 h-3.5" />
-                        </Link>
-                    }
-                >
-                    <div className="space-y-4 text-xs">
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200/80">
-                            <div>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                                    Email
-                                </span>
-                                <span className="font-semibold text-slate-900 block mt-0.5 truncate">
-                                    {detailModalClient.email || '-'}
-                                </span>
-                            </div>
-                            <div>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                                    No. WhatsApp
-                                </span>
-                                <span className="font-semibold text-slate-900 font-mono block mt-0.5">
-                                    {detailModalClient.phone || '-'}
-                                </span>
-                            </div>
-                            <div>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                                    Instagram
-                                </span>
-                                <span className="font-semibold text-slate-900 block mt-0.5 truncate">
-                                    {detailModalClient.instagram || '-'}
-                                </span>
-                            </div>
-                            <div>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                                    Wilayah Domisili
-                                </span>
-                                <span className="font-semibold text-slate-900 block mt-0.5 truncate">
-                                    {[detailModalClient.district, detailModalClient.city, detailModalClient.province].filter(Boolean).join(', ') || detailModalClient.city || '-'}
-                                </span>
-                            </div>
-                            <div>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                                    Sumber Lead
-                                </span>
-                                <span className="font-semibold text-slate-900 block mt-0.5">
-                                    {detailModalClient.source || '-'}
-                                </span>
-                                {(detailModalClient.wedding_organizer?.name || detailModalClient.referral_name) && (
-                                    <span className="text-[10.5px] font-bold text-[#E8630A] block mt-0.5 truncate">
-                                        Ref: {detailModalClient.wedding_organizer?.name || detailModalClient.referral_name}
+                {/* ========================================================================= */}
+                {/* MODAL 2: DETAIL RINGKASAN KLIEN (Quick View) */}
+                {/* ========================================================================= */}
+                {detailModalClient && (
+                    <Modal
+                        isOpen={!!detailModalClient}
+                        onClose={() => setDetailModalClient(null)}
+                        title={`Profil: ${detailModalClient.name}`}
+                        subtitle={`ID Klien: #${detailModalClient.id} • ${[detailModalClient.district, detailModalClient.city, detailModalClient.province].filter(Boolean).join(', ') || detailModalClient.city}`}
+                        maxWidth="2xl"
+                        icon={
+                            <img
+                                src={
+                                    detailModalClient.avatar ||
+                                    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
+                                }
+                                alt=""
+                                className="w-9 h-9 rounded-xl object-cover ring-1 ring-slate-200"
+                            />
+                        }
+                        footer={
+                            <Link
+                                href={`/clients/${detailModalClient.id}`}
+                                className="px-5 py-2 rounded-xl bg-[#0B1527] hover:bg-[#152238] text-white font-bold text-xs shadow-md flex items-center gap-1.5 cursor-pointer"
+                            >
+                                <span>Buka Halaman Detail Penuh</span>
+                                <ExternalLink className="w-3.5 h-3.5" />
+                            </Link>
+                        }
+                    >
+                        <div className="space-y-4 text-xs">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200/80">
+                                <div>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                        Email
                                     </span>
-                                )}
+                                    <span className="font-semibold text-slate-900 block mt-0.5 truncate">
+                                        {detailModalClient.email || '-'}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                        No. WhatsApp
+                                    </span>
+                                    <span className="font-semibold text-slate-900 font-mono block mt-0.5">
+                                        {detailModalClient.phone || '-'}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                        Instagram
+                                    </span>
+                                    <span className="font-semibold text-slate-900 block mt-0.5 truncate">
+                                        {detailModalClient.instagram || '-'}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                        Wilayah Domisili
+                                    </span>
+                                    <span className="font-semibold text-slate-900 block mt-0.5 truncate">
+                                        {[detailModalClient.district, detailModalClient.city, detailModalClient.province].filter(Boolean).join(', ') || detailModalClient.city || '-'}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                        Sumber Lead
+                                    </span>
+                                    <span className="font-semibold text-slate-900 block mt-0.5">
+                                        {detailModalClient.source || '-'}
+                                    </span>
+                                    {(detailModalClient.wedding_organizer?.name || detailModalClient.referral_name) && (
+                                        <span className="text-[10.5px] font-bold text-[#E8630A] block mt-0.5 truncate">
+                                            Ref: {detailModalClient.wedding_organizer?.name || detailModalClient.referral_name}
+                                        </span>
+                                    )}
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                        Status
+                                    </span>
+                                    <span className="font-semibold text-emerald-700 block mt-0.5 capitalize">
+                                        {detailModalClient.status}
+                                    </span>
+                                </div>
                             </div>
-                            <div>
+
+                            {detailModalClient.tags && detailModalClient.tags.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                    {detailModalClient.tags.map((t, idx) => (
+                                        <span key={idx} className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold">
+                                            #{t}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+
+                            <div className="p-3.5 rounded-xl border border-slate-200/80 bg-white space-y-1">
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                                    Status
+                                    Alamat Domisili
                                 </span>
-                                <span className="font-semibold text-emerald-700 block mt-0.5 capitalize">
-                                    {detailModalClient.status}
-                                </span>
+                                <p className="text-slate-700 leading-relaxed">
+                                    {detailModalClient.address || 'Belum ada catatan alamat lengkap.'}
+                                </p>
                             </div>
                         </div>
+                    </Modal>
+                )}
 
-                        {detailModalClient.tags && detailModalClient.tags.length > 0 && (
-                            <div className="flex flex-wrap items-center gap-1.5">
-                                {detailModalClient.tags.map((t, idx) => (
-                                    <span key={idx} className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold">
-                                        #{t}
-                                    </span>
-                                ))}
-                            </div>
-                        )}
-
-                        <div className="p-3.5 rounded-xl border border-slate-200/80 bg-white space-y-1">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                                Alamat Domisili
-                            </span>
-                            <p className="text-slate-700 leading-relaxed">
-                                {detailModalClient.address || 'Belum ada catatan alamat lengkap.'}
-                            </p>
-                        </div>
-                    </div>
-                </Modal>
-            )}
-
-            {/* ========================================================================= */}
-            {/* MODAL 3: KONFIRMASI HAPUS (AlertConfirmation Component) */}
-            {/* ========================================================================= */}
-            <AlertConfirmation
-                isOpen={confirmDelete.isOpen}
-                onClose={() => setConfirmDelete({ isOpen: false })}
-                onConfirm={handleDeleteConfirmed}
-                title="Hapus Data Klien?"
-                description={
-                    <span>
-                        Apakah Anda yakin ingin menghapus data klien{' '}
-                        <strong className="text-slate-900">{confirmDelete.clientName}</strong>? Tindakan
-                        ini akan memindahkan data ke riwayat arsip.
-                    </span>
-                }
-                confirmText="Ya, Hapus Klien"
-                cancelText="Batal"
-                variant="danger"
-            />
+                {/* ========================================================================= */}
+                {/* MODAL 3: KONFIRMASI HAPUS (AlertConfirmation Component) */}
+                {/* ========================================================================= */}
+                <AlertConfirmation
+                    isOpen={confirmDelete.isOpen}
+                    onClose={() => setConfirmDelete({ isOpen: false })}
+                    onConfirm={handleDeleteConfirmed}
+                    title="Hapus Data Klien?"
+                    description={
+                        <span>
+                            Apakah Anda yakin ingin menghapus data klien{' '}
+                            <strong className="text-slate-900">{confirmDelete.clientName}</strong>? Tindakan
+                            ini akan memindahkan data ke riwayat arsip.
+                        </span>
+                    }
+                    confirmText="Ya, Hapus Klien"
+                    cancelText="Batal"
+                    variant="danger"
+                />
             </div>
         </>
     );

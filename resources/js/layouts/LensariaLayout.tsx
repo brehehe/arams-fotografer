@@ -1,20 +1,20 @@
 import React, { useState } from 'react';
 import { usePage } from '@inertiajs/react';
-import LensariaSidebar from '@/components/LensariaSidebar';
-import LensariaHeader from '@/components/LensariaHeader';
+import AramsSidebar from '@/components/AramsSidebar';
+import AramsHeader from '@/components/AramsHeader';
 import { Toaster } from '@/components/ui/sonner';
 
-interface LensariaLayoutProps {
+interface AramsLayoutProps {
     children: React.ReactNode;
     title?: string;
     breadcrumbs?: Array<{ label: string; href?: string }>;
 }
 
-export default function LensariaLayout({
+export default function AramsLayout({
     children,
     title = 'Dashboard',
     breadcrumbs,
-}: LensariaLayoutProps) {
+}: AramsLayoutProps) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const { props: pageProps } = usePage<any>();
 
@@ -160,14 +160,14 @@ export default function LensariaLayout({
                 }
             `}</style>
             {/* Desktop & Mobile Sidebar */}
-            <LensariaSidebar
+            <AramsSidebar
                 isOpen={sidebarOpen}
                 onClose={() => setSidebarOpen(false)}
             />
 
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col min-w-0 lg:pl-64 transition-all duration-300">
-                <LensariaHeader
+                <AramsHeader
                     title={title}
                     breadcrumbs={breadcrumbs}
                     onMenuToggle={() => setSidebarOpen(!sidebarOpen)}

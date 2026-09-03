@@ -1193,7 +1193,7 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
 
     // Storage Form State
     const [storageForm, setStorageForm] = useState({
-        gdrive_folder_template: getVal('gdrive_folder_template', 'Lensaria/{YEAR}/{CATEGORY}/{PROJECT_NAME}'),
+        gdrive_folder_template: getVal('gdrive_folder_template', 'Arams/{YEAR}/{CATEGORY}/{PROJECT_NAME}'),
         link_expiry_days: getVal('link_expiry_days', '0'),
         auto_generate_folders: getVal('auto_generate_folders', '1'),
     });
@@ -1220,7 +1220,7 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
 
     return (
         <div className="space-y-6 pb-16 w-full max-w-full">
-            <Head title="Settings - Lensaria Photography" />
+            <Head title="Settings - Arams Photography" />
 
             {/* Header Title & Subtitle */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1390,7 +1390,7 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
                                             value={form.company_name}
                                             onChange={(e) => setForm({ ...form, company_name: e.target.value })}
                                             className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:border-[#E8630A] focus:ring-2 focus:ring-[#E8630A]/20 outline-hidden transition-all font-medium"
-                                            placeholder="Contoh: Lensaria Photography"
+                                            placeholder="Contoh: Arams Photography"
                                         />
                                     </div>
 
@@ -1403,7 +1403,7 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
                                             value={form.company_legal_name}
                                             onChange={(e) => setForm({ ...form, company_legal_name: e.target.value })}
                                             className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:border-[#E8630A] focus:ring-2 focus:ring-[#E8630A]/20 outline-hidden transition-all"
-                                            placeholder="Contoh: PT Lensaria Kreatif Nusantara"
+                                            placeholder="Contoh: PT Arams Kreatif Nusantara"
                                         />
                                     </div>
                                 </div>
@@ -1678,12 +1678,12 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
 
                                     <div className="flex items-center gap-2.5">
                                         <Mail className="w-4 h-4 text-slate-400 shrink-0" />
-                                        <span>{form.company_email || 'hello@lensaria.com'}</span>
+                                        <span>{form.company_email || 'hello@arams.com'}</span>
                                     </div>
 
                                     <div className="flex items-center gap-2.5">
                                         <Globe className="w-4 h-4 text-slate-400 shrink-0" />
-                                        <span className="text-blue-600 font-medium">{form.company_website || 'https://www.lensaria.com'}</span>
+                                        <span className="text-blue-600 font-medium">{form.company_website || 'https://www.arams.com'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -4116,7 +4116,7 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
                                         <Database className="w-4 h-4" />
                                     </div>
                                     <div>
-                                        <span className="font-bold text-slate-800 block font-mono">lensaria_backup_2026-08-27_full.json</span>
+                                        <span className="font-bold text-slate-800 block font-mono">arams_backup_2026-08-27_full.json</span>
                                         <span className="text-[11px] text-slate-400">Dibuat otomatis oleh Sistem • 1.4 MB</span>
                                     </div>
                                 </div>
@@ -4134,8 +4134,8 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
                                         <Database className="w-4 h-4" />
                                     </div>
                                     <div>
-                                        <span className="font-bold text-slate-800 block font-mono">lensaria_backup_2026-08-20_weekly.json</span>
-                                        <span className="text-[11px] text-slate-400">Dibuat oleh Admin Lensaria • 1.2 MB</span>
+                                        <span className="font-bold text-slate-800 block font-mono">arams_backup_2026-08-20_weekly.json</span>
+                                        <span className="text-[11px] text-slate-400">Dibuat oleh Admin Arams • 1.2 MB</span>
                                     </div>
                                 </div>
                                 <a
@@ -4571,7 +4571,7 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
                             {/* Scrollable Form Body */}
                             <div className="p-6 space-y-4 text-xs overflow-y-auto flex-1">
                                 <p className="text-slate-500">
-                                    Urutan tahapan standar pengerjaan project di sistem Lensaria Photography:
+                                    Urutan tahapan standar pengerjaan project di sistem Arams Photography:
                                 </p>
 
                                 <div className="space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-200/80">
@@ -4717,7 +4717,7 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
             {/* MODAL 5: INTEGRASI GOOGLE DRIVE & STORAGE */}
             {/* ========================================================================= */}
             {activeModal === 'storage' && (() => {
-                const sampleFolderPreview = (storageForm.gdrive_folder_template || 'Lensaria/{YEAR}/{CATEGORY}/{PROJECT_NAME}')
+                const sampleFolderPreview = (storageForm.gdrive_folder_template || 'Arams/{YEAR}/{CATEGORY}/{PROJECT_NAME}')
                     .replace(/\{YEAR\}/g, '2026')
                     .replace(/\{CATEGORY\}/g, 'Wedding')
                     .replace(/\{PROJECT_NAME\}/g, 'Andi_Sinta_Wedding')

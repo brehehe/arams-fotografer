@@ -72,7 +72,7 @@ class DatabaseSeeder extends Seeder
         // 2. Users
         $owner = User::create([
             'name' => 'Andi Pratama',
-            'email' => 'andi.pratama@lensaria.com',
+            'email' => 'andi.pratama@arams.com',
             'phone' => '0812-3456-7890',
             'avatar' => 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
             'status' => 'active',
@@ -84,7 +84,7 @@ class DatabaseSeeder extends Seeder
 
         $photographer = User::create([
             'name' => 'Sinta Pratama',
-            'email' => 'sinta.pratama@lensaria.com',
+            'email' => 'sinta.pratama@arams.com',
             'phone' => '0812-9988-7766',
             'avatar' => 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
             'status' => 'active',
@@ -95,8 +95,8 @@ class DatabaseSeeder extends Seeder
         $photographer->assignRole($photographerRole);
 
         $admin = User::create([
-            'name' => 'Admin Lensaria',
-            'email' => 'admin@lensaria.com',
+            'name' => 'Admin Arams',
+            'email' => 'admin@arams.com',
             'phone' => '0812-1122-3344',
             'avatar' => 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
             'status' => 'active',
@@ -108,7 +108,7 @@ class DatabaseSeeder extends Seeder
 
         $editor = User::create([
             'name' => 'Rian Hidayat',
-            'email' => 'rian.editor@lensaria.com',
+            'email' => 'rian.editor@arams.com',
             'phone' => '0813-4455-6677',
             'avatar' => 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
             'status' => 'active',
@@ -120,10 +120,10 @@ class DatabaseSeeder extends Seeder
 
         // 3. Settings
         $defaultSettings = [
-            ['key' => 'company_name', 'value' => 'Lensaria Photography', 'group' => 'company'],
-            ['key' => 'company_legal_name', 'value' => 'PT Lensaria Kreatif Nusantara', 'group' => 'company'],
+            ['key' => 'company_name', 'value' => 'Arams Photography', 'group' => 'company'],
+            ['key' => 'company_legal_name', 'value' => 'PT Arams Kreatif Nusantara', 'group' => 'company'],
             ['key' => 'company_tagline', 'value' => 'Capturing Moments, Creating Timeless Memories', 'group' => 'company'],
-            ['key' => 'company_email', 'value' => 'hello@lensaria.com', 'group' => 'company'],
+            ['key' => 'company_email', 'value' => 'hello@arams.com', 'group' => 'company'],
             ['key' => 'company_phone', 'value' => '+62 812-3456-7890', 'group' => 'company'],
             ['key' => 'company_whatsapp', 'value' => '+62 812-3456-7890', 'group' => 'company'],
             ['key' => 'company_address', 'value' => 'Jl. Senopati No. 45, Kebayoran Baru, Jakarta Selatan 12190', 'group' => 'company'],
@@ -146,7 +146,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Transfer BCA',
             'code' => 'BCA',
             'account_number' => '8820192837',
-            'account_holder' => 'PT Lensaria Kreatif Nusantara',
+            'account_holder' => 'PT Arams Kreatif Nusantara',
             'icon' => 'Building',
             'status' => 'active',
         ]);
@@ -154,7 +154,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Transfer Mandiri',
             'code' => 'MANDIRI',
             'account_number' => '1370019283921',
-            'account_holder' => 'PT Lensaria Kreatif Nusantara',
+            'account_holder' => 'PT Arams Kreatif Nusantara',
             'icon' => 'Building',
             'status' => 'active',
         ]);
@@ -162,7 +162,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Transfer BNI',
             'code' => 'BNI',
             'account_number' => '0492817263',
-            'account_holder' => 'PT Lensaria Kreatif Nusantara',
+            'account_holder' => 'PT Arams Kreatif Nusantara',
             'icon' => 'Building',
             'status' => 'active',
         ]);
@@ -170,15 +170,15 @@ class DatabaseSeeder extends Seeder
             'name' => 'Transfer BRI',
             'code' => 'BRI',
             'account_number' => '020101002938531',
-            'account_holder' => 'PT Lensaria Kreatif Nusantara',
+            'account_holder' => 'PT Arams Kreatif Nusantara',
             'icon' => 'Building',
             'status' => 'active',
         ]);
         $qris = PaymentMethod::create([
-            'name' => 'QRIS Lensaria Studio',
+            'name' => 'QRIS Arams Studio',
             'code' => 'QRIS',
             'account_number' => 'NMID1029384756',
-            'account_holder' => 'Lensaria Studio',
+            'account_holder' => 'Arams Studio',
             'icon' => 'QrCode',
             'status' => 'active',
         ]);
@@ -186,7 +186,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Kartu Debit / Kredit (EDC Studio)',
             'code' => 'EDC',
             'account_number' => 'EDC-STUDIO-01',
-            'account_holder' => 'Lensaria Studio',
+            'account_holder' => 'Arams Studio',
             'icon' => 'CreditCard',
             'status' => 'active',
         ]);
@@ -201,7 +201,7 @@ class DatabaseSeeder extends Seeder
         $noteTemplatesData = [
             [
                 'title' => 'Terms of Service (TOS) Wedding & Prewedding',
-                'content' => "1. Booking fee (DP) minimal 30% dari total nilai paket untuk mengunci tanggal pemotretan.\n2. Pelunasan sisa tagihan wajib diselesaikan maksimal H-7 sebelum hari H acara.\n3. Hak cipta foto milik Lensaria Photography, klien diberikan lisensi penggunaan personal.\n4. Revisi editing maksimal 2 (dua) kali dengan catatan tertulis dalam waktu 14 hari sejak penyerahan draft.",
+                'content' => "1. Booking fee (DP) minimal 30% dari total nilai paket untuk mengunci tanggal pemotretan.\n2. Pelunasan sisa tagihan wajib diselesaikan maksimal H-7 sebelum hari H acara.\n3. Hak cipta foto milik Arams Photography, klien diberikan lisensi penggunaan personal.\n4. Revisi editing maksimal 2 (dua) kali dengan catatan tertulis dalam waktu 14 hari sejak penyerahan draft.",
                 'type' => 'terms_and_conditions',
                 'status' => 'active',
             ],
@@ -213,7 +213,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'title' => 'Catatan Tambahan & Instruksi Pembayaran Invoice',
-                'content' => "1. Pembayaran resmi hanya dilakukan melalui rekening atas nama PT Lensaria Kreatif Nusantara.\n2. Mohon cantumkan Nomor Invoice pada berita transfer.\n3. Konfirmasi bukti transfer dapat dikirimkan melalui WhatsApp Finance Studio: +62 812-3456-7890.\n4. Kwitansi dan update status pembayaran akan diterbitkan otomatis dalam 1x24 jam.",
+                'content' => "1. Pembayaran resmi hanya dilakukan melalui rekening atas nama PT Arams Kreatif Nusantara.\n2. Mohon cantumkan Nomor Invoice pada berita transfer.\n3. Konfirmasi bukti transfer dapat dikirimkan melalui WhatsApp Finance Studio: +62 812-3456-7890.\n4. Kwitansi dan update status pembayaran akan diterbitkan otomatis dalam 1x24 jam.",
                 'type' => 'invoice_notes',
                 'status' => 'active',
             ],
@@ -707,7 +707,7 @@ class DatabaseSeeder extends Seeder
             'progress' => 100,
             'event_date' => Carbon::parse('2026-07-28'),
             'deadline' => Carbon::parse('2026-05-25'),
-            'location' => 'Lensaria Studio Senopati',
+            'location' => 'Arams Studio Senopati',
             'photographer_id' => $photographer->id,
             'price' => 15000000,
             'total_amount' => 15000000,
@@ -954,7 +954,7 @@ class DatabaseSeeder extends Seeder
             [
                 'project_id' => $p1->id,
                 'name' => 'Raw 4K Cinema Footage & Drone (Dropbox)',
-                'drive_url' => 'https://www.dropbox.com/sh/lensaria/wedding-andi-sinta-raw',
+                'drive_url' => 'https://www.dropbox.com/sh/arams/wedding-andi-sinta-raw',
                 'file_type' => 'dropbox',
                 'size' => 64200000000,
                 'created_by' => $photographer->id,
@@ -970,7 +970,7 @@ class DatabaseSeeder extends Seeder
             [
                 'project_id' => $p3->id,
                 'name' => 'Birthday Photos & Reels Video (OneDrive)',
-                'drive_url' => 'https://1drv.ms/f/s!AmLensariaBirthdayKeira',
+                'drive_url' => 'https://1drv.ms/f/s!AmAramsBirthdayKeira',
                 'file_type' => 'onedrive',
                 'size' => 4500000000,
                 'created_by' => $photographer->id,

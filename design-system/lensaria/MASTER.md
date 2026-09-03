@@ -1,12 +1,12 @@
-# Design System Master File — Lensaria Photography Management
+# Design System Master File — Arams Photography Management
 
-> **LOGIC:** When building a specific page, first check `design-system/lensaria/pages/[page-name].md`.
+> **LOGIC:** When building a specific page, first check `design-system/arams/pages/[page-name].md`.
 > If that file exists, its rules **override** this Master file.
 > If not, strictly follow the rules below.
 
 ---
 
-**Project:** Lensaria Photography Management System  
+**Project:** Arams Photography Management System  
 **Category:** Photography / Creative Business Management Platform  
 **Target Stack:** Laravel 11 + React (Inertia.js) + Tailwind CSS + Lucide Icons + Framer Motion  
 

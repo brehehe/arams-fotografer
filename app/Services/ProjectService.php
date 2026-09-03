@@ -686,7 +686,7 @@ class ProjectService
             'logo' => \App\Models\Setting::get('company_logo'),
             'tagline' => \App\Models\Setting::get('company_tagline', 'Capturing Moments, Creating Timeless Memories'),
             'phone' => \App\Models\Setting::get('company_phone', '+62 812-3456-7890'),
-            'email' => \App\Models\Setting::get('company_email', 'hello@lensaria.com'),
+            'email' => \App\Models\Setting::get('company_email', 'hello@arams.com'),
             'address' => \App\Models\Setting::get('company_address', 'Jl. Senopati No. 45, Kebayoran Baru, Jakarta Selatan 12190'),
             'instagram' => \App\Models\Setting::get('company_instagram', 'aramspictures'),
             'website' => \App\Models\Setting::get('company_website', 'https://www.arams.com'),

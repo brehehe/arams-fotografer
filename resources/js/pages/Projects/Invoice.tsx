@@ -136,7 +136,7 @@ export default function ProjectInvoice({
     const studioLegalName = company_settings?.legal_name || appSettings?.company_legal_name || 'Arams Pictures Studio';
     const studioTagline = company_settings?.tagline || appSettings?.company_tagline || 'Capturing Moments, Creating Timeless Memories';
     const studioPhone = company_settings?.phone || appSettings?.company_phone || '+62 812-3456-7890';
-    const studioEmail = company_settings?.email || appSettings?.company_email || 'hello@lensaria.com';
+    const studioEmail = company_settings?.email || appSettings?.company_email || 'hello@arams.com';
     const studioAddress =
         company_settings?.address ||
         appSettings?.company_address ||
@@ -196,7 +196,7 @@ export default function ProjectInvoice({
         tagline: studioTagline || 'Capturing Moments, Creating Timeless Memories',
         bankName: defaultPaymentMethod.name || 'Bank Mandiri',
         bankAccount: defaultPaymentMethod.account_number || '123-00-1234567-8',
-        bankHolder: defaultPaymentMethod.account_holder || (studioLegalName ? `a.n. ${studioLegalName}` : 'a.n. PT Lensaria Kreatif Nusantara'),
+        bankHolder: defaultPaymentMethod.account_holder || (studioLegalName ? `a.n. ${studioLegalName}` : 'a.n. PT Arams Kreatif Nusantara'),
         note1: 'DP (uang muka) digunakan sebagai konfirmasi booking tanggal.',
         note2: 'Sisa pembayaran akan diinformasikan sesuai progress project.',
         autoSendNote: 'Invoice ini akan dikirim otomatis ke klien setelah Anda mengirimkan melalui WhatsApp atau Email.',
@@ -1047,7 +1047,7 @@ export default function ProjectInvoice({
                                             <ul className="space-y-1 text-slate-600 leading-relaxed">
                                                 <li className="flex items-start gap-1.5">
                                                     <Check className="w-3 h-3 text-emerald-600 shrink-0 mt-0.5" />
-                                                    <span>Invoice ini sah dan diproses secara otomatis oleh sistem Lensaria.</span>
+                                                    <span>Invoice ini sah dan diproses secara otomatis oleh sistem Arams.</span>
                                                 </li>
                                                 <li className="flex items-start gap-1.5">
                                                     <Check className="w-3 h-3 text-emerald-600 shrink-0 mt-0.5" />

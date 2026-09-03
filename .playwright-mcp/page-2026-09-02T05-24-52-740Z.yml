@@ -30,7 +30,7 @@
       - generic [ref=e45]:
         - generic [ref=e46]:
           - generic [ref=e47]: Email
-          - textbox "Masukkan email Anda" [ref=e49]: andi.pratama@lensaria.com
+          - textbox "Masukkan email Anda" [ref=e49]: andi.pratama@arams.com
         - generic [ref=e50]:
           - generic [ref=e51]: Password
           - generic [ref=e52]:

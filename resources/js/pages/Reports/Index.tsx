@@ -295,9 +295,8 @@ function RevenueAreaChart({
                                         x="0"
                                         y="0"
                                         textAnchor="middle"
-                                        className={`text-[9px] font-bold font-mono ${
-                                            isHovered ? 'fill-white' : 'fill-slate-700'
-                                        }`}
+                                        className={`text-[9px] font-bold font-mono ${isHovered ? 'fill-white' : 'fill-slate-700'
+                                            }`}
                                     >
                                         {formatRupiahCompact(pt.revenue)}
                                     </text>
@@ -309,9 +308,8 @@ function RevenueAreaChart({
                                 x={pt.x}
                                 y={chartHeight - 12}
                                 textAnchor="middle"
-                                className={`text-[11px] pointer-events-none transition-all duration-150 ${
-                                    isHovered ? 'fill-purple-600 font-bold' : 'fill-slate-500 font-medium'
-                                }`}
+                                className={`text-[11px] pointer-events-none transition-all duration-150 ${isHovered ? 'fill-purple-600 font-bold' : 'fill-slate-500 font-medium'
+                                    }`}
                             >
                                 {pt.month}
                             </text>
@@ -362,7 +360,7 @@ export default function ReportIndex({
 
     return (
         <div className="w-full max-w-full space-y-6 pb-12">
-            <Head title="Laporan & Analitik Studio - Lensaria Photography" />
+            <Head title="Laporan & Analitik Studio - Arams Photography" />
 
             {/* ── HEADER TITLE & CONTROLS ── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -400,9 +398,8 @@ export default function ReportIndex({
                                         key={yr}
                                         type="button"
                                         onClick={() => handleYearChange(yr)}
-                                        className={`w-full text-left px-4 py-2 text-xs font-semibold hover:bg-purple-50 transition-colors cursor-pointer flex items-center justify-between ${
-                                            selectedYear === yr ? 'text-purple-600 bg-purple-50/60 font-bold' : 'text-slate-700'
-                                        }`}
+                                        className={`w-full text-left px-4 py-2 text-xs font-semibold hover:bg-purple-50 transition-colors cursor-pointer flex items-center justify-between ${selectedYear === yr ? 'text-purple-600 bg-purple-50/60 font-bold' : 'text-slate-700'
+                                            }`}
                                     >
                                         <span>Tahun {yr}</span>
                                         {selectedYear === yr && <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />}

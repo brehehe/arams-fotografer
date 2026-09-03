@@ -348,7 +348,7 @@ export default function ClientDetail({
                         setRegionCities(data);
                     }
                 })
-                .catch(() => {})
+                .catch(() => { })
                 .finally(() => setLoadingCities(false));
         }
 
@@ -361,7 +361,7 @@ export default function ClientDetail({
                         setRegionDistricts(data);
                     }
                 })
-                .catch(() => {})
+                .catch(() => { })
                 .finally(() => setLoadingDistricts(false));
         }
 
@@ -374,7 +374,7 @@ export default function ClientDetail({
                         setRegionVillages(data);
                     }
                 })
-                .catch(() => {})
+                .catch(() => { })
                 .finally(() => setLoadingVillages(false));
         }
     }, [client.province_code, client.city_code, client.district_code]);
@@ -407,7 +407,7 @@ export default function ClientDetail({
                         setRegionCities(data);
                     }
                 })
-                .catch(() => {})
+                .catch(() => { })
                 .finally(() => setLoadingCities(false));
         }
     };
@@ -437,7 +437,7 @@ export default function ClientDetail({
                         setRegionDistricts(data);
                     }
                 })
-                .catch(() => {})
+                .catch(() => { })
                 .finally(() => setLoadingDistricts(false));
         }
     };
@@ -464,7 +464,7 @@ export default function ClientDetail({
                         setRegionVillages(data);
                     }
                 })
-                .catch(() => {})
+                .catch(() => { })
                 .finally(() => setLoadingVillages(false));
         }
     };
@@ -1083,7 +1083,7 @@ export default function ClientDetail({
             projectId: '3',
             title: 'Raw & Edited Engagement Photos',
             url: 'https://drive.google.com/drive/folders/3c9dE-5vWp2yN8j7k6h5',
-            uploader: 'Admin Lensaria',
+            uploader: 'Admin Arams',
             date: '12 Januari 2024',
         },
     ]);
@@ -1138,7 +1138,7 @@ export default function ClientDetail({
                     date: isUpcoming ? 'Belum Dimulai' : '20 Mei 2024',
                     status: isUpcoming ? ('pending' as const) : ('done' as const),
                     progress: isUpcoming ? 0 : 100,
-                    pic: 'Art Director Lensaria',
+                    pic: 'Art Director Arams',
                     description: stageDescriptions['Concept & Briefing'],
                 },
                 {
@@ -1156,7 +1156,7 @@ export default function ClientDetail({
                     date: isCompleted ? 'Selesai' : isUpcoming ? 'Belum Dimulai' : 'Sedang Dikerjakan (60%)',
                     status: isCompleted ? ('done' as const) : isUpcoming ? ('pending' as const) : ('active' as const),
                     progress: isCompleted ? 100 : isUpcoming ? 0 : 60,
-                    pic: 'Lead Retoucher Lensaria',
+                    pic: 'Lead Retoucher Arams',
                     description: stageDescriptions['Photo Editing & Retouch'],
                 },
                 {
@@ -1187,7 +1187,7 @@ export default function ClientDetail({
                 date: isUpcoming ? 'Belum Dimulai' : '25 Mei 2024',
                 status: isUpcoming ? ('pending' as const) : ('done' as const),
                 progress: isUpcoming ? 0 : 100,
-                pic: 'Project Officer Lensaria',
+                pic: 'Project Officer Arams',
                 description: stageDescriptions['TM Wedding'],
             },
             {
@@ -1325,7 +1325,7 @@ export default function ClientDetail({
                 projectId: String(selectedProject?.id || '1'),
                 title: newDriveTitle.trim(),
                 url: newDriveUrl.trim(),
-                uploader: 'Admin Lensaria',
+                uploader: 'Admin Arams',
                 date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
             },
         ]);
@@ -1352,7 +1352,7 @@ export default function ClientDetail({
             icon_color: 'text-amber-500 bg-amber-50',
             content:
                 'Klien menginginkan hasil foto dengan tone warm natural dan video cinematic. Fokus pada emotion dan candid moment.',
-            author: 'Admin Lensaria',
+            author: 'Admin Arams',
             date: '18 Mei 2024, 10:30 WIB',
             project: 'Prewedding Kevin & Jessica',
         },
@@ -1378,7 +1378,7 @@ export default function ClientDetail({
             icon_color: 'text-blue-500 bg-blue-50',
             content:
                 'DP sudah dibayarkan tanggal 15 Mei 2024 sebesar Rp 10.000.000. Invoice akan dikirim setelah meeting TM Wedding.',
-            author: 'Admin Lensaria',
+            author: 'Admin Arams',
             date: '16 Mei 2024, 14:05 WIB',
             project: 'Wedding Kevin & Jessica',
         },
@@ -1420,7 +1420,7 @@ export default function ClientDetail({
             border_color: meta.border,
             icon_color: meta.icon,
             content: noteInputText.trim(),
-            author: 'Admin Lensaria',
+            author: 'Admin Arams',
             date: `${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}, ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB`,
             project: client.projects?.[0]?.name || 'Wedding Kevin & Jessica',
         };
@@ -1451,7 +1451,7 @@ export default function ClientDetail({
             icon_type: 'whatsapp',
             title: 'Konfirmasi Jadwal Technical Meeting',
             content: 'Klien menyetujui jadwal technical meeting prewedding hari Sabtu, 25 Mei 2024 pukul 14:00 WIB di studio.',
-            author: 'Admin Lensaria',
+            author: 'Admin Arams',
             date: '18 Mei 2024, 15:30 WIB',
             status: 'Terkirim & Dibalas',
         },
@@ -1496,7 +1496,7 @@ export default function ClientDetail({
                 icon_type: newCommFormData.channel.toLowerCase(),
                 title: newCommFormData.title.trim(),
                 content: newCommFormData.content.trim(),
-                author: 'Admin Lensaria',
+                author: 'Admin Arams',
                 date: `${formatDate(newCommFormData.date)}, ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB`,
                 status: 'Selesai',
             },
@@ -1742,497 +1742,1395 @@ export default function ClientDetail({
                         <div className="bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden">
                             {/* Tab Bar Header inside Card */}
                             <div className="px-6 pt-4 border-b border-slate-100 flex items-center gap-7 sm:gap-8 overflow-x-auto scrollbar-none">
-                            {[
-                                { id: 'ringkasan', label: 'Ringkasan' },
-                                { id: 'projects', label: 'Projects & Orders' },
-                                { id: 'pembayaran', label: 'Pembayaran' },
-                                { id: 'files', label: 'Files' },
-                                { id: 'catatan', label: 'Catatan' },
-                                { id: 'komunikasi', label: 'Riwayat Komunikasi' },
-                                { id: 'akun', label: 'Informasi Akun' },
-                            ].map((t) => {
-                                const isActive = mainTab === t.id;
-                                return (
-                                    <button
-                                        key={t.id}
-                                        type="button"
-                                        onClick={() => setMainTab(t.id as any)}
-                                        className={`pb-3 text-xs whitespace-nowrap cursor-pointer relative transition-colors ${
-                                            isActive
-                                                ? 'font-extrabold text-[#E57A00]'
-                                                : 'font-semibold text-slate-500 hover:text-slate-900'
-                                        }`}
-                                    >
-                                        {t.label}
-                                        {isActive && (
-                                            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#E57A00] rounded-full" />
-                                        )}
-                                    </button>
-                                );
-                            })}
-                        </div>
-
-                        {/* TAB 1: RINGKASAN (INFORMASI DETAIL KLIEN - EXACT MATCH TO SCREENSHOT) */}
-                        {mainTab === 'ringkasan' && (
-                            <div className="p-6 space-y-5 animate-in fade-in duration-150">
-                                <h3 className="text-sm font-extrabold text-slate-900 tracking-tight">
-                                    Informasi Detail Klien
-                                </h3>
-
-                                {/* SECTION 1 & 2: CPW & CPP Side by Side */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {/* CPW Card */}
-                                    <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5">
-                                        <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
-                                            <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
-                                                <User className="w-3.5 h-3.5" />
-                                            </div>
-                                            <h4 className="text-xs font-bold text-slate-900">
-                                                Informasi Calon Pengantin (CPW)
-                                            </h4>
-                                        </div>
-
-                                        <div className="space-y-2.5 text-xs">
-                                            <div className="flex items-start">
-                                                <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Nama Lengkap</span>
-                                                <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                <span className="font-semibold text-slate-900 leading-snug break-words flex-1 min-w-0">
-                                                    {client.bride_name || client.name?.split('&')?.[0]?.trim() || 'Andi Pratama'}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-start">
-                                                <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Panggilan</span>
-                                                <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                    {client.bride_nickname || (client.bride_name ? client.bride_name.split(' ')[0] : client.name?.split(' ')?.[0]) || 'Andi'}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-start">
-                                                <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Tanggal Lahir</span>
-                                                <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                    {client.bride_birth_date ? formatDate(client.bride_birth_date) : '15 Mei 1992'}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-start">
-                                                <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Pekerjaan</span>
-                                                <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                    {client.job_title || 'Pengusaha'}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-start">
-                                                <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Akun Instagram</span>
-                                                <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                <span className="font-semibold text-slate-900 leading-snug break-words flex-1 min-w-0">
-                                                    {client.instagram || '@kevin_sanjaya'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* CPP Card */}
-                                    <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5">
-                                        <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
-                                            <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
-                                                <User className="w-3.5 h-3.5" />
-                                            </div>
-                                            <h4 className="text-xs font-bold text-slate-900">
-                                                Informasi Calon Pengantin (CPP)
-                                            </h4>
-                                        </div>
-
-                                        <div className="space-y-2.5 text-xs">
-                                            <div className="flex items-start">
-                                                <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Nama Lengkap</span>
-                                                <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                <span className="font-semibold text-slate-900 leading-snug break-words flex-1 min-w-0">
-                                                    {client.groom_name || client.partner_name || (client.name?.includes('&') ? client.name.split('&')[1]?.trim() : 'Sarah Wijaya')}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-start">
-                                                <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Panggilan</span>
-                                                <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                    {client.groom_nickname || (client.partner_name ? client.partner_name.split(' ')[0] : 'Sarah')}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-start">
-                                                <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Tanggal Lahir</span>
-                                                <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                    {client.groom_birth_date ? formatDate(client.groom_birth_date) : '03 Agustus 1992'}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-start">
-                                                <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Pekerjaan</span>
-                                                <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                    {client.occupation || 'Aktris'}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-start">
-                                                <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Akun Instagram</span>
-                                                <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                <span className="font-semibold text-slate-900 leading-snug break-words flex-1 min-w-0">
-                                                    {client.partner_instagram || client.instagram || '@jessica_mila'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* SECTION 3: Informasi Alamat & Kontak (Numbered 1-12 Badges) */}
-                                <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5">
-                                    <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
-                                        <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
-                                            <MapPin className="w-3.5 h-3.5" />
-                                        </div>
-                                        <h4 className="text-xs font-bold text-slate-900">
-                                            Informasi Alamat & Kontak
-                                        </h4>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-xs">
-                                        {/* Column 1: Items 1 to 6 */}
-                                        <div className="space-y-2.5">
-                                            <div className="flex items-start">
-                                                <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
-                                                    <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">1</span>
-                                                    <span className="text-[11px]">Provinsi</span>
-                                                </div>
-                                                <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.province || 'DKI Jakarta'}</span>
-                                            </div>
-                                            <div className="flex items-start">
-                                                <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
-                                                    <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">2</span>
-                                                    <span className="text-[11px]">Kota / Kabupaten</span>
-                                                </div>
-                                                <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.city || 'Jakarta Selatan'}</span>
-                                            </div>
-                                            <div className="flex items-start">
-                                                <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
-                                                    <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">3</span>
-                                                    <span className="text-[11px]">Kecamatan</span>
-                                                </div>
-                                                <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.district || 'Kebayoran Baru'}</span>
-                                            </div>
-                                            <div className="flex items-start">
-                                                <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
-                                                    <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">4</span>
-                                                    <span className="text-[11px]">Kelurahan</span>
-                                                </div>
-                                                <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.village || 'Melawai'}</span>
-                                            </div>
-                                            <div className="flex items-start">
-                                                <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
-                                                    <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">5</span>
-                                                    <span className="text-[11px]">Kode Pos</span>
-                                                </div>
-                                                <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                <span className="font-mono font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.postal_code || '12160'}</span>
-                                            </div>
-                                            <div className="flex items-start">
-                                                <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
-                                                    <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">6</span>
-                                                    <span className="text-[11px]">Alamat Lengkap</span>
-                                                </div>
-                                                <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                <span className="font-semibold text-slate-900 leading-relaxed flex-1 min-w-0">
-                                                    {client.address || 'Jl. Senopati No. 45, Kebayoran Baru, Jakarta Selatan'}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        {/* Column 2: Items 7 to 12 */}
-                                        <div className="space-y-2.5">
-                                            <div className="flex items-start">
-                                                <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
-                                                    <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">7</span>
-                                                    <span className="text-[11px]">Contact Person</span>
-                                                </div>
-                                                <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.contact_person || 'Jessica Mila (CPP)'}</span>
-                                            </div>
-                                            <div className="flex items-start">
-                                                <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
-                                                    <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">8</span>
-                                                    <span className="text-[11px]">Pref. Kontak</span>
-                                                </div>
-                                                <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                <span className="font-semibold text-slate-900 leading-snug capitalize flex-1 min-w-0">
-                                                    {client.preferred_contact === 'email' ? 'Email' : client.preferred_contact === 'phone' ? 'Telepon' : 'WhatsApp'}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-start">
-                                                <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
-                                                    <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">9</span>
-                                                    <span className="text-[11px]">Pekerjaan</span>
-                                                </div>
-                                                <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.occupation || 'Aktris'}</span>
-                                            </div>
-                                            <div className="flex items-start">
-                                                <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
-                                                    <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">10</span>
-                                                    <span className="text-[11px]">Email Aktif</span>
-                                                </div>
-                                                <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                <span className="font-semibold text-slate-900 leading-snug break-words flex-1 min-w-0">{client.email || 'client@arams.com'}</span>
-                                            </div>
-                                            <div className="flex items-start">
-                                                <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
-                                                    <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">11</span>
-                                                    <span className="text-[11px]">Akun Instagram</span>
-                                                </div>
-                                                <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                <span className="font-semibold text-slate-900 leading-snug break-words flex-1 min-w-0">{client.instagram || '@kevinjessica_wedding'}</span>
-                                            </div>
-                                            <div className="flex items-start">
-                                                <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
-                                                    <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">12</span>
-                                                    <span className="text-[11px]">Sosmed Lain</span>
-                                                </div>
-                                                <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                <span className="font-semibold text-slate-900 leading-relaxed flex-1 min-w-0">
-                                                    {client.other_social_media || 'TikTok: @kevinjessica_wed • YouTube: Kevin & Mila'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* SECTION 4: Informasi Acara / Project */}
-                                <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5">
-                                    <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
-                                        <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
-                                            <Calendar className="w-3.5 h-3.5" />
-                                        </div>
-                                        <h4 className="text-xs font-bold text-slate-900">
-                                            Informasi Acara / Project
-                                        </h4>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2.5 text-xs">
-                                        <div className="space-y-2.5">
-                                            <div className="flex items-start">
-                                                <span className="text-slate-400 w-28 sm:w-32 shrink-0 text-[11px] pt-0.5">Jenis Acara</span>
-                                                <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                    {client.projects?.[0]?.category?.name || 'Wedding'}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-start">
-                                                <span className="text-slate-400 w-28 sm:w-32 shrink-0 text-[11px] pt-0.5">Tanggal Acara</span>
-                                                <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                    {client.projects?.[0]?.event_date ? formatDate(client.projects[0].event_date) : '22 Mei 2026'}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-start">
-                                                <span className="text-slate-400 w-28 sm:w-32 shrink-0 text-[11px] pt-0.5">Waktu Acara</span>
-                                                <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                    {client.projects?.[0]?.event_time || '16:00 – Selesai'}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-2.5">
-                                            <div className="flex items-start">
-                                                <span className="text-slate-400 w-28 sm:w-32 shrink-0 text-[11px] pt-0.5">Lokasi / Venue</span>
-                                                <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                    {client.projects?.[0]?.location || 'Grand Ballroom Hotel Mulia Senayan, Jakarta'}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-start">
-                                                <span className="text-slate-400 w-28 sm:w-32 shrink-0 text-[11px] pt-0.5">Paket Layanan</span>
-                                                <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                    {client.projects?.[0]?.package?.name || 'Royal Wedding Package'}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-start">
-                                                <span className="text-slate-400 w-28 sm:w-32 shrink-0 text-[11px] pt-0.5">Kategori Project</span>
-                                                <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                    {client.projects?.[0]?.category?.name || 'Wedding'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* SECTION 5: Informasi Tambahan */}
-                                <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-2.5">
-                                    <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
-                                        <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
-                                            <FileText className="w-3.5 h-3.5" />
-                                        </div>
-                                        <h4 className="text-xs font-bold text-slate-900">
-                                            Informasi Tambahan
-                                        </h4>
-                                    </div>
-
-                                    <div className="flex items-start text-xs">
-                                        <span className="text-slate-400 w-20 shrink-0 text-[11px] pt-0.5">Catatan</span>
-                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                        <p className="font-medium text-slate-700 leading-relaxed flex-1 min-w-0">
-                                            {client.notes || 'Klien menginginkan konsep elegan & timeless. Request outdoor photo session di venue.'}
-                                        </p>
-                                    </div>
-                                </div>
+                                {[
+                                    { id: 'ringkasan', label: 'Ringkasan' },
+                                    { id: 'projects', label: 'Projects & Orders' },
+                                    { id: 'pembayaran', label: 'Pembayaran' },
+                                    { id: 'files', label: 'Files' },
+                                    { id: 'catatan', label: 'Catatan' },
+                                    { id: 'komunikasi', label: 'Riwayat Komunikasi' },
+                                    { id: 'akun', label: 'Informasi Akun' },
+                                ].map((t) => {
+                                    const isActive = mainTab === t.id;
+                                    return (
+                                        <button
+                                            key={t.id}
+                                            type="button"
+                                            onClick={() => setMainTab(t.id as any)}
+                                            className={`pb-3 text-xs whitespace-nowrap cursor-pointer relative transition-colors ${isActive
+                                                    ? 'font-extrabold text-[#E57A00]'
+                                                    : 'font-semibold text-slate-500 hover:text-slate-900'
+                                                }`}
+                                        >
+                                            {t.label}
+                                            {isActive && (
+                                                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#E57A00] rounded-full" />
+                                            )}
+                                        </button>
+                                    );
+                                })}
                             </div>
-                        )}
 
-                        {/* TAB 2: PROJECTS & ORDERS (Gambar 4) */}
-                        {mainTab === 'projects' && (
-                            <div className="p-6 space-y-5 animate-in fade-in duration-150">
-                                {/* Header */}
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                                    <div>
-                                        <h3 className="text-sm font-bold text-slate-900">
-                                            Daftar Projects & Orders
-                                        </h3>
-                                        <p className="text-xs text-slate-500 mt-0.5">
-                                            Kelola project aktif, riwayat order, dan progress pengerjaan klien.
-                                        </p>
+                            {/* TAB 1: RINGKASAN (INFORMASI DETAIL KLIEN - EXACT MATCH TO SCREENSHOT) */}
+                            {mainTab === 'ringkasan' && (
+                                <div className="p-6 space-y-5 animate-in fade-in duration-150">
+                                    <h3 className="text-sm font-extrabold text-slate-900 tracking-tight">
+                                        Informasi Detail Klien
+                                    </h3>
+
+                                    {/* SECTION 1 & 2: CPW & CPP Side by Side */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {/* CPW Card */}
+                                        <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5">
+                                            <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
+                                                <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
+                                                    <User className="w-3.5 h-3.5" />
+                                                </div>
+                                                <h4 className="text-xs font-bold text-slate-900">
+                                                    Informasi Calon Pengantin (CPW)
+                                                </h4>
+                                            </div>
+
+                                            <div className="space-y-2.5 text-xs">
+                                                <div className="flex items-start">
+                                                    <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Nama Lengkap</span>
+                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug break-words flex-1 min-w-0">
+                                                        {client.bride_name || client.name?.split('&')?.[0]?.trim() || 'Andi Pratama'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-start">
+                                                    <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Panggilan</span>
+                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                        {client.bride_nickname || (client.bride_name ? client.bride_name.split(' ')[0] : client.name?.split(' ')?.[0]) || 'Andi'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-start">
+                                                    <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Tanggal Lahir</span>
+                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                        {client.bride_birth_date ? formatDate(client.bride_birth_date) : '15 Mei 1992'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-start">
+                                                    <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Pekerjaan</span>
+                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                        {client.job_title || 'Pengusaha'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-start">
+                                                    <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Akun Instagram</span>
+                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug break-words flex-1 min-w-0">
+                                                        {client.instagram || '@kevin_sanjaya'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* CPP Card */}
+                                        <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5">
+                                            <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
+                                                <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
+                                                    <User className="w-3.5 h-3.5" />
+                                                </div>
+                                                <h4 className="text-xs font-bold text-slate-900">
+                                                    Informasi Calon Pengantin (CPP)
+                                                </h4>
+                                            </div>
+
+                                            <div className="space-y-2.5 text-xs">
+                                                <div className="flex items-start">
+                                                    <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Nama Lengkap</span>
+                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug break-words flex-1 min-w-0">
+                                                        {client.groom_name || client.partner_name || (client.name?.includes('&') ? client.name.split('&')[1]?.trim() : 'Sarah Wijaya')}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-start">
+                                                    <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Panggilan</span>
+                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                        {client.groom_nickname || (client.partner_name ? client.partner_name.split(' ')[0] : 'Sarah')}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-start">
+                                                    <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Tanggal Lahir</span>
+                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                        {client.groom_birth_date ? formatDate(client.groom_birth_date) : '03 Agustus 1992'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-start">
+                                                    <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Pekerjaan</span>
+                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                        {client.occupation || 'Aktris'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-start">
+                                                    <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Akun Instagram</span>
+                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug break-words flex-1 min-w-0">
+                                                        {client.partner_instagram || client.instagram || '@jessica_mila'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <Link
-                                        href={`/projects/create?client_id=${client.id}`}
-                                        className="px-4 py-2 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs shrink-0 self-start sm:self-auto cursor-pointer"
-                                    >
-                                        <Plus className="w-3.5 h-3.5" />
-                                        <span>Buat Project Baru</span>
-                                    </Link>
+                                    {/* SECTION 3: Informasi Alamat & Kontak (Numbered 1-12 Badges) */}
+                                    <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5">
+                                        <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
+                                            <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
+                                                <MapPin className="w-3.5 h-3.5" />
+                                            </div>
+                                            <h4 className="text-xs font-bold text-slate-900">
+                                                Informasi Alamat & Kontak
+                                            </h4>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-xs">
+                                            {/* Column 1: Items 1 to 6 */}
+                                            <div className="space-y-2.5">
+                                                <div className="flex items-start">
+                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
+                                                        <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">1</span>
+                                                        <span className="text-[11px]">Provinsi</span>
+                                                    </div>
+                                                    <span className="text-slate-400 mr-2 shrink-0">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.province || 'DKI Jakarta'}</span>
+                                                </div>
+                                                <div className="flex items-start">
+                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
+                                                        <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">2</span>
+                                                        <span className="text-[11px]">Kota / Kabupaten</span>
+                                                    </div>
+                                                    <span className="text-slate-400 mr-2 shrink-0">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.city || 'Jakarta Selatan'}</span>
+                                                </div>
+                                                <div className="flex items-start">
+                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
+                                                        <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">3</span>
+                                                        <span className="text-[11px]">Kecamatan</span>
+                                                    </div>
+                                                    <span className="text-slate-400 mr-2 shrink-0">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.district || 'Kebayoran Baru'}</span>
+                                                </div>
+                                                <div className="flex items-start">
+                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
+                                                        <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">4</span>
+                                                        <span className="text-[11px]">Kelurahan</span>
+                                                    </div>
+                                                    <span className="text-slate-400 mr-2 shrink-0">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.village || 'Melawai'}</span>
+                                                </div>
+                                                <div className="flex items-start">
+                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
+                                                        <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">5</span>
+                                                        <span className="text-[11px]">Kode Pos</span>
+                                                    </div>
+                                                    <span className="text-slate-400 mr-2 shrink-0">:</span>
+                                                    <span className="font-mono font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.postal_code || '12160'}</span>
+                                                </div>
+                                                <div className="flex items-start">
+                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
+                                                        <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">6</span>
+                                                        <span className="text-[11px]">Alamat Lengkap</span>
+                                                    </div>
+                                                    <span className="text-slate-400 mr-2 shrink-0">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-relaxed flex-1 min-w-0">
+                                                        {client.address || 'Jl. Senopati No. 45, Kebayoran Baru, Jakarta Selatan'}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* Column 2: Items 7 to 12 */}
+                                            <div className="space-y-2.5">
+                                                <div className="flex items-start">
+                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
+                                                        <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">7</span>
+                                                        <span className="text-[11px]">Contact Person</span>
+                                                    </div>
+                                                    <span className="text-slate-400 mr-2 shrink-0">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.contact_person || 'Jessica Mila (CPP)'}</span>
+                                                </div>
+                                                <div className="flex items-start">
+                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
+                                                        <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">8</span>
+                                                        <span className="text-[11px]">Pref. Kontak</span>
+                                                    </div>
+                                                    <span className="text-slate-400 mr-2 shrink-0">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug capitalize flex-1 min-w-0">
+                                                        {client.preferred_contact === 'email' ? 'Email' : client.preferred_contact === 'phone' ? 'Telepon' : 'WhatsApp'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-start">
+                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
+                                                        <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">9</span>
+                                                        <span className="text-[11px]">Pekerjaan</span>
+                                                    </div>
+                                                    <span className="text-slate-400 mr-2 shrink-0">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.occupation || 'Aktris'}</span>
+                                                </div>
+                                                <div className="flex items-start">
+                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
+                                                        <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">10</span>
+                                                        <span className="text-[11px]">Email Aktif</span>
+                                                    </div>
+                                                    <span className="text-slate-400 mr-2 shrink-0">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug break-words flex-1 min-w-0">{client.email || 'client@arams.com'}</span>
+                                                </div>
+                                                <div className="flex items-start">
+                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
+                                                        <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">11</span>
+                                                        <span className="text-[11px]">Akun Instagram</span>
+                                                    </div>
+                                                    <span className="text-slate-400 mr-2 shrink-0">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug break-words flex-1 min-w-0">{client.instagram || '@kevinjessica_wedding'}</span>
+                                                </div>
+                                                <div className="flex items-start">
+                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
+                                                        <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">12</span>
+                                                        <span className="text-[11px]">Sosmed Lain</span>
+                                                    </div>
+                                                    <span className="text-slate-400 mr-2 shrink-0">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-relaxed flex-1 min-w-0">
+                                                        {client.other_social_media || 'TikTok: @kevinjessica_wed • YouTube: Kevin & Mila'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* SECTION 4: Informasi Acara / Project */}
+                                    <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5">
+                                        <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
+                                            <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
+                                                <Calendar className="w-3.5 h-3.5" />
+                                            </div>
+                                            <h4 className="text-xs font-bold text-slate-900">
+                                                Informasi Acara / Project
+                                            </h4>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2.5 text-xs">
+                                            <div className="space-y-2.5">
+                                                <div className="flex items-start">
+                                                    <span className="text-slate-400 w-28 sm:w-32 shrink-0 text-[11px] pt-0.5">Jenis Acara</span>
+                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                        {client.projects?.[0]?.category?.name || 'Wedding'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-start">
+                                                    <span className="text-slate-400 w-28 sm:w-32 shrink-0 text-[11px] pt-0.5">Tanggal Acara</span>
+                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                        {client.projects?.[0]?.event_date ? formatDate(client.projects[0].event_date) : '22 Mei 2026'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-start">
+                                                    <span className="text-slate-400 w-28 sm:w-32 shrink-0 text-[11px] pt-0.5">Waktu Acara</span>
+                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                        {client.projects?.[0]?.event_time || '16:00 – Selesai'}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-2.5">
+                                                <div className="flex items-start">
+                                                    <span className="text-slate-400 w-28 sm:w-32 shrink-0 text-[11px] pt-0.5">Lokasi / Venue</span>
+                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                        {client.projects?.[0]?.location || 'Grand Ballroom Hotel Mulia Senayan, Jakarta'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-start">
+                                                    <span className="text-slate-400 w-28 sm:w-32 shrink-0 text-[11px] pt-0.5">Paket Layanan</span>
+                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                        {client.projects?.[0]?.package?.name || 'Royal Wedding Package'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-start">
+                                                    <span className="text-slate-400 w-28 sm:w-32 shrink-0 text-[11px] pt-0.5">Kategori Project</span>
+                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                        {client.projects?.[0]?.category?.name || 'Wedding'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* SECTION 5: Informasi Tambahan */}
+                                    <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-2.5">
+                                        <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
+                                            <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
+                                                <FileText className="w-3.5 h-3.5" />
+                                            </div>
+                                            <h4 className="text-xs font-bold text-slate-900">
+                                                Informasi Tambahan
+                                            </h4>
+                                        </div>
+
+                                        <div className="flex items-start text-xs">
+                                            <span className="text-slate-400 w-20 shrink-0 text-[11px] pt-0.5">Catatan</span>
+                                            <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                            <p className="font-medium text-slate-700 leading-relaxed flex-1 min-w-0">
+                                                {client.notes || 'Klien menginginkan konsep elegan & timeless. Request outdoor photo session di venue.'}
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
+                            )}
 
-                                {/* Filter Bar */}
-                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                                    <div className="relative flex-1">
-                                        <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                                        <input
-                                            type="text"
-                                            value={projectSearchQuery}
-                                            onChange={(e) => setProjectSearchQuery(e.target.value)}
-                                            placeholder="Cari project / order..."
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                                        />
+                            {/* TAB 2: PROJECTS & ORDERS (Gambar 4) */}
+                            {mainTab === 'projects' && (
+                                <div className="p-6 space-y-5 animate-in fade-in duration-150">
+                                    {/* Header */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                                        <div>
+                                            <h3 className="text-sm font-bold text-slate-900">
+                                                Daftar Projects & Orders
+                                            </h3>
+                                            <p className="text-xs text-slate-500 mt-0.5">
+                                                Kelola project aktif, riwayat order, dan progress pengerjaan klien.
+                                            </p>
+                                        </div>
+
+                                        <Link
+                                            href={`/projects/create?client_id=${client.id}`}
+                                            className="px-4 py-2 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs shrink-0 self-start sm:self-auto cursor-pointer"
+                                        >
+                                            <Plus className="w-3.5 h-3.5" />
+                                            <span>Buat Project Baru</span>
+                                        </Link>
                                     </div>
 
-                                    <div className="flex items-center gap-2">
-                                        <NativeSelect
-                                            value={projectStatusFilter}
-                                            onChange={(e) => setProjectStatusFilter(e.target.value)}
-                                            className="text-xs min-w-[140px]"
-                                        >
-                                            <option value="all">Semua Status</option>
-                                            <option value="completed">Selesai</option>
-                                            <option value="in_progress">Sedang Dikerjakan</option>
-                                            <option value="upcoming">Akan Datang</option>
-                                        </NativeSelect>
+                                    {/* Filter Bar */}
+                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                                        <div className="relative flex-1">
+                                            <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                            <input
+                                                type="text"
+                                                value={projectSearchQuery}
+                                                onChange={(e) => setProjectSearchQuery(e.target.value)}
+                                                placeholder="Cari project / order..."
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                                            />
+                                        </div>
 
-                                        <NativeSelect
-                                            value={projectPeriodFilter}
-                                            onChange={(e) => setProjectPeriodFilter(e.target.value)}
-                                            className="text-xs min-w-[140px]"
-                                        >
-                                            <option value="all">Semua Periode</option>
-                                            <option value="year">Tahun 2025</option>
-                                            <option value="month">Bulan Ini</option>
-                                        </NativeSelect>
+                                        <div className="flex items-center gap-2">
+                                            <NativeSelect
+                                                value={projectStatusFilter}
+                                                onChange={(e) => setProjectStatusFilter(e.target.value)}
+                                                className="text-xs min-w-[140px]"
+                                            >
+                                                <option value="all">Semua Status</option>
+                                                <option value="completed">Selesai</option>
+                                                <option value="in_progress">Sedang Dikerjakan</option>
+                                                <option value="upcoming">Akan Datang</option>
+                                            </NativeSelect>
+
+                                            <NativeSelect
+                                                value={projectPeriodFilter}
+                                                onChange={(e) => setProjectPeriodFilter(e.target.value)}
+                                                className="text-xs min-w-[140px]"
+                                            >
+                                                <option value="all">Semua Periode</option>
+                                                <option value="year">Tahun 2025</option>
+                                                <option value="month">Bulan Ini</option>
+                                            </NativeSelect>
+                                        </div>
                                     </div>
-                                </div>
 
-                                {/* Table */}
-                                <div className="border border-slate-200/80 rounded-2xl overflow-hidden shadow-2xs">
-                                    <Table>
-                                        <TableHeader className="bg-slate-50/80">
-                                            <TableRow>
-                                                <TableHead className="text-[11px] font-bold text-slate-600">No. Project</TableHead>
-                                                <TableHead className="text-[11px] font-bold text-slate-600">Nama Project</TableHead>
-                                                <TableHead className="text-[11px] font-bold text-slate-600">Tanggal Acara</TableHead>
-                                                <TableHead className="text-[11px] font-bold text-slate-600">Paket</TableHead>
-                                                <TableHead className="text-[11px] font-bold text-slate-600">Status</TableHead>
-                                                <TableHead className="text-[11px] font-bold text-slate-600 text-right">Total</TableHead>
-                                                <TableHead className="text-[11px] font-bold text-slate-600">Terakhir Diperbarui</TableHead>
-                                                <TableHead className="text-[11px] font-bold text-slate-600 text-center">Aksi</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {filteredProjectsTable.length > 0 ? (
-                                                filteredProjectsTable.map((p) => (
-                                                    <TableRow key={p.id} className="hover:bg-slate-50/50 transition-colors">
-                                                        <TableCell className="font-mono font-bold text-xs text-slate-800">
-                                                            {p.code}
-                                                        </TableCell>
-                                                        <TableCell className="font-bold text-xs text-slate-900">
-                                                            {p.name}
-                                                        </TableCell>
-                                                        <TableCell className="text-xs text-slate-600">
-                                                            {p.event_date}
-                                                        </TableCell>
-                                                        <TableCell className="text-xs text-slate-600 font-medium">
-                                                            {p.package_name}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Badge variant={p.status_color as any} className="text-[10px] font-bold">
-                                                                {p.status}
-                                                            </Badge>
-                                                        </TableCell>
-                                                        <TableCell className="text-xs font-mono font-bold text-slate-900 text-right">
-                                                            {formatRupiah(p.total_amount)}
-                                                        </TableCell>
-                                                        <TableCell className="text-[11px] text-slate-400 font-medium">
-                                                            {p.updated_at}
-                                                        </TableCell>
-                                                        <TableCell className="text-center">
-                                                            <div className="flex items-center justify-center gap-1.5">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        handleSelectProject(p.id);
-                                                                        setMainTab('files');
-                                                                    }}
-                                                                    className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-primary-accent shadow-2xs transition-all cursor-pointer"
-                                                                    title="Lihat Timeline & Berkas Project"
-                                                                >
-                                                                    <Clock className="w-3.5 h-3.5" />
-                                                                </button>
-                                                                <Link
-                                                                    href={`/projects/${p.id}`}
-                                                                    className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 shadow-2xs transition-all"
-                                                                    title="Lihat Detail Project"
-                                                                >
-                                                                    <Eye className="w-3.5 h-3.5" />
-                                                                </Link>
-                                                            </div>
+                                    {/* Table */}
+                                    <div className="border border-slate-200/80 rounded-2xl overflow-hidden shadow-2xs">
+                                        <Table>
+                                            <TableHeader className="bg-slate-50/80">
+                                                <TableRow>
+                                                    <TableHead className="text-[11px] font-bold text-slate-600">No. Project</TableHead>
+                                                    <TableHead className="text-[11px] font-bold text-slate-600">Nama Project</TableHead>
+                                                    <TableHead className="text-[11px] font-bold text-slate-600">Tanggal Acara</TableHead>
+                                                    <TableHead className="text-[11px] font-bold text-slate-600">Paket</TableHead>
+                                                    <TableHead className="text-[11px] font-bold text-slate-600">Status</TableHead>
+                                                    <TableHead className="text-[11px] font-bold text-slate-600 text-right">Total</TableHead>
+                                                    <TableHead className="text-[11px] font-bold text-slate-600">Terakhir Diperbarui</TableHead>
+                                                    <TableHead className="text-[11px] font-bold text-slate-600 text-center">Aksi</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {filteredProjectsTable.length > 0 ? (
+                                                    filteredProjectsTable.map((p) => (
+                                                        <TableRow key={p.id} className="hover:bg-slate-50/50 transition-colors">
+                                                            <TableCell className="font-mono font-bold text-xs text-slate-800">
+                                                                {p.code}
+                                                            </TableCell>
+                                                            <TableCell className="font-bold text-xs text-slate-900">
+                                                                {p.name}
+                                                            </TableCell>
+                                                            <TableCell className="text-xs text-slate-600">
+                                                                {p.event_date}
+                                                            </TableCell>
+                                                            <TableCell className="text-xs text-slate-600 font-medium">
+                                                                {p.package_name}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <Badge variant={p.status_color as any} className="text-[10px] font-bold">
+                                                                    {p.status}
+                                                                </Badge>
+                                                            </TableCell>
+                                                            <TableCell className="text-xs font-mono font-bold text-slate-900 text-right">
+                                                                {formatRupiah(p.total_amount)}
+                                                            </TableCell>
+                                                            <TableCell className="text-[11px] text-slate-400 font-medium">
+                                                                {p.updated_at}
+                                                            </TableCell>
+                                                            <TableCell className="text-center">
+                                                                <div className="flex items-center justify-center gap-1.5">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            handleSelectProject(p.id);
+                                                                            setMainTab('files');
+                                                                        }}
+                                                                        className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-primary-accent shadow-2xs transition-all cursor-pointer"
+                                                                        title="Lihat Timeline & Berkas Project"
+                                                                    >
+                                                                        <Clock className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                    <Link
+                                                                        href={`/projects/${p.id}`}
+                                                                        className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 shadow-2xs transition-all"
+                                                                        title="Lihat Detail Project"
+                                                                    >
+                                                                        <Eye className="w-3.5 h-3.5" />
+                                                                    </Link>
+                                                                </div>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))
+                                                ) : (
+                                                    <TableRow>
+                                                        <TableCell colSpan={8} className="text-center py-8 text-xs text-slate-400">
+                                                            Tidak ada data project yang sesuai filter.
                                                         </TableCell>
                                                     </TableRow>
-                                                ))
-                                            ) : (
-                                                <TableRow>
-                                                    <TableCell colSpan={8} className="text-center py-8 text-xs text-slate-400">
-                                                        Tidak ada data project yang sesuai filter.
-                                                    </TableCell>
-                                                </TableRow>
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                </div>
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
 
-                                {/* Pagination Footer */}
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500 pt-1">
-                                    <span>
-                                        Menampilkan 1 - {filteredProjectsTable.length} dari {filteredProjectsTable.length} data
-                                    </span>
-                                    <div className="flex items-center gap-2">
+                                    {/* Pagination Footer */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500 pt-1">
+                                        <span>
+                                            Menampilkan 1 - {filteredProjectsTable.length} dari {filteredProjectsTable.length} data
+                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    type="button"
+                                                    disabled
+                                                    className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 cursor-not-allowed"
+                                                >
+                                                    &lt;
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="w-7 h-7 rounded-lg bg-indigo-600 text-white font-bold flex items-center justify-center text-xs shadow-2xs"
+                                                >
+                                                    1
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    disabled
+                                                    className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 cursor-not-allowed"
+                                                >
+                                                    &gt;
+                                                </button>
+                                            </div>
+                                            <span className="text-[11px] text-slate-400 pl-2">10 / halaman</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* TAB 3: PEMBAYARAN (Gambar 1) */}
+                            {mainTab === 'pembayaran' && (
+                                <div className="p-6 space-y-5 animate-in fade-in duration-150">
+                                    {/* Header */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                                        <div>
+                                            <h3 className="text-sm font-bold text-slate-900">
+                                                Riwayat Pembayaran
+                                            </h3>
+                                            <p className="text-xs text-slate-500 mt-0.5">
+                                                Monitoring invoice, catatan transaksi, dan status pelunasan klien.
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsPaymentModalOpen(true)}
+                                            className="px-4 py-2 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0 self-start sm:self-auto"
+                                        >
+                                            <Plus className="w-3.5 h-3.5" />
+                                            <span>Tambah Pembayaran</span>
+                                        </button>
+                                    </div>
+
+                                    {/* Filter Bar */}
+                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                                        <div className="relative flex-1">
+                                            <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                            <input
+                                                type="text"
+                                                value={paymentSearchQuery}
+                                                onChange={(e) => setPaymentSearchQuery(e.target.value)}
+                                                placeholder="Cari invoice / project..."
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-accent/20 focus:border-primary-accent transition-all"
+                                            />
+                                        </div>
+
+                                        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                                            <NativeSelect
+                                                value={paymentStatusFilter}
+                                                onChange={(e) => setPaymentStatusFilter(e.target.value)}
+                                                className="text-xs min-w-[130px]"
+                                            >
+                                                <option value="all">Semua Status</option>
+                                                <option value="lunas">Lunas</option>
+                                                <option value="sebagian">Sebagian</option>
+                                                <option value="unpaid">Belum Dibayar</option>
+                                            </NativeSelect>
+
+                                            <NativeSelect
+                                                value={paymentMethodFilter}
+                                                onChange={(e) => setPaymentMethodFilter(e.target.value)}
+                                                className="text-xs min-w-[130px]"
+                                            >
+                                                <option value="all">Semua Metode</option>
+                                                <option value="bca">Transfer BCA</option>
+                                                <option value="mandiri">Transfer Mandiri</option>
+                                                <option value="cash">Cash / Tunai</option>
+                                            </NativeSelect>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => toast.info('Fitur export data pembayaran')}
+                                                className="px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer transition-colors"
+                                            >
+                                                <Download className="w-3.5 h-3.5" />
+                                                <span>Export</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* 4 KPI Summary Cards (Gambar 1) */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                                        <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-1">
+                                            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                                                Total Tagihan
+                                            </span>
+                                            <div className="text-lg font-bold font-mono text-slate-900">
+                                                Rp 101.500.000
+                                            </div>
+                                            <span className="text-[11px] text-slate-400 block">
+                                                9 Invoice
+                                            </span>
+                                        </div>
+
+                                        <div className="p-4 rounded-2xl bg-emerald-50/40 border border-emerald-100 shadow-2xs space-y-1">
+                                            <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">
+                                                Total Dibayar
+                                            </span>
+                                            <div className="text-lg font-bold font-mono text-emerald-600">
+                                                Rp 85.750.000
+                                            </div>
+                                            <span className="text-[11px] text-emerald-600/80 block">
+                                                8 Pembayaran
+                                            </span>
+                                        </div>
+
+                                        <div className="p-4 rounded-2xl bg-amber-50/40 border border-amber-100 shadow-2xs space-y-1">
+                                            <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider block">
+                                                Sisa Tagihan
+                                            </span>
+                                            <div className="text-lg font-bold font-mono text-amber-600">
+                                                Rp 15.750.000
+                                            </div>
+                                            <span className="text-[11px] text-amber-600/80 block">
+                                                3 Invoice
+                                            </span>
+                                        </div>
+
+                                        <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                                    Persentase Dibayar
+                                                </span>
+                                                <span className="text-xs font-bold font-mono text-slate-900">
+                                                    84,52%
+                                                </span>
+                                            </div>
+                                            <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                                                <div className="h-full bg-emerald-500 rounded-full" style={{ width: '84.52%' }} />
+                                            </div>
+                                            <span className="text-[10px] text-slate-400 block pt-0.5">
+                                                Tingkat pelunasan sangat baik
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Table */}
+                                    <div className="border border-slate-200/80 rounded-2xl overflow-hidden shadow-2xs">
+                                        <Table>
+                                            <TableHeader className="bg-slate-50/80">
+                                                <TableRow>
+                                                    <TableHead className="text-[11px] font-bold text-slate-600">No. Invoice</TableHead>
+                                                    <TableHead className="text-[11px] font-bold text-slate-600">Project</TableHead>
+                                                    <TableHead className="text-[11px] font-bold text-slate-600">Tanggal Invoice</TableHead>
+                                                    <TableHead className="text-[11px] font-bold text-slate-600">Jatuh Tempo</TableHead>
+                                                    <TableHead className="text-[11px] font-bold text-slate-600 text-right">Total Tagihan</TableHead>
+                                                    <TableHead className="text-[11px] font-bold text-slate-600 text-right">Dibayar</TableHead>
+                                                    <TableHead className="text-[11px] font-bold text-slate-600 text-right">Sisa</TableHead>
+                                                    <TableHead className="text-[11px] font-bold text-slate-600">Status</TableHead>
+                                                    <TableHead className="text-[11px] font-bold text-slate-600">Metode</TableHead>
+                                                    <TableHead className="text-[11px] font-bold text-slate-600 text-center">Aksi</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {filteredInvoicesList.length > 0 ? (
+                                                    filteredInvoicesList.map((inv) => (
+                                                        <TableRow key={inv.id} className="hover:bg-slate-50/50 transition-colors">
+                                                            <TableCell>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => toast.info(`Melihat detail invoice ${inv.invoice_no}`)}
+                                                                    className="font-mono font-bold text-xs text-indigo-600 hover:underline cursor-pointer"
+                                                                >
+                                                                    {inv.invoice_no}
+                                                                </button>
+                                                            </TableCell>
+                                                            <TableCell className="font-semibold text-xs text-slate-900">
+                                                                {inv.project_name}
+                                                            </TableCell>
+                                                            <TableCell className="text-xs text-slate-600">
+                                                                {inv.invoice_date}
+                                                            </TableCell>
+                                                            <TableCell className="text-xs text-slate-600">
+                                                                {inv.due_date}
+                                                            </TableCell>
+                                                            <TableCell className="text-xs font-mono font-bold text-slate-900 text-right">
+                                                                {formatRupiah(inv.total_amount)}
+                                                            </TableCell>
+                                                            <TableCell className="text-xs font-mono font-bold text-emerald-600 text-right">
+                                                                {formatRupiah(inv.paid_amount)}
+                                                            </TableCell>
+                                                            <TableCell
+                                                                className={`text-xs font-mono font-bold text-right ${inv.remaining_amount > 0 ? 'text-amber-600' : 'text-slate-400'
+                                                                    }`}
+                                                            >
+                                                                {formatRupiah(inv.remaining_amount)}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <Badge variant={inv.status_variant as any} className="text-[10px] font-bold">
+                                                                    {inv.status}
+                                                                </Badge>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <span className="text-xs font-bold text-slate-800 block">
+                                                                    {inv.payment_method}
+                                                                </span>
+                                                                <span className="text-[10px] text-slate-400 block">
+                                                                    {inv.paid_at}
+                                                                </span>
+                                                            </TableCell>
+                                                            <TableCell className="text-center">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => toast.info(`Mendownload invoice ${inv.invoice_no}`)}
+                                                                    className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 shadow-2xs transition-all cursor-pointer"
+                                                                    title="Download Invoice"
+                                                                >
+                                                                    <Download className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))
+                                                ) : (
+                                                    <TableRow>
+                                                        <TableCell colSpan={10} className="text-center py-8 text-xs text-slate-400">
+                                                            Tidak ada data invoice yang sesuai kriteria pencarian.
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+
+                                    {/* Callout & Pagination */}
+                                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2 text-xs text-slate-600">
+                                        <div className="w-4 h-4 rounded-full bg-indigo-100 text-indigo-600 font-bold text-[10px] flex items-center justify-center shrink-0">
+                                            i
+                                        </div>
+                                        <span>Klik nomor invoice untuk melihat detail invoice dan riwayat pembayaran.</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* TAB 4: FILES (Timeline & Workflow Pengerjaan Project) */}
+                            {mainTab === 'files' && (
+                                <div className="p-6 space-y-6 animate-in fade-in duration-150">
+                                    {/* Header */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="text-sm font-bold text-slate-900">
+                                                    Timeline / Progres Pengerjaan Project
+                                                </h3>
+                                                <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-bold text-[10px]">
+                                                    {initialProjectsList.length} Project Klien
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-slate-500 mt-0.5">
+                                                Tracking alur tahapan kerja foto & video per project klien secara real-time
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsAddDriveLinkModalOpen(true)}
+                                            className="px-4 py-2 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0 self-start sm:self-auto"
+                                        >
+                                            <Plus className="w-3.5 h-3.5" />
+                                            <span>Simpan Link Google Drive</span>
+                                        </button>
+                                    </div>
+
+                                    {/* PROJECT SWITCHER BAR WITH SELECT SEARCH */}
+                                    <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 shadow-2xs space-y-4">
+                                        {/* Header Row with Label & Workflow Switcher Pills */}
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                            <div>
+                                                <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                                                    <Folder className="w-3.5 h-3.5 text-primary-accent" />
+                                                    <span>Pilih Project Klien ({initialProjectsList.length} Project)</span>
+                                                </label>
+                                                <p className="text-[11px] text-slate-400 mt-0.5">
+                                                    Cari & pilih project untuk cek alur tahapan & berkas pengerjaan
+                                                </p>
+                                            </div>
+
+                                            {/* Workflow Switcher Pills (Adapts cleanly on all viewports) */}
+                                            <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200/80 shadow-2xs self-start sm:self-auto shrink-0">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setActiveWorkflowTab('wedding')}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeWorkflowTab === 'wedding'
+                                                            ? 'bg-primary-accent text-white shadow-xs'
+                                                            : 'text-slate-600 hover:bg-slate-100'
+                                                        }`}
+                                                >
+                                                    Wedding (8 Tahap)
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setActiveWorkflowTab('prewedding')}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeWorkflowTab === 'prewedding'
+                                                            ? 'bg-primary-accent text-white shadow-xs'
+                                                            : 'text-slate-600 hover:bg-slate-100'
+                                                        }`}
+                                                >
+                                                    Prewedding / Event (5 Tahap)
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Full-width SelectSearch Input */}
+                                        <div className="w-full">
+                                            <SelectSearch
+                                                options={projectSearchOptions}
+                                                value={String(selectedProject?.id || selectedProjectId)}
+                                                onChange={(val) => val && handleSelectProject(val)}
+                                                placeholder="Cari & pilih project klien..."
+                                                searchPlaceholder="Ketik nomor project atau nama acara..."
+                                                clearable={false}
+                                                className="w-full text-xs bg-white"
+                                            />
+                                        </div>
+
+                                        {/* Active Project Info Strip */}
+                                        <div className="pt-3 border-t border-slate-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+                                            <div className="flex items-center gap-2 flex-wrap min-w-0">
+                                                <span className="font-mono text-xs font-extrabold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-primary-accent shadow-2xs shrink-0">
+                                                    {selectedProject?.code}
+                                                </span>
+                                                <span className="font-bold text-slate-900 truncate">
+                                                    {selectedProject?.name}
+                                                </span>
+                                                <span className="text-slate-300 hidden sm:inline">•</span>
+                                                <span className="text-slate-600 truncate">
+                                                    {selectedProject?.package_name}
+                                                </span>
+                                            </div>
+
+                                            <div className="flex items-center gap-3 shrink-0 self-start sm:self-auto">
+                                                <span className="text-slate-500 flex items-center gap-1 text-[11px] font-medium">
+                                                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                                                    {selectedProject?.event_date}
+                                                </span>
+                                                <Badge
+                                                    variant={selectedProject?.status_color as any}
+                                                    className="text-[10px] font-bold px-2 py-0.5"
+                                                >
+                                                    {selectedProject?.status}
+                                                </Badge>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Connected Horizontal Stepper Timeline */}
+                                    <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs overflow-x-auto space-y-2">
+                                        <div className="flex items-center justify-between pb-1 text-[11px] text-slate-400 font-medium">
+                                            <span>Alur Tahapan Pekerjaan (Klik salah satu step untuk rincian)</span>
+                                            <span>
+                                                {completedStagesCount} dari {currentStages.length} Tahap Selesai
+                                            </span>
+                                        </div>
+
+                                        <div className="relative min-w-[760px] pt-3 pb-2">
+                                            {/* Background connecting line bar */}
+                                            <div className="absolute top-[27px] left-8 right-8 h-1 bg-slate-200 -z-0 rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full bg-emerald-500 transition-all duration-300 rounded-full"
+                                                    style={{
+                                                        width: `${Math.min(
+                                                            100,
+                                                            (completedStagesCount / (currentStages.length - 1 || 1)) * 100
+                                                        )}%`,
+                                                    }}
+                                                />
+                                            </div>
+
+                                            <div className="flex items-start justify-between relative z-10 gap-2">
+                                                {currentStages.map((s, idx) => {
+                                                    const isStepSelected = selectedStageIndex === idx;
+                                                    return (
+                                                        <button
+                                                            key={s.step}
+                                                            type="button"
+                                                            onClick={() => setSelectedStageIndex(idx)}
+                                                            className="flex-1 flex flex-col items-center text-center cursor-pointer group transition-all"
+                                                        >
+                                                            <div
+                                                                className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shadow-2xs mb-2 transition-all relative ${s.status === 'done'
+                                                                        ? 'bg-emerald-500 text-white shadow-emerald-200 ring-2 ring-white'
+                                                                        : s.status === 'active'
+                                                                            ? 'bg-primary-accent text-white ring-4 ring-primary-accent/25 shadow-md scale-105'
+                                                                            : 'bg-white border-2 border-slate-300 text-slate-500 group-hover:border-slate-400 group-hover:bg-slate-50'
+                                                                    } ${isStepSelected
+                                                                        ? 'ring-2 ring-offset-2 ring-primary-accent'
+                                                                        : ''
+                                                                    }`}
+                                                            >
+                                                                {s.status === 'done' ? (
+                                                                    <Check className="w-4 h-4" />
+                                                                ) : (
+                                                                    <span>{s.step}</span>
+                                                                )}
+                                                            </div>
+
+                                                            <span
+                                                                className={`text-[11px] font-bold line-clamp-2 max-w-[95px] transition-colors ${isStepSelected
+                                                                        ? 'text-primary-accent font-extrabold'
+                                                                        : s.status === 'active'
+                                                                            ? 'text-slate-900'
+                                                                            : 'text-slate-700'
+                                                                    }`}
+                                                            >
+                                                                {s.title}
+                                                            </span>
+
+                                                            <span
+                                                                className={`text-[10px] font-semibold mt-1 px-1.5 py-0.5 rounded-md ${s.status === 'done'
+                                                                        ? 'bg-emerald-50 text-emerald-700'
+                                                                        : s.status === 'active'
+                                                                            ? 'bg-amber-50 text-amber-700 font-bold'
+                                                                            : 'text-slate-400 bg-slate-50'
+                                                                    }`}
+                                                            >
+                                                                {s.date}
+                                                            </span>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* 2 Dynamic Metric & Detail Boxes */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+                                        {/* Left Card: Detail Tahap Terpilih */}
+                                        <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex flex-col justify-between gap-4">
+                                            {/* Stage Pill & Status Header */}
+                                            <div className="space-y-2 pb-3 border-b border-slate-100">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="px-2.5 py-1 rounded-lg bg-primary-accent/10 text-primary-accent text-xs font-black tracking-wide shrink-0">
+                                                        Tahap {selectedStage.step}
+                                                    </span>
+                                                    <Badge
+                                                        variant={
+                                                            selectedStage.status === 'done'
+                                                                ? 'success'
+                                                                : selectedStage.status === 'active'
+                                                                    ? 'info'
+                                                                    : 'secondary'
+                                                        }
+                                                        className="text-[10px] font-bold px-2.5 py-1 shrink-0"
+                                                    >
+                                                        {selectedStage.status === 'done'
+                                                            ? 'Selesai (100%)'
+                                                            : selectedStage.status === 'active'
+                                                                ? 'Sedang Dikerjakan (60%)'
+                                                                : 'Belum Dimulai (0%)'}
+                                                    </Badge>
+                                                </div>
+                                                <h4 className="text-base sm:text-lg font-extrabold text-slate-900 leading-snug">
+                                                    {selectedStage.title}
+                                                </h4>
+                                            </div>
+
+                                            {/* Stage Progress Bar */}
+                                            <div className="space-y-1.5">
+                                                <div className="flex items-center justify-between text-xs">
+                                                    <span className="text-slate-500 font-medium">Progres Pengerjaan Tahap Ini</span>
+                                                    <span className="font-extrabold text-slate-900 text-sm font-mono">{selectedStage.progress}%</span>
+                                                </div>
+                                                <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                                                    <div
+                                                        className={`h-full rounded-full transition-all duration-500 ${selectedStage.status === 'done'
+                                                                ? 'bg-emerald-500'
+                                                                : selectedStage.status === 'active'
+                                                                    ? 'bg-primary-accent'
+                                                                    : 'bg-slate-300'
+                                                            }`}
+                                                        style={{ width: `${selectedStage.progress}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Description Box */}
+                                            <div className="p-3.5 rounded-xl bg-slate-50/80 border-l-4 border-primary-accent border border-slate-100 space-y-1">
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                                    Deskripsi & Catatan Tahapan
+                                                </span>
+                                                <p className="text-xs text-slate-600 leading-relaxed">
+                                                    {selectedStage.description || 'Pekerjaan berjalan sesuai SOP dan timeline produksi.'}
+                                                </p>
+                                            </div>
+
+                                            {/* Footer Metadata */}
+                                            <div className="grid grid-cols-2 gap-3 pt-2 text-xs border-t border-slate-100">
+                                                <div>
+                                                    <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Status / Tanggal</span>
+                                                    <span className="font-bold text-slate-800 mt-0.5 block">{selectedStage.date}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Penanggung Jawab (PIC)</span>
+                                                    <span className="font-bold text-slate-800 mt-0.5 block">{selectedStage.pic}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Right Card: Progress Keseluruhan Project */}
+                                        <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex flex-col justify-between gap-4">
+                                            {/* Header with Title & Big Hero Metric */}
+                                            <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
+                                                <div className="space-y-1">
+                                                    <h4 className="text-base sm:text-lg font-extrabold text-slate-900 leading-snug">
+                                                        Progress Keseluruhan
+                                                    </h4>
+                                                    <p className="text-xs text-slate-500">
+                                                        <span className="font-extrabold text-slate-800">{completedStagesCount}</span> dari{' '}
+                                                        {currentStages.length} tahap pengerjaan telah selesai
+                                                    </p>
+                                                </div>
+                                                <div className="text-3xl sm:text-4xl font-black font-mono text-primary-accent shrink-0 text-right">
+                                                    {overallProgressPercent}%
+                                                </div>
+                                            </div>
+
+                                            {/* Overall Progress Bar & Milestone Labels */}
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between text-xs text-slate-500">
+                                                    <span className="font-medium">Total Akumulasi Milestone</span>
+                                                    <span className="font-bold text-primary-accent">{overallProgressPercent}% Selesai</span>
+                                                </div>
+                                                <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                                                    <div
+                                                        className="h-full bg-primary-accent rounded-full transition-all duration-500"
+                                                        style={{ width: `${overallProgressPercent}%` }}
+                                                    />
+                                                </div>
+                                                <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium pt-0.5">
+                                                    <span>Awal Project (DP)</span>
+                                                    <span>Editing & Produksi</span>
+                                                    <span>Final Delivery</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Stage Counts Breakdown Pill Grid */}
+                                            <div className="grid grid-cols-3 gap-2 text-center">
+                                                <div className="p-2 rounded-xl bg-emerald-50/70 border border-emerald-100">
+                                                    <span className="text-[10px] font-bold text-emerald-600 uppercase block">Selesai</span>
+                                                    <span className="text-xs sm:text-sm font-extrabold text-emerald-700 font-mono">{completedStagesCount} Tahap</span>
+                                                </div>
+                                                <div className="p-2 rounded-xl bg-amber-50/70 border border-amber-100">
+                                                    <span className="text-[10px] font-bold text-amber-600 uppercase block">Aktif</span>
+                                                    <span className="text-xs sm:text-sm font-extrabold text-amber-700 font-mono">
+                                                        {currentStages.some((s) => s.status === 'active') ? 1 : 0} Tahap
+                                                    </span>
+                                                </div>
+                                                <div className="p-2 rounded-xl bg-slate-50 border border-slate-100">
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Menunggu</span>
+                                                    <span className="text-xs sm:text-sm font-extrabold text-slate-600 font-mono">
+                                                        {currentStages.filter((s) => s.status === 'pending').length} Tahap
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* Active Project Box */}
+                                            <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-100 flex items-center justify-between gap-2 text-xs">
+                                                <div className="min-w-0">
+                                                    <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Project Aktif</span>
+                                                    <span className="font-bold text-slate-800 truncate block mt-0.5">
+                                                        {selectedProject?.name}
+                                                    </span>
+                                                </div>
+                                                <Badge
+                                                    variant={selectedProject?.status_color as any}
+                                                    className="text-[10px] font-bold shrink-0"
+                                                >
+                                                    {selectedProject?.status}
+                                                </Badge>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* 2-Column Split: Checklist + Link Google Drive */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                                        {/* Left Card: Opsi Pekerjaan (Internal) */}
+                                        <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-4">
+                                            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                                                <div>
+                                                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                                                        Opsi Pekerjaan (Internal)
+                                                    </h4>
+                                                    <p className="text-xs text-slate-500 mt-0.5">
+                                                        Checklist tugas tim editing & produksi untuk project ini
+                                                    </p>
+                                                </div>
+                                                <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold text-xs">
+                                                    {checkedTasksCount}/8 Selesai
+                                                </span>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                                {[
+                                                    { id: 'editedPhoto', label: 'Edited Photo' },
+                                                    { id: 'revisiEditedPhoto', label: 'Revisi Edited Photo (Opsional)' },
+                                                    { id: 'finalEditedPhoto', label: 'Final Edited Photo' },
+                                                    { id: 'editedVideoHL', label: 'Edited Video HL' },
+                                                    { id: 'revisiEditedVideoHL', label: 'Revisi Edited Video HL (Opsional)' },
+                                                    { id: 'editedFullDoc', label: 'Edited Full Doc (Opsional)' },
+                                                    { id: 'finalEditedVideoHL', label: 'Final Edited Video HL' },
+                                                    { id: 'finalEditedFullDoc', label: 'Final Edited Full Doc (Opsional)' },
+                                                ].map((task) => {
+                                                    const isChecked = (jobChecklist as any)[task.id] || false;
+                                                    return (
+                                                        <label
+                                                            key={task.id}
+                                                            className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all cursor-pointer select-none ${isChecked
+                                                                    ? 'border-emerald-300 bg-emerald-50/50 text-emerald-950 shadow-2xs font-semibold'
+                                                                    : 'border-slate-200/80 bg-slate-50/40 hover:bg-slate-100/70 hover:border-slate-300 text-slate-800'
+                                                                }`}
+                                                        >
+                                                            <Checkbox
+                                                                checked={isChecked}
+                                                                onCheckedChange={(val) => {
+                                                                    const isNowChecked = !!val;
+                                                                    setJobChecklist((prev) => ({ ...prev, [task.id]: isNowChecked }));
+                                                                    toast.success(
+                                                                        isNowChecked
+                                                                            ? `Tugas "${task.label}" ditandai selesai!`
+                                                                            : `Tugas "${task.label}" dibatalkan.`
+                                                                    );
+                                                                }}
+                                                                className="shrink-0"
+                                                            />
+                                                            <span
+                                                                className={`text-xs ${isChecked ? 'line-through text-slate-400' : 'font-medium'
+                                                                    }`}
+                                                            >
+                                                                {task.label}
+                                                            </span>
+                                                        </label>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        {/* Right Card: Link Google Drive */}
+                                        <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-4">
+                                            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                                                <div>
+                                                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                                                        Link Google Drive
+                                                    </h4>
+                                                    <p className="text-xs text-slate-500 mt-0.5">
+                                                        Folder berkas & preview untuk project: <span className="font-semibold text-slate-700">{selectedProject?.code}</span>
+                                                    </p>
+                                                </div>
+                                                <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs">
+                                                    {projectDriveLinks.length} Folder
+                                                </span>
+                                            </div>
+
+                                            <div className="space-y-3">
+                                                {projectDriveLinks.map((dl) => (
+                                                    <div
+                                                        key={dl.id}
+                                                        className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/60 flex items-start justify-between gap-3 hover:border-slate-300 transition-colors"
+                                                    >
+                                                        <div className="flex items-start gap-3 min-w-0">
+                                                            <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0 mt-0.5 shadow-2xs">
+                                                                <Folder className="w-4 h-4" />
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <span className="font-bold text-xs text-slate-900 block leading-snug">
+                                                                    {dl.title}
+                                                                </span>
+                                                                <a
+                                                                    href={dl.url}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    className="text-xs text-primary-accent hover:underline block truncate mt-0.5"
+                                                                >
+                                                                    {dl.url}
+                                                                </a>
+                                                                <span className="text-[10px] text-slate-400 block mt-1">
+                                                                    Diupload oleh {dl.uploader} • {dl.date}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-1.5 shrink-0">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleCopyLink(dl.url)}
+                                                                className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-primary-accent text-xs font-bold shadow-2xs transition-colors cursor-pointer"
+                                                                title="Salin Link"
+                                                            >
+                                                                <Copy className="w-3.5 h-3.5" />
+                                                            </button>
+                                                            <a
+                                                                href={dl.url}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-xs font-bold shadow-2xs flex items-center gap-1"
+                                                            >
+                                                                <span>Buka</span>
+                                                                <ExternalLink className="w-3 h-3" />
+                                                            </a>
+                                                        </div>
+                                                    </div>
+                                                ))}
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsAddDriveLinkModalOpen(true)}
+                                                    className="w-full py-2.5 rounded-xl border-2 border-dashed border-slate-200 hover:border-primary-accent/40 hover:bg-primary-accent/5 text-slate-600 hover:text-primary-accent font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                                >
+                                                    <Plus className="w-3.5 h-3.5" />
+                                                    <span>Tambah Link Google Drive</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* TAB 5: CATATAN (Gambar 3) */}
+                            {mainTab === 'catatan' && (
+                                <div className="p-6 space-y-5 animate-in fade-in duration-150">
+                                    {/* Header */}
+                                    <div>
+                                        <h3 className="text-sm font-bold text-slate-900">
+                                            Catatan
+                                        </h3>
+                                        <p className="text-xs text-slate-500 mt-0.5">
+                                            Kelola catatan internal terkait klien, preferensi, dan instruksi khusus
+                                        </p>
+                                    </div>
+
+                                    {/* Add Note Box */}
+                                    <div className="border border-slate-200/80 rounded-2xl overflow-hidden bg-white shadow-2xs">
+                                        <textarea
+                                            rows={3}
+                                            value={noteInputText}
+                                            onChange={(e) => setNoteInputText(e.target.value)}
+                                            placeholder="Tulis catatan baru..."
+                                            className="w-full p-4 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none resize-none"
+                                        />
+                                        <div className="px-4 py-2.5 bg-slate-50/80 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                            <div className="flex items-center gap-3">
+                                                <NativeSelect
+                                                    value={noteInputCategory}
+                                                    onChange={(e) => setNoteInputCategory(e.target.value)}
+                                                    className="text-xs py-1"
+                                                >
+                                                    <option value="Preferensi">Preferensi</option>
+                                                    <option value="Informasi">Informasi</option>
+                                                    <option value="Pembayaran">Pembayaran</option>
+                                                    <option value="Meeting">Meeting</option>
+                                                </NativeSelect>
+
+                                                <div className="flex items-center gap-2 text-slate-400 border-l border-slate-200 pl-3">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => toast.info('Fitur lampirkan file ke catatan')}
+                                                        className="hover:text-slate-700 cursor-pointer"
+                                                        title="Lampirkan File"
+                                                    >
+                                                        <Paperclip className="w-3.5 h-3.5" />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setNoteInputText((prev) => prev + '**tebal**')}
+                                                        className="hover:text-slate-700 cursor-pointer"
+                                                        title="Teks Tebal"
+                                                    >
+                                                        <Bold className="w-3.5 h-3.5" />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setNoteInputText((prev) => prev + '_miring_')}
+                                                        className="hover:text-slate-700 cursor-pointer"
+                                                        title="Teks Miring"
+                                                    >
+                                                        <Italic className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                onClick={handleAddNote}
+                                                className="px-4 py-1.5 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer self-end sm:self-auto"
+                                            >
+                                                <Check className="w-3.5 h-3.5" />
+                                                <span>Simpan Catatan</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Filter Bar */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <NativeSelect
+                                                value={noteCategoryFilter}
+                                                onChange={(e) => setNoteCategoryFilter(e.target.value)}
+                                                className="text-xs min-w-[140px]"
+                                            >
+                                                <option value="all">Semua Kategori</option>
+                                                <option value="preferensi">Preferensi</option>
+                                                <option value="informasi">Informasi</option>
+                                                <option value="pembayaran">Pembayaran</option>
+                                                <option value="meeting">Meeting</option>
+                                            </NativeSelect>
+
+                                            <NativeSelect
+                                                value={noteAuthorFilter}
+                                                onChange={(e) => setNoteAuthorFilter(e.target.value)}
+                                                className="text-xs min-w-[140px]"
+                                            >
+                                                <option value="all">Dibuat Oleh</option>
+                                                <option value="admin">Admin Arams</option>
+                                                <option value="budi">Budi Santoso (Supervisor)</option>
+                                            </NativeSelect>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setNoteCategoryFilter('all');
+                                                setNoteAuthorFilter('all');
+                                            }}
+                                            className="text-xs font-bold text-slate-500 hover:text-slate-900 flex items-center gap-1 cursor-pointer"
+                                        >
+                                            <RotateCcw className="w-3.5 h-3.5" />
+                                            <span>Reset Filter</span>
+                                        </button>
+                                    </div>
+
+                                    {/* 4 Note Cards (Gambar 3) */}
+                                    <div className="space-y-3.5">
+                                        {filteredNotesList.map((note) => (
+                                            <div
+                                                key={note.id}
+                                                className={`p-4 rounded-2xl bg-white border border-slate-200/80 border-l-4 ${note.border_color} shadow-2xs space-y-2`}
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <div
+                                                            className={`w-6 h-6 rounded-lg flex items-center justify-center ${note.icon_color}`}
+                                                        >
+                                                            {note.category === 'Preferensi' ? (
+                                                                <Star className="w-3.5 h-3.5" />
+                                                            ) : note.category === 'Informasi' ? (
+                                                                <FileText className="w-3.5 h-3.5" />
+                                                            ) : note.category === 'Pembayaran' ? (
+                                                                <Receipt className="w-3.5 h-3.5" />
+                                                            ) : (
+                                                                <MessageSquare className="w-3.5 h-3.5" />
+                                                            )}
+                                                        </div>
+                                                        <h4 className="text-xs font-bold text-slate-900">
+                                                            {note.title}
+                                                        </h4>
+                                                    </div>
+
+                                                    <Badge variant={note.badge_color as any} className="text-[10px] font-bold">
+                                                        {note.category}
+                                                    </Badge>
+                                                </div>
+
+                                                <p className="text-xs text-slate-700 leading-relaxed pl-8">
+                                                    {note.content}
+                                                </p>
+
+                                                <div className="text-[11px] text-slate-400 font-medium pl-8 flex items-center gap-2">
+                                                    <span>{note.author}</span>
+                                                    <span>•</span>
+                                                    <span>{note.date}</span>
+                                                    <span>•</span>
+                                                    <span>{note.project}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Pagination */}
+                                    <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+                                        <span>
+                                            Menampilkan 1 - {filteredNotesList.length} dari {filteredNotesList.length} catatan
+                                        </span>
                                         <div className="flex items-center gap-1">
                                             <button
                                                 type="button"
@@ -2255,1257 +3153,342 @@ export default function ClientDetail({
                                                 &gt;
                                             </button>
                                         </div>
-                                        <span className="text-[11px] text-slate-400 pl-2">10 / halaman</span>
                                     </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
 
-                        {/* TAB 3: PEMBAYARAN (Gambar 1) */}
-                        {mainTab === 'pembayaran' && (
-                            <div className="p-6 space-y-5 animate-in fade-in duration-150">
-                                {/* Header */}
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                                    <div>
-                                        <h3 className="text-sm font-bold text-slate-900">
-                                            Riwayat Pembayaran
-                                        </h3>
-                                        <p className="text-xs text-slate-500 mt-0.5">
-                                            Monitoring invoice, catatan transaksi, dan status pelunasan klien.
-                                        </p>
-                                    </div>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsPaymentModalOpen(true)}
-                                        className="px-4 py-2 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0 self-start sm:self-auto"
-                                    >
-                                        <Plus className="w-3.5 h-3.5" />
-                                        <span>Tambah Pembayaran</span>
-                                    </button>
-                                </div>
-
-                                {/* Filter Bar */}
-                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                                    <div className="relative flex-1">
-                                        <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                                        <input
-                                            type="text"
-                                            value={paymentSearchQuery}
-                                            onChange={(e) => setPaymentSearchQuery(e.target.value)}
-                                            placeholder="Cari invoice / project..."
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-accent/20 focus:border-primary-accent transition-all"
-                                        />
-                                    </div>
-
-                                    <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                                        <NativeSelect
-                                            value={paymentStatusFilter}
-                                            onChange={(e) => setPaymentStatusFilter(e.target.value)}
-                                            className="text-xs min-w-[130px]"
-                                        >
-                                            <option value="all">Semua Status</option>
-                                            <option value="lunas">Lunas</option>
-                                            <option value="sebagian">Sebagian</option>
-                                            <option value="unpaid">Belum Dibayar</option>
-                                        </NativeSelect>
-
-                                        <NativeSelect
-                                            value={paymentMethodFilter}
-                                            onChange={(e) => setPaymentMethodFilter(e.target.value)}
-                                            className="text-xs min-w-[130px]"
-                                        >
-                                            <option value="all">Semua Metode</option>
-                                            <option value="bca">Transfer BCA</option>
-                                            <option value="mandiri">Transfer Mandiri</option>
-                                            <option value="cash">Cash / Tunai</option>
-                                        </NativeSelect>
+                            {/* TAB 6: RIWAYAT KOMUNIKASI */}
+                            {mainTab === 'komunikasi' && (
+                                <div className="p-6 space-y-5 animate-in fade-in duration-150">
+                                    {/* Header */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                                        <div>
+                                            <h3 className="text-sm font-bold text-slate-900">
+                                                Riwayat Komunikasi & WhatsApp Chat
+                                            </h3>
+                                            <p className="text-xs text-slate-500 mt-0.5">
+                                                Catatan interaksi, pesan WhatsApp, email, dan meeting klien
+                                            </p>
+                                        </div>
 
                                         <button
                                             type="button"
-                                            onClick={() => toast.info('Fitur export data pembayaran')}
-                                            className="px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer transition-colors"
+                                            onClick={() => setIsAddCommModalOpen(true)}
+                                            className="px-4 py-2 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0 self-start sm:self-auto"
                                         >
-                                            <Download className="w-3.5 h-3.5" />
-                                            <span>Export</span>
+                                            <Plus className="w-3.5 h-3.5" />
+                                            <span>+ Catat Komunikasi</span>
                                         </button>
                                     </div>
-                                </div>
 
-                                {/* 4 KPI Summary Cards (Gambar 1) */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-                                    <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-1">
-                                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                                            Total Tagihan
-                                        </span>
-                                        <div className="text-lg font-bold font-mono text-slate-900">
-                                            Rp 101.500.000
-                                        </div>
-                                        <span className="text-[11px] text-slate-400 block">
-                                            9 Invoice
-                                        </span>
-                                    </div>
-
-                                    <div className="p-4 rounded-2xl bg-emerald-50/40 border border-emerald-100 shadow-2xs space-y-1">
-                                        <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">
-                                            Total Dibayar
-                                        </span>
-                                        <div className="text-lg font-bold font-mono text-emerald-600">
-                                            Rp 85.750.000
-                                        </div>
-                                        <span className="text-[11px] text-emerald-600/80 block">
-                                            8 Pembayaran
-                                        </span>
-                                    </div>
-
-                                    <div className="p-4 rounded-2xl bg-amber-50/40 border border-amber-100 shadow-2xs space-y-1">
-                                        <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider block">
-                                            Sisa Tagihan
-                                        </span>
-                                        <div className="text-lg font-bold font-mono text-amber-600">
-                                            Rp 15.750.000
-                                        </div>
-                                        <span className="text-[11px] text-amber-600/80 block">
-                                            3 Invoice
-                                        </span>
-                                    </div>
-
-                                    <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-1.5">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                                                Persentase Dibayar
-                                            </span>
-                                            <span className="text-xs font-bold font-mono text-slate-900">
-                                                84,52%
-                                            </span>
-                                        </div>
-                                        <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: '84.52%' }} />
-                                        </div>
-                                        <span className="text-[10px] text-slate-400 block pt-0.5">
-                                            Tingkat pelunasan sangat baik
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Table */}
-                                <div className="border border-slate-200/80 rounded-2xl overflow-hidden shadow-2xs">
-                                    <Table>
-                                        <TableHeader className="bg-slate-50/80">
-                                            <TableRow>
-                                                <TableHead className="text-[11px] font-bold text-slate-600">No. Invoice</TableHead>
-                                                <TableHead className="text-[11px] font-bold text-slate-600">Project</TableHead>
-                                                <TableHead className="text-[11px] font-bold text-slate-600">Tanggal Invoice</TableHead>
-                                                <TableHead className="text-[11px] font-bold text-slate-600">Jatuh Tempo</TableHead>
-                                                <TableHead className="text-[11px] font-bold text-slate-600 text-right">Total Tagihan</TableHead>
-                                                <TableHead className="text-[11px] font-bold text-slate-600 text-right">Dibayar</TableHead>
-                                                <TableHead className="text-[11px] font-bold text-slate-600 text-right">Sisa</TableHead>
-                                                <TableHead className="text-[11px] font-bold text-slate-600">Status</TableHead>
-                                                <TableHead className="text-[11px] font-bold text-slate-600">Metode</TableHead>
-                                                <TableHead className="text-[11px] font-bold text-slate-600 text-center">Aksi</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {filteredInvoicesList.length > 0 ? (
-                                                filteredInvoicesList.map((inv) => (
-                                                    <TableRow key={inv.id} className="hover:bg-slate-50/50 transition-colors">
-                                                        <TableCell>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => toast.info(`Melihat detail invoice ${inv.invoice_no}`)}
-                                                                className="font-mono font-bold text-xs text-indigo-600 hover:underline cursor-pointer"
-                                                            >
-                                                                {inv.invoice_no}
-                                                            </button>
-                                                        </TableCell>
-                                                        <TableCell className="font-semibold text-xs text-slate-900">
-                                                            {inv.project_name}
-                                                        </TableCell>
-                                                        <TableCell className="text-xs text-slate-600">
-                                                            {inv.invoice_date}
-                                                        </TableCell>
-                                                        <TableCell className="text-xs text-slate-600">
-                                                            {inv.due_date}
-                                                        </TableCell>
-                                                        <TableCell className="text-xs font-mono font-bold text-slate-900 text-right">
-                                                            {formatRupiah(inv.total_amount)}
-                                                        </TableCell>
-                                                        <TableCell className="text-xs font-mono font-bold text-emerald-600 text-right">
-                                                            {formatRupiah(inv.paid_amount)}
-                                                        </TableCell>
-                                                        <TableCell
-                                                            className={`text-xs font-mono font-bold text-right ${
-                                                                inv.remaining_amount > 0 ? 'text-amber-600' : 'text-slate-400'
-                                                            }`}
-                                                        >
-                                                            {formatRupiah(inv.remaining_amount)}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Badge variant={inv.status_variant as any} className="text-[10px] font-bold">
-                                                                {inv.status}
-                                                            </Badge>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <span className="text-xs font-bold text-slate-800 block">
-                                                                {inv.payment_method}
-                                                            </span>
-                                                            <span className="text-[10px] text-slate-400 block">
-                                                                {inv.paid_at}
-                                                            </span>
-                                                        </TableCell>
-                                                        <TableCell className="text-center">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => toast.info(`Mendownload invoice ${inv.invoice_no}`)}
-                                                                className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 shadow-2xs transition-all cursor-pointer"
-                                                                title="Download Invoice"
-                                                            >
-                                                                <Download className="w-3.5 h-3.5" />
-                                                            </button>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))
-                                            ) : (
-                                                <TableRow>
-                                                    <TableCell colSpan={10} className="text-center py-8 text-xs text-slate-400">
-                                                        Tidak ada data invoice yang sesuai kriteria pencarian.
-                                                    </TableCell>
-                                                </TableRow>
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-
-                                {/* Callout & Pagination */}
-                                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2 text-xs text-slate-600">
-                                    <div className="w-4 h-4 rounded-full bg-indigo-100 text-indigo-600 font-bold text-[10px] flex items-center justify-center shrink-0">
-                                        i
-                                    </div>
-                                    <span>Klik nomor invoice untuk melihat detail invoice dan riwayat pembayaran.</span>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* TAB 4: FILES (Timeline & Workflow Pengerjaan Project) */}
-                        {mainTab === 'files' && (
-                            <div className="p-6 space-y-6 animate-in fade-in duration-150">
-                                {/* Header */}
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="text-sm font-bold text-slate-900">
-                                                Timeline / Progres Pengerjaan Project
-                                            </h3>
-                                            <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-bold text-[10px]">
-                                                {initialProjectsList.length} Project Klien
-                                            </span>
-                                        </div>
-                                        <p className="text-xs text-slate-500 mt-0.5">
-                                            Tracking alur tahapan kerja foto & video per project klien secara real-time
-                                        </p>
-                                    </div>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsAddDriveLinkModalOpen(true)}
-                                        className="px-4 py-2 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0 self-start sm:self-auto"
-                                    >
-                                        <Plus className="w-3.5 h-3.5" />
-                                        <span>Simpan Link Google Drive</span>
-                                    </button>
-                                </div>
-
-                                {/* PROJECT SWITCHER BAR WITH SELECT SEARCH */}
-                                <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 shadow-2xs space-y-4">
-                                    {/* Header Row with Label & Workflow Switcher Pills */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                        <div>
-                                            <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                                                <Folder className="w-3.5 h-3.5 text-primary-accent" />
-                                                <span>Pilih Project Klien ({initialProjectsList.length} Project)</span>
-                                            </label>
-                                            <p className="text-[11px] text-slate-400 mt-0.5">
-                                                Cari & pilih project untuk cek alur tahapan & berkas pengerjaan
-                                            </p>
-                                        </div>
-
-                                        {/* Workflow Switcher Pills (Adapts cleanly on all viewports) */}
-                                        <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200/80 shadow-2xs self-start sm:self-auto shrink-0">
-                                            <button
-                                                type="button"
-                                                onClick={() => setActiveWorkflowTab('wedding')}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                                    activeWorkflowTab === 'wedding'
-                                                        ? 'bg-primary-accent text-white shadow-xs'
-                                                        : 'text-slate-600 hover:bg-slate-100'
-                                                }`}
-                                            >
-                                                Wedding (8 Tahap)
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setActiveWorkflowTab('prewedding')}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                                    activeWorkflowTab === 'prewedding'
-                                                        ? 'bg-primary-accent text-white shadow-xs'
-                                                        : 'text-slate-600 hover:bg-slate-100'
-                                                }`}
-                                            >
-                                                Prewedding / Event (5 Tahap)
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Full-width SelectSearch Input */}
-                                    <div className="w-full">
-                                        <SelectSearch
-                                            options={projectSearchOptions}
-                                            value={String(selectedProject?.id || selectedProjectId)}
-                                            onChange={(val) => val && handleSelectProject(val)}
-                                            placeholder="Cari & pilih project klien..."
-                                            searchPlaceholder="Ketik nomor project atau nama acara..."
-                                            clearable={false}
-                                            className="w-full text-xs bg-white"
-                                        />
-                                    </div>
-
-                                    {/* Active Project Info Strip */}
-                                    <div className="pt-3 border-t border-slate-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
-                                        <div className="flex items-center gap-2 flex-wrap min-w-0">
-                                            <span className="font-mono text-xs font-extrabold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-primary-accent shadow-2xs shrink-0">
-                                                {selectedProject?.code}
-                                            </span>
-                                            <span className="font-bold text-slate-900 truncate">
-                                                {selectedProject?.name}
-                                            </span>
-                                            <span className="text-slate-300 hidden sm:inline">•</span>
-                                            <span className="text-slate-600 truncate">
-                                                {selectedProject?.package_name}
-                                            </span>
-                                        </div>
-
-                                        <div className="flex items-center gap-3 shrink-0 self-start sm:self-auto">
-                                            <span className="text-slate-500 flex items-center gap-1 text-[11px] font-medium">
-                                                <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                                                {selectedProject?.event_date}
-                                            </span>
-                                            <Badge
-                                                variant={selectedProject?.status_color as any}
-                                                className="text-[10px] font-bold px-2 py-0.5"
-                                            >
-                                                {selectedProject?.status}
-                                            </Badge>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Connected Horizontal Stepper Timeline */}
-                                <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs overflow-x-auto space-y-2">
-                                    <div className="flex items-center justify-between pb-1 text-[11px] text-slate-400 font-medium">
-                                        <span>Alur Tahapan Pekerjaan (Klik salah satu step untuk rincian)</span>
-                                        <span>
-                                            {completedStagesCount} dari {currentStages.length} Tahap Selesai
-                                        </span>
-                                    </div>
-
-                                    <div className="relative min-w-[760px] pt-3 pb-2">
-                                        {/* Background connecting line bar */}
-                                        <div className="absolute top-[27px] left-8 right-8 h-1 bg-slate-200 -z-0 rounded-full overflow-hidden">
-                                            <div
-                                                className="h-full bg-emerald-500 transition-all duration-300 rounded-full"
-                                                style={{
-                                                    width: `${Math.min(
-                                                        100,
-                                                        (completedStagesCount / (currentStages.length - 1 || 1)) * 100
-                                                    )}%`,
-                                                }}
+                                    {/* Filter Bar */}
+                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                                        <div className="relative flex-1">
+                                            <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                            <input
+                                                type="text"
+                                                value={commSearchQuery}
+                                                onChange={(e) => setCommSearchQuery(e.target.value)}
+                                                placeholder="Cari riwayat komunikasi..."
+                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
                                             />
                                         </div>
 
-                                        <div className="flex items-start justify-between relative z-10 gap-2">
-                                            {currentStages.map((s, idx) => {
-                                                const isStepSelected = selectedStageIndex === idx;
-                                                return (
-                                                    <button
-                                                        key={s.step}
-                                                        type="button"
-                                                        onClick={() => setSelectedStageIndex(idx)}
-                                                        className="flex-1 flex flex-col items-center text-center cursor-pointer group transition-all"
-                                                    >
-                                                        <div
-                                                            className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shadow-2xs mb-2 transition-all relative ${
-                                                                s.status === 'done'
-                                                                    ? 'bg-emerald-500 text-white shadow-emerald-200 ring-2 ring-white'
-                                                                    : s.status === 'active'
-                                                                    ? 'bg-primary-accent text-white ring-4 ring-primary-accent/25 shadow-md scale-105'
-                                                                    : 'bg-white border-2 border-slate-300 text-slate-500 group-hover:border-slate-400 group-hover:bg-slate-50'
-                                                            } ${
-                                                                isStepSelected
-                                                                    ? 'ring-2 ring-offset-2 ring-primary-accent'
-                                                                    : ''
-                                                            }`}
-                                                        >
-                                                            {s.status === 'done' ? (
-                                                                <Check className="w-4 h-4" />
-                                                            ) : (
-                                                                <span>{s.step}</span>
-                                                            )}
-                                                        </div>
-
-                                                        <span
-                                                            className={`text-[11px] font-bold line-clamp-2 max-w-[95px] transition-colors ${
-                                                                isStepSelected
-                                                                    ? 'text-primary-accent font-extrabold'
-                                                                    : s.status === 'active'
-                                                                    ? 'text-slate-900'
-                                                                    : 'text-slate-700'
-                                                            }`}
-                                                        >
-                                                            {s.title}
-                                                        </span>
-
-                                                        <span
-                                                            className={`text-[10px] font-semibold mt-1 px-1.5 py-0.5 rounded-md ${
-                                                                s.status === 'done'
-                                                                    ? 'bg-emerald-50 text-emerald-700'
-                                                                    : s.status === 'active'
-                                                                    ? 'bg-amber-50 text-amber-700 font-bold'
-                                                                    : 'text-slate-400 bg-slate-50'
-                                                            }`}
-                                                        >
-                                                            {s.date}
-                                                        </span>
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
+                                        <NativeSelect
+                                            value={commChannelFilter}
+                                            onChange={(e) => setCommChannelFilter(e.target.value)}
+                                            className="text-xs min-w-[140px]"
+                                        >
+                                            <option value="all">Semua Channel</option>
+                                            <option value="WhatsApp">WhatsApp</option>
+                                            <option value="Email">Email</option>
+                                            <option value="Telepon">Telepon</option>
+                                        </NativeSelect>
                                     </div>
-                                </div>
 
-                                {/* 2 Dynamic Metric & Detail Boxes */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-                                    {/* Left Card: Detail Tahap Terpilih */}
-                                    <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex flex-col justify-between gap-4">
-                                        {/* Stage Pill & Status Header */}
-                                        <div className="space-y-2 pb-3 border-b border-slate-100">
-                                            <div className="flex items-center justify-between gap-2">
-                                                <span className="px-2.5 py-1 rounded-lg bg-primary-accent/10 text-primary-accent text-xs font-black tracking-wide shrink-0">
-                                                    Tahap {selectedStage.step}
-                                                </span>
-                                                <Badge
-                                                    variant={
-                                                        selectedStage.status === 'done'
-                                                            ? 'success'
-                                                            : selectedStage.status === 'active'
-                                                            ? 'info'
-                                                            : 'secondary'
-                                                    }
-                                                    className="text-[10px] font-bold px-2.5 py-1 shrink-0"
+                                    {/* Communication Cards List */}
+                                    <div className="space-y-3">
+                                        {commList
+                                            .filter(
+                                                (c) =>
+                                                    (commChannelFilter === 'all' || c.channel === commChannelFilter) &&
+                                                    (c.title.toLowerCase().includes(commSearchQuery.toLowerCase()) ||
+                                                        c.content.toLowerCase().includes(commSearchQuery.toLowerCase()))
+                                            )
+                                            .map((item) => (
+                                                <div
+                                                    key={item.id}
+                                                    className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex items-start gap-3.5 hover:border-slate-300 transition-colors"
                                                 >
-                                                    {selectedStage.status === 'done'
-                                                        ? 'Selesai (100%)'
-                                                        : selectedStage.status === 'active'
-                                                        ? 'Sedang Dikerjakan (60%)'
-                                                        : 'Belum Dimulai (0%)'}
-                                                </Badge>
-                                            </div>
-                                            <h4 className="text-base sm:text-lg font-extrabold text-slate-900 leading-snug">
-                                                {selectedStage.title}
-                                            </h4>
-                                        </div>
-
-                                        {/* Stage Progress Bar */}
-                                        <div className="space-y-1.5">
-                                            <div className="flex items-center justify-between text-xs">
-                                                <span className="text-slate-500 font-medium">Progres Pengerjaan Tahap Ini</span>
-                                                <span className="font-extrabold text-slate-900 text-sm font-mono">{selectedStage.progress}%</span>
-                                            </div>
-                                            <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                                                <div
-                                                    className={`h-full rounded-full transition-all duration-500 ${
-                                                        selectedStage.status === 'done'
-                                                            ? 'bg-emerald-500'
-                                                            : selectedStage.status === 'active'
-                                                            ? 'bg-primary-accent'
-                                                            : 'bg-slate-300'
-                                                    }`}
-                                                    style={{ width: `${selectedStage.progress}%` }}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Description Box */}
-                                        <div className="p-3.5 rounded-xl bg-slate-50/80 border-l-4 border-primary-accent border border-slate-100 space-y-1">
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                                                Deskripsi & Catatan Tahapan
-                                            </span>
-                                            <p className="text-xs text-slate-600 leading-relaxed">
-                                                {selectedStage.description || 'Pekerjaan berjalan sesuai SOP dan timeline produksi.'}
-                                            </p>
-                                        </div>
-
-                                        {/* Footer Metadata */}
-                                        <div className="grid grid-cols-2 gap-3 pt-2 text-xs border-t border-slate-100">
-                                            <div>
-                                                <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Status / Tanggal</span>
-                                                <span className="font-bold text-slate-800 mt-0.5 block">{selectedStage.date}</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Penanggung Jawab (PIC)</span>
-                                                <span className="font-bold text-slate-800 mt-0.5 block">{selectedStage.pic}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Right Card: Progress Keseluruhan Project */}
-                                    <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex flex-col justify-between gap-4">
-                                        {/* Header with Title & Big Hero Metric */}
-                                        <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
-                                            <div className="space-y-1">
-                                                <h4 className="text-base sm:text-lg font-extrabold text-slate-900 leading-snug">
-                                                    Progress Keseluruhan
-                                                </h4>
-                                                <p className="text-xs text-slate-500">
-                                                    <span className="font-extrabold text-slate-800">{completedStagesCount}</span> dari{' '}
-                                                    {currentStages.length} tahap pengerjaan telah selesai
-                                                </p>
-                                            </div>
-                                            <div className="text-3xl sm:text-4xl font-black font-mono text-primary-accent shrink-0 text-right">
-                                                {overallProgressPercent}%
-                                            </div>
-                                        </div>
-
-                                        {/* Overall Progress Bar & Milestone Labels */}
-                                        <div className="space-y-2">
-                                            <div className="flex items-center justify-between text-xs text-slate-500">
-                                                <span className="font-medium">Total Akumulasi Milestone</span>
-                                                <span className="font-bold text-primary-accent">{overallProgressPercent}% Selesai</span>
-                                            </div>
-                                            <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden">
-                                                <div
-                                                    className="h-full bg-primary-accent rounded-full transition-all duration-500"
-                                                    style={{ width: `${overallProgressPercent}%` }}
-                                                />
-                                            </div>
-                                            <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium pt-0.5">
-                                                <span>Awal Project (DP)</span>
-                                                <span>Editing & Produksi</span>
-                                                <span>Final Delivery</span>
-                                            </div>
-                                        </div>
-
-                                        {/* Stage Counts Breakdown Pill Grid */}
-                                        <div className="grid grid-cols-3 gap-2 text-center">
-                                            <div className="p-2 rounded-xl bg-emerald-50/70 border border-emerald-100">
-                                                <span className="text-[10px] font-bold text-emerald-600 uppercase block">Selesai</span>
-                                                <span className="text-xs sm:text-sm font-extrabold text-emerald-700 font-mono">{completedStagesCount} Tahap</span>
-                                            </div>
-                                            <div className="p-2 rounded-xl bg-amber-50/70 border border-amber-100">
-                                                <span className="text-[10px] font-bold text-amber-600 uppercase block">Aktif</span>
-                                                <span className="text-xs sm:text-sm font-extrabold text-amber-700 font-mono">
-                                                    {currentStages.some((s) => s.status === 'active') ? 1 : 0} Tahap
-                                                </span>
-                                            </div>
-                                            <div className="p-2 rounded-xl bg-slate-50 border border-slate-100">
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase block">Menunggu</span>
-                                                <span className="text-xs sm:text-sm font-extrabold text-slate-600 font-mono">
-                                                    {currentStages.filter((s) => s.status === 'pending').length} Tahap
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        {/* Active Project Box */}
-                                        <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-100 flex items-center justify-between gap-2 text-xs">
-                                            <div className="min-w-0">
-                                                <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Project Aktif</span>
-                                                <span className="font-bold text-slate-800 truncate block mt-0.5">
-                                                    {selectedProject?.name}
-                                                </span>
-                                            </div>
-                                            <Badge
-                                                variant={selectedProject?.status_color as any}
-                                                className="text-[10px] font-bold shrink-0"
-                                            >
-                                                {selectedProject?.status}
-                                            </Badge>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* 2-Column Split: Checklist + Link Google Drive */}
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                                    {/* Left Card: Opsi Pekerjaan (Internal) */}
-                                    <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-4">
-                                        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                                            <div>
-                                                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                                                    Opsi Pekerjaan (Internal)
-                                                </h4>
-                                                <p className="text-xs text-slate-500 mt-0.5">
-                                                    Checklist tugas tim editing & produksi untuk project ini
-                                                </p>
-                                            </div>
-                                            <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold text-xs">
-                                                {checkedTasksCount}/8 Selesai
-                                            </span>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                            {[
-                                                { id: 'editedPhoto', label: 'Edited Photo' },
-                                                { id: 'revisiEditedPhoto', label: 'Revisi Edited Photo (Opsional)' },
-                                                { id: 'finalEditedPhoto', label: 'Final Edited Photo' },
-                                                { id: 'editedVideoHL', label: 'Edited Video HL' },
-                                                { id: 'revisiEditedVideoHL', label: 'Revisi Edited Video HL (Opsional)' },
-                                                { id: 'editedFullDoc', label: 'Edited Full Doc (Opsional)' },
-                                                { id: 'finalEditedVideoHL', label: 'Final Edited Video HL' },
-                                                { id: 'finalEditedFullDoc', label: 'Final Edited Full Doc (Opsional)' },
-                                            ].map((task) => {
-                                                const isChecked = (jobChecklist as any)[task.id] || false;
-                                                return (
-                                                    <label
-                                                        key={task.id}
-                                                        className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all cursor-pointer select-none ${
-                                                            isChecked
-                                                                ? 'border-emerald-300 bg-emerald-50/50 text-emerald-950 shadow-2xs font-semibold'
-                                                                : 'border-slate-200/80 bg-slate-50/40 hover:bg-slate-100/70 hover:border-slate-300 text-slate-800'
-                                                        }`}
-                                                    >
-                                                        <Checkbox
-                                                            checked={isChecked}
-                                                            onCheckedChange={(val) => {
-                                                                const isNowChecked = !!val;
-                                                                setJobChecklist((prev) => ({ ...prev, [task.id]: isNowChecked }));
-                                                                toast.success(
-                                                                    isNowChecked
-                                                                        ? `Tugas "${task.label}" ditandai selesai!`
-                                                                        : `Tugas "${task.label}" dibatalkan.`
-                                                                );
-                                                            }}
-                                                            className="shrink-0"
-                                                        />
-                                                        <span
-                                                            className={`text-xs ${
-                                                                isChecked ? 'line-through text-slate-400' : 'font-medium'
+                                                    <div
+                                                        className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${item.channel === 'WhatsApp'
+                                                                ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                                                : item.channel === 'Email'
+                                                                    ? 'bg-blue-50 text-blue-600 border border-blue-100'
+                                                                    : 'bg-amber-50 text-amber-600 border border-amber-100'
                                                             }`}
-                                                        >
-                                                            {task.label}
-                                                        </span>
-                                                    </label>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-
-                                    {/* Right Card: Link Google Drive */}
-                                    <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-4">
-                                        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                                            <div>
-                                                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                                                    Link Google Drive
-                                                </h4>
-                                                <p className="text-xs text-slate-500 mt-0.5">
-                                                    Folder berkas & preview untuk project: <span className="font-semibold text-slate-700">{selectedProject?.code}</span>
-                                                </p>
-                                            </div>
-                                            <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs">
-                                                {projectDriveLinks.length} Folder
-                                            </span>
-                                        </div>
-
-                                        <div className="space-y-3">
-                                            {projectDriveLinks.map((dl) => (
-                                                <div
-                                                    key={dl.id}
-                                                    className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/60 flex items-start justify-between gap-3 hover:border-slate-300 transition-colors"
-                                                >
-                                                    <div className="flex items-start gap-3 min-w-0">
-                                                        <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0 mt-0.5 shadow-2xs">
-                                                            <Folder className="w-4 h-4" />
-                                                        </div>
-                                                        <div className="min-w-0">
-                                                            <span className="font-bold text-xs text-slate-900 block leading-snug">
-                                                                {dl.title}
-                                                            </span>
-                                                            <a
-                                                                href={dl.url}
-                                                                target="_blank"
-                                                                rel="noreferrer"
-                                                                className="text-xs text-primary-accent hover:underline block truncate mt-0.5"
-                                                            >
-                                                                {dl.url}
-                                                            </a>
-                                                            <span className="text-[10px] text-slate-400 block mt-1">
-                                                                Diupload oleh {dl.uploader} • {dl.date}
-                                                            </span>
-                                                        </div>
+                                                    >
+                                                        {item.channel === 'WhatsApp' ? (
+                                                            <MessageCircle className="w-4 h-4" />
+                                                        ) : item.channel === 'Email' ? (
+                                                            <Mail className="w-4 h-4" />
+                                                        ) : (
+                                                            <Phone className="w-4 h-4" />
+                                                        )}
                                                     </div>
 
-                                                    <div className="flex items-center gap-1.5 shrink-0">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleCopyLink(dl.url)}
-                                                            className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-primary-accent text-xs font-bold shadow-2xs transition-colors cursor-pointer"
-                                                            title="Salin Link"
-                                                        >
-                                                            <Copy className="w-3.5 h-3.5" />
-                                                        </button>
-                                                        <a
-                                                            href={dl.url}
-                                                            target="_blank"
-                                                            rel="noreferrer"
-                                                            className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-xs font-bold shadow-2xs flex items-center gap-1"
-                                                        >
-                                                            <span>Buka</span>
-                                                            <ExternalLink className="w-3 h-3" />
-                                                        </a>
+                                                    <div className="flex-1 space-y-1 min-w-0">
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <h4 className="text-xs font-bold text-slate-900 truncate">
+                                                                {item.channel}: {item.title}
+                                                            </h4>
+                                                            <Badge
+                                                                variant={item.channel === 'WhatsApp' ? 'success' : item.channel === 'Email' ? 'info' : 'warning'}
+                                                                className="text-[10px] font-bold shrink-0"
+                                                            >
+                                                                {item.status}
+                                                            </Badge>
+                                                        </div>
+
+                                                        <p className="text-xs text-slate-600 leading-relaxed">
+                                                            {item.content}
+                                                        </p>
+
+                                                        <div className="text-[10px] text-slate-400 flex items-center gap-2 pt-1">
+                                                            <span>{item.author}</span>
+                                                            <span>•</span>
+                                                            <span>{item.date}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             ))}
+                                    </div>
+                                </div>
+                            )}
 
+                            {/* TAB 7: INFORMASI AKUN (Gambar 5) */}
+                            {mainTab === 'akun' && (
+                                <div className="p-6 space-y-6 animate-in fade-in duration-150">
+                                    {/* Header */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                                        <div>
+                                            <h3 className="text-sm font-bold text-slate-900">
+                                                Informasi Akun Klien (Akses ke Web Klien)
+                                            </h3>
+                                            <p className="text-xs text-slate-500 mt-0.5">
+                                                Klien dapat login ke portal untuk melihat progress, download file, dan review foto.
+                                            </p>
+                                        </div>
+
+                                        {/* Toggle Switch */}
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <span className="text-xs font-bold text-slate-700">Buat akun klien</span>
                                             <button
                                                 type="button"
-                                                onClick={() => setIsAddDriveLinkModalOpen(true)}
-                                                className="w-full py-2.5 rounded-xl border-2 border-dashed border-slate-200 hover:border-primary-accent/40 hover:bg-primary-accent/5 text-slate-600 hover:text-primary-accent font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                                onClick={() => setIsAccountActive(!isAccountActive)}
+                                                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${isAccountActive ? 'bg-indigo-600' : 'bg-slate-200'
+                                                    }`}
                                             >
-                                                <Plus className="w-3.5 h-3.5" />
-                                                <span>Tambah Link Google Drive</span>
+                                                <span
+                                                    className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform shadow-xs ${isAccountActive ? 'left-6' : 'left-1'
+                                                        }`}
+                                                />
                                             </button>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
-                        )}
 
-                        {/* TAB 5: CATATAN (Gambar 3) */}
-                        {mainTab === 'catatan' && (
-                            <div className="p-6 space-y-5 animate-in fade-in duration-150">
-                                {/* Header */}
-                                <div>
-                                    <h3 className="text-sm font-bold text-slate-900">
-                                        Catatan
-                                    </h3>
-                                    <p className="text-xs text-slate-500 mt-0.5">
-                                        Kelola catatan internal terkait klien, preferensi, dan instruksi khusus
-                                    </p>
-                                </div>
-
-                                {/* Add Note Box */}
-                                <div className="border border-slate-200/80 rounded-2xl overflow-hidden bg-white shadow-2xs">
-                                    <textarea
-                                        rows={3}
-                                        value={noteInputText}
-                                        onChange={(e) => setNoteInputText(e.target.value)}
-                                        placeholder="Tulis catatan baru..."
-                                        className="w-full p-4 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none resize-none"
-                                    />
-                                    <div className="px-4 py-2.5 bg-slate-50/80 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                        <div className="flex items-center gap-3">
-                                            <NativeSelect
-                                                value={noteInputCategory}
-                                                onChange={(e) => setNoteInputCategory(e.target.value)}
-                                                className="text-xs py-1"
-                                            >
-                                                <option value="Preferensi">Preferensi</option>
-                                                <option value="Informasi">Informasi</option>
-                                                <option value="Pembayaran">Pembayaran</option>
-                                                <option value="Meeting">Meeting</option>
-                                            </NativeSelect>
-
-                                            <div className="flex items-center gap-2 text-slate-400 border-l border-slate-200 pl-3">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => toast.info('Fitur lampirkan file ke catatan')}
-                                                    className="hover:text-slate-700 cursor-pointer"
-                                                    title="Lampirkan File"
-                                                >
-                                                    <Paperclip className="w-3.5 h-3.5" />
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setNoteInputText((prev) => prev + '**tebal**')}
-                                                    className="hover:text-slate-700 cursor-pointer"
-                                                    title="Teks Tebal"
-                                                >
-                                                    <Bold className="w-3.5 h-3.5" />
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setNoteInputText((prev) => prev + '_miring_')}
-                                                    className="hover:text-slate-700 cursor-pointer"
-                                                    title="Teks Miring"
-                                                >
-                                                    <Italic className="w-3.5 h-3.5" />
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <button
-                                            type="button"
-                                            onClick={handleAddNote}
-                                            className="px-4 py-1.5 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer self-end sm:self-auto"
-                                        >
-                                            <Check className="w-3.5 h-3.5" />
-                                            <span>Simpan Catatan</span>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Filter Bar */}
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <NativeSelect
-                                            value={noteCategoryFilter}
-                                            onChange={(e) => setNoteCategoryFilter(e.target.value)}
-                                            className="text-xs min-w-[140px]"
-                                        >
-                                            <option value="all">Semua Kategori</option>
-                                            <option value="preferensi">Preferensi</option>
-                                            <option value="informasi">Informasi</option>
-                                            <option value="pembayaran">Pembayaran</option>
-                                            <option value="meeting">Meeting</option>
-                                        </NativeSelect>
-
-                                        <NativeSelect
-                                            value={noteAuthorFilter}
-                                            onChange={(e) => setNoteAuthorFilter(e.target.value)}
-                                            className="text-xs min-w-[140px]"
-                                        >
-                                            <option value="all">Dibuat Oleh</option>
-                                            <option value="admin">Admin Lensaria</option>
-                                            <option value="budi">Budi Santoso (Supervisor)</option>
-                                        </NativeSelect>
-                                    </div>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setNoteCategoryFilter('all');
-                                            setNoteAuthorFilter('all');
-                                        }}
-                                        className="text-xs font-bold text-slate-500 hover:text-slate-900 flex items-center gap-1 cursor-pointer"
-                                    >
-                                        <RotateCcw className="w-3.5 h-3.5" />
-                                        <span>Reset Filter</span>
-                                    </button>
-                                </div>
-
-                                {/* 4 Note Cards (Gambar 3) */}
-                                <div className="space-y-3.5">
-                                    {filteredNotesList.map((note) => (
-                                        <div
-                                            key={note.id}
-                                            className={`p-4 rounded-2xl bg-white border border-slate-200/80 border-l-4 ${note.border_color} shadow-2xs space-y-2`}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <div
-                                                        className={`w-6 h-6 rounded-lg flex items-center justify-center ${note.icon_color}`}
-                                                    >
-                                                        {note.category === 'Preferensi' ? (
-                                                            <Star className="w-3.5 h-3.5" />
-                                                        ) : note.category === 'Informasi' ? (
-                                                            <FileText className="w-3.5 h-3.5" />
-                                                        ) : note.category === 'Pembayaran' ? (
-                                                            <Receipt className="w-3.5 h-3.5" />
-                                                        ) : (
-                                                            <MessageSquare className="w-3.5 h-3.5" />
-                                                        )}
+                                    {isAccountActive ? (
+                                        <form onSubmit={handleSaveClientAccount} className="space-y-5">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                        Email Akun <span className="text-red-500">*</span>
+                                                    </label>
+                                                    <div className="relative">
+                                                        <Mail className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                                        <input
+                                                            type="email"
+                                                            required
+                                                            value={accountEmail}
+                                                            onChange={(e) => setAccountEmail(e.target.value)}
+                                                            placeholder="andipratama@email.com"
+                                                            className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
+                                                        />
                                                     </div>
-                                                    <h4 className="text-xs font-bold text-slate-900">
-                                                        {note.title}
-                                                    </h4>
                                                 </div>
 
-                                                <Badge variant={note.badge_color as any} className="text-[10px] font-bold">
-                                                    {note.category}
-                                                </Badge>
-                                            </div>
-
-                                            <p className="text-xs text-slate-700 leading-relaxed pl-8">
-                                                {note.content}
-                                            </p>
-
-                                            <div className="text-[11px] text-slate-400 font-medium pl-8 flex items-center gap-2">
-                                                <span>{note.author}</span>
-                                                <span>•</span>
-                                                <span>{note.date}</span>
-                                                <span>•</span>
-                                                <span>{note.project}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {/* Pagination */}
-                                <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
-                                    <span>
-                                        Menampilkan 1 - {filteredNotesList.length} dari {filteredNotesList.length} catatan
-                                    </span>
-                                    <div className="flex items-center gap-1">
-                                        <button
-                                            type="button"
-                                            disabled
-                                            className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 cursor-not-allowed"
-                                        >
-                                            &lt;
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="w-7 h-7 rounded-lg bg-indigo-600 text-white font-bold flex items-center justify-center text-xs shadow-2xs"
-                                        >
-                                            1
-                                        </button>
-                                        <button
-                                            type="button"
-                                            disabled
-                                            className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 cursor-not-allowed"
-                                        >
-                                            &gt;
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* TAB 6: RIWAYAT KOMUNIKASI */}
-                        {mainTab === 'komunikasi' && (
-                            <div className="p-6 space-y-5 animate-in fade-in duration-150">
-                                {/* Header */}
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                                    <div>
-                                        <h3 className="text-sm font-bold text-slate-900">
-                                            Riwayat Komunikasi & WhatsApp Chat
-                                        </h3>
-                                        <p className="text-xs text-slate-500 mt-0.5">
-                                            Catatan interaksi, pesan WhatsApp, email, dan meeting klien
-                                        </p>
-                                    </div>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsAddCommModalOpen(true)}
-                                        className="px-4 py-2 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0 self-start sm:self-auto"
-                                    >
-                                        <Plus className="w-3.5 h-3.5" />
-                                        <span>+ Catat Komunikasi</span>
-                                    </button>
-                                </div>
-
-                                {/* Filter Bar */}
-                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                                    <div className="relative flex-1">
-                                        <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                                        <input
-                                            type="text"
-                                            value={commSearchQuery}
-                                            onChange={(e) => setCommSearchQuery(e.target.value)}
-                                            placeholder="Cari riwayat komunikasi..."
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                                        />
-                                    </div>
-
-                                    <NativeSelect
-                                        value={commChannelFilter}
-                                        onChange={(e) => setCommChannelFilter(e.target.value)}
-                                        className="text-xs min-w-[140px]"
-                                    >
-                                        <option value="all">Semua Channel</option>
-                                        <option value="WhatsApp">WhatsApp</option>
-                                        <option value="Email">Email</option>
-                                        <option value="Telepon">Telepon</option>
-                                    </NativeSelect>
-                                </div>
-
-                                {/* Communication Cards List */}
-                                <div className="space-y-3">
-                                    {commList
-                                        .filter(
-                                            (c) =>
-                                                (commChannelFilter === 'all' || c.channel === commChannelFilter) &&
-                                                (c.title.toLowerCase().includes(commSearchQuery.toLowerCase()) ||
-                                                    c.content.toLowerCase().includes(commSearchQuery.toLowerCase()))
-                                        )
-                                        .map((item) => (
-                                            <div
-                                                key={item.id}
-                                                className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex items-start gap-3.5 hover:border-slate-300 transition-colors"
-                                            >
-                                                <div
-                                                    className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-                                                        item.channel === 'WhatsApp'
-                                                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-                                                            : item.channel === 'Email'
-                                                            ? 'bg-blue-50 text-blue-600 border border-blue-100'
-                                                            : 'bg-amber-50 text-amber-600 border border-amber-100'
-                                                    }`}
-                                                >
-                                                    {item.channel === 'WhatsApp' ? (
-                                                        <MessageCircle className="w-4 h-4" />
-                                                    ) : item.channel === 'Email' ? (
-                                                        <Mail className="w-4 h-4" />
-                                                    ) : (
-                                                        <Phone className="w-4 h-4" />
-                                                    )}
+                                                <div>
+                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                        Username (opsional)
+                                                    </label>
+                                                    <div className="relative">
+                                                        <span className="text-xs font-bold text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2">
+                                                            @
+                                                        </span>
+                                                        <input
+                                                            type="text"
+                                                            value={accountUsername}
+                                                            onChange={(e) => setAccountUsername(e.target.value)}
+                                                            placeholder="andipratama"
+                                                            className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                                                        />
+                                                    </div>
                                                 </div>
 
-                                                <div className="flex-1 space-y-1 min-w-0">
-                                                    <div className="flex items-center justify-between gap-2">
-                                                        <h4 className="text-xs font-bold text-slate-900 truncate">
-                                                            {item.channel}: {item.title}
-                                                        </h4>
-                                                        <Badge
-                                                            variant={item.channel === 'WhatsApp' ? 'success' : item.channel === 'Email' ? 'info' : 'warning'}
-                                                            className="text-[10px] font-bold shrink-0"
+                                                <div>
+                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                        Password <span className="text-red-500">*</span>
+                                                    </label>
+                                                    <div className="relative">
+                                                        <Lock className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                                        <input
+                                                            type={showAccountPassword ? 'text' : 'password'}
+                                                            required
+                                                            value={accountPassword}
+                                                            onChange={(e) => setAccountPassword(e.target.value)}
+                                                            placeholder="Abc123!@#"
+                                                            className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-9 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setShowAccountPassword(!showAccountPassword)}
+                                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                                                         >
-                                                            {item.status}
-                                                        </Badge>
-                                                    </div>
-
-                                                    <p className="text-xs text-slate-600 leading-relaxed">
-                                                        {item.content}
-                                                    </p>
-
-                                                    <div className="text-[10px] text-slate-400 flex items-center gap-2 pt-1">
-                                                        <span>{item.author}</span>
-                                                        <span>•</span>
-                                                        <span>{item.date}</span>
+                                                            {showAccountPassword ? (
+                                                                <EyeOff className="w-3.5 h-3.5" />
+                                                            ) : (
+                                                                <Eye className="w-3.5 h-3.5" />
+                                                            )}
+                                                        </button>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
-                                </div>
-                            </div>
-                        )}
 
-                        {/* TAB 7: INFORMASI AKUN (Gambar 5) */}
-                        {mainTab === 'akun' && (
-                            <div className="p-6 space-y-6 animate-in fade-in duration-150">
-                                {/* Header */}
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                                    <div>
-                                        <h3 className="text-sm font-bold text-slate-900">
-                                            Informasi Akun Klien (Akses ke Web Klien)
-                                        </h3>
-                                        <p className="text-xs text-slate-500 mt-0.5">
-                                            Klien dapat login ke portal untuk melihat progress, download file, dan review foto.
-                                        </p>
-                                    </div>
-
-                                    {/* Toggle Switch */}
-                                    <div className="flex items-center gap-2 shrink-0">
-                                        <span className="text-xs font-bold text-slate-700">Buat akun klien</span>
-                                        <button
-                                            type="button"
-                                            onClick={() => setIsAccountActive(!isAccountActive)}
-                                            className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
-                                                isAccountActive ? 'bg-indigo-600' : 'bg-slate-200'
-                                            }`}
-                                        >
-                                            <span
-                                                className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform shadow-xs ${
-                                                    isAccountActive ? 'left-6' : 'left-1'
-                                                }`}
-                                            />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {isAccountActive ? (
-                                    <form onSubmit={handleSaveClientAccount} className="space-y-5">
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                    Email Akun <span className="text-red-500">*</span>
-                                                </label>
-                                                <div className="relative">
-                                                    <Mail className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                                                    <input
-                                                        type="email"
-                                                        required
-                                                        value={accountEmail}
-                                                        onChange={(e) => setAccountEmail(e.target.value)}
-                                                        placeholder="andipratama@email.com"
-                                                        className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
-                                                    />
+                                                <div>
+                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                        Konfirmasi Password <span className="text-red-500">*</span>
+                                                    </label>
+                                                    <div className="relative">
+                                                        <Lock className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                                        <input
+                                                            type={showAccountPasswordConfirm ? 'text' : 'password'}
+                                                            required
+                                                            value={accountPasswordConfirm}
+                                                            onChange={(e) => setAccountPasswordConfirm(e.target.value)}
+                                                            placeholder="Abc123!@#"
+                                                            className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-9 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setShowAccountPasswordConfirm(!showAccountPasswordConfirm)}
+                                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                                                        >
+                                                            {showAccountPasswordConfirm ? (
+                                                                <EyeOff className="w-3.5 h-3.5" />
+                                                            ) : (
+                                                                <Eye className="w-3.5 h-3.5" />
+                                                            )}
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
 
                                             <div>
-                                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                    Username (opsional)
-                                                </label>
-                                                <div className="relative">
-                                                    <span className="text-xs font-bold text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2">
-                                                        @
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <label className="text-[11px] font-bold text-slate-700">
+                                                        Pesan untuk Klien (Akan dikirim bersama akun)
+                                                    </label>
+                                                    <span className="text-[10px] text-slate-400">
+                                                        {accountMessage.length} / 500
                                                     </span>
-                                                    <input
-                                                        type="text"
-                                                        value={accountUsername}
-                                                        onChange={(e) => setAccountUsername(e.target.value)}
-                                                        placeholder="andipratama"
-                                                        className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                                                    />
                                                 </div>
+                                                <textarea
+                                                    rows={3}
+                                                    maxLength={500}
+                                                    value={accountMessage}
+                                                    onChange={(e) => setAccountMessage(e.target.value)}
+                                                    className="w-full bg-white border border-slate-200 rounded-xl p-3.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-none leading-relaxed"
+                                                />
                                             </div>
 
                                             <div>
-                                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                    Password <span className="text-red-500">*</span>
+                                                <label className="text-[11px] font-bold text-slate-700 block mb-2">
+                                                    Bagikan Akun Melalui
                                                 </label>
-                                                <div className="relative">
-                                                    <Lock className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                                                    <input
-                                                        type={showAccountPassword ? 'text' : 'password'}
-                                                        required
-                                                        value={accountPassword}
-                                                        onChange={(e) => setAccountPassword(e.target.value)}
-                                                        placeholder="Abc123!@#"
-                                                        className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-9 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
-                                                    />
+                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                                     <button
                                                         type="button"
-                                                        onClick={() => setShowAccountPassword(!showAccountPassword)}
-                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                                                        onClick={() => setAccountShareMethod('email')}
+                                                        className={`p-3.5 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer ${accountShareMethod === 'email'
+                                                                ? 'border-indigo-600 bg-indigo-50/40 text-indigo-900 font-bold ring-1 ring-indigo-600'
+                                                                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                                            }`}
                                                     >
-                                                        {showAccountPassword ? (
-                                                            <EyeOff className="w-3.5 h-3.5" />
-                                                        ) : (
-                                                            <Eye className="w-3.5 h-3.5" />
-                                                        )}
+                                                        <Mail className="w-4 h-4 text-indigo-600 shrink-0" />
+                                                        <span className="text-xs">Email</span>
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setAccountShareMethod('whatsapp')}
+                                                        className={`p-3.5 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer ${accountShareMethod === 'whatsapp'
+                                                                ? 'border-emerald-600 bg-emerald-50/40 text-emerald-900 font-bold ring-1 ring-emerald-600'
+                                                                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                                            }`}
+                                                    >
+                                                        <MessageCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                                                        <span className="text-xs">WhatsApp</span>
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setAccountShareMethod('both')}
+                                                        className={`p-3.5 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer ${accountShareMethod === 'both'
+                                                                ? 'border-primary-accent bg-amber-50/25 text-slate-900 font-bold ring-1 ring-primary-accent'
+                                                                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                                            }`}
+                                                    >
+                                                        <Send className="w-4 h-4 text-primary-accent shrink-0" />
+                                                        <span className="text-xs">Keduanya (Email & WA)</span>
                                                     </button>
                                                 </div>
                                             </div>
 
-                                            <div>
-                                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                    Konfirmasi Password <span className="text-red-500">*</span>
-                                                </label>
-                                                <div className="relative">
-                                                    <Lock className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                                                    <input
-                                                        type={showAccountPasswordConfirm ? 'text' : 'password'}
-                                                        required
-                                                        value={accountPasswordConfirm}
-                                                        onChange={(e) => setAccountPasswordConfirm(e.target.value)}
-                                                        placeholder="Abc123!@#"
-                                                        className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-9 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setShowAccountPasswordConfirm(!showAccountPasswordConfirm)}
-                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                                                    >
-                                                        {showAccountPasswordConfirm ? (
-                                                            <EyeOff className="w-3.5 h-3.5" />
-                                                        ) : (
-                                                            <Eye className="w-3.5 h-3.5" />
-                                                        )}
-                                                    </button>
+                                            <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                <div className="flex items-start gap-2.5">
+                                                    <div className="w-4 h-4 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">
+                                                        i
+                                                    </div>
+                                                    <p className="text-xs text-indigo-950 leading-relaxed">
+                                                        Akun ini akan langsung aktif setelah disimpan. Klien akan menerima kredensial login melalui metode pengiriman yang dipilih di atas.
+                                                    </p>
                                                 </div>
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <div className="flex items-center justify-between mb-1">
-                                                <label className="text-[11px] font-bold text-slate-700">
-                                                    Pesan untuk Klien (Akan dikirim bersama akun)
-                                                </label>
-                                                <span className="text-[10px] text-slate-400">
-                                                    {accountMessage.length} / 500
-                                                </span>
-                                            </div>
-                                            <textarea
-                                                rows={3}
-                                                maxLength={500}
-                                                value={accountMessage}
-                                                onChange={(e) => setAccountMessage(e.target.value)}
-                                                className="w-full bg-white border border-slate-200 rounded-xl p-3.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-none leading-relaxed"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="text-[11px] font-bold text-slate-700 block mb-2">
-                                                Bagikan Akun Melalui
-                                            </label>
-                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setAccountShareMethod('email')}
-                                                    className={`p-3.5 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer ${
-                                                        accountShareMethod === 'email'
-                                                            ? 'border-indigo-600 bg-indigo-50/40 text-indigo-900 font-bold ring-1 ring-indigo-600'
-                                                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                                                    }`}
-                                                >
-                                                    <Mail className="w-4 h-4 text-indigo-600 shrink-0" />
-                                                    <span className="text-xs">Email</span>
-                                                </button>
 
                                                 <button
-                                                    type="button"
-                                                    onClick={() => setAccountShareMethod('whatsapp')}
-                                                    className={`p-3.5 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer ${
-                                                        accountShareMethod === 'whatsapp'
-                                                            ? 'border-emerald-600 bg-emerald-50/40 text-emerald-900 font-bold ring-1 ring-emerald-600'
-                                                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                                                    }`}
+                                                    type="submit"
+                                                    disabled={submittingAccount}
+                                                    className="px-5 py-2.5 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs shrink-0 cursor-pointer disabled:opacity-50"
                                                 >
-                                                    <MessageCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                                                    <span className="text-xs">WhatsApp</span>
-                                                </button>
-
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setAccountShareMethod('both')}
-                                                    className={`p-3.5 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer ${
-                                                        accountShareMethod === 'both'
-                                                            ? 'border-primary-accent bg-amber-50/25 text-slate-900 font-bold ring-1 ring-primary-accent'
-                                                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                                                    }`}
-                                                >
-                                                    <Send className="w-4 h-4 text-primary-accent shrink-0" />
-                                                    <span className="text-xs">Keduanya (Email & WA)</span>
+                                                    <Send className="w-3.5 h-3.5" />
+                                                    <span>{submittingAccount ? 'Mengirimkan...' : 'Buat & Kirim Akun'}</span>
                                                 </button>
                                             </div>
+                                        </form>
+                                    ) : (
+                                        <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
+                                            <Lock className="w-8 h-8 text-slate-300 mx-auto" />
+                                            <h4 className="text-xs font-bold text-slate-700">Akses Portal Klien Non-Aktif</h4>
+                                            <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                                                Aktifkan tombol toggle "Buat akun klien" di kanan atas untuk memberikan akses portal kepada klien.
+                                            </p>
                                         </div>
-
-                                        <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                            <div className="flex items-start gap-2.5">
-                                                <div className="w-4 h-4 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">
-                                                    i
-                                                </div>
-                                                <p className="text-xs text-indigo-950 leading-relaxed">
-                                                    Akun ini akan langsung aktif setelah disimpan. Klien akan menerima kredensial login melalui metode pengiriman yang dipilih di atas.
-                                                </p>
-                                            </div>
-
-                                            <button
-                                                type="submit"
-                                                disabled={submittingAccount}
-                                                className="px-5 py-2.5 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs shrink-0 cursor-pointer disabled:opacity-50"
-                                            >
-                                                <Send className="w-3.5 h-3.5" />
-                                                <span>{submittingAccount ? 'Mengirimkan...' : 'Buat & Kirim Akun'}</span>
-                                            </button>
-                                        </div>
-                                    </form>
-                                ) : (
-                                    <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
-                                        <Lock className="w-8 h-8 text-slate-300 mx-auto" />
-                                        <h4 className="text-xs font-bold text-slate-700">Akses Portal Klien Non-Aktif</h4>
-                                        <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                                            Aktifkan tombol toggle "Buat akun klien" di kanan atas untuk memberikan akses portal kepada klien.
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
-                </div>
 
-                {/* RIGHT COLUMN: 3 SIDEBAR WIDGETS (MATCHING REFERENCE SCREENSHOT EXACTLY) */}
-                <div className="lg:col-span-4 space-y-5">
+                    {/* RIGHT COLUMN: 3 SIDEBAR WIDGETS (MATCHING REFERENCE SCREENSHOT EXACTLY) */}
+                    <div className="lg:col-span-4 space-y-5">
                         {/* WIDGET 1: RINGKASAN PROJECT */}
                         <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs space-y-3.5">
                             <div className="flex items-center justify-between">
@@ -3744,22 +3727,20 @@ export default function ClientDetail({
                                         key={s.id}
                                         type="button"
                                         onClick={() => goToEditStep(s.id as any)}
-                                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex-1 justify-center ${
-                                            isActive
+                                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex-1 justify-center ${isActive
                                                 ? 'bg-white text-slate-900 shadow-2xs ring-1 ring-slate-200/80 font-extrabold'
                                                 : isPassed
-                                                ? 'text-emerald-700 hover:text-emerald-800 hover:bg-white/50'
-                                                : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'
-                                        }`}
+                                                    ? 'text-emerald-700 hover:text-emerald-800 hover:bg-white/50'
+                                                    : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'
+                                            }`}
                                     >
                                         <span
-                                            className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                                                isActive
+                                            className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${isActive
                                                     ? 'bg-[#C89445] text-white'
                                                     : isPassed
-                                                    ? 'bg-emerald-100 text-emerald-700'
-                                                    : 'bg-slate-200 text-slate-600'
-                                            }`}
+                                                        ? 'bg-emerald-100 text-emerald-700'
+                                                        : 'bg-slate-200 text-slate-600'
+                                                }`}
                                         >
                                             {isPassed ? <Check className="w-3 h-3 text-emerald-700 stroke-[3]" /> : s.stepNum}
                                         </span>
@@ -3790,11 +3771,10 @@ export default function ClientDetail({
                                                 key={t.id}
                                                 type="button"
                                                 onClick={() => setEditFormData({ ...editFormData, client_type: t.id })}
-                                                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                                                    editFormData.client_type === t.id
+                                                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${editFormData.client_type === t.id
                                                         ? 'bg-amber-50/60 border-[#C89445] text-[#8C5D19] ring-2 ring-[#C89445]/20 font-bold'
                                                         : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
-                                                }`}
+                                                    }`}
                                             >
                                                 <span className="text-xs font-bold block">{t.label}</span>
                                                 <span className="text-[10px] text-slate-400 block mt-0.5">{t.desc}</span>
@@ -4333,7 +4313,7 @@ export default function ClientDetail({
                                             <option value="Google">Google Search / SEO</option>
                                             <option value="Wedding Organizer">Vendor Partner / Wedding Organizer</option>
                                             <option value="Rekomendasi Teman">Rekomendasi Klien / Teman</option>
-                                            <option value="Website">Website Resmi Lensaria</option>
+                                            <option value="Website">Website Resmi Arams</option>
                                             <option value="Bridestory">Bridestory</option>
                                         </select>
                                     </div>
@@ -4409,11 +4389,10 @@ export default function ClientDetail({
                                                         key={tag}
                                                         type="button"
                                                         onClick={() => toggleEditTag(tag)}
-                                                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                                                            isSelected
+                                                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${isSelected
                                                                 ? 'bg-amber-100 text-amber-800 border border-amber-300'
                                                                 : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {tag}
                                                     </button>

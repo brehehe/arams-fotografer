@@ -296,7 +296,7 @@ export default function WeddingOrganizersIndex({
 
     return (
         <div className="w-full max-w-full space-y-6 pb-12">
-            <Head title="Wedding Organizer (WO) - Lensaria Photography" />
+            <Head title="Wedding Organizer (WO) - Arams Photography" />
 
             {/* Breadcrumb & Header Title */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
