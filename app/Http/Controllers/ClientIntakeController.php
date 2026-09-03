@@ -25,8 +25,8 @@ class ClientIntakeController extends Controller
     public function create(): Response
     {
         $categories = Category::where('status', 'active')
-            ->select('id', 'name', 'color')
-            ->orderBy('name')
+            ->select('id', 'name', 'slug', 'description', 'color')
+            ->orderBy('sort_order')
             ->get();
 
         $packages = Package::where('status', 'active')
@@ -68,6 +68,8 @@ class ClientIntakeController extends Controller
     {
         $this->processClientIntake->execute($request->validated());
 
-        return redirect()->back()->with('success', 'Formulir booking berhasil dikirim! Tim Arams Pictures akan segera menghubungi Anda melalui WhatsApp.');
+        return redirect()->back()
+            ->with('intake_success', true)
+            ->with('success', 'Formulir booking berhasil dikirim! Tim Arams Pictures akan segera menghubungi Anda melalui WhatsApp.');
     }
 }

@@ -35,6 +35,36 @@ Route::get('/form-klien', [ClientIntakeController::class, 'create'])->name('clie
 Route::get('/booking', fn () => redirect()->route('client.intake'));
 Route::post('/form-klien', [ClientIntakeController::class, 'store'])->name('client.intake.store');
 
+// Public API: Indonesia Region Cascading (powered by aliziodev/laravel-indonesia-regions)
+Route::get('/api/regions/provinces', function () {
+    $provinces = \Aliziodev\IndonesiaRegions\Models\IndonesiaRegion::whereRaw("code ~ '^[0-9]{2}$'")
+        ->orderBy('name')
+        ->get(['code', 'name'])
+        ->map(fn ($r) => ['code' => $r->code, 'name' => $r->name]);
+    return response()->json($provinces);
+})->name('api.regions.provinces');
+
+Route::get('/api/regions/children', function (Request $request) {
+    $parentCode = $request->query('parent_code', '');
+    if (empty($parentCode)) return response()->json([]);
+
+    // Determine child depth: province (2) → city (2+dot+2), city → district, district → village
+    $dots = substr_count($parentCode, '.');
+    $pattern = '^' . preg_quote($parentCode, '/') . '\.[0-9]+$';
+
+    // For villages (depth 3 → codes like XX.YY.ZZ.NNNN), the pattern changes
+    if ($dots >= 2) {
+        $pattern = '^' . preg_quote($parentCode, '/') . '\.[0-9]+$';
+    }
+
+    $children = \Aliziodev\IndonesiaRegions\Models\IndonesiaRegion::whereRaw("code ~ ?", [$pattern])
+        ->orderBy('name')
+        ->get(['code', 'name', 'postal_code'])
+        ->map(fn ($r) => ['code' => $r->code, 'name' => $r->name, 'postal_code' => $r->postal_code]);
+
+    return response()->json($children);
+})->name('api.regions.children');
+
 Route::get('/', function () {
     if (auth()->check()) {
         if (auth()->user()->hasRole('Client')) {
@@ -61,6 +91,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // 2. Clients & Wedding Organizers (WO)
+    Route::post('/clients/{client}/account', [ClientController::class, 'storeAccount'])->name('clients.account.store');
     Route::resource('clients', ClientController::class);
     Route::resource('wedding-organizers', WeddingOrganizerController::class)->except(['create', 'edit', 'show']);
     Route::get('/wedding-organizer', [WeddingOrganizerController::class, 'index'])->name('wedding-organizer.index');

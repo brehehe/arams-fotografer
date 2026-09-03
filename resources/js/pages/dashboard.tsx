@@ -941,18 +941,19 @@ export default function Dashboard({
                         <div className="space-y-2 flex-1">
                             {upcoming_deadlines && upcoming_deadlines.length > 0 ? (
                                 upcoming_deadlines.slice(0, 5).map((dl) => (
-                                    <div
+                                    <Link
                                         key={dl.id}
-                                        className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50/80 transition-colors gap-3"
+                                        href={`/projects/${dl.id}`}
+                                        className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 transition-colors gap-3 group"
                                     >
                                         <div className="flex items-center gap-3 min-w-0">
                                             <img
                                                 src={dl.thumbnail || 'https://images.unsplash.com/photo-1519741497674-611481863552?w=100&auto=format&fit=crop&q=80'}
                                                 alt={dl.name}
-                                                className="w-9 h-9 rounded-xl object-cover ring-1 ring-slate-200 shrink-0 shadow-2xs"
+                                                className="w-9 h-9 rounded-xl object-cover ring-1 ring-slate-200 shrink-0 shadow-2xs group-hover:ring-amber-300 transition-all"
                                             />
                                             <div className="min-w-0">
-                                                <h4 className="text-xs font-bold text-slate-900 truncate">
+                                                <h4 className="text-xs font-bold text-slate-900 group-hover:text-primary-accent transition-colors truncate">
                                                     {dl.name}
                                                 </h4>
                                                 <span className="text-[11px] text-slate-400 block truncate">
@@ -961,18 +962,19 @@ export default function Dashboard({
                                             </div>
                                         </div>
 
-                                        <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border whitespace-nowrap shrink-0 ${dl.urgency === 'completed' ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
-                                                : dl.urgency === 'urgent' ? 'text-amber-700 bg-amber-50 border-amber-200'
-                                                    : dl.urgency === 'overdue' ? 'text-red-700 bg-red-50 border-red-200'
-                                                        : 'text-blue-700 bg-blue-50 border-blue-200'
+                                        <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border whitespace-nowrap shrink-0 ${dl.urgency === 'urgent'
+                                                ? 'text-amber-700 bg-amber-50 border-amber-200'
+                                                : dl.urgency === 'overdue'
+                                                    ? 'text-red-700 bg-red-50 border-red-200'
+                                                    : 'text-blue-700 bg-blue-50 border-blue-200'
                                             }`}>
                                             {dl.urgency_text}
                                         </span>
-                                    </div>
+                                    </Link>
                                 ))
                             ) : (
                                 <div className="text-center py-6 text-slate-400 text-xs">
-                                    Belum ada project mendekati deadline.
+                                    Belum ada project aktif mendekati deadline.
                                 </div>
                             )}
                         </div>

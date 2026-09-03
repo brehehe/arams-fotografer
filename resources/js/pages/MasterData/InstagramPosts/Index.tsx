@@ -211,7 +211,7 @@ export default function InstagramPostsIndex({
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                         <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
-                            <Instagram className="w-6 h-6 text-rose-600" />
+                            {/* <Instagram className="w-6 h-6 text-rose-600" /> */}
                             <span>Feed Instagram Studio</span>
                         </h1>
                         <p className="text-xs text-slate-500 mt-0.5">

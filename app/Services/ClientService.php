@@ -71,7 +71,10 @@ class ClientService
 
         $cities = Client::whereNotNull('city')->distinct()->pluck('city');
         $sources = Client::whereNotNull('source')->distinct()->pluck('source');
-        $categories = \App\Models\Category::where('status', 'active')->select('id', 'name', 'color')->get();
+        $categories = \App\Models\Category::where('status', 'active')
+            ->select('id', 'name', 'slug', 'description', 'color')
+            ->orderBy('sort_order')
+            ->get();
         $packages = \App\Models\Package::where('status', 'active')->select('id', 'name', 'category_id', 'base_price', 'duration_hours', 'description')->get();
         $weddingOrganizers = \App\Models\WeddingOrganizer::whereIn('status', ['partner', 'active'])
             ->select('id', 'name', 'pic_name', 'phone', 'city', 'tier')
@@ -108,6 +111,7 @@ class ClientService
     public function getClientDetail(Client $client): Client
     {
         $client->load([
+            'user:id,name,email,phone,avatar,client_id,status,last_login_at,created_at',
             'referredByClient:id,name,phone,city,email,bride_name,groom_name',
             'referrals:id,name,phone,city,referred_by_client_id,created_at',
             'weddingOrganizer:id,name,pic_name,phone,email,city,tier',

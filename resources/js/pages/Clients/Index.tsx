@@ -145,6 +145,8 @@ interface ClientsIndexProps {
     categories?: Array<{
         id: string | number;
         name: string;
+        slug?: string;
+        description?: string;
         color?: string;
     }>;
     packages?: Array<{
@@ -517,6 +519,41 @@ export default function ClientsIndex({
             })),
         [regionVillages]
     );
+
+    // Kategori / Tipe Klien dynamically fetched from Master Data Categories
+    const categoryOptions = useMemo(() => {
+        const list = (categories || []).map((cat) => ({
+            value: cat.slug || String(cat.id),
+            label: cat.name,
+            subtitle: cat.description || `Master Kategori: ${cat.name}`,
+        }));
+
+        const cur = formData.client_type;
+        if (cur && !list.some((o) => o.value === cur)) {
+            if (cur === 'personal') {
+                const perorangan = list.find((o) => o.value === 'perorangan');
+                list.unshift({
+                    value: 'personal',
+                    label: perorangan ? `${perorangan.label} (Personal)` : 'Personal Portrait',
+                    subtitle: 'Kategori Klien',
+                });
+            } else if (cur === 'family') {
+                list.unshift({
+                    value: 'family',
+                    label: 'Family & Maternity',
+                    subtitle: 'Kategori Klien',
+                });
+            } else {
+                list.push({
+                    value: cur,
+                    label: cur.charAt(0).toUpperCase() + cur.slice(1),
+                    subtitle: 'Kategori Klien',
+                });
+            }
+        }
+
+        return list;
+    }, [categories, formData.client_type]);
 
     const presetTags = [
         'VIP',
@@ -1523,32 +1560,23 @@ export default function ClientsIndex({
                         {/* ========================================================================= */}
                         {activeFormTab === 'profile' && (
                             <div className="space-y-4 animate-in fade-in duration-150">
-                                {/* Kategori / Tipe Klien Selection */}
+                                {/* Kategori / Tipe Klien Selection (SelectSearch dari Master Data Categories) */}
                                 <div>
                                     <label className="text-[11px] font-bold text-slate-700 block mb-1.5">
                                         Kategori / Tipe Klien <span className="text-red-500">*</span>
                                     </label>
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                                        {[
-                                            { id: 'wedding', label: 'Wedding & Prewed', desc: 'Pernikahan & Prewedding' },
-                                            { id: 'personal', label: 'Personal Portrait', desc: 'Wisuda, Studio & Profil' },
-                                            { id: 'family', label: 'Family & Maternity', desc: 'Foto Keluarga & Anak' },
-                                            { id: 'corporate', label: 'Corporate & B2B', desc: 'Perusahaan & Commercial' },
-                                        ].map((t) => (
-                                            <button
-                                                key={t.id}
-                                                type="button"
-                                                onClick={() => setFormData({ ...formData, client_type: t.id })}
-                                                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${formData.client_type === t.id
-                                                        ? 'bg-amber-50/60 border-[#C89445] text-[#8C5D19] ring-2 ring-[#C89445]/20 font-bold'
-                                                        : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
-                                                    }`}
-                                            >
-                                                <span className="text-xs font-bold block">{t.label}</span>
-                                                <span className="text-[10px] text-slate-400 block mt-0.5">{t.desc}</span>
-                                            </button>
-                                        ))}
-                                    </div>
+                                    <SelectSearch
+                                        options={categoryOptions}
+                                        value={formData.client_type}
+                                        onChange={(val) => setFormData({ ...formData, client_type: val })}
+                                        placeholder="Pilih Kategori / Tipe Klien..."
+                                        searchPlaceholder="Cari kategori dari Master Data..."
+                                        clearable={false}
+                                        className="w-full text-xs bg-white"
+                                    />
+                                    <p className="text-[10px] text-slate-400 mt-1">
+                                        Kategori diambil langsung dari Master Data Kategori (<Link href="/master-data/categories" className="text-amber-700 hover:underline font-medium">/master-data/categories</Link>).
+                                    </p>
                                 </div>
 
                                 {/* Nama Lengkap Klien / Acara */}

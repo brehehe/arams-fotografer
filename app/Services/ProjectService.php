@@ -111,11 +111,11 @@ class ProjectService
             COALESCE(AVG(CASE WHEN progress IS NOT NULL THEN progress ELSE 0 END), 0) as avg_progress
         ")->first();
 
-        // Closest Upcoming Deadlines directly from Database
+        // Closest Upcoming Deadlines directly from Database (Hanya yang belum selesai & tenggat waktu mendatang)
         $upcomingDeadlines = Project::with(['category:id,name,color'])
             ->whereNotNull('deadline')
-            ->where('status', '!=', 'completed')
-            ->where('status', '!=', 'cancelled')
+            ->whereNotIn('status', ['completed', 'selesai', 'cancelled', 'dibatalkan', 'delivered'])
+            ->where('deadline', '>=', \Carbon\Carbon::now()->startOfDay())
             ->orderBy('deadline', 'asc')
             ->limit(5)
             ->get()

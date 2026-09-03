@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { toast } from 'sonner';
 import {
@@ -69,9 +69,16 @@ interface ClientEditProps {
         city?: string;
         tier?: string;
     }>;
+    categories?: Array<{
+        id: string;
+        name: string;
+        slug?: string;
+        description?: string;
+        color?: string;
+    }>;
 }
 
-export default function ClientEdit({ client, all_clients = [], wedding_organizers = [] }: ClientEditProps) {
+export default function ClientEdit({ client, all_clients = [], wedding_organizers = [], categories = [] }: ClientEditProps) {
     const { appSettings } = usePage().props as any;
     const breadcrumbColor = appSettings?.breadcrumb_color || '#C98922';
     const breadcrumbActiveColor = appSettings?.breadcrumb_active_color || '#FFFFFF';
@@ -102,6 +109,40 @@ export default function ClientEdit({ client, all_clients = [], wedding_organizer
     const [jobTitle, setJobTitle] = useState(client.job_title || '');
     const [notes, setNotes] = useState(client.notes || '');
     const [submitting, setSubmitting] = useState(false);
+
+    // Kategori / Tipe Klien dynamically fetched from Master Data Categories
+    const categoryOptions = useMemo(() => {
+        const list = (categories || []).map((cat) => ({
+            value: cat.slug || String(cat.id),
+            label: cat.name,
+            subtitle: cat.description || `Master Kategori: ${cat.name}`,
+        }));
+
+        if (clientType && !list.some((o) => o.value === clientType)) {
+            if (clientType === 'personal') {
+                const perorangan = list.find((o) => o.value === 'perorangan');
+                list.unshift({
+                    value: 'personal',
+                    label: perorangan ? `${perorangan.label} (Personal)` : 'Personal Portrait',
+                    subtitle: 'Kategori Klien',
+                });
+            } else if (clientType === 'family') {
+                list.unshift({
+                    value: 'family',
+                    label: 'Family & Maternity',
+                    subtitle: 'Kategori Klien',
+                });
+            } else {
+                list.push({
+                    value: clientType,
+                    label: clientType.charAt(0).toUpperCase() + clientType.slice(1),
+                    subtitle: 'Kategori Klien',
+                });
+            }
+        }
+
+        return list;
+    }, [categories, clientType]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -334,17 +375,17 @@ export default function ClientEdit({ client, all_clients = [], wedding_organizer
 
                     <div>
                         <SelectSearch
-                            label="Tipe Klien"
+                            label="Kategori / Tipe Klien"
                             value={clientType}
                             onChange={(val) => setClientType(val)}
-                            options={[
-                                { value: 'wedding', label: 'Wedding / Pasangan Pengantin', subtitle: 'Pernikahan, Akad, Resepsi' },
-                                { value: 'personal', label: 'Personal / Individu', subtitle: 'Potret, Wisuda, Personal Branding' },
-                                { value: 'family', label: 'Keluarga / Maternity', subtitle: 'Foto Keluarga, Maternity, Newborn' },
-                                { value: 'corporate', label: 'Corporate / Brand', subtitle: 'Company Profile, Event Kantor, Produk' },
-                                { value: 'agency', label: 'Agency / Event Organizer', subtitle: 'Kolaborasi EO, Agency' },
-                            ]}
+                            options={categoryOptions}
+                            placeholder="Pilih Kategori / Tipe Klien..."
+                            searchPlaceholder="Cari kategori dari Master Data..."
+                            clearable={false}
                         />
+                        <p className="text-[10px] text-slate-400 mt-1">
+                            Kategori diambil langsung dari Master Data Kategori (<Link href="/master-data/categories" className="text-amber-700 hover:underline font-medium">/master-data/categories</Link>).
+                        </p>
                     </div>
 
                     <div>

@@ -137,6 +137,15 @@ interface ClientDetailProps {
         birth_date?: string;
         job_title?: string;
         created_at: string;
+        user?: {
+            id: string;
+            name: string;
+            email: string;
+            phone?: string;
+            status?: string;
+            last_login_at?: string;
+            created_at?: string;
+        } | null;
         projects: Array<any>;
         invoices: Array<any>;
         payments: Array<any>;
@@ -146,7 +155,7 @@ interface ClientDetailProps {
         payments_count: number;
         referrals_count?: number;
     };
-    categories?: Array<{ id: string; name: string; color?: string }>;
+    categories?: Array<{ id: string; name: string; slug?: string; description?: string; color?: string }>;
     packages?: Array<{ id: string; name: string; category_id: string; base_price: number | string; duration_hours?: number; description?: string }>;
     team_members?: Array<{ id: string; name: string; email: string; avatar?: string | null; role?: string }>;
     payment_methods?: Array<{ id: string; name: string; account_number?: string; account_holder?: string }>;
@@ -478,6 +487,41 @@ export default function ClientDetail({
             postal_code: found?.postal_code || prev.postal_code,
         }));
     };
+
+    // Category options for Edit Client Form (Master Data Categories)
+    const categoryOptions = useMemo(() => {
+        const list = (categories || []).map((cat: any) => ({
+            value: cat.slug || String(cat.id),
+            label: cat.name,
+            subtitle: cat.description || `Master Kategori: ${cat.name}`,
+        }));
+
+        const cur = editFormData.client_type;
+        if (cur && !list.some((o: any) => o.value === cur)) {
+            if (cur === 'personal') {
+                const perorangan = list.find((o: any) => o.value === 'perorangan');
+                list.unshift({
+                    value: 'personal',
+                    label: perorangan ? `${perorangan.label} (Personal)` : 'Personal Portrait',
+                    subtitle: 'Kategori Klien',
+                });
+            } else if (cur === 'family') {
+                list.unshift({
+                    value: 'family',
+                    label: 'Family & Maternity',
+                    subtitle: 'Kategori Klien',
+                });
+            } else {
+                list.push({
+                    value: cur,
+                    label: cur.charAt(0).toUpperCase() + cur.slice(1),
+                    subtitle: 'Kategori Klien',
+                });
+            }
+        }
+
+        return list;
+    }, [categories, editFormData.client_type]);
 
     // Modal Tambah Pembayaran States
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -1515,18 +1559,36 @@ export default function ClientDetail({
     // -------------------------------------------------------------
     // STATES FOR TAB 7: INFORMASI AKUN KLIEN (Gambar 5)
     // -------------------------------------------------------------
+    const clientUser = client.user;
     const [isAccountActive, setIsAccountActive] = useState(true);
-    const [accountEmail, setAccountEmail] = useState(client.email || 'andipratama@email.com');
-    const [accountUsername, setAccountUsername] = useState('andipratama');
-    const [accountPassword, setAccountPassword] = useState('Abc123!@#');
-    const [accountPasswordConfirm, setAccountPasswordConfirm] = useState('Abc123!@#');
+    const [accountEmail, setAccountEmail] = useState(clientUser?.email || client.email || '');
+    const [accountUsername, setAccountUsername] = useState(
+        clientUser?.email
+            ? clientUser.email.split('@')[0]
+            : (client.email
+                ? client.email.split('@')[0]
+                : (client.name ? client.name.toLowerCase().replace(/[^a-z0-9]/g, '') : 'klien'))
+    );
+    const [accountPassword, setAccountPassword] = useState('arams2026');
+    const [accountPasswordConfirm, setAccountPasswordConfirm] = useState('arams2026');
     const [showAccountPassword, setShowAccountPassword] = useState(false);
     const [showAccountPasswordConfirm, setShowAccountPasswordConfirm] = useState(false);
     const [accountMessage, setAccountMessage] = useState(
-        'Halo Kak Andi Pratama, berikut informasi akun login portal klien Arams Photography Anda. Silakan login untuk melihat progress dan mengunduh file project Anda.'
+        `Halo Kak ${client.name || 'Klien'},\n\nBerikut informasi akun login portal klien Arams Photography Anda:\nSilakan login untuk melihat progress project, review foto, dan download file Anda.`
     );
-    const [accountShareMethod, setAccountShareMethod] = useState<'email' | 'whatsapp' | 'both'>('both');
+    const [accountShareMethod, setAccountShareMethod] = useState<'email' | 'whatsapp' | 'both'>('whatsapp');
     const [submittingAccount, setSubmittingAccount] = useState(false);
+
+    // Sync state if client props change
+    useEffect(() => {
+        if (client.user) {
+            setAccountEmail(client.user.email);
+            setAccountUsername(client.user.email.split('@')[0]);
+        } else if (client.email) {
+            setAccountEmail(client.email);
+            setAccountUsername(client.email.split('@')[0]);
+        }
+    }, [client]);
 
     const handleSaveClientAccount = (e?: React.FormEvent) => {
         if (e) e.preventDefault();
@@ -1538,11 +1600,47 @@ export default function ClientDetail({
             toast.error('Password dan konfirmasi password tidak cocok');
             return;
         }
+        if (accountPassword.length < 6) {
+            toast.error('Password minimal 6 karakter');
+            return;
+        }
+
         setSubmittingAccount(true);
-        setTimeout(() => {
-            setSubmittingAccount(false);
-            toast.success('Akun klien berhasil dibuat & kredensial telah dikirimkan!');
-        }, 600);
+        router.post(
+            `/clients/${client.id}/account`,
+            {
+                email: accountEmail,
+                username: accountUsername,
+                password: accountPassword,
+                send_method: accountShareMethod,
+                message: accountMessage,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: (page) => {
+                    setSubmittingAccount(false);
+                    toast.success(clientUser ? 'Kredensial akun klien berhasil diperbarui!' : 'Akun klien berhasil dibuat & diaktifkan!');
+                    const flash = (page.props as any).flash;
+                    if (flash?.whatsapp_url && (accountShareMethod === 'whatsapp' || accountShareMethod === 'both')) {
+                        const newWin = window.open(flash.whatsapp_url, '_blank');
+                        if (!newWin || newWin.closed || typeof newWin.closed === 'undefined') {
+                            toast.info('Klik untuk membuka pesan WhatsApp', {
+                                action: {
+                                    label: 'Kirim WhatsApp',
+                                    onClick: () => window.open(flash.whatsapp_url, '_blank'),
+                                },
+                                duration: 10000,
+                            });
+                        }
+                    }
+                },
+                onError: (errors) => {
+                    setSubmittingAccount(false);
+                    const msg = Object.values(errors)[0] as string;
+                    toast.error(msg || 'Gagal menyimpan akun klien');
+                },
+            }
+        );
     };
 
     return (
@@ -3273,16 +3371,16 @@ export default function ClientDetail({
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                                         <div>
                                             <h3 className="text-sm font-bold text-slate-900">
-                                                Informasi Akun Klien (Akses ke Web Klien)
+                                                Informasi Akun Klien (Akses Portal Klien)
                                             </h3>
                                             <p className="text-xs text-slate-500 mt-0.5">
-                                                Klien dapat login ke portal untuk melihat progress, download file, dan review foto.
+                                                Klien dapat login ke portal untuk melihat progress project, review foto, dan download file.
                                             </p>
                                         </div>
 
                                         {/* Toggle Switch */}
                                         <div className="flex items-center gap-2 shrink-0">
-                                            <span className="text-xs font-bold text-slate-700">Buat akun klien</span>
+                                            <span className="text-xs font-bold text-slate-700">{clientUser ? 'Akses Portal Klien' : 'Buat akun klien'}</span>
                                             <button
                                                 type="button"
                                                 onClick={() => setIsAccountActive(!isAccountActive)}
@@ -3298,187 +3396,239 @@ export default function ClientDetail({
                                     </div>
 
                                     {isAccountActive ? (
-                                        <form onSubmit={handleSaveClientAccount} className="space-y-5">
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                        Email Akun <span className="text-red-500">*</span>
-                                                    </label>
-                                                    <div className="relative">
-                                                        <Mail className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                                                        <input
-                                                            type="email"
-                                                            required
-                                                            value={accountEmail}
-                                                            onChange={(e) => setAccountEmail(e.target.value)}
-                                                            placeholder="andipratama@email.com"
-                                                            className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
-                                                        />
+                                        <div className="space-y-5">
+                                            {/* Status Akun Aktif Card jika user sudah terdaftar */}
+                                            {clientUser && (
+                                                <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                    <div className="flex items-start gap-3">
+                                                        <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                                                            <CheckCircle2 className="w-5 h-5" />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <span className="text-xs font-bold text-emerald-950">
+                                                                    Akun Portal Klien Aktif
+                                                                </span>
+                                                                <Badge variant="success" className="text-[10px] py-0 px-2 font-bold uppercase">
+                                                                    {clientUser.status || 'Active'}
+                                                                </Badge>
+                                                                <span className="text-[11px] text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-full font-medium">
+                                                                    Role: Client
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-xs text-emerald-900">
+                                                                Email Login: <span className="font-semibold text-emerald-950 underline">{clientUser.email}</span>
+                                                            </p>
+                                                            <div className="text-[11px] text-emerald-700 flex items-center gap-2 pt-0.5">
+                                                                <span>Dibuat: {clientUser.created_at ? new Date(clientUser.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}</span>
+                                                                <span>•</span>
+                                                                <span>Login Terakhir: {clientUser.last_login_at ? new Date(clientUser.last_login_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : 'Belum pernah login'}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {client.phone && (
+                                                        <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const cleanPhone = (client.phone || '').replace(/[^0-9]/g, '').replace(/^0/, '62');
+                                                                    const loginUrl = `${window.location.origin}/login`;
+                                                                    const msg = `Halo Kak ${client.name},\n\nBerikut pengingat akses login portal klien Arams Photography Anda:\n🌐 Link Portal: ${loginUrl}\n📧 Email: ${clientUser.email}\n\nSilakan login untuk melihat progress project, review foto, dan download file Anda. Terima kasih!`;
+                                                                    window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+                                                                }}
+                                                                className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                                                            >
+                                                                <MessageCircle className="w-3.5 h-3.5" />
+                                                                <span>WA Pengingat</span>
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            <form onSubmit={handleSaveClientAccount} className="space-y-5">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                            Email Akun <span className="text-red-500">*</span>
+                                                        </label>
+                                                        <div className="relative">
+                                                            <Mail className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                                            <input
+                                                                type="email"
+                                                                required
+                                                                value={accountEmail}
+                                                                onChange={(e) => setAccountEmail(e.target.value)}
+                                                                placeholder="andipratama@email.com"
+                                                                className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                            Username (opsional)
+                                                        </label>
+                                                        <div className="relative">
+                                                            <span className="text-xs font-bold text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2">
+                                                                @
+                                                            </span>
+                                                            <input
+                                                                type="text"
+                                                                value={accountUsername}
+                                                                onChange={(e) => setAccountUsername(e.target.value)}
+                                                                placeholder="andipratama"
+                                                                className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                            {clientUser ? 'Password Baru / Kredensial' : 'Password Akun'} <span className="text-red-500">*</span>
+                                                        </label>
+                                                        <div className="relative">
+                                                            <Lock className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                                            <input
+                                                                type={showAccountPassword ? 'text' : 'password'}
+                                                                required
+                                                                value={accountPassword}
+                                                                onChange={(e) => setAccountPassword(e.target.value)}
+                                                                placeholder="Abc123!@#"
+                                                                className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-9 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setShowAccountPassword(!showAccountPassword)}
+                                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                                                            >
+                                                                {showAccountPassword ? (
+                                                                    <EyeOff className="w-3.5 h-3.5" />
+                                                                ) : (
+                                                                    <Eye className="w-3.5 h-3.5" />
+                                                                )}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                            Konfirmasi Password <span className="text-red-500">*</span>
+                                                        </label>
+                                                        <div className="relative">
+                                                            <Lock className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                                            <input
+                                                                type={showAccountPasswordConfirm ? 'text' : 'password'}
+                                                                required
+                                                                value={accountPasswordConfirm}
+                                                                onChange={(e) => setAccountPasswordConfirm(e.target.value)}
+                                                                placeholder="Abc123!@#"
+                                                                className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-9 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setShowAccountPasswordConfirm(!showAccountPasswordConfirm)}
+                                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                                                            >
+                                                                {showAccountPasswordConfirm ? (
+                                                                    <EyeOff className="w-3.5 h-3.5" />
+                                                                ) : (
+                                                                    <Eye className="w-3.5 h-3.5" />
+                                                                )}
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
 
                                                 <div>
-                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                        Username (opsional)
-                                                    </label>
-                                                    <div className="relative">
-                                                        <span className="text-xs font-bold text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2">
-                                                            @
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <label className="text-[11px] font-bold text-slate-700">
+                                                            Pesan untuk Klien (Akan dikirim bersama kredensial)
+                                                        </label>
+                                                        <span className="text-[10px] text-slate-400">
+                                                            {accountMessage.length} / 500
                                                         </span>
-                                                        <input
-                                                            type="text"
-                                                            value={accountUsername}
-                                                            onChange={(e) => setAccountUsername(e.target.value)}
-                                                            placeholder="andipratama"
-                                                            className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                                                        />
                                                     </div>
+                                                    <textarea
+                                                        rows={3}
+                                                        maxLength={500}
+                                                        value={accountMessage}
+                                                        onChange={(e) => setAccountMessage(e.target.value)}
+                                                        className="w-full bg-white border border-slate-200 rounded-xl p-3.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-none leading-relaxed"
+                                                    />
                                                 </div>
 
                                                 <div>
-                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                        Password <span className="text-red-500">*</span>
+                                                    <label className="text-[11px] font-bold text-slate-700 block mb-2">
+                                                        Bagikan Akun Melalui
                                                     </label>
-                                                    <div className="relative">
-                                                        <Lock className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                                                        <input
-                                                            type={showAccountPassword ? 'text' : 'password'}
-                                                            required
-                                                            value={accountPassword}
-                                                            onChange={(e) => setAccountPassword(e.target.value)}
-                                                            placeholder="Abc123!@#"
-                                                            className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-9 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
-                                                        />
+                                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                                         <button
                                                             type="button"
-                                                            onClick={() => setShowAccountPassword(!showAccountPassword)}
-                                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                                                            onClick={() => setAccountShareMethod('email')}
+                                                            className={`p-3.5 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer ${accountShareMethod === 'email'
+                                                                    ? 'border-indigo-600 bg-indigo-50/40 text-indigo-900 font-bold ring-1 ring-indigo-600'
+                                                                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                                                }`}
                                                         >
-                                                            {showAccountPassword ? (
-                                                                <EyeOff className="w-3.5 h-3.5" />
-                                                            ) : (
-                                                                <Eye className="w-3.5 h-3.5" />
-                                                            )}
+                                                            <Mail className="w-4 h-4 text-indigo-600 shrink-0" />
+                                                            <span className="text-xs">Email</span>
+                                                        </button>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setAccountShareMethod('whatsapp')}
+                                                            className={`p-3.5 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer ${accountShareMethod === 'whatsapp'
+                                                                    ? 'border-emerald-600 bg-emerald-50/40 text-emerald-900 font-bold ring-1 ring-emerald-600'
+                                                                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                                                }`}
+                                                        >
+                                                            <MessageCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                                                            <span className="text-xs">WhatsApp</span>
+                                                        </button>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setAccountShareMethod('both')}
+                                                            className={`p-3.5 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer ${accountShareMethod === 'both'
+                                                                    ? 'border-primary-accent bg-amber-50/25 text-slate-900 font-bold ring-1 ring-primary-accent'
+                                                                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                                                }`}
+                                                        >
+                                                            <Send className="w-4 h-4 text-primary-accent shrink-0" />
+                                                            <span className="text-xs">Keduanya (Email & WA)</span>
                                                         </button>
                                                     </div>
                                                 </div>
 
-                                                <div>
-                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                        Konfirmasi Password <span className="text-red-500">*</span>
-                                                    </label>
-                                                    <div className="relative">
-                                                        <Lock className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                                                        <input
-                                                            type={showAccountPasswordConfirm ? 'text' : 'password'}
-                                                            required
-                                                            value={accountPasswordConfirm}
-                                                            onChange={(e) => setAccountPasswordConfirm(e.target.value)}
-                                                            placeholder="Abc123!@#"
-                                                            className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-9 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
-                                                        />
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setShowAccountPasswordConfirm(!showAccountPasswordConfirm)}
-                                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                                                        >
-                                                            {showAccountPasswordConfirm ? (
-                                                                <EyeOff className="w-3.5 h-3.5" />
-                                                            ) : (
-                                                                <Eye className="w-3.5 h-3.5" />
-                                                            )}
-                                                        </button>
+                                                <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                    <div className="flex items-start gap-2.5">
+                                                        <div className="w-4 h-4 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">
+                                                            i
+                                                        </div>
+                                                        <p className="text-xs text-indigo-950 leading-relaxed">
+                                                            Akun ini langsung tersimpan ke sistem (tabel users) dengan role <strong>Client</strong>. Klien dapat langsung login ke portal via <strong>/login</strong>.
+                                                        </p>
                                                     </div>
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <div className="flex items-center justify-between mb-1">
-                                                    <label className="text-[11px] font-bold text-slate-700">
-                                                        Pesan untuk Klien (Akan dikirim bersama akun)
-                                                    </label>
-                                                    <span className="text-[10px] text-slate-400">
-                                                        {accountMessage.length} / 500
-                                                    </span>
-                                                </div>
-                                                <textarea
-                                                    rows={3}
-                                                    maxLength={500}
-                                                    value={accountMessage}
-                                                    onChange={(e) => setAccountMessage(e.target.value)}
-                                                    className="w-full bg-white border border-slate-200 rounded-xl p-3.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-none leading-relaxed"
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <label className="text-[11px] font-bold text-slate-700 block mb-2">
-                                                    Bagikan Akun Melalui
-                                                </label>
-                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setAccountShareMethod('email')}
-                                                        className={`p-3.5 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer ${accountShareMethod === 'email'
-                                                                ? 'border-indigo-600 bg-indigo-50/40 text-indigo-900 font-bold ring-1 ring-indigo-600'
-                                                                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                                                            }`}
-                                                    >
-                                                        <Mail className="w-4 h-4 text-indigo-600 shrink-0" />
-                                                        <span className="text-xs">Email</span>
-                                                    </button>
 
                                                     <button
-                                                        type="button"
-                                                        onClick={() => setAccountShareMethod('whatsapp')}
-                                                        className={`p-3.5 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer ${accountShareMethod === 'whatsapp'
-                                                                ? 'border-emerald-600 bg-emerald-50/40 text-emerald-900 font-bold ring-1 ring-emerald-600'
-                                                                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                                                            }`}
+                                                        type="submit"
+                                                        disabled={submittingAccount}
+                                                        className="px-5 py-2.5 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs shrink-0 cursor-pointer disabled:opacity-50"
                                                     >
-                                                        <MessageCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                                                        <span className="text-xs">WhatsApp</span>
-                                                    </button>
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setAccountShareMethod('both')}
-                                                        className={`p-3.5 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer ${accountShareMethod === 'both'
-                                                                ? 'border-primary-accent bg-amber-50/25 text-slate-900 font-bold ring-1 ring-primary-accent'
-                                                                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                                                            }`}
-                                                    >
-                                                        <Send className="w-4 h-4 text-primary-accent shrink-0" />
-                                                        <span className="text-xs">Keduanya (Email & WA)</span>
+                                                        <Send className="w-3.5 h-3.5" />
+                                                        <span>{submittingAccount ? 'Menyimpan...' : (clientUser ? 'Simpan & Kirim Ulang Kredensial' : 'Buat & Kirim Akun')}</span>
                                                     </button>
                                                 </div>
-                                            </div>
-
-                                            <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                                <div className="flex items-start gap-2.5">
-                                                    <div className="w-4 h-4 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">
-                                                        i
-                                                    </div>
-                                                    <p className="text-xs text-indigo-950 leading-relaxed">
-                                                        Akun ini akan langsung aktif setelah disimpan. Klien akan menerima kredensial login melalui metode pengiriman yang dipilih di atas.
-                                                    </p>
-                                                </div>
-
-                                                <button
-                                                    type="submit"
-                                                    disabled={submittingAccount}
-                                                    className="px-5 py-2.5 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs shrink-0 cursor-pointer disabled:opacity-50"
-                                                >
-                                                    <Send className="w-3.5 h-3.5" />
-                                                    <span>{submittingAccount ? 'Mengirimkan...' : 'Buat & Kirim Akun'}</span>
-                                                </button>
-                                            </div>
-                                        </form>
+                                            </form>
+                                        </div>
                                     ) : (
                                         <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
                                             <Lock className="w-8 h-8 text-slate-300 mx-auto" />
                                             <h4 className="text-xs font-bold text-slate-700">Akses Portal Klien Non-Aktif</h4>
                                             <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                                                Aktifkan tombol toggle "Buat akun klien" di kanan atas untuk memberikan akses portal kepada klien.
+                                                Aktifkan tombol toggle "Akses Portal Klien" di kanan atas untuk memberikan akses portal kepada klien.
                                             </p>
                                         </div>
                                     )}
@@ -3755,32 +3905,23 @@ export default function ClientDetail({
                         {/* ========================================================================= */}
                         {editActiveFormTab === 'profile' && (
                             <div className="space-y-4 animate-in fade-in duration-150">
-                                {/* Kategori / Tipe Klien Selection */}
+                                {/* Kategori / Tipe Klien Selection (SelectSearch dari Master Data Categories) */}
                                 <div>
                                     <label className="text-[11px] font-bold text-slate-700 block mb-1.5">
                                         Kategori / Tipe Klien <span className="text-red-500">*</span>
                                     </label>
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                                        {[
-                                            { id: 'wedding', label: 'Wedding & Prewed', desc: 'Pernikahan & Prewedding' },
-                                            { id: 'personal', label: 'Personal Portrait', desc: 'Wisuda, Studio & Profil' },
-                                            { id: 'family', label: 'Family & Maternity', desc: 'Foto Keluarga & Anak' },
-                                            { id: 'corporate', label: 'Corporate & B2B', desc: 'Perusahaan & Commercial' },
-                                        ].map((t) => (
-                                            <button
-                                                key={t.id}
-                                                type="button"
-                                                onClick={() => setEditFormData({ ...editFormData, client_type: t.id })}
-                                                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${editFormData.client_type === t.id
-                                                        ? 'bg-amber-50/60 border-[#C89445] text-[#8C5D19] ring-2 ring-[#C89445]/20 font-bold'
-                                                        : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
-                                                    }`}
-                                            >
-                                                <span className="text-xs font-bold block">{t.label}</span>
-                                                <span className="text-[10px] text-slate-400 block mt-0.5">{t.desc}</span>
-                                            </button>
-                                        ))}
-                                    </div>
+                                    <SelectSearch
+                                        options={categoryOptions}
+                                        value={editFormData.client_type}
+                                        onChange={(val) => setEditFormData({ ...editFormData, client_type: val })}
+                                        placeholder="Pilih Kategori / Tipe Klien..."
+                                        searchPlaceholder="Cari kategori dari Master Data..."
+                                        clearable={false}
+                                        className="w-full text-xs bg-white"
+                                    />
+                                    <p className="text-[10px] text-slate-400 mt-1">
+                                        Kategori diambil langsung dari Master Data Kategori (<Link href="/master-data/categories" className="text-amber-700 hover:underline font-medium">/master-data/categories</Link>).
+                                    </p>
                                 </div>
 
                                 {/* Nama Lengkap Klien / Acara */}

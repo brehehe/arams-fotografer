@@ -57,6 +57,7 @@ class DatabaseSeeder extends Seeder
         $photographerRole = Role::findOrCreate('Photographer');
         $editorRole = Role::findOrCreate('Editor');
         $supervisorRole = Role::findOrCreate('Supervisor');
+        $clientRole = Role::findOrCreate('Client');
 
         $superAdminRole->syncPermissions(Permission::all());
         $ownerRole->syncPermissions(Permission::all());
@@ -544,6 +545,28 @@ class DatabaseSeeder extends Seeder
             'avatar' => 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=150&auto=format&fit=crop&q=80',
         ]);
 
+        // Demo Intake Form Client — data ini persis sama dengan dummy di ClientIntakeForm.tsx
+        // Digunakan sebagai data demo/testing form pengisian oleh staf
+        $clientKevinJessica = Client::create([
+            'name'            => 'Kevin & Jessica',
+            'bride_name'      => 'Jessica Mila',
+            'bride_nickname'  => 'Mila',
+            'groom_name'      => 'Kevin Sanjaya',
+            'groom_nickname'  => 'Kevin',
+            'instagram'       => '@jessica_mila', // instagram CPW
+            'email'           => 'jessica.mila@gmail.com',
+            'phone'           => '+62 812-3456-7890',
+            'city'            => 'Jakarta Selatan',
+            'province'        => 'DKI Jakarta',
+            'province_code'   => '31',
+            'address'         => 'Jl. Melawai Raya No.12, RT.03/RW.02',
+            'postal_code'     => '12160',
+            'source'          => 'Instagram',
+            'status'          => 'active',
+            'notes'           => 'Klien menginginkan konsep elegan & timeless. Request outdoor photo session di venue. Tidak ada drone di area indoor.',
+            'avatar'          => 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
+        ]);
+
         for ($i = 11; $i <= 42; $i++) {
             Client::create([
                 'name' => "Klien Eksklusif {$i}",
@@ -1013,6 +1036,55 @@ class DatabaseSeeder extends Seeder
             FileLink::create($fl);
         }
 
+        // Demo project — Kevin & Jessica Wedding (dari dummy form)
+        $pKevinJessica = Project::create([
+            'project_number'  => 'PRJ-2512-0099',
+            'name'            => 'Kevin & Jessica Wedding',
+            'client_id'       => $clientKevinJessica->id,
+            'category_id'     => $categories['wedding']->id,
+            'package_id'      => $packages['wedding_royal']->id,
+            'status'          => 'draft',
+            'progress'        => 5,
+            'event_date'      => Carbon::parse('2025-12-21'),
+            'location'        => 'The Ritz Carlton Jakarta (Akad & Resepsi)',
+            'photographer_id' => $photographer->id,
+            'editor_id'       => $owner->id,
+            'supervisor_id'   => $admin->id,
+            'price'           => 50000000,
+            'discount'        => 0,
+            'tax'             => 0,
+            'total_amount'    => 50000000,
+            'paid_amount'     => 0,
+            'payment_status'  => 'unpaid',
+            'thumbnail'       => 'https://images.unsplash.com/photo-1519741497674-611481863552?w=300&auto=format&fit=crop&q=80',
+            'workflow_step'   => 'booking',
+            'notes'           => "Konsep: Putih, Gold, Rustic. Est. tamu 200-300 orang.\nWO: Infinity Wedding Organizer, MUA: Lisa Makeup, Dekorasi: Bloom Decor.\nRef: pinterest.com/kevinandmila, @thebridestory, @weddingku.",
+        ]);
+
+        $invKevinJessica = Invoice::create([
+            'invoice_number'   => 'INV-2512-0099',
+            'project_id'       => $pKevinJessica->id,
+            'client_id'        => $clientKevinJessica->id,
+            'issue_date'       => Carbon::parse('2025-09-01'),
+            'due_date'         => Carbon::parse('2025-12-01'),
+            'subtotal'         => 50000000,
+            'discount'         => 0,
+            'tax'              => 0,
+            'total'            => 50000000,
+            'paid_amount'      => 0,
+            'remaining_amount' => 50000000,
+            'status'           => 'draft',
+            'notes'            => 'Invoice awal — menunggu konfirmasi DP booking fee.',
+        ]);
+
+        InvoiceItem::create([
+            'invoice_id'  => $invKevinJessica->id,
+            'description' => $packages['wedding_royal']->name . ' — ' . $packages['wedding_royal']->description,
+            'qty'         => 1,
+            'unit_price'  => 50000000,
+            'total'       => 50000000,
+        ]);
+
         // 13. Activity Logs
         activity()
             ->causedBy($admin)
@@ -1041,5 +1113,22 @@ class DatabaseSeeder extends Seeder
             ->event('file_upload')
             ->createdAt(Carbon::now()->subHours(8))
             ->log('Admin mengunggah file baru untuk project Family Roberts');
+
+        // 14. Additional Module Seeders
+        $this->call([
+            WeddingOrganizerSeeder::class,
+            AddonSeeder::class,
+            WorkflowDeliverableSeeder::class,
+            ClientSourceAndNoteTemplatesSeeder::class,
+            ClientUserSeeder::class,
+            ProjectsShowcaseSeeder::class,
+            PortalContentSeeder::class,
+        ]);
+
+        // 15. Indonesia Regions Seeder (Auto-seed if empty)
+        if (class_exists(\Aliziodev\IndonesiaRegions\Database\Seeders\IndonesiaRegionSeeder::class)
+            && \Aliziodev\IndonesiaRegions\Models\IndonesiaRegion::count() === 0) {
+            $this->call(\Aliziodev\IndonesiaRegions\Database\Seeders\IndonesiaRegionSeeder::class);
+        }
     }
 }

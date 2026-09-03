@@ -117,6 +117,7 @@ class HandleInertiaRequests extends Middleware
                 'warning' => fn () => $request->session()->get('warning'),
                 'info' => fn () => $request->session()->get('info'),
                 'toast' => fn () => $request->session()->get('toast'),
+                'whatsapp_url' => fn () => $request->session()->get('whatsapp_url'),
             ],
         ];
     }

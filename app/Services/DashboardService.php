@@ -230,26 +230,24 @@ class DashboardService
                 ];
             });
 
-        // 6. Nearest Upcoming Deadlines
+        // 6. Nearest Upcoming Deadlines (Hanya project aktif yang belum selesai dan tenggat waktu mendatang)
         $upcomingDeadlines = Project::select('id', 'name', 'thumbnail', 'deadline', 'status')
-            ->where('status', '!=', 'cancelled')
+            ->whereNotIn('status', ['completed', 'selesai', 'cancelled', 'dibatalkan', 'delivered'])
             ->whereNotNull('deadline')
+            ->where('deadline', '>=', Carbon::now()->startOfDay())
             ->orderBy('deadline', 'asc')
             ->take(5)
             ->get()
             ->map(function ($proj) {
-                $diff = Carbon::now()->startOfDay()->diffInDays($proj->deadline->startOfDay(), false);
+                $diff = (int) Carbon::now()->startOfDay()->diffInDays($proj->deadline->startOfDay(), false);
                 $urgency = 'normal';
                 $urgencyText = '';
 
-                if ($proj->status === 'completed') {
-                    $urgencyText = 'Selesai';
-                    $urgency = 'completed';
-                } elseif ($diff < 0) {
-                    $urgencyText = abs($diff).' hari lewat';
-                    $urgency = 'overdue';
-                } elseif ($diff === 0) {
+                if ($diff === 0) {
                     $urgencyText = 'Hari ini';
+                    $urgency = 'urgent';
+                } elseif ($diff === 1) {
+                    $urgencyText = 'Besok';
                     $urgency = 'urgent';
                 } else {
                     $urgencyText = $diff.' hari lagi';
