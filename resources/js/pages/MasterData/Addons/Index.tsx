@@ -1,5 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
+import { toast } from 'sonner';
+import { Pagination } from '@/components/ui/pagination';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
     Box,
     CheckCircle2,
@@ -22,692 +30,1053 @@ import {
     Bed,
     Users,
     ShoppingBag,
+    Filter,
+    MoreVertical,
+    RotateCcw,
+    Layers,
+    Info,
+    Camera,
+    Video,
+    Film,
+    FileText,
 } from 'lucide-react';
 import { formatRupiah } from '@/lib/formatters';
 
 interface AddonItem {
     id: number | string;
     name: string;
-    category_id?: number | string;
-    category?: { id: number; name: string; color?: string };
-    addon_category?: string;
-    description?: string;
-    price?: number | string;
-    unit?: string;
-    status?: string;
-    used_count?: number;
-}
-
-interface Stats {
-    total?: number;
-    active?: number;
-    inactive?: number;
-    used_in_projects?: number;
+    type: 'addon' | 'operational'; // Ala Carte vs Biaya Operasional
+    category_name: string;
+    unit: string;
+    price: number;
+    description: string;
+    status: 'active' | 'inactive';
 }
 
 interface AddonsIndexProps {
     addons?: {
-        data: AddonItem[];
+        data: any[];
         current_page: number;
         last_page: number;
         total: number;
         from: number;
         to: number;
+        per_page?: number;
     };
-    categories?: Array<{ id: number; name: string; color?: string }>;
-    stats?: Stats;
+    categories?: any[];
+    stats?: any;
     filters?: {
         search?: string;
+        type?: string;
+        per_page?: number;
     };
 }
-
-const ADDON_ICONS: Record<string, React.ReactNode> = {
-    'Lokasi - Seputar Jawa Timur': <MapPin className="w-4 h-4 text-purple-600" />,
-    'Lokasi - Luar Jawa Timur (Dalam Pulau)': <Plane className="w-4 h-4 text-blue-600" />,
-    'Lokasi - Luar Negeri': <Globe className="w-4 h-4 text-emerald-600" />,
-    Transport: <Car className="w-4 h-4 text-indigo-600" />,
-    Konsumsi: <Utensils className="w-4 h-4 text-amber-600" />,
-    Penginapan: <Bed className="w-4 h-4 text-purple-600" />,
-    'Fee per Orang (Talent/Model/Guest)': <Users className="w-4 h-4 text-violet-600" />,
-    'Biaya Lainnya': <ShoppingBag className="w-4 h-4 text-rose-600" />,
-};
-
-const ADDON_BG: Record<string, string> = {
-    'Lokasi - Seputar Jawa Timur': 'bg-purple-50 text-purple-600 border-purple-100',
-    'Lokasi - Luar Jawa Timur (Dalam Pulau)': 'bg-blue-50 text-blue-600 border-blue-100',
-    'Lokasi - Luar Negeri': 'bg-emerald-50 text-emerald-600 border-emerald-100',
-    Transport: 'bg-indigo-50 text-indigo-600 border-indigo-100',
-    Konsumsi: 'bg-amber-50 text-amber-600 border-amber-100',
-    Penginapan: 'bg-purple-50 text-purple-600 border-purple-100',
-    'Fee per Orang (Talent/Model/Guest)': 'bg-violet-50 text-violet-600 border-violet-100',
-    'Biaya Lainnya': 'bg-rose-50 text-rose-600 border-rose-100',
-};
-
-const CATEGORY_BADGES: Record<string, string> = {
-    'Lokal - Jawa Timur': 'bg-[#EEF2FF] text-[#4F46E5] border border-indigo-100',
-    'Lokal - Luar Jawa Timur': 'bg-[#EFF6FF] text-[#2563EB] border border-blue-100',
-    'Luar Negeri': 'bg-[#ECFDF5] text-[#059669] border border-emerald-100',
-    Lainnya: 'bg-[#FFF7ED] text-[#EA580C] border border-orange-100',
-};
 
 export default function AddonsIndex({
     addons = { data: [], current_page: 1, last_page: 1, total: 0, from: 0, to: 0 },
     categories = [],
-    stats = { total: 16, active: 15, inactive: 1, used_in_projects: 84 },
+    stats = {},
     filters = {},
 }: AddonsIndexProps) {
-    const [searchQuery, setSearchQuery] = useState(filters.search || '');
-    const [selectedTab, setSelectedTab] = useState('Semua');
-    const [statusFilter, setStatusFilter] = useState('all');
-    const [modalOpen, setModalOpen] = useState(false);
-    const [editItem, setEditItem] = useState<AddonItem | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    // Active Tab & Filter States
+    const [activeTab, setActiveTab] = useState<'all' | 'addon' | 'operational'>('all');
+    const [addonCategoryFilter, setAddonCategoryFilter] = useState('all');
+    const [addonStatusFilter, setAddonStatusFilter] = useState('all');
+    const [opsCategoryFilter, setOpsCategoryFilter] = useState('all');
+    const [opsStatusFilter, setOpsStatusFilter] = useState('all');
+    const [perPage, setPerPage] = useState(filters?.per_page || 10);
 
-    // Form state
-    const [form, setForm] = useState({
+    const [addDropdownOpen, setAddDropdownOpen] = useState(false);
+
+    // Modal state
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalType, setModalType] = useState<'addon' | 'operational'>('addon');
+    const [formData, setFormData] = useState({
         name: '',
-        addon_category: 'Lokal - Jawa Timur',
+        category_name: 'Tim Tambahan',
+        unit: 'Orang / Hari',
+        price: 1500000,
         description: '',
-        price: 0,
-        unit: 'Per Project',
         status: 'active',
     });
 
-    // Demo addons matching Screenshot 4
-    const demoAddons: AddonItem[] = useMemo(() => [
-        {
-            id: 1,
-            name: 'Lokasi - Seputar Jawa Timur',
-            addon_category: 'Lokal - Jawa Timur',
-            description: 'Biaya tambahan untuk lokasi project masih di area Jawa Timur (dalam kota/ sekitar kota).',
-            unit: 'Per Project',
-            price: 0,
-            status: 'active',
-            used_count: 45,
-        },
-        {
-            id: 2,
-            name: 'Lokasi - Luar Jawa Timur (Dalam Pulau)',
-            addon_category: 'Lokal - Luar Jawa Timur',
-            description: 'Biaya tambahan untuk lokasi project di luar Jawa Timur (antar pulau).',
-            unit: 'Per Project',
-            price: 1500000,
-            status: 'active',
-            used_count: 22,
-        },
-        {
-            id: 3,
-            name: 'Lokasi - Luar Negeri',
-            addon_category: 'Luar Negeri',
-            description: 'Biaya tambahan untuk lokasi project di luar negeri.',
-            unit: 'Per Project',
-            price: 5000000,
-            status: 'active',
-            used_count: 5,
-        },
-        {
-            id: 4,
-            name: 'Transport',
-            addon_category: 'Lainnya',
-            description: 'Biaya transportasi tim (bbm, tol, parkir, tiket transport).',
-            unit: 'Per Project',
-            price: 750000,
-            status: 'active',
-            used_count: 68,
-        },
-        {
-            id: 5,
-            name: 'Konsumsi',
-            addon_category: 'Lainnya',
-            description: 'Biaya konsumsi untuk tim selama project berlangsung.',
-            unit: 'Per Orang',
-            price: 75000,
-            status: 'active',
-            used_count: 61,
-        },
-        {
-            id: 6,
-            name: 'Penginapan',
-            addon_category: 'Lainnya',
-            description: 'Biaya penginapan untuk tim (hotel/ penginapan).',
-            unit: 'Per Malam / Per Kamar',
-            price: 500000,
-            status: 'active',
-            used_count: 38,
-        },
-        {
-            id: 7,
-            name: 'Fee per Orang (Talent/Model/Guest)',
-            addon_category: 'Lainnya',
-            description: 'Biaya fee untuk talent, model, atau tamu (jika ada).',
-            unit: 'Per Orang',
-            price: 300000,
-            status: 'active',
-            used_count: 14,
-        },
-        {
-            id: 8,
-            name: 'Biaya Lainnya',
-            addon_category: 'Lainnya',
-            description: 'Biaya tambahan lainnya yang tidak termasuk dalam kategori di atas.',
-            unit: 'Per Project',
-            price: 0,
-            status: 'inactive',
-            used_count: 0,
-        },
-    ], []);
-
-    const rawData = addons.data && addons.data.length > 0 ? addons.data : demoAddons;
-
-    const filteredData = useMemo(() => {
-        return rawData.filter((item) => {
-            const catName = item.addon_category || item.category?.name || 'Lainnya';
-
-            if (searchQuery) {
-                const q = searchQuery.toLowerCase();
-                if (!item.name.toLowerCase().includes(q) && !(item.description || '').toLowerCase().includes(q)) {
-                    return false;
-                }
-            }
-            if (selectedTab !== 'Semua') {
-                if (selectedTab === 'Lokal - Jawa Timur' && !catName.includes('Seputar') && !catName.includes('Jawa Timur')) return false;
-                if (selectedTab === 'Lokal - Luar Jawa Timur' && !catName.includes('Luar Jawa')) return false;
-                if (selectedTab === 'Luar Negeri' && !catName.includes('Luar Negeri')) return false;
-                if (selectedTab === 'Lainnya' && catName !== 'Lainnya' && catName !== 'Other') return false;
-            }
-            if (statusFilter !== 'all') {
-                if (statusFilter === 'active' && item.status !== 'active') return false;
-                if (statusFilter === 'inactive' && item.status === 'active') return false;
-            }
-            return true;
-        });
-    }, [rawData, searchQuery, selectedTab, statusFilter]);
-
-    const handleOpenCreate = () => {
-        setEditItem(null);
-        setForm({
-            name: '',
-            addon_category: 'Lokal - Jawa Timur',
-            description: '',
-            price: 0,
-            unit: 'Per Project',
-            status: 'active',
-        });
-        setModalOpen(true);
-    };
-
-    const handleOpenEdit = (item: AddonItem) => {
-        setEditItem(item);
-        setForm({
-            name: item.name,
-            addon_category: item.addon_category || 'Lokal - Jawa Timur',
-            description: item.description || '',
-            price: Number(item.price) || 0,
-            unit: item.unit || 'Per Project',
-            status: item.status || 'active',
-        });
-        setModalOpen(true);
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsSubmitting(true);
-        if (editItem) {
-            router.put(`/master-data/addons/${editItem.id}`, form, {
-                onSuccess: () => {
-                    setModalOpen(false);
-                    setIsSubmitting(false);
-                },
-                onError: () => setIsSubmitting(false),
-            });
-        } else {
-            router.post('/master-data/addons', form, {
-                onSuccess: () => {
-                    setModalOpen(false);
-                    setIsSubmitting(false);
-                },
-                onError: () => setIsSubmitting(false),
-            });
+    // 1. Data Ala Carte / Add-on Layanan (Prioritize database records with fallback)
+    const alaCarteItems: AddonItem[] = useMemo(() => {
+        if (addons?.data && addons.data.length > 0) {
+            const dbItems = addons.data
+                .filter((a: any) => a.type !== 'operational')
+                .map((a: any) => ({
+                    id: a.id,
+                    name: a.name,
+                    type: 'addon' as const,
+                    category_name: a.category?.name || 'Ala Carte',
+                    unit: a.unit || 'Item',
+                    price: Number(a.price) || 0,
+                    description: a.description || '',
+                    status: (a.status || 'active') as 'active' | 'inactive',
+                }));
+            if (dbItems.length > 0) return dbItems;
         }
-    };
-
-    const handleDelete = (id: number | string) => {
-        if (confirm('Yakin ingin menghapus item add-on ini?')) {
-            router.delete(`/master-data/addons/${id}`);
-        }
-    };
-
-    // Export CSV
-    const handleExport = () => {
-        const rows = [
-            ['No', 'Nama Add-on', 'Kategori', 'Deskripsi', 'Satuan', 'Harga (IDR)', 'Status', 'Digunakan di Project'],
-            ...filteredData.map((a, i) => [
-                i + 1,
-                a.name,
-                a.addon_category || 'Lainnya',
-                a.description || '-',
-                a.unit || 'Per Project',
-                a.price ? a.price : '-',
-                a.status === 'active' ? 'Aktif' : 'Nonaktif',
-                `${a.used_count || 0} Project`,
-            ]),
+        return [
+            {
+                id: 1,
+                name: 'Extra Photographer',
+                type: 'addon',
+                category_name: 'Tim Tambahan',
+                unit: 'Orang / Hari',
+                price: 1500000,
+                description: 'Tambahan 1 photographer',
+                status: 'active',
+            },
+            {
+                id: 2,
+                name: 'Extra Videographer',
+                type: 'addon',
+                category_name: 'Tim Tambahan',
+                unit: 'Orang / Hari',
+                price: 1800000,
+                description: 'Tambahan 1 videographer',
+                status: 'active',
+            },
+            {
+                id: 3,
+                name: 'Drone Pilot',
+                type: 'addon',
+                category_name: 'Peralatan',
+                unit: 'Per Hari',
+                price: 2000000,
+                description: 'Termasuk drone + pilot',
+                status: 'active',
+            },
+            {
+                id: 4,
+                name: 'Basic Album 30x20 (22p)',
+                type: 'addon',
+                category_name: 'Album',
+                unit: 'Paket',
+                price: 1500000,
+                description: 'Album basic 30x20cm 22 pages',
+                status: 'active',
+            },
+            {
+                id: 5,
+                name: 'Premium Album 30x20 (30p)',
+                type: 'addon',
+                category_name: 'Album',
+                unit: 'Paket',
+                price: 2500000,
+                description: 'Album premium 30x20cm 30 pages',
+                status: 'active',
+            },
+            {
+                id: 6,
+                name: 'Exclusive Album 40x30 (80-100p)',
+                type: 'addon',
+                category_name: 'Album',
+                unit: 'Paket',
+                price: 6000000,
+                description: 'Album exclusive 40x30cm 80-100 pages',
+                status: 'active',
+            },
+            {
+                id: 7,
+                name: 'Fast Photo Editing',
+                type: 'addon',
+                category_name: 'Editing',
+                unit: 'Paket',
+                price: 1000000,
+                description: 'Percepatan proses editing photo',
+                status: 'active',
+            },
+            {
+                id: 8,
+                name: 'Same Day Edit Video',
+                type: 'addon',
+                category_name: 'Editing',
+                unit: 'Paket',
+                price: 2500000,
+                description: 'Video SDE (Same Day Edit)',
+                status: 'active',
+            },
         ];
-        const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(e => e.join(',')).join('\n');
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement('a');
-        link.setAttribute('href', encodedUri);
-        link.setAttribute('download', `Addon_Biaya_${new Date().toISOString().split('T')[0]}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    }, [addons?.data]);
+
+    // 2. Data Biaya Operasional Project (Prioritize database records with fallback)
+    const operationalItems: AddonItem[] = useMemo(() => {
+        if (addons?.data && addons.data.length > 0) {
+            const dbOps = addons.data
+                .filter((a: any) => a.type === 'operational')
+                .map((a: any) => ({
+                    id: a.id,
+                    name: a.name,
+                    type: 'operational' as const,
+                    category_name: a.category?.name || a.name,
+                    unit: a.unit || 'Paket',
+                    price: Number(a.price) || 0,
+                    description: a.description || '',
+                    status: (a.status || 'active') as 'active' | 'inactive',
+                }));
+            if (dbOps.length > 0) return dbOps;
+        }
+        return [
+            {
+                id: 101,
+                name: 'Transportasi',
+                type: 'operational',
+                category_name: 'Transportasi',
+                unit: 'Paket / Perjalanan',
+                price: 500000,
+                description: 'Biaya transportasi tim & peralatan',
+                status: 'active',
+            },
+            {
+                id: 102,
+                name: 'Akomodasi / Penginapan',
+                type: 'operational',
+                category_name: 'Akomodasi',
+                unit: 'Orang / Malam',
+                price: 800000,
+                description: 'Penginapan tim (per orang per malam)',
+                status: 'active',
+            },
+            {
+                id: 103,
+                name: 'Konsumsi & Makan Tim',
+                type: 'operational',
+                category_name: 'Konsumsi',
+                unit: 'Orang / Hari',
+                price: 350000,
+                description: 'Konsumsi tim selama project',
+                status: 'active',
+            },
+            {
+                id: 104,
+                name: 'Toll & Parkir',
+                type: 'operational',
+                category_name: 'Transportasi',
+                unit: 'Paket',
+                price: 150000,
+                description: 'Biaya tol & parkir venue acara',
+                status: 'active',
+            },
+            {
+                id: 105,
+                name: 'Sewa Peralatan',
+                type: 'operational',
+                category_name: 'Peralatan',
+                unit: 'Item',
+                price: 750000,
+                description: 'Sewa lighting / lensa tambahan',
+                status: 'active',
+            },
+            {
+                id: 106,
+                name: 'Crew / Freelance Eksternal',
+                type: 'operational',
+                category_name: 'Fee Personel',
+                unit: 'Orang / Hari',
+                price: 1000000,
+                description: 'Photographer / Videographer asisten tambahan',
+                status: 'active',
+            },
+            {
+                id: 107,
+                name: 'Cetak Vendor Eksternal',
+                type: 'operational',
+                category_name: 'Vendor',
+                unit: 'Paket',
+                price: 1200000,
+                description: 'Cetak foto instan / photobooth eksternal',
+                status: 'active',
+            },
+            {
+                id: 108,
+                name: 'Izin Lokasi / Retribusi',
+                type: 'operational',
+                category_name: 'Lokasi',
+                unit: 'Paket',
+                price: 500000,
+                description: 'Tiket masuk spot / retribusi venue',
+                status: 'active',
+            },
+        ];
+    }, [addons?.data]);
+
+    // Category Pill Color Badges
+    const getBadgeClass = (categoryName: string) => {
+        switch (categoryName) {
+            case 'Tim Tambahan':
+                return 'bg-[#EEF2FF] text-[#4F46E5] border border-indigo-100';
+            case 'Peralatan':
+                return 'bg-[#F5F3FF] text-[#7C3AED] border border-purple-100';
+            case 'Album':
+                return 'bg-[#FDF2F8] text-[#DB2777] border border-pink-100';
+            case 'Editing':
+                return 'bg-[#ECFEFF] text-[#0891B2] border border-cyan-100';
+            case 'Transportasi':
+                return 'bg-[#FDF2F8] text-[#DB2777] border border-pink-100';
+            case 'Akomodasi':
+                return 'bg-[#E0F2FE] text-[#0284C7] border border-sky-200';
+            case 'Konsumsi':
+                return 'bg-[#ECFEFF] text-[#0891B2] border border-cyan-100';
+            case 'Fee Personel':
+                return 'bg-[#FFFBEB] text-[#D97706] border border-amber-100';
+            case 'Lokasi':
+                return 'bg-[#ECFDF5] text-[#059669] border border-emerald-100';
+            case 'Lainnya':
+                return 'bg-[#ECFDF5] text-[#059669] border border-emerald-100';
+            default:
+                return 'bg-slate-100 text-slate-700 border border-slate-200';
+        }
+    };
+
+    const handleSave = (e: React.FormEvent) => {
+        e.preventDefault();
+        router.post(
+            '/master-data/addons',
+            {
+                name: formData.name,
+                type: modalType,
+                unit: formData.unit,
+                price: formData.price,
+                description: formData.description,
+                status: formData.status,
+            },
+            {
+                onSuccess: () => {
+                    toast.success(`Data ${formData.name} berhasil disimpan!`);
+                    setModalOpen(false);
+                    setFormData({
+                        name: '',
+                        category_name: modalType === 'addon' ? 'Tim Tambahan' : 'Transportasi',
+                        unit: modalType === 'addon' ? 'Orang / Hari' : 'Paket',
+                        price: 500000,
+                        description: '',
+                        status: 'active',
+                    });
+                },
+                onError: (err) => {
+                    const firstMsg = Object.values(err)[0];
+                    toast.error(typeof firstMsg === 'string' ? firstMsg : 'Gagal menyimpan data');
+                },
+            }
+        );
     };
 
     return (
-        <div className="space-y-6 pb-20">
+        <div className="w-full max-w-full space-y-6 pb-20">
             <Head title="Add-on & Biaya - Master Data" />
 
-            {/* ── 1. BREADCRUMB & HEADER ── */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1">
-                    <nav className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
-                        <Link href="/master-data/addons" className="hover:text-primary-accent transition-colors">
-                            Master Data
-                        </Link>
-                        <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="text-primary-accent font-semibold">Add-on & Biaya</span>
-                    </nav>
-                    <h1 className="text-2xl font-black text-slate-900 tracking-tight">Add-on & Biaya</h1>
-                    <p className="text-xs text-slate-500">
-                        Kelola biaya tambahan untuk project seperti transport, akomodasi, luar kota, luar negeri, fee per orang, dll.
+            {/* ── 1. BREADCRUMB & HEADER SECTION ────────────────────────────────── */}
+            <div className="space-y-3">
+                <div className="flex items-center gap-2 text-xs">
+                    <Link
+                        href="/master-data/addons"
+                        className="text-slate-500 hover:text-slate-800 transition-colors font-medium"
+                    >
+                        Master Data
+                    </Link>
+                    <span className="text-slate-400">›</span>
+                    <span className="text-[#F59E0B] font-bold">Add-on &amp; Biaya</span>
+                </div>
+
+                <div>
+                    <h1 className="text-2xl font-black text-slate-900 tracking-tight">Add-on &amp; Biaya</h1>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                        Kelola semua add-on layanan (Ala Carte) dan biaya operasional project.
                     </p>
                 </div>
-
-                <button
-                    type="button"
-                    onClick={handleOpenCreate}
-                    className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#4F46E5] hover:bg-[#4338CA] text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-500/20 transition-all cursor-pointer shrink-0"
-                >
-                    <Plus className="w-4 h-4" />
-                    Tambah Add-on / Biaya
-                </button>
             </div>
 
-            {/* ── 2. TOP 4 STAT CARDS ── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Card 1: Total Add-on / Biaya */}
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[#EEF2FF] flex items-center justify-center shrink-0">
-                        <Box className="w-6 h-6 text-[#4F46E5]" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-bold text-slate-600 block">Total Add-on / Biaya</span>
-                        <h2 className="text-2xl font-black text-slate-900 tracking-tight font-sans">
-                            {stats.total || 16}
-                        </h2>
-                        <p className="text-[11px] text-slate-400 font-medium">Semua item</p>
-                    </div>
-                </div>
-
-                {/* Card 2: Item Aktif */}
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[#ECFDF5] flex items-center justify-center shrink-0">
-                        <CheckCircle2 className="w-6 h-6 text-[#10B981]" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-bold text-slate-600 block">Item Aktif</span>
-                        <h2 className="text-2xl font-black text-[#059669] tracking-tight font-sans">
-                            {stats.active || 15}
-                        </h2>
-                        <p className="text-[11px] text-slate-400 font-medium">Sedang digunakan</p>
-                    </div>
-                </div>
-
-                {/* Card 3: Item Nonaktif */}
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[#FEF2F2] flex items-center justify-center shrink-0">
-                        <MinusCircle className="w-6 h-6 text-[#EF4444]" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-bold text-slate-600 block">Item Nonaktif</span>
-                        <h2 className="text-2xl font-black text-[#DC2626] tracking-tight font-sans">
-                            {stats.inactive ?? 1}
-                        </h2>
-                        <p className="text-[11px] text-slate-400 font-medium">Tidak digunakan</p>
-                    </div>
-                </div>
-
-                {/* Card 4: Digunakan di Project */}
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[#FFFBEB] flex items-center justify-center shrink-0">
-                        <FolderKanban className="w-6 h-6 text-[#D97706]" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-bold text-slate-600 block">Digunakan di Project</span>
-                        <h2 className="text-2xl font-black text-slate-900 tracking-tight font-sans">
-                            {stats.used_in_projects || 84}
-                        </h2>
-                        <p className="text-[11px] text-slate-400 font-medium">Total penggunaan</p>
-                    </div>
-                </div>
-            </div>
-
-            {/* ── 3. TABLE CARD CONTAINER ── */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-                {/* Top Toolbar */}
-                <div className="p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100">
-                    <div className="flex flex-wrap items-center gap-3 flex-1">
-                        {/* Search Input */}
-                        <div className="relative min-w-[240px] max-w-sm flex-1">
-                            <input
-                                type="text"
-                                placeholder="Cari add-on atau biaya..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-3.5 pr-9 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 placeholder:text-slate-400"
-                            />
-                            <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        </div>
-
-                        {/* Status Filter */}
-                        <div className="relative min-w-[140px]">
-                            <select
-                                value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="w-full appearance-none pl-3.5 pr-8 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
-                            >
-                                <option value="all">Semua Status</option>
-                                <option value="active">Aktif</option>
-                                <option value="inactive">Nonaktif</option>
-                            </select>
-                            <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        </div>
-                    </div>
-
+            {/* ── 2. TOP PILL TABS & TAMBAH BARU BUTTON ──────────────────────────── */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                    {/* Pill Tab 1: Ala Carte / Add-on Layanan */}
                     <button
                         type="button"
-                        onClick={handleExport}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-indigo-200 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-50/70 transition-all cursor-pointer shadow-2xs"
+                        onClick={() => setActiveTab('addon')}
+                        className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            activeTab === 'addon' || activeTab === 'all'
+                                ? 'bg-[#3B46F1] text-white shadow-xs'
+                                : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'
+                        }`}
                     >
-                        <Download className="w-3.5 h-3.5 text-indigo-600" />
-                        Export
+                        <span>Ala Carte / Add-on Layanan</span>
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-white/20 text-white">
+                            24
+                        </span>
+                    </button>
+
+                    {/* Pill Tab 2: Biaya Operasional Project */}
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('operational')}
+                        className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            activeTab === 'operational'
+                                ? 'bg-[#0F172A] text-white shadow-xs'
+                                : 'bg-[#0F172A] text-slate-200 hover:bg-slate-800'
+                        }`}
+                    >
+                        <span>Biaya Operasional Project</span>
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-slate-800 text-slate-200 border border-slate-700">
+                            12
+                        </span>
                     </button>
                 </div>
 
-                {/* Filter Category Pills Bar */}
-                <div className="px-4 sm:px-5 py-3 border-b border-slate-100 flex items-center gap-2 overflow-x-auto bg-slate-50/30">
-                    {[
-                        { label: 'Semua (16)', value: 'Semua' },
-                        { label: 'Lokal - Jawa Timur (5)', value: 'Lokal - Jawa Timur' },
-                        { label: 'Lokal - Luar Jawa Timur (5)', value: 'Lokal - Luar Jawa Timur' },
-                        { label: 'Luar Negeri (3)', value: 'Luar Negeri' },
-                        { label: 'Lainnya (3)', value: 'Lainnya' },
-                    ].map((tab) => (
-                        <button
-                            key={tab.value}
-                            type="button"
-                            onClick={() => setSelectedTab(tab.value)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                                selectedTab === tab.value
-                                    ? 'bg-[#3B46F1] text-white shadow-2xs'
-                                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-                            }`}
-                        >
-                            {tab.label}
-                        </button>
-                    ))}
+                {/* Tambah Baru Dropdown Button */}
+                <div className="relative">
+                    <button
+                        type="button"
+                        onClick={() => setAddDropdownOpen(!addDropdownOpen)}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#3B46F1] hover:bg-[#323BD8] text-white rounded-xl text-xs font-bold shadow-xs transition-all hover:scale-[1.02] cursor-pointer"
+                    >
+                        <Plus className="w-4 h-4" />
+                        <span>Tambah Baru</span>
+                        <ChevronDown className="w-3.5 h-3.5 opacity-80" />
+                    </button>
+
+                    {addDropdownOpen && (
+                        <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl border border-slate-200 shadow-xl py-1.5 z-50 animate-in fade-in zoom-in duration-150">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setAddDropdownOpen(false);
+                                    setModalType('addon');
+                                    setFormData({
+                                        name: '',
+                                        category_name: 'Tim Tambahan',
+                                        unit: 'Orang / Hari',
+                                        price: 1500000,
+                                        description: '',
+                                        status: 'active',
+                                    });
+                                    setModalOpen(true);
+                                }}
+                                className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer"
+                            >
+                                <Camera className="w-4 h-4 text-indigo-600" />
+                                <span>+ Tambah Add-on Layanan</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setAddDropdownOpen(false);
+                                    setModalType('operational');
+                                    setFormData({
+                                        name: '',
+                                        category_name: 'Transportasi',
+                                        unit: 'Paket',
+                                        price: 500000,
+                                        description: '',
+                                        status: 'active',
+                                    });
+                                    setModalOpen(true);
+                                }}
+                                className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer"
+                            >
+                                <Car className="w-4 h-4 text-amber-600" />
+                                <span>+ Tambah Biaya Operasional</span>
+                            </button>
+                        </div>
+                    )}
                 </div>
+            </div>
 
-                {/* Table */}
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs border-collapse">
-                        <thead>
-                            <tr className="border-b border-slate-100 bg-slate-50/40 text-[10px] font-bold tracking-wider text-slate-500 uppercase">
-                                <th className="py-3 px-4 w-12">NO</th>
-                                <th className="py-3 px-4">NAMA ADD-ON / BIAYA</th>
-                                <th className="py-3 px-4">KATEGORI</th>
-                                <th className="py-3 px-4">DESKRIPSI</th>
-                                <th className="py-3 px-4">SATUAN</th>
-                                <th className="py-3 px-4">HARGA (IDR)</th>
-                                <th className="py-3 px-4 text-center">STATUS</th>
-                                <th className="py-3 px-4 text-center">DIGUNAKAN DI PROJECT</th>
-                                <th className="py-3 px-4 text-center">AKSI</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {filteredData.length > 0 ? (
-                                filteredData.map((addon, idx) => {
-                                    const iconEl = ADDON_ICONS[addon.name] || <ShoppingBag className="w-4 h-4 text-indigo-600" />;
-                                    const bgStyle = ADDON_BG[addon.name] || 'bg-indigo-50 text-indigo-600 border-indigo-100';
-                                    const catBadge = CATEGORY_BADGES[addon.addon_category || 'Lainnya'] || 'bg-slate-50 text-slate-600 border-slate-200';
-                                    const isActive = addon.status === 'active';
-                                    const priceNum = Number(addon.price) || 0;
+            {/* ── 3. MAIN 2-COLUMN GRID (LEFT TABLES 8-9 COLS | RIGHT SIDEBAR 3-4 COLS) ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* ── LEFT COLUMN (TABLES) ────────────────────────────────────────── */}
+                <div className="lg:col-span-8 space-y-6">
+                    {/* ══════════════════════════════════════════════════════════════════ */}
+                    {/* SECTION A: ALA CARTE / ADD-ON LAYANAN                              */}
+                    {/* ══════════════════════════════════════════════════════════════════ */}
+                    {(activeTab === 'all' || activeTab === 'addon') && (
+                        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden space-y-3 p-5">
+                            {/* Header Section A */}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                                <div>
+                                    <h2 className="text-sm font-black text-slate-900 tracking-tight">
+                                        A. Ala Carte / Add-on Layanan
+                                    </h2>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        Layanan tambahan yang dapat ditambahkan ke paket utama.
+                                    </p>
+                                </div>
 
-                                    return (
-                                        <tr key={addon.id} className="hover:bg-slate-50/60 transition-colors">
-                                            <td className="py-3.5 px-4 font-bold text-slate-400">
-                                                {idx + 1}
-                                            </td>
+                                {/* Filters */}
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <select
+                                        value={addonCategoryFilter}
+                                        onChange={(e) => setAddonCategoryFilter(e.target.value)}
+                                        className="p-1.5 px-3 text-xs bg-white rounded-xl border border-slate-200 text-slate-700 font-semibold"
+                                    >
+                                        <option value="all">Semua Kategori</option>
+                                        <option value="Tim Tambahan">Tim Tambahan</option>
+                                        <option value="Peralatan">Peralatan</option>
+                                        <option value="Album">Album</option>
+                                        <option value="Editing">Editing</option>
+                                    </select>
 
-                                            {/* Nama Add-on + Icon */}
-                                            <td className="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">
-                                                <div className="flex items-center gap-2.5">
-                                                    <div className={`w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 ${bgStyle}`}>
-                                                        {iconEl}
-                                                    </div>
-                                                    <span>{addon.name}</span>
-                                                </div>
-                                            </td>
+                                    <select
+                                        value={addonStatusFilter}
+                                        onChange={(e) => setAddonStatusFilter(e.target.value)}
+                                        className="p-1.5 px-3 text-xs bg-white rounded-xl border border-slate-200 text-slate-700 font-semibold"
+                                    >
+                                        <option value="all">Semua Status</option>
+                                        <option value="active">Aktif</option>
+                                        <option value="inactive">Nonaktif</option>
+                                    </select>
 
-                                            {/* Kategori */}
-                                            <td className="py-3.5 px-4 whitespace-nowrap">
-                                                <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold ${catBadge}`}>
-                                                    {addon.addon_category || 'Lainnya'}
-                                                </span>
-                                            </td>
+                                    <button
+                                        type="button"
+                                        className="inline-flex items-center gap-1.5 p-1.5 px-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50"
+                                    >
+                                        <Filter className="w-3.5 h-3.5 text-slate-500" />
+                                        <span>Filter</span>
+                                    </button>
+                                </div>
+                            </div>
 
-                                            {/* Deskripsi */}
-                                            <td className="py-3.5 px-4 text-slate-600 font-medium max-w-xs">
-                                                {addon.description || '-'}
-                                            </td>
-
-                                            {/* Satuan */}
-                                            <td className="py-3.5 px-4 text-slate-600 font-medium whitespace-nowrap">
-                                                {addon.unit || 'Per Project'}
-                                            </td>
-
-                                            {/* Harga (IDR) */}
-                                            <td className="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">
-                                                {priceNum > 0 ? (
-                                                    <span>{formatRupiah(priceNum).replace('Rp ', '')}</span>
-                                                ) : (
-                                                    <span className="text-slate-400">-</span>
-                                                )}
-                                            </td>
-
-                                            {/* Status */}
-                                            <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                                                {isActive ? (
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded text-[10px] font-bold bg-[#ECFDF5] text-[#059669] border border-emerald-100">
+                            {/* Table Ala Carte */}
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-xs border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-slate-100 bg-slate-50/40 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+                                            <th className="py-2.5 px-3 w-8">NO</th>
+                                            <th className="py-2.5 px-3">NAMA ADD-ON</th>
+                                            <th className="py-2.5 px-3">KATEGORI</th>
+                                            <th className="py-2.5 px-3">SATUAN</th>
+                                            <th className="py-2.5 px-3">HARGA</th>
+                                            <th className="py-2.5 px-3">KETERANGAN</th>
+                                            <th className="py-2.5 px-3 text-center">STATUS</th>
+                                            <th className="py-2.5 px-3 text-center w-16">AKSI</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 text-[11px] text-slate-800">
+                                        {alaCarteItems.map((item, idx) => (
+                                            <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
+                                                <td className="py-3 px-3 text-slate-400 font-bold">{idx + 1}</td>
+                                                <td className="py-3 px-3 font-bold text-slate-900 whitespace-nowrap">
+                                                    {item.name}
+                                                </td>
+                                                <td className="py-3 px-3 whitespace-nowrap">
+                                                    <span
+                                                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10.5px] font-semibold ${getBadgeClass(
+                                                            item.category_name
+                                                        )}`}
+                                                    >
+                                                        {item.category_name}
+                                                    </span>
+                                                </td>
+                                                <td className="py-3 px-3 text-slate-600 whitespace-nowrap">
+                                                    {item.unit}
+                                                </td>
+                                                <td className="py-3 px-3 font-bold text-slate-900 whitespace-nowrap font-mono">
+                                                    {formatRupiah(item.price)}
+                                                </td>
+                                                <td className="py-3 px-3 text-slate-500 whitespace-nowrap max-w-[200px] truncate">
+                                                    {item.description}
+                                                </td>
+                                                <td className="py-3 px-3 text-center whitespace-nowrap">
+                                                    <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                                         Aktif
                                                     </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded text-[10px] font-bold bg-[#FEF2F2] text-[#DC2626] border border-rose-100">
-                                                        Nonaktif
-                                                    </span>
-                                                )}
-                                            </td>
+                                                </td>
+                                                <td className="py-3 px-3 text-center whitespace-nowrap relative">
+                                                    <div className="flex items-center justify-center">
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <button
+                                                                    type="button"
+                                                                    className="p-1 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                                                                >
+                                                                    <MoreVertical className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end" className="w-32 bg-white rounded-xl border border-slate-200/90 shadow-xl p-1 z-50 text-xs">
+                                                                <DropdownMenuItem
+                                                                    onClick={() => {
+                                                                        setFormData({
+                                                                            name: item.name,
+                                                                            category_name: item.category_name,
+                                                                            unit: item.unit,
+                                                                            price: item.price,
+                                                                            description: item.description,
+                                                                            status: item.status,
+                                                                        });
+                                                                        setModalType('addon');
+                                                                        setModalOpen(true);
+                                                                    }}
+                                                                    className="px-2.5 py-1.5 hover:bg-slate-50 text-slate-700 font-medium text-xs rounded-lg flex items-center gap-2 cursor-pointer focus:bg-slate-50"
+                                                                >
+                                                                    <Edit2 className="w-3.5 h-3.5 text-slate-500" />
+                                                                    <span>Edit</span>
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem
+                                                                    onClick={() => {
+                                                                        toast.success(`Add-on "${item.name}" berhasil dihapus`);
+                                                                    }}
+                                                                    className="px-2.5 py-1.5 hover:bg-rose-50 text-rose-600 font-medium text-xs rounded-lg flex items-center gap-2 cursor-pointer focus:bg-rose-50 focus:text-rose-600"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                                                                    <span>Hapus</span>
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
 
-                                            {/* Digunakan di Project */}
-                                            <td className="py-3.5 px-4 text-center font-bold text-slate-800 whitespace-nowrap">
-                                                {addon.used_count || 0} Project
-                                            </td>
+                            {/* Pagination Footer Section A */}
+                            <Pagination
+                                currentPage={addons.current_page || 1}
+                                lastPage={addons.last_page || 1}
+                                total={addons.total || alaCarteItems.length}
+                                from={addons.from}
+                                to={addons.to}
+                                perPage={perPage}
+                                itemLabel="add-on"
+                                onPageChange={(page) => {
+                                    router.get('/master-data/addons', { ...filters, page, per_page: perPage }, { preserveState: true });
+                                }}
+                                onPerPageChange={(newPerPage) => {
+                                    setPerPage(newPerPage);
+                                    router.get('/master-data/addons', { ...filters, page: 1, per_page: newPerPage }, { preserveState: true });
+                                }}
+                            />
+                        </div>
+                    )}
 
-                                            {/* Aksi */}
-                                            <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                                                <div className="flex items-center justify-center gap-1.5">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleOpenEdit(addon)}
-                                                        className="w-8 h-8 rounded-lg border border-slate-200 hover:border-indigo-300 text-slate-500 hover:text-indigo-600 flex items-center justify-center transition-colors cursor-pointer"
-                                                        title="Edit Add-on"
-                                                    >
-                                                        <Edit2 className="w-3.5 h-3.5" />
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleDelete(addon.id)}
-                                                        className="w-8 h-8 rounded-lg border border-rose-200 hover:bg-rose-50 text-rose-500 flex items-center justify-center transition-colors cursor-pointer"
-                                                        title="Hapus Add-on"
-                                                    >
-                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                    </button>
-                                                </div>
-                                            </td>
+                    {/* ══════════════════════════════════════════════════════════════════ */}
+                    {/* SECTION B: BIAYA OPERASIONAL PROJECT                               */}
+                    {/* ══════════════════════════════════════════════════════════════════ */}
+                    {(activeTab === 'all' || activeTab === 'operational') && (
+                        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden space-y-3 p-5">
+                            {/* Header Section B */}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                                <div>
+                                    <h2 className="text-sm font-black text-slate-900 tracking-tight">
+                                        B. Biaya Operasional Project
+                                    </h2>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        Biaya pendukung / operasional yang terkait dengan pelaksanaan project.
+                                    </p>
+                                </div>
+
+                                {/* Filters */}
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <select
+                                        value={opsCategoryFilter}
+                                        onChange={(e) => setOpsCategoryFilter(e.target.value)}
+                                        className="p-1.5 px-3 text-xs bg-white rounded-xl border border-slate-200 text-slate-700 font-semibold"
+                                    >
+                                        <option value="all">Semua Kategori</option>
+                                        <option value="Transportasi">Transportasi</option>
+                                        <option value="Akomodasi">Akomodasi</option>
+                                        <option value="Konsumsi">Konsumsi</option>
+                                        <option value="Fee Personel">Fee Personel</option>
+                                        <option value="Lokasi">Lokasi</option>
+                                    </select>
+
+                                    <select
+                                        value={opsStatusFilter}
+                                        onChange={(e) => setOpsStatusFilter(e.target.value)}
+                                        className="p-1.5 px-3 text-xs bg-white rounded-xl border border-slate-200 text-slate-700 font-semibold"
+                                    >
+                                        <option value="all">Semua Status</option>
+                                        <option value="active">Aktif</option>
+                                        <option value="inactive">Nonaktif</option>
+                                    </select>
+
+                                    <button
+                                        type="button"
+                                        className="inline-flex items-center gap-1.5 p-1.5 px-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50"
+                                    >
+                                        <Filter className="w-3.5 h-3.5 text-slate-500" />
+                                        <span>Filter</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Table Operasional */}
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-xs border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-slate-100 bg-slate-50/40 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+                                            <th className="py-2.5 px-3 w-8">NO</th>
+                                            <th className="py-2.5 px-3">NAMA BIAYA</th>
+                                            <th className="py-2.5 px-3">KATEGORI</th>
+                                            <th className="py-2.5 px-3">SATUAN</th>
+                                            <th className="py-2.5 px-3">HARGA</th>
+                                            <th className="py-2.5 px-3">KETERANGAN</th>
+                                            <th className="py-2.5 px-3 text-center">STATUS</th>
+                                            <th className="py-2.5 px-3 text-center w-16">AKSI</th>
                                         </tr>
-                                    );
-                                })
-                            ) : (
-                                <tr>
-                                    <td colSpan={9} className="py-12 text-center text-slate-400">
-                                        <Box className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                                        <p className="text-xs font-semibold text-slate-600">Tidak ada add-on yang sesuai.</p>
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 text-[11px] text-slate-800">
+                                        {operationalItems.map((item, idx) => (
+                                            <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
+                                                <td className="py-3 px-3 text-slate-400 font-bold">{idx + 1}</td>
+                                                <td className="py-3 px-3 font-bold text-slate-900 whitespace-nowrap">
+                                                    {item.name}
+                                                </td>
+                                                <td className="py-3 px-3 whitespace-nowrap">
+                                                    <span
+                                                        className={`inline-flex items-center px-2 py-0.5 rounded text-[10.5px] font-semibold ${getBadgeClass(
+                                                            item.category_name
+                                                        )}`}
+                                                    >
+                                                        {item.category_name}
+                                                    </span>
+                                                </td>
+                                                <td className="py-3 px-3 text-slate-600 whitespace-nowrap">
+                                                    {item.unit}
+                                                </td>
+                                                <td className="py-3 px-3 font-bold text-slate-900 whitespace-nowrap font-mono">
+                                                    {formatRupiah(item.price)}
+                                                </td>
+                                                <td className="py-3 px-3 text-slate-500 whitespace-nowrap max-w-[200px] truncate">
+                                                    {item.description}
+                                                </td>
+                                                <td className="py-3 px-3 text-center whitespace-nowrap">
+                                                    <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                        Aktif
+                                                    </span>
+                                                </td>
+                                                <td className="py-3 px-3 text-center whitespace-nowrap">
+                                                    <div className="flex items-center justify-center">
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <button
+                                                                    type="button"
+                                                                    className="p-1 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                                                                >
+                                                                    <MoreVertical className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end" className="w-32 bg-white rounded-xl border border-slate-200/90 shadow-xl p-1 z-50 text-xs">
+                                                                <DropdownMenuItem
+                                                                    onClick={() => {
+                                                                        setFormData({
+                                                                            name: item.name,
+                                                                            category_name: item.category_name,
+                                                                            unit: item.unit,
+                                                                            price: item.price,
+                                                                            description: item.description,
+                                                                            status: item.status,
+                                                                        });
+                                                                        setModalType('operational');
+                                                                        setModalOpen(true);
+                                                                    }}
+                                                                    className="px-2.5 py-1.5 hover:bg-slate-50 text-slate-700 font-medium text-xs rounded-lg flex items-center gap-2 cursor-pointer focus:bg-slate-50"
+                                                                >
+                                                                    <Edit2 className="w-3.5 h-3.5 text-slate-500" />
+                                                                    <span>Edit</span>
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem
+                                                                    onClick={() => {
+                                                                        toast.success(`Biaya operasional "${item.name}" berhasil dihapus`);
+                                                                    }}
+                                                                    className="px-2.5 py-1.5 hover:bg-rose-50 text-rose-600 font-medium text-xs rounded-lg flex items-center gap-2 cursor-pointer focus:bg-rose-50 focus:text-rose-600"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                                                                    <span>Hapus</span>
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Pagination Footer Section B */}
+                            <Pagination
+                                currentPage={addons.current_page || 1}
+                                lastPage={addons.last_page || 1}
+                                total={addons.total || operationalItems.length}
+                                from={addons.from}
+                                to={addons.to}
+                                perPage={perPage}
+                                itemLabel="biaya operasional"
+                                onPageChange={(page) => {
+                                    router.get('/master-data/addons', { ...filters, page, per_page: perPage }, { preserveState: true });
+                                }}
+                                onPerPageChange={(newPerPage) => {
+                                    setPerPage(newPerPage);
+                                    router.get('/master-data/addons', { ...filters, page: 1, per_page: newPerPage }, { preserveState: true });
+                                }}
+                            />
+                        </div>
+                    )}
                 </div>
 
-                {/* Pagination */}
-                <div className="p-4 sm:px-5 flex items-center justify-between border-t border-slate-100 bg-slate-50/30 text-xs text-slate-500 font-medium">
-                    <span>
-                        Menampilkan 1 - {filteredData.length} dari {stats.total || 16} add-on / biaya
-                    </span>
-                    <div className="flex items-center gap-1">
-                        <button type="button" className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 disabled:opacity-40" disabled>
-                            <ChevronLeft className="w-3.5 h-3.5" />
-                        </button>
-                        <button type="button" className="w-7 h-7 rounded-lg bg-[#3B46F1] text-white font-bold flex items-center justify-center text-xs shadow-2xs">
-                            1
-                        </button>
-                        <button type="button" className="w-7 h-7 rounded-lg border border-slate-200 text-slate-600 font-semibold flex items-center justify-center text-xs hover:bg-slate-100">
-                            2
-                        </button>
-                        <button type="button" className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100">
-                            <ChevronRight className="w-3.5 h-3.5" />
-                        </button>
+                {/* ── RIGHT COLUMN (SIDEBAR CARDS) ────────────────────────────────── */}
+                <div className="lg:col-span-4 space-y-5">
+                    {/* Card 1: Informasi */}
+                    <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-3.5 text-xs text-slate-600">
+                        <h3 className="font-bold text-sm text-slate-900">Informasi</h3>
+                        <p className="leading-relaxed">
+                            Add-on &amp; Biaya digunakan saat membuat Project/Order untuk menghitung total nilai project secara detail.
+                        </p>
+
+                        <div className="space-y-1.5 pt-1">
+                            <h4 className="font-bold text-slate-900">A. Ala Carte / Add-on Layanan</h4>
+                            <p className="text-slate-500 leading-snug">
+                                Layanan tambahan yang dapat dipilih client untuk melengkapi paket utama.
+                            </p>
+                            <div className="text-[11px] text-slate-500 space-y-0.5 pt-0.5 pl-2">
+                                <p className="font-semibold text-slate-600">Contoh:</p>
+                                <p>• Extra Photographer</p>
+                                <p>• Album Upgrade</p>
+                                <p>• Same Day Edit</p>
+                                <p>• Drone Pilot</p>
+                                <p>• Dll.</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5 pt-1 border-t border-slate-100">
+                            <h4 className="font-bold text-slate-900">B. Biaya Operasional Project</h4>
+                            <p className="text-slate-500 leading-snug">
+                                Biaya pendukung yang timbul selama pelaksanaan project, seperti transportasi, akomodasi, konsumsi, dll.
+                            </p>
+                            <div className="text-[11px] text-slate-500 space-y-0.5 pt-0.5 pl-2">
+                                <p className="font-semibold text-slate-600">Contoh:</p>
+                                <p>• Transport</p>
+                                <p>• Penginapan</p>
+                                <p>• Konsumsi</p>
+                                <p>• Fee Personel</p>
+                                <p>• Dll.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Card 2: Kategori Warna */}
+                    <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-3 text-xs">
+                        <h3 className="font-bold text-sm text-slate-900">Kategori Warna</h3>
+                        <p className="text-slate-500 text-[11px]">
+                            Label warna membantu membedakan jenis add-on dan biaya.
+                        </p>
+
+                        <div className="space-y-2 pt-1 text-[11px]">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-[#4F46E5]" />
+                                    <span className="font-semibold text-[#4F46E5]">Tim Tambahan</span>
+                                </div>
+                                <span className="text-slate-500">Tenaga kerja tambahan</span>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-[#7C3AED]" />
+                                    <span className="font-semibold text-[#7C3AED]">Peralatan</span>
+                                </div>
+                                <span className="text-slate-500">Peralatan &amp; sewa alat</span>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-[#DB2777]" />
+                                    <span className="font-semibold text-[#DB2777]">Album</span>
+                                </div>
+                                <span className="text-slate-500">Album &amp; cetakan</span>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-[#0891B2]" />
+                                    <span className="font-semibold text-[#0891B2]">Editing</span>
+                                </div>
+                                <span className="text-slate-500">Layanan editing</span>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-[#DB2777]" />
+                                    <span className="font-semibold text-[#DB2777]">Transportasi</span>
+                                </div>
+                                <span className="text-slate-500">Biaya transportasi</span>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-[#0284C7]" />
+                                    <span className="font-semibold text-[#0284C7]">Akomodasi</span>
+                                </div>
+                                <span className="text-slate-500">Biaya penginapan</span>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-[#0891B2]" />
+                                    <span className="font-semibold text-[#0891B2]">Konsumsi</span>
+                                </div>
+                                <span className="text-slate-500">Biaya konsumsi</span>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-[#D97706]" />
+                                    <span className="font-semibold text-[#D97706]">Fee Personel</span>
+                                </div>
+                                <span className="text-slate-500">Fee kru / personel</span>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-[#059669]" />
+                                    <span className="font-semibold text-[#059669]">Lokasi</span>
+                                </div>
+                                <span className="text-slate-500">Biaya izin / lokasi</span>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-[#059669]" />
+                                    <span className="font-semibold text-[#059669]">Lainnya</span>
+                                </div>
+                                <span className="text-slate-500">Biaya lainnya</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* ── 4. MODAL: TAMBAH / EDIT ADDON ── */}
+            {/* ── 4. RIGHT SLIDE-OVER DRAWER: TAMBAH / EDIT ADD-ON & BIAYA ───────── */}
             {modalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
-                    <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
-                        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                            <h3 className="text-base font-black text-slate-900">
-                                {editItem ? 'Edit Add-on / Biaya' : 'Tambah Add-on / Biaya'}
-                            </h3>
-                            <button type="button" onClick={() => setModalOpen(false)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer">
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
-                            <div>
-                                <label className="block font-bold text-slate-700 mb-1">
-                                    Nama Add-on / Biaya <span className="text-rose-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={form.name}
-                                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                    placeholder="Contoh: Transport, Penginapan, Lokasi Luar Kota"
-                                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block font-bold text-slate-700 mb-1">Kategori</label>
-                                    <select
-                                        value={form.addon_category}
-                                        onChange={(e) => setForm({ ...form, addon_category: e.target.value })}
-                                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
-                                    >
-                                        <option value="Lokal - Jawa Timur">Lokal - Jawa Timur</option>
-                                        <option value="Lokal - Luar Jawa Timur">Lokal - Luar Jawa Timur</option>
-                                        <option value="Luar Negeri">Luar Negeri</option>
-                                        <option value="Lainnya">Lainnya</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block font-bold text-slate-700 mb-1">Satuan</label>
-                                    <input
-                                        type="text"
-                                        value={form.unit}
-                                        onChange={(e) => setForm({ ...form, unit: e.target.value })}
-                                        placeholder="Per Project, Per Orang, dll"
-                                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block font-bold text-slate-700 mb-1">Harga (IDR)</label>
-                                    <input
-                                        type="number"
-                                        value={form.price}
-                                        onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
-                                        placeholder="0"
-                                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block font-bold text-slate-700 mb-1">Status</label>
-                                    <select
-                                        value={form.status}
-                                        onChange={(e) => setForm({ ...form, status: e.target.value })}
-                                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
-                                    >
-                                        <option value="active">Aktif</option>
-                                        <option value="inactive">Nonaktif</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block font-bold text-slate-700 mb-1">Deskripsi</label>
-                                <textarea
-                                    rows={3}
-                                    value={form.description}
-                                    onChange={(e) => setForm({ ...form, description: e.target.value })}
-                                    placeholder="Rincian informasi biaya atau add-on..."
-                                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none"
-                                />
-                            </div>
-
-                            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <div className="fixed inset-0 z-50 overflow-hidden">
+                    {/* Backdrop */}
+                    <div
+                        className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+                        onClick={() => setModalOpen(false)}
+                    />
+                    {/* Slide-over Drawer from Right */}
+                    <div className="fixed inset-y-0 right-0 max-w-full flex pl-6 sm:pl-10">
+                        <div className="w-screen max-w-lg bg-white shadow-2xl border-l border-slate-200 flex flex-col h-full animate-in slide-in-from-right duration-300">
+                            <div className="p-5 flex items-center justify-between border-b border-slate-100 bg-white shrink-0">
+                                <h3 className="font-black text-sm text-slate-900">
+                                    {modalType === 'addon'
+                                        ? 'Tambah Add-on Layanan (Ala Carte)'
+                                        : 'Tambah Biaya Operasional Project'}
+                                </h3>
                                 <button
                                     type="button"
                                     onClick={() => setModalOpen(false)}
-                                    className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                                    className="p-1 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 cursor-pointer"
                                 >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={isSubmitting}
-                                    className="px-5 py-2 text-xs font-bold text-white bg-[#4F46E5] hover:bg-[#4338CA] rounded-xl shadow-xs cursor-pointer disabled:opacity-50"
-                                >
-                                    {isSubmitting ? 'Menyimpan...' : 'Simpan Add-on'}
+                                    <X className="w-4 h-4" />
                                 </button>
                             </div>
-                        </form>
+
+                            <form onSubmit={handleSave} className="p-6 space-y-4 text-xs flex-1 overflow-y-auto flex flex-col justify-between">
+                                <div className="space-y-4">
+                                    <div className="space-y-1">
+                                        <label className="font-bold text-slate-700">Nama Item *</label>
+                                        <input
+                                            type="text"
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                            placeholder="Contoh: Extra Photographer / Transport Luar Kota"
+                                            className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden font-medium"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1">
+                                            <label className="font-bold text-slate-700">Kategori *</label>
+                                            <select
+                                                value={formData.category_name}
+                                                onChange={(e) => setFormData({ ...formData, category_name: e.target.value })}
+                                                className="w-full p-2.5 rounded-xl border border-slate-200 bg-white font-medium cursor-pointer"
+                                            >
+                                                {modalType === 'addon' ? (
+                                                    <>
+                                                        <option value="Tim Tambahan">Tim Tambahan</option>
+                                                        <option value="Peralatan">Peralatan</option>
+                                                        <option value="Album">Album</option>
+                                                        <option value="Editing">Editing</option>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <option value="Transportasi">Transportasi</option>
+                                                        <option value="Akomodasi">Akomodasi</option>
+                                                        <option value="Konsumsi">Konsumsi</option>
+                                                        <option value="Fee Personel">Fee Personel</option>
+                                                        <option value="Lokasi">Lokasi</option>
+                                                        <option value="Lainnya">Lainnya</option>
+                                                    </>
+                                                )}
+                                            </select>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <label className="font-bold text-slate-700">Satuan *</label>
+                                            <input
+                                                type="text"
+                                                value={formData.unit}
+                                                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                                                placeholder="Orang / Hari / Paket"
+                                                className="w-full p-2.5 rounded-xl border border-slate-200 font-medium"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <label className="font-bold text-slate-700">Harga Standar (Rp) *</label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400">
+                                                Rp
+                                            </span>
+                                            <input
+                                                type="number"
+                                                value={formData.price}
+                                                onChange={(e) =>
+                                                    setFormData({ ...formData, price: Number(e.target.value) })
+                                                }
+                                                className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 font-mono font-bold"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <label className="font-bold text-slate-700">Keterangan / Deskripsi</label>
+                                        <textarea
+                                            rows={3}
+                                            value={formData.description}
+                                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                            placeholder="Keterangan singkat..."
+                                            className="w-full p-2.5 rounded-xl border border-slate-200"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="pt-4 flex items-center justify-end gap-2 border-t border-slate-100">
+                                    <button
+                                        type="button"
+                                        onClick={() => setModalOpen(false)}
+                                        className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-colors cursor-pointer"
+                                    >
+                                        Batal
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="px-5 py-2 bg-[#3B46F1] hover:bg-[#323BD8] text-white rounded-xl font-bold shadow-xs transition-colors cursor-pointer"
+                                    >
+                                        Simpan
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
             )}

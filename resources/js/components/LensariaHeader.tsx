@@ -106,7 +106,18 @@ export default function LensariaHeader({
     const fontHeading = appSettings?.font_family_heading || 'Plus Jakarta Sans';
 
     const breadcrumbColor = appSettings?.breadcrumb_color || appSettings?.primary_accent_color || '#C98922';
-    const breadcrumbActiveColor = appSettings?.breadcrumb_active_color || '#0F172A';
+    const breadcrumbActiveColor = appSettings?.breadcrumb_active_color || '#FFFFFF';
+    const headerSearchBg = appSettings?.header_search_bg || '';
+    const headerSearchText = appSettings?.header_search_text || '';
+
+    // Check if header is dark
+    const isDarkHeader = Boolean(
+        (headerBgGradient && (headerBgGradient.includes('#1C') || headerBgGradient.includes('#1c') || headerBgGradient.includes('#0E') || headerBgGradient.includes('#0e') || headerBgGradient.includes('#0A') || headerBgGradient.includes('#0a') || headerBgGradient.includes('#181129'))) ||
+        (headerBg && !['#ffffff', '#fff', '#f8fafc', '#f1f5f9', '#f8f6f5'].includes(headerBg.toLowerCase()))
+    );
+
+    const effectiveSearchBg = headerSearchBg || (isDarkHeader ? 'rgba(255, 255, 255, 0.12)' : 'rgba(241, 245, 249, 0.85)');
+    const effectiveSearchText = headerSearchText || (isDarkHeader ? '#FFFFFF' : '#0F172A');
 
     // 1. Fetch Notifications
     const fetchNotifications = async () => {
@@ -379,34 +390,47 @@ export default function LensariaHeader({
                         {effectiveTitle}
                     </h1>
                     {effectiveBreadcrumbs && effectiveBreadcrumbs.length > 0 ? (
-                        <nav className="flex items-center gap-1.5 text-[11px] text-slate-400 mt-0.5">
+                        <nav className="flex items-center gap-1.5 text-[11px] mt-0.5">
                             {effectiveBreadcrumbs.map((crumb, idx) => (
                                 <React.Fragment key={crumb.label}>
                                     {crumb.href ? (
                                         <Link
                                             href={crumb.href}
-                                            className="hover:text-slate-700 transition-colors font-normal"
+                                            style={{ color: breadcrumbColor }}
+                                            className="hover:opacity-80 transition-opacity font-medium"
                                         >
                                             {crumb.label}
                                         </Link>
                                     ) : (
-                                        <span className="font-medium text-slate-600">
+                                        <span
+                                            style={{ color: breadcrumbActiveColor }}
+                                            className="font-semibold"
+                                        >
                                             {crumb.label}
                                         </span>
                                     )}
                                     {idx < effectiveBreadcrumbs.length - 1 && (
-                                        <span className="text-slate-300">›</span>
+                                        <span style={{ color: breadcrumbColor, opacity: 0.5 }}>›</span>
                                     )}
                                 </React.Fragment>
                             ))}
                         </nav>
                     ) : (
-                        <nav className="flex items-center gap-1.5 text-[11px] text-slate-400 mt-0.5">
-                            <Link href="/dashboard" className="hover:text-slate-700 transition-colors font-normal">
+                        <nav className="flex items-center gap-1.5 text-[11px] mt-0.5">
+                            <Link
+                                href="/dashboard"
+                                style={{ color: breadcrumbColor }}
+                                className="hover:opacity-80 transition-opacity font-medium"
+                            >
                                 Dashboard
                             </Link>
-                            <span className="text-slate-300">›</span>
-                            <span className="font-medium text-slate-600">{effectiveTitle}</span>
+                            <span style={{ color: breadcrumbColor, opacity: 0.5 }}>›</span>
+                            <span
+                                style={{ color: breadcrumbActiveColor }}
+                                className="font-semibold"
+                            >
+                                {effectiveTitle}
+                            </span>
                         </nav>
                     )}
                 </div>
@@ -417,7 +441,10 @@ export default function LensariaHeader({
                 {/* ── 1. GLOBAL SEARCH WITH LIVE AUTOCOMPLETE ────────────────────────── */}
                 <div className="relative w-48 sm:w-64 lg:w-80">
                     <div className="relative flex items-center">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                        <Search
+                            style={{ color: effectiveSearchText, opacity: 0.65 }}
+                            className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none"
+                        />
                         <input
                             ref={searchInputRef}
                             type="text"
@@ -428,13 +455,17 @@ export default function LensariaHeader({
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Search project, client, photographer..."
                             style={{
-                                color: headerTextColor,
+                                background: effectiveSearchBg,
+                                color: effectiveSearchText,
                                 borderColor: headerBorderColor,
                             }}
-                            className="w-full pl-8.5 pr-14 py-1.5 rounded-xl bg-slate-50/80 hover:bg-slate-100/80 focus:bg-white text-xs placeholder-slate-400 border border-slate-200 focus:border-[#F05322] focus:ring-2 focus:ring-[#F05322]/20 transition-all outline-hidden"
+                            className="w-full pl-8.5 pr-14 py-1.5 rounded-xl text-xs placeholder:opacity-50 border focus:ring-2 focus:ring-[#C98922]/25 transition-all outline-hidden"
                         />
                         {searching ? (
-                            <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 animate-spin" />
+                            <Loader2
+                                style={{ color: effectiveSearchText, opacity: 0.65 }}
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin"
+                            />
                         ) : searchQuery ? (
                             <button
                                 type="button"
@@ -442,12 +473,20 @@ export default function LensariaHeader({
                                     setSearchQuery('');
                                     setSearchOpen(false);
                                 }}
+                                style={{ color: effectiveSearchText }}
                                 className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 hover:opacity-100 rounded-md transition-opacity cursor-pointer opacity-60"
                             >
                                 <X className="w-3.5 h-3.5" />
                             </button>
                         ) : (
-                            <kbd className="hidden lg:inline-flex items-center absolute right-2.5 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[9px] font-mono font-bold text-slate-400 bg-white/20 border border-white/30 rounded shadow-2xs">
+                            <kbd
+                                style={{
+                                    color: effectiveSearchText,
+                                    borderColor: headerBorderColor,
+                                    background: isDarkHeader ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.05)',
+                                }}
+                                className="hidden lg:inline-flex items-center absolute right-2.5 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[9px] font-mono font-bold border rounded shadow-2xs opacity-75"
+                            >
                                 ⌘K
                             </kbd>
                         )}
@@ -801,13 +840,13 @@ export default function LensariaHeader({
                                 {user.name}
                             </span>
                             <span
-                                style={{ color: `${headerTextColor}99` }}
-                                className="text-[10px] font-medium leading-tight"
+                                style={{ color: breadcrumbColor || headerTextColor, opacity: 0.85 }}
+                                className="text-[10px] font-semibold leading-tight"
                             >
                                 {roleName}
                             </span>
                         </div>
-                        <ChevronDown style={{ color: `${headerTextColor}80` }} className="w-3.5 h-3.5 group-hover:opacity-100 transition-transform" />
+                        <ChevronDown style={{ color: headerTextColor, opacity: 0.7 }} className="w-3.5 h-3.5 group-hover:opacity-100 transition-transform" />
                     </button>
 
                     {/* Profile Dropdown Menu */}

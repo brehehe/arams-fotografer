@@ -86,11 +86,11 @@ export function SelectSearch({
   }
 
   return (
-    <div className={cn("relative w-full text-xs", className)} ref={dropdownRef}>
+    <div className={cn("relative w-full text-xs space-y-1.5", className)} ref={dropdownRef}>
       {label && (
         <label
           className={cn(
-            "block font-semibold mb-1.5 text-xs flex items-center justify-between",
+            "block font-semibold text-xs flex items-center justify-between",
             variant === 'dark' ? "text-slate-300" : "text-slate-700"
           )}
         >
@@ -118,11 +118,11 @@ export function SelectSearch({
         disabled={disabled || isLoading}
         onClick={() => !disabled && !isLoading && setIsOpen(!isOpen)}
         className={cn(
-          "w-full h-[38px] px-3.5 rounded-xl text-left flex items-center justify-between transition-all duration-150 outline-hidden cursor-pointer",
+          "w-full h-[42px] px-3.5 rounded-xl text-left flex items-center justify-between transition-all duration-150 outline-hidden cursor-pointer",
           variant === 'dark'
             ? "bg-black/30 border border-white/10 text-white focus:border-[#C89445] focus:ring-2 focus:ring-[#C89445]/20"
-            : "bg-white border border-slate-200 text-slate-900 focus:border-[#C89445] focus:ring-2 focus:ring-[#C89445]/20",
-          isOpen && "border-[#C89445] ring-2 ring-[#C89445]/20 shadow-xs",
+            : "bg-white border border-slate-200 text-slate-900 focus:border-[#4F46E5] focus:ring-2 focus:ring-indigo-500/20",
+          isOpen && "border-[#4F46E5] ring-2 ring-indigo-500/20 shadow-xs",
           error && "border-rose-400 ring-1 ring-rose-300",
           (disabled || isLoading) && (variant === 'dark' ? "bg-white/5 cursor-not-allowed opacity-50" : "bg-slate-50 cursor-not-allowed opacity-65")
         )}
@@ -133,16 +133,11 @@ export function SelectSearch({
               Memuat daftar pilihan...
             </span>
           ) : selectedOption ? (
-            <div className="flex items-center gap-2 truncate">
+            <div className="flex items-center gap-2 truncate flex-1 min-w-0">
               {selectedOption.icon}
               <span className={cn("font-bold text-xs truncate", variant === 'dark' ? "text-white" : "text-slate-900")}>
                 {selectedOption.label}
               </span>
-              {selectedOption.subtitle && (
-                <span className={cn("text-[10px] font-medium shrink-0", variant === 'dark' ? "text-slate-400" : "text-slate-500")}>
-                  ({selectedOption.subtitle})
-                </span>
-              )}
             </div>
           ) : (
             <span className={cn("font-normal text-xs", variant === 'dark' ? "text-slate-500" : "text-slate-400")}>
@@ -226,7 +221,7 @@ export function SelectSearch({
                     type="button"
                     onClick={() => handleSelect(opt.value)}
                     className={cn(
-                      "w-full px-3 py-2 rounded-xl text-left flex items-center justify-between transition-colors cursor-pointer text-xs",
+                      "w-full px-3 py-2.5 rounded-xl text-left flex items-center justify-between transition-colors cursor-pointer text-xs",
                       isSelected
                         ? "bg-[#C89445]/20 text-[#C89445] font-bold"
                         : variant === 'dark'
@@ -234,12 +229,12 @@ export function SelectSearch({
                           : "hover:bg-slate-50 text-slate-700 font-medium"
                     )}
                   >
-                    <div className="flex items-center gap-2 truncate">
+                    <div className="flex items-center gap-2.5 truncate min-w-0 flex-1">
                       {opt.icon}
-                      <div>
-                        <span className="block truncate">{opt.label}</span>
+                      <div className="min-w-0 flex-1">
+                        <span className="block truncate font-bold text-xs">{opt.label}</span>
                         {opt.subtitle && (
-                          <span className={cn("text-[10px] block font-normal", variant === 'dark' ? "text-slate-400" : "text-slate-400")}>
+                          <span className={cn("text-[11px] block font-normal truncate mt-0.5", variant === 'dark' ? "text-slate-400" : "text-slate-500")}>
                             {opt.subtitle}
                           </span>
                         )}

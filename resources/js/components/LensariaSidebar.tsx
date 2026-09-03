@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import {
     LayoutDashboard,
@@ -28,14 +28,22 @@ interface LensariaSidebarProps {
 
 export default function LensariaSidebar({ isOpen = true, onClose }: LensariaSidebarProps) {
     const { url, props: pageProps } = usePage<any>();
-    const [masterDataOpen, setMasterDataOpen] = useState(url.startsWith('/master-data'));
+    const currentPath = (url || '').split('?')[0].split('#')[0];
+    const isMasterData = currentPath.startsWith('/master-data');
+    const [masterDataOpen, setMasterDataOpen] = useState(isMasterData);
+
+    useEffect(() => {
+        if (isMasterData) {
+            setMasterDataOpen(true);
+        }
+    }, [currentPath, isMasterData]);
 
     const isCurrent = (path: string) => {
-        if (path === '/dashboard') return url === '/dashboard' || url === '/';
-        if (path === '/settings') return url.startsWith('/settings');
-        if (path === '/wedding-organizer') return url.startsWith('/wedding-organizer') || url.startsWith('/wedding-organizers') || url.startsWith('/weeding-organizer');
-        if (path === '/client-sources') return url.startsWith('/client-sources') || url.startsWith('/sumber-klien');
-        return url.startsWith(path);
+        if (path === '/dashboard') return currentPath === '/dashboard' || currentPath === '/';
+        if (path === '/settings') return currentPath.startsWith('/settings');
+        if (path === '/wedding-organizer') return currentPath.startsWith('/wedding-organizer') || currentPath.startsWith('/wedding-organizers') || currentPath.startsWith('/weeding-organizer');
+        if (path === '/client-sources') return currentPath.startsWith('/client-sources') || currentPath.startsWith('/sumber-klien');
+        return currentPath === path || currentPath.startsWith(path + '/');
     };
 
     const user = pageProps?.auth?.user;
@@ -64,6 +72,7 @@ export default function LensariaSidebar({ isOpen = true, onClose }: LensariaSide
         { name: 'Jenis Layanan', href: '/master-data/services' },
         { name: 'Paket & Harga', href: '/master-data/packages' },
         { name: 'Add-on & Biaya', href: '/master-data/addons' },
+        { name: 'Workflow & Template', href: '/master-data/workflows' },
         { name: 'Metode Pembayaran', href: '/master-data/payment-methods' },
         { name: 'Template Catatan', href: '/master-data/notes' },
     ];
@@ -172,13 +181,16 @@ export default function LensariaSidebar({ isOpen = true, onClose }: LensariaSide
                                 style={active ? {
                                     background: sidebarActiveBgGradient || sidebarActiveBg,
                                     color: sidebarActiveText,
-                                } : undefined}
+                                } : (sidebarTextColor ? { color: sidebarTextColor } : undefined)}
                                 className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all group ${active
                                     ? 'shadow-md shadow-black/20 text-white font-bold'
-                                    : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                                    : 'hover:bg-white/10'
                                     }`}
                             >
-                                <item.icon className={`w-4 h-4 shrink-0 ${active ? 'text-white' : 'text-slate-400'}`} />
+                                <item.icon
+                                    className="w-4 h-4 shrink-0"
+                                    style={{ color: active ? sidebarActiveText : (sidebarTextColor || undefined) }}
+                                />
                                 <span className="flex-1">{item.name}</span>
                             </Link>
                         );
@@ -190,27 +202,33 @@ export default function LensariaSidebar({ isOpen = true, onClose }: LensariaSide
                             <button
                                 type="button"
                                 onClick={() => setMasterDataOpen(!masterDataOpen)}
-                                className={`flex items-center justify-between w-full px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${url.startsWith('/master-data')
+                                style={!isMasterData && sidebarTextColor ? { color: sidebarTextColor } : undefined}
+                                className={`flex items-center justify-between w-full px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${isMasterData
                                     ? 'text-white font-bold bg-white/5'
-                                    : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                                    : 'hover:bg-white/10'
                                     }`}
                             >
                                 <div className="flex items-center gap-3">
-                                    <Database className={`w-4 h-4 shrink-0 ${url.startsWith('/master-data') ? 'text-[#F05322]' : 'text-slate-400'}`} />
+                                    <Database
+                                        className="w-4 h-4 shrink-0"
+                                        style={{ color: isMasterData ? (sidebarActiveBg || '#F05322') : (sidebarTextColor || undefined) }}
+                                    />
                                     <span>Master Data</span>
                                 </div>
-                                {masterDataOpen ? (
-                                    <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                                ) : (
-                                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                                )}
+                                <div style={{ color: sidebarTextColor || undefined }}>
+                                    {masterDataOpen ? (
+                                        <ChevronDown className="w-3.5 h-3.5" />
+                                    ) : (
+                                        <ChevronRight className="w-3.5 h-3.5" />
+                                    )}
+                                </div>
                             </button>
 
                             {/* Master Data Submenu */}
                             {masterDataOpen && (
                                 <div className="mt-1 ml-4 pl-3 border-l border-white/10 space-y-0.5 py-0.5 animate-in slide-in-from-top-1 duration-150">
                                     {masterDataNav.map((sub) => {
-                                        const subActive = url === sub.href;
+                                        const subActive = currentPath === sub.href || currentPath.startsWith(sub.href + '/');
                                         return (
                                             <Link
                                                 key={sub.name}
@@ -218,10 +236,10 @@ export default function LensariaSidebar({ isOpen = true, onClose }: LensariaSide
                                                 style={subActive ? {
                                                     background: sidebarActiveBgGradient || sidebarActiveBg,
                                                     color: sidebarActiveText,
-                                                } : undefined}
+                                                } : (sidebarTextColor ? { color: sidebarTextColor } : undefined)}
                                                 className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors ${subActive
                                                     ? 'font-bold shadow-xs'
-                                                    : 'text-slate-400 hover:text-white hover:bg-white/5 font-medium'
+                                                    : 'hover:bg-white/10 font-medium'
                                                     }`}
                                             >
                                                 <span>{sub.name}</span>
@@ -246,13 +264,16 @@ export default function LensariaSidebar({ isOpen = true, onClose }: LensariaSide
                                 style={active ? {
                                     background: sidebarActiveBgGradient || sidebarActiveBg,
                                     color: sidebarActiveText,
-                                } : undefined}
+                                } : (sidebarTextColor ? { color: sidebarTextColor } : undefined)}
                                 className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all group ${active
                                     ? 'shadow-xs text-white'
-                                    : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                                    : 'hover:bg-white/10'
                                     }`}
                             >
-                                <item.icon className={`w-4 h-4 shrink-0 ${active ? 'text-current' : 'text-slate-400'}`} />
+                                <item.icon
+                                    className="w-4 h-4 shrink-0"
+                                    style={{ color: active ? sidebarActiveText : (sidebarTextColor || undefined) }}
+                                />
                                 <span>{item.name}</span>
                             </Link>
                         );

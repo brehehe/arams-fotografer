@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Head, router, usePage, Link } from '@inertiajs/react';
+import confetti from 'canvas-confetti';
 import {
     Calendar,
     Clock,
@@ -95,11 +96,38 @@ export default function ClientIntakeForm({
     },
 }: ClientIntakeFormProps) {
     const pageProps = usePage().props as any;
+    const appSettings = pageProps?.appSettings || {};
     const { flash } = pageProps;
     const intakeSuccess = flash?.intake_success || flash?.success;
 
+    // Dynamic brand & theme tokens from Settings
+    const companyName = appSettings.company_name || company.name || 'Arams Pictures';
+    const companyTagline = appSettings.company_tagline || 'Photografer';
+    const companyPhone = appSettings.company_phone || company.phone || '081234567890';
+    const loginBg = appSettings.login_bg_color || '#2E0F15';
+    const loginBgGradient = appSettings.login_bg_gradient || 'linear-gradient(180deg, #2E0F15 0%, #200A0E 100%)';
+    const loginCardBg = appSettings.login_card_bg || '#380E13';
+    const loginAccent = appSettings.login_accent_color || appSettings.primary_accent_color || '#4A151B';
+    const fontHeading = appSettings.font_family_heading || 'Plus Jakarta Sans';
+
     const [currentStep, setCurrentStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+    React.useEffect(() => {
+        if (intakeSuccess) {
+            setShowSuccessModal(true);
+            try {
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                });
+            } catch (e) {
+                // ignore
+            }
+        }
+    }, [intakeSuccess]);
 
     // Form Data State covering all multi-step form requirements
     const [formData, setFormData] = useState({
@@ -242,7 +270,16 @@ export default function ClientIntakeForm({
             {
                 onSuccess: () => {
                     setIsSubmitting(false);
-                    toast.success('Formulir berhasil dikirim! Tim kami akan segera menghubungi Anda.');
+                    setShowSuccessModal(true);
+                    try {
+                        confetti({
+                            particleCount: 100,
+                            spread: 70,
+                            origin: { y: 0.6 },
+                        });
+                    } catch (e) {
+                        // ignore
+                    }
                 },
                 onError: (errors) => {
                     setIsSubmitting(false);
@@ -339,27 +376,45 @@ export default function ClientIntakeForm({
 
     const currentCategoryName = categoryOptions.find((c) => c.value === formData.category_id)?.label || 'Wedding (Pernikahan)';
 
+    const initials = companyName
+        .split(' ')
+        .filter(Boolean)
+        .map((w: string) => w[0])
+        .join('')
+        .slice(0, 2)
+        .toLowerCase() || 'ap';
+
     return (
-        <div className="min-h-screen w-full bg-white flex flex-col lg:flex-row font-sans antialiased text-slate-800 selection:bg-indigo-500 selection:text-white">
-            <Head title="Form Data Diri Client - Arams Pictures" />
+        <div className="min-h-screen w-full bg-[#EFECE8] flex flex-col lg:flex-row font-sans antialiased text-slate-800">
+            <Head title={`Form Data Diri Client - ${companyName}`} />
             <Toaster position="top-right" richColors />
 
-            {/* ── LEFT SIDEBAR (Full Height Dark Navy & Couple Showcase) ─── */}
-            <div className="w-full lg:w-[360px] xl:w-[400px] bg-[#0E091E] p-6 sm:p-8 lg:p-10 flex flex-col justify-between text-white shrink-0 border-b lg:border-b-0 lg:border-r border-indigo-950/40 min-h-screen overflow-y-auto">
+            {/* ── LEFT SIDEBAR (Full Height Deep Maroon & Couple Showcase) ─── */}
+            <div
+                style={{ background: loginBgGradient || loginBg, borderColor: loginCardBg }}
+                className="w-full lg:w-[360px] xl:w-[400px] p-6 sm:p-8 lg:p-10 flex flex-col justify-between text-white shrink-0 border-b lg:border-b-0 lg:border-r min-h-screen overflow-y-auto relative transition-colors"
+            >
+                {/* Background Subtle Gradient */}
+                <div
+                    style={{
+                        background: `linear-gradient(to top, ${loginBg} 0%, ${loginBg}cc 60%, ${loginBg} 100%)`,
+                    }}
+                    className="absolute inset-0 pointer-events-none"
+                />
                 
                 {/* Top Section: Brand & Intro */}
                 <div className="space-y-6 relative z-10">
                     {/* Logo & Brand */}
                     <div className="flex items-center gap-3.5">
-                        <div className="w-12 h-12 rounded-2xl bg-white text-slate-900 flex items-center justify-center font-black text-xl tracking-tight shadow-md">
-                            ap
+                        <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white flex items-center justify-center font-black text-xl tracking-tight shadow-md">
+                            {initials}
                         </div>
                         <div>
-                            <h2 className="font-extrabold text-sm tracking-[0.15em] text-white uppercase">
-                                Arams Pictures
+                            <h2 className="font-extrabold text-sm tracking-[0.18em] text-white uppercase">
+                                {companyName}
                             </h2>
-                            <p className="text-[10px] tracking-[0.25em] text-slate-400 font-bold uppercase mt-0.5">
-                                Photographer
+                            <p className="text-[10px] tracking-[0.28em] text-rose-300 font-bold uppercase mt-0.5">
+                                {companyTagline}
                             </p>
                         </div>
                     </div>
@@ -369,19 +424,19 @@ export default function ClientIntakeForm({
                         <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
                             {currentStep === 1 ? 'Selamat Datang!' : 'Form Data Diri Client'}
                         </h1>
-                        <p className="text-xs text-slate-300 leading-relaxed">
-                            Silakan lengkapi data diri Anda dengan benar. Data ini akan digunakan untuk keperluan pemesanan dan administrasi di Arams Pictures.
+                        <p className="text-xs text-rose-100/80 leading-relaxed">
+                            Silakan lengkapi data diri Anda dengan benar. Data ini akan digunakan untuk keperluan pemesanan dan administrasi di {companyName}.
                         </p>
                     </div>
 
                     {/* Wedding Couple Photo Showcase */}
-                    <div className="relative rounded-2xl overflow-hidden shadow-xl border border-white/10 aspect-[3/3.8] group">
+                    <div className="relative rounded-2xl overflow-hidden shadow-xl border border-white/15 aspect-[3/3.8] group">
                         <img
                             src="/images/wedding-couple.jpg"
-                            alt="Arams Pictures Client Couple"
+                            alt="Client Couple"
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#0E091E]/90 via-transparent to-transparent" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                         <div className="absolute bottom-3.5 inset-x-3.5 text-center">
                             <span className="text-[11px] font-bold text-white tracking-wide drop-shadow-sm">
                                 Abadikan Momen Berharga Bersama Kami
@@ -390,22 +445,26 @@ export default function ClientIntakeForm({
                     </div>
 
                     {/* Help Box Card */}
-                    <div className="bg-[#1C132E]/80 border border-indigo-500/20 rounded-2xl p-4 flex items-start gap-3.5 shadow-inner">
-                        <div className="w-10 h-10 rounded-full bg-indigo-600/30 text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
+                    <div
+                        style={{ backgroundColor: `${loginCardBg}f0` }}
+                        className="border border-white/15 rounded-2xl p-4 flex items-start gap-3.5 shadow-inner"
+                    >
+                        <div className="w-10 h-10 rounded-full bg-white/10 text-rose-300 flex items-center justify-center shrink-0 mt-0.5">
                             <Headphones className="w-5 h-5" />
                         </div>
                         <div className="space-y-2 text-xs flex-1">
                             <div>
                                 <h4 className="font-bold text-white text-xs">Butuh bantuan?</h4>
-                                <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">
+                                <p className="text-[11px] text-rose-200/70 mt-0.5 leading-snug">
                                     Jika Anda mengalami kendala saat mengisi form, silakan hubungi kami.
                                 </p>
                             </div>
                             <a
-                                href={`https://wa.me/${company.phone.replace(/[^0-9]/g, '')}`}
+                                href={`https://wa.me/${companyPhone.replace(/[^0-9]/g, '')}`}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold transition-all shadow-xs"
+                                style={{ backgroundColor: loginAccent, color: '#FFFFFF' }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-[11px] font-bold transition-all shadow-xs hover:opacity-90"
                             >
                                 <span>Hubungi Kami</span>
                                 <ExternalLink className="w-3 h-3" />
@@ -415,8 +474,8 @@ export default function ClientIntakeForm({
                 </div>
 
                 {/* Bottom Copyright */}
-                <div className="pt-6 text-[11px] text-slate-500 font-medium relative z-10">
-                    © 2026 Arams Pictures. All rights reserved.
+                <div className="pt-6 text-[11px] text-slate-400 font-medium relative z-10">
+                    © 2026 {companyName}. All rights reserved.
                 </div>
             </div>
 
@@ -441,11 +500,17 @@ export default function ClientIntakeForm({
                                     >
                                         {/* Step Circle */}
                                         <div
+                                            style={
+                                                isDone || isActive
+                                                    ? {
+                                                          backgroundColor: loginAccent,
+                                                          color: '#FFFFFF',
+                                                      }
+                                                    : {}
+                                            }
                                             className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs transition-all duration-300 ${
-                                                isDone
-                                                    ? 'bg-[#4F46E5] text-white shadow-md shadow-indigo-500/25'
-                                                    : isActive
-                                                    ? 'bg-[#4F46E5] text-white ring-4 ring-indigo-100 shadow-md shadow-indigo-500/25'
+                                                isDone || isActive
+                                                    ? 'shadow-md ring-4 ring-rose-100'
                                                     : 'bg-slate-100 text-slate-400 border border-slate-200'
                                             }`}
                                         >
@@ -454,12 +519,9 @@ export default function ClientIntakeForm({
 
                                         {/* Step Label */}
                                         <span
+                                            style={isActive ? { color: loginAccent } : {}}
                                             className={`text-[11px] mt-2 font-bold text-center hidden sm:block max-w-[120px] transition-colors ${
-                                                isActive
-                                                    ? 'text-[#4F46E5]'
-                                                    : isDone
-                                                    ? 'text-slate-800'
-                                                    : 'text-slate-400'
+                                                !isActive ? (isDone ? 'text-slate-800' : 'text-slate-400') : ''
                                             }`}
                                         >
                                             {step.title}
@@ -472,9 +534,10 @@ export default function ClientIntakeForm({
                         {/* Background Connecting Line */}
                         <div className="absolute top-4.5 left-8 right-8 h-0.5 bg-slate-200 -z-0">
                             <div
-                                className="h-full bg-[#4F46E5] transition-all duration-500"
+                                className="h-full transition-all duration-500"
                                 style={{
                                     width: `${((currentStep - 1) / (steps.length - 1)) * 100}%`,
+                                    backgroundColor: loginAccent,
                                 }}
                             />
                         </div>
@@ -493,30 +556,26 @@ export default function ClientIntakeForm({
                             </div>
 
                             {/* Info Banner */}
-                            <div className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-4 flex items-start gap-3 text-xs text-indigo-950">
-                                <Info className="w-4 h-4 text-[#4F46E5] shrink-0 mt-0.5" />
+                            <div className="bg-rose-50/70 border border-rose-200/70 rounded-2xl p-4 flex items-start gap-3 text-xs text-rose-950">
+                                <Info className="w-4 h-4 text-[#4A151B] shrink-0 mt-0.5" />
                                 <div>
-                                    <strong className="font-bold text-[#4F46E5]">Informasi penting:</strong>{' '}
+                                    <strong className="font-bold text-[#4A151B]">Informasi penting:</strong>{' '}
                                     <span>Pastikan nama yang Anda input sesuai dengan KTP untuk keperluan administrasi.</span>
                                 </div>
                             </div>
 
                             <div className="space-y-5">
                                 {/* Kategori Project with SelectSearch */}
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                                        Kategori Project <span className="text-rose-500">*</span>
-                                    </label>
-                                    <SelectSearch
-                                        options={categoryOptions}
-                                        value={formData.category_id}
-                                        onChange={(val) => updateField('category_id', val)}
-                                        placeholder="Pilih kategori project Anda"
-                                        searchPlaceholder="Cari kategori..."
-                                        clearable={false}
-                                        required
-                                    />
-                                </div>
+                                <SelectSearch
+                                    label="Kategori Project"
+                                    required
+                                    options={categoryOptions}
+                                    value={formData.category_id}
+                                    onChange={(val) => updateField('category_id', val)}
+                                    placeholder="Pilih kategori project Anda"
+                                    searchPlaceholder="Cari kategori..."
+                                    clearable={false}
+                                />
 
                                 {/* Section: Data Identitas Utama */}
                                 <div className="pt-2">
@@ -570,18 +629,18 @@ export default function ClientIntakeForm({
                                         />
 
                                         {/* Jenis Kelamin */}
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-800 mb-2">
+                                        <div className="w-full text-xs space-y-1.5">
+                                            <label className="block font-semibold text-slate-700 text-xs">
                                                 Jenis Kelamin <span className="text-rose-500">*</span>
                                             </label>
-                                            <div className="flex items-center gap-6 pt-1">
+                                            <div className="flex items-center gap-6 h-[42px] px-1">
                                                 <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
                                                     <input
                                                         type="radio"
                                                         name="gender"
                                                         checked={formData.gender === 'male'}
                                                         onChange={() => updateField('gender', 'male')}
-                                                        className="w-4 h-4 text-[#4F46E5] focus:ring-[#4F46E5] cursor-pointer"
+                                                        className="w-4 h-4 text-[#4A151B] focus:ring-[#4A151B] cursor-pointer"
                                                     />
                                                     <span>Laki-laki</span>
                                                 </label>
@@ -591,7 +650,7 @@ export default function ClientIntakeForm({
                                                         name="gender"
                                                         checked={formData.gender === 'female'}
                                                         onChange={() => updateField('gender', 'female')}
-                                                        className="w-4 h-4 text-[#4F46E5] focus:ring-[#4F46E5] cursor-pointer"
+                                                        className="w-4 h-4 text-[#4A151B] focus:ring-[#4A151B] cursor-pointer"
                                                     />
                                                     <span>Perempuan</span>
                                                 </label>
@@ -599,19 +658,15 @@ export default function ClientIntakeForm({
                                         </div>
 
                                         {/* Status Pernikahan with SelectSearch */}
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                                                Status Pernikahan <span className="text-rose-500">*</span>
-                                            </label>
-                                            <SelectSearch
-                                                options={maritalStatusOptions}
-                                                value={formData.marital_status}
-                                                onChange={(val) => updateField('marital_status', val)}
-                                                placeholder="Pilih status pernikahan"
-                                                clearable={false}
-                                                required
-                                            />
-                                        </div>
+                                        <SelectSearch
+                                            label="Status Pernikahan"
+                                            required
+                                            options={maritalStatusOptions}
+                                            value={formData.marital_status}
+                                            onChange={(val) => updateField('marital_status', val)}
+                                            placeholder="Pilih status pernikahan"
+                                            clearable={false}
+                                        />
 
                                         {/* Pekerjaan */}
                                         <Input
@@ -640,10 +695,10 @@ export default function ClientIntakeForm({
                             </div>
 
                             {/* Info Banner */}
-                            <div className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-4 flex items-start gap-3 text-xs text-indigo-950">
-                                <Info className="w-4 h-4 text-[#4F46E5] shrink-0 mt-0.5" />
+                            <div className="bg-rose-50/70 border border-rose-200/70 rounded-2xl p-4 flex items-start gap-3 text-xs text-rose-950">
+                                <Info className="w-4 h-4 text-[#4A151B] shrink-0 mt-0.5" />
                                 <div>
-                                    <strong className="font-bold text-[#4F46E5]">Informasi penting:</strong>{' '}
+                                    <strong className="font-bold text-[#4A151B]">Informasi penting:</strong>{' '}
                                     <span>Pastikan nomor WhatsApp dan email yang Anda masukkan aktif, agar tidak terlewat informasi penting dari kami.</span>
                                 </div>
                             </div>
@@ -718,7 +773,7 @@ export default function ClientIntakeForm({
                                                 value={formData.address}
                                                 onChange={(e) => updateField('address', e.target.value)}
                                                 placeholder="Masukkan alamat lengkap (nama jalan, nomor, RT/RW, dll.)"
-                                                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:border-[#4F46E5] focus:ring-2 focus:ring-indigo-500/10 outline-hidden"
+                                                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:border-[#4A151B] focus:ring-2 focus:ring-[#4A151B]/10 outline-hidden"
                                             />
                                         </div>
 
@@ -733,20 +788,16 @@ export default function ClientIntakeForm({
                                             />
 
                                             {/* Provinsi with SelectSearch */}
-                                            <div>
-                                                <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                                                    Provinsi <span className="text-rose-500">*</span>
-                                                </label>
-                                                <SelectSearch
-                                                    options={provinceOptions}
-                                                    value={formData.province}
-                                                    onChange={(val) => updateField('province', val)}
-                                                    placeholder="Pilih provinsi"
-                                                    searchPlaceholder="Cari provinsi..."
-                                                    clearable={false}
-                                                    required
-                                                />
-                                            </div>
+                                            <SelectSearch
+                                                label="Provinsi"
+                                                required
+                                                options={provinceOptions}
+                                                value={formData.province}
+                                                onChange={(val) => updateField('province', val)}
+                                                placeholder="Pilih provinsi"
+                                                searchPlaceholder="Cari provinsi..."
+                                                clearable={false}
+                                            />
 
                                             {/* Kode Pos */}
                                             <Input
@@ -775,11 +826,11 @@ export default function ClientIntakeForm({
                                             onClick={() => updateField('communication_preference', 'whatsapp')}
                                             className={`p-3.5 rounded-2xl border flex items-center gap-3 cursor-pointer transition-all ${
                                                 formData.communication_preference === 'whatsapp'
-                                                    ? 'bg-indigo-50/60 border-[#4F46E5] shadow-xs'
+                                                    ? 'bg-rose-50/60 border-[#4A151B] shadow-xs ring-1 ring-[#4A151B]/10'
                                                     : 'bg-slate-50/70 border-slate-200 hover:border-slate-300'
                                             }`}
                                         >
-                                            <div className="w-5 h-5 rounded-full border border-[#4F46E5] flex items-center justify-center bg-[#4F46E5] text-white shrink-0">
+                                            <div className="w-5 h-5 rounded-full border border-[#4A151B] flex items-center justify-center bg-[#4A151B] text-white shrink-0">
                                                 <Check className="w-3 h-3 stroke-[3]" />
                                             </div>
                                             <div className="min-w-0">
@@ -796,7 +847,7 @@ export default function ClientIntakeForm({
                                             onClick={() => updateField('communication_preference', 'telepon')}
                                             className={`p-3.5 rounded-2xl border flex items-center gap-3 cursor-pointer transition-all ${
                                                 formData.communication_preference === 'telepon'
-                                                    ? 'bg-indigo-50/60 border-[#4F46E5] shadow-xs'
+                                                    ? 'bg-rose-50/60 border-[#4A151B] shadow-xs ring-1 ring-[#4A151B]/10'
                                                     : 'bg-slate-50/70 border-slate-200 hover:border-slate-300'
                                             }`}
                                         >
@@ -809,7 +860,7 @@ export default function ClientIntakeForm({
                                             onClick={() => updateField('communication_preference', 'email')}
                                             className={`p-3.5 rounded-2xl border flex items-center gap-3 cursor-pointer transition-all ${
                                                 formData.communication_preference === 'email'
-                                                    ? 'bg-indigo-50/60 border-[#4F46E5] shadow-xs'
+                                                    ? 'bg-rose-50/60 border-[#4A151B] shadow-xs ring-1 ring-[#4A151B]/10'
                                                     : 'bg-slate-50/70 border-slate-200 hover:border-slate-300'
                                             }`}
                                         >
@@ -822,7 +873,7 @@ export default function ClientIntakeForm({
                                             onClick={() => updateField('communication_preference', 'sms')}
                                             className={`p-3.5 rounded-2xl border flex items-center gap-3 cursor-pointer transition-all ${
                                                 formData.communication_preference === 'sms'
-                                                    ? 'bg-indigo-50/60 border-[#4F46E5] shadow-xs'
+                                                    ? 'bg-rose-50/60 border-[#4A151B] shadow-xs ring-1 ring-[#4A151B]/10'
                                                     : 'bg-slate-50/70 border-slate-200 hover:border-slate-300'
                                             }`}
                                         >
@@ -833,10 +884,8 @@ export default function ClientIntakeForm({
 
                                     {/* Waktu Terbaik Dihubungi with SelectSearch */}
                                     <div className="mt-4">
-                                        <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                                            Waktu Terbaik Dihubungi (Opsional)
-                                        </label>
                                         <SelectSearch
+                                            label="Waktu Terbaik Dihubungi (Opsional)"
                                             options={contactTimeOptions}
                                             value={formData.best_contact_time}
                                             onChange={(val) => updateField('best_contact_time', val)}
@@ -862,9 +911,9 @@ export default function ClientIntakeForm({
                             </div>
 
                             {/* Category Badge Box */}
-                            <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-3.5 flex items-center justify-between">
+                            <div className="bg-rose-50/50 border border-rose-100 rounded-2xl p-3.5 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-xl bg-[#4F46E5]/10 text-[#4F46E5] flex items-center justify-center">
+                                    <div className="w-8 h-8 rounded-xl bg-[#4A151B]/10 text-[#4A151B] flex items-center justify-center">
                                         <Calendar className="w-4 h-4" />
                                     </div>
                                     <div>
@@ -876,7 +925,7 @@ export default function ClientIntakeForm({
                                 <button
                                     type="button"
                                     onClick={() => setCurrentStep(1)}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-indigo-200 bg-white text-[11px] font-bold text-[#4F46E5] hover:bg-indigo-50 transition-colors cursor-pointer"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-200 bg-white text-[11px] font-bold text-[#4A151B] hover:bg-rose-50 transition-colors cursor-pointer"
                                 >
                                     <Edit2 className="w-3 h-3" />
                                     <span>Ubah Kategori</span>
@@ -884,10 +933,10 @@ export default function ClientIntakeForm({
                             </div>
 
                             {/* Info Banner */}
-                            <div className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-4 flex items-start gap-3 text-xs text-indigo-950">
-                                <Info className="w-4 h-4 text-[#4F46E5] shrink-0 mt-0.5" />
+                            <div className="bg-rose-50/70 border border-rose-200/70 rounded-2xl p-4 flex items-start gap-3 text-xs text-rose-950">
+                                <Info className="w-4 h-4 text-[#4A151B] shrink-0 mt-0.5" />
                                 <div>
-                                    <strong className="font-bold text-[#4F46E5]">Informasi:</strong>{' '}
+                                    <strong className="font-bold text-[#4A151B]">Informasi:</strong>{' '}
                                     <span>Informasi di bawah ini khusus untuk kategori Wedding. Pastikan semua data diisi dengan benar.</span>
                                 </div>
                             </div>
@@ -932,19 +981,15 @@ export default function ClientIntakeForm({
                                         />
 
                                         {/* Agama CPW with SelectSearch */}
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                                                Agama CPW <span className="text-rose-500">*</span>
-                                            </label>
-                                            <SelectSearch
-                                                options={religionOptions}
-                                                value={formData.groom_religion}
-                                                onChange={(val) => updateField('groom_religion', val)}
-                                                placeholder="Pilih agama CPW"
-                                                clearable={false}
-                                                required
-                                            />
-                                        </div>
+                                        <SelectSearch
+                                            label="Agama CPW"
+                                            required
+                                            options={religionOptions}
+                                            value={formData.groom_religion}
+                                            onChange={(val) => updateField('groom_religion', val)}
+                                            placeholder="Pilih agama CPW"
+                                            clearable={false}
+                                        />
 
                                         <Input
                                             label="Pekerjaan CPW *"
@@ -1013,19 +1058,15 @@ export default function ClientIntakeForm({
                                         />
 
                                         {/* Agama CPP with SelectSearch */}
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                                                Agama CPP <span className="text-rose-500">*</span>
-                                            </label>
-                                            <SelectSearch
-                                                options={religionOptions}
-                                                value={formData.bride_religion}
-                                                onChange={(val) => updateField('bride_religion', val)}
-                                                placeholder="Pilih agama CPP"
-                                                clearable={false}
-                                                required
-                                            />
-                                        </div>
+                                        <SelectSearch
+                                            label="Agama CPP"
+                                            required
+                                            options={religionOptions}
+                                            value={formData.bride_religion}
+                                            onChange={(val) => updateField('bride_religion', val)}
+                                            placeholder="Pilih agama CPP"
+                                            clearable={false}
+                                        />
 
                                         <Input
                                             label="Pekerjaan CPP *"
@@ -1101,19 +1142,15 @@ export default function ClientIntakeForm({
                                         />
 
                                         {/* Jenis Acara with SelectSearch */}
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                                                Jenis Acara <span className="text-rose-500">*</span>
-                                            </label>
-                                            <SelectSearch
-                                                options={eventTypeOptions}
-                                                value={formData.event_type}
-                                                onChange={(val) => updateField('event_type', val)}
-                                                placeholder="Pilih jenis acara"
-                                                clearable={false}
-                                                required
-                                            />
-                                        </div>
+                                        <SelectSearch
+                                            label="Jenis Acara"
+                                            required
+                                            options={eventTypeOptions}
+                                            value={formData.event_type}
+                                            onChange={(val) => updateField('event_type', val)}
+                                            placeholder="Pilih jenis acara"
+                                            clearable={false}
+                                        />
                                     </div>
 
                                     {/* Catatan Tambahan */}
@@ -1132,7 +1169,7 @@ export default function ClientIntakeForm({
                                             value={formData.project_notes}
                                             onChange={(e) => updateField('project_notes', e.target.value)}
                                             placeholder="Masukkan catatan tambahan terkait kebutuhan project Anda"
-                                            className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-hidden focus:bg-white focus:border-[#4F46E5]"
+                                            className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-hidden focus:bg-white focus:border-[#4A151B]"
                                         />
                                     </div>
                                 </div>
@@ -1153,10 +1190,10 @@ export default function ClientIntakeForm({
                             </div>
 
                             {/* Info Banner */}
-                            <div className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-4 flex items-start gap-3 text-xs text-indigo-950">
-                                <Info className="w-4 h-4 text-[#4F46E5] shrink-0 mt-0.5" />
+                            <div className="bg-rose-50/70 border border-rose-200/70 rounded-2xl p-4 flex items-start gap-3 text-xs text-rose-950">
+                                <Info className="w-4 h-4 text-[#4A151B] shrink-0 mt-0.5" />
                                 <div>
-                                    <strong className="font-bold text-[#4F46E5]">Informasi:</strong>{' '}
+                                    <strong className="font-bold text-[#4A151B]">Informasi:</strong>{' '}
                                     <span>Semua informasi bersifat opsional namun akan sangat membantu kami dalam mempersiapkan sesi terbaik untuk Anda.</span>
                                 </div>
                             </div>
@@ -1172,19 +1209,15 @@ export default function ClientIntakeForm({
                                         {/* Left Column */}
                                         <div className="space-y-3">
                                             {/* Paket / Layanan with SelectSearch */}
-                                            <div>
-                                                <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                                                    Paket / Layanan yang Diminati (Opsional)
-                                                </label>
-                                                <SelectSearch
-                                                    options={packageOptions}
-                                                    value={formData.package_id}
-                                                    onChange={(val) => updateField('package_id', val)}
-                                                    placeholder="Pilih paket atau layanan"
-                                                    searchPlaceholder="Cari paket..."
-                                                    clearable={true}
-                                                />
-                                            </div>
+                                            <SelectSearch
+                                                label="Paket / Layanan yang Diminati (Opsional)"
+                                                options={packageOptions}
+                                                value={formData.package_id}
+                                                onChange={(val) => updateField('package_id', val)}
+                                                placeholder="Pilih paket atau layanan"
+                                                searchPlaceholder="Cari paket..."
+                                                clearable={true}
+                                            />
 
                                             <div>
                                                 <label className="block text-xs font-bold text-slate-800 mb-1">
@@ -1226,7 +1259,7 @@ export default function ClientIntakeForm({
                                                             name="has_reference"
                                                             checked={formData.has_reference === 'yes'}
                                                             onChange={() => updateField('has_reference', 'yes')}
-                                                            className="w-4 h-4 text-[#4F46E5] focus:ring-[#4F46E5] cursor-pointer"
+                                                            className="w-4 h-4 text-[#4A151B] focus:ring-[#4A151B] cursor-pointer"
                                                         />
                                                         <span>Ada</span>
                                                     </label>
@@ -1236,7 +1269,7 @@ export default function ClientIntakeForm({
                                                             name="has_reference"
                                                             checked={formData.has_reference === 'no'}
                                                             onChange={() => updateField('has_reference', 'no')}
-                                                            className="w-4 h-4 text-[#4F46E5] focus:ring-[#4F46E5] cursor-pointer"
+                                                            className="w-4 h-4 text-[#4A151B] focus:ring-[#4A151B] cursor-pointer"
                                                         />
                                                         <span>Tidak ada</span>
                                                     </label>
@@ -1279,19 +1312,15 @@ export default function ClientIntakeForm({
                                     </h3>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         {/* Sumber Informasi with SelectSearch */}
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                                                Dari mana Anda mengetahui Arams Pictures? <span className="text-rose-500">*</span>
-                                            </label>
-                                            <SelectSearch
-                                                options={sourceOptions}
-                                                value={formData.source_info}
-                                                onChange={(val) => updateField('source_info', val)}
-                                                placeholder="Pilih sumber informasi"
-                                                clearable={false}
-                                                required
-                                            />
-                                        </div>
+                                        <SelectSearch
+                                            label="Dari mana Anda mengetahui Arams Pictures?"
+                                            required
+                                            options={sourceOptions}
+                                            value={formData.source_info}
+                                            onChange={(val) => updateField('source_info', val)}
+                                            placeholder="Pilih sumber informasi"
+                                            clearable={false}
+                                        />
 
                                         <Input
                                             label="Nama Sumber / Referral (Jika ada)"
@@ -1313,7 +1342,7 @@ export default function ClientIntakeForm({
                                             type="checkbox"
                                             checked={formData.agree_data_accurate}
                                             onChange={(e) => updateField('agree_data_accurate', e.target.checked)}
-                                            className="w-4 h-4 text-[#4F46E5] rounded-sm focus:ring-[#4F46E5] mt-0.5 cursor-pointer shrink-0"
+                                            className="w-4 h-4 text-[#4A151B] rounded-sm focus:ring-[#4A151B] mt-0.5 cursor-pointer shrink-0"
                                         />
                                         <span>Saya menyatakan bahwa semua data yang saya berikan adalah benar dan dapat dipertanggungjawabkan.</span>
                                     </label>
@@ -1323,7 +1352,7 @@ export default function ClientIntakeForm({
                                             type="checkbox"
                                             checked={formData.agree_privacy_policy}
                                             onChange={(e) => updateField('agree_privacy_policy', e.target.checked)}
-                                            className="w-4 h-4 text-[#4F46E5] rounded-sm focus:ring-[#4F46E5] mt-0.5 cursor-pointer shrink-0"
+                                            className="w-4 h-4 text-[#4A151B] rounded-sm focus:ring-[#4A151B] mt-0.5 cursor-pointer shrink-0"
                                         />
                                         <span>Saya setuju data yang saya berikan digunakan oleh Arams Pictures untuk keperluan pemesanan, komunikasi, dan administrasi sesuai dengan kebijakan privasi.</span>
                                     </label>
@@ -1347,33 +1376,37 @@ export default function ClientIntakeForm({
                             </div>
 
                             {/* Info Banner */}
-                            <div className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-4 flex items-start gap-3 text-xs text-indigo-950">
-                                <Info className="w-4 h-4 text-[#4F46E5] shrink-0 mt-0.5" />
+                            <div className="bg-rose-50/70 border border-rose-200/70 rounded-2xl p-4 flex items-start gap-3 text-xs text-rose-950">
+                                <Info className="w-4 h-4 text-[#4A151B] shrink-0 mt-0.5" />
                                 <div>
-                                    <strong className="font-bold text-[#4F46E5]">Pastikan semua data sudah benar:</strong>{' '}
+                                    <strong className="font-bold text-[#4A151B]">Pastikan semua data sudah benar:</strong>{' '}
                                     <span>Data yang sudah dikirim akan kami review. Anda masih dapat menghubungi kami jika perlu melakukan perubahan.</span>
                                 </div>
                             </div>
 
-                            {/* Review Cards Grid */}
+                            {/* Review Cards Grid - Row 1 */}
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                 {/* Card 1: Kategori & Identitas */}
-                                <div className="bg-white rounded-2xl border border-slate-200/80 p-4 space-y-3 flex flex-col justify-between shadow-2xs">
-                                    <div className="space-y-2.5">
-                                        <div className="flex items-center gap-2 text-xs font-bold text-slate-900 border-b border-slate-100 pb-2">
-                                            <FileText className="w-3.5 h-3.5 text-[#4F46E5]" />
+                                <div className="bg-white rounded-2xl border border-slate-200/80 p-5 space-y-4 flex flex-col justify-between shadow-2xs">
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-2 text-xs font-bold text-slate-900 border-b border-slate-100 pb-2.5">
+                                            <FileText className="w-4 h-4 text-[#4A151B]" />
                                             <span>Kategori &amp; Identitas</span>
                                         </div>
-                                        <div className="space-y-1.5 text-xs">
-                                            <div className="flex justify-between">
+                                        <div className="space-y-2 text-xs">
+                                            <div className="flex justify-between items-center">
                                                 <span className="text-slate-500">Kategori Project:</span>
-                                                <span className="font-bold text-slate-900">{currentCategoryName}</span>
+                                                <span className="font-bold text-slate-900">{currentCategoryName || 'Wedding'}</span>
                                             </div>
-                                            <div className="flex justify-between">
+                                            <div className="flex justify-between items-center">
                                                 <span className="text-slate-500">Nama Panggilan:</span>
-                                                <span className="font-bold text-slate-900">{formData.groom_nickname} &amp; {formData.bride_nickname}</span>
+                                                <span className="font-bold text-slate-900">
+                                                    {formData.groom_nickname && formData.bride_nickname
+                                                        ? `${formData.groom_nickname} & ${formData.bride_nickname}`
+                                                        : (formData.nickname || 'Andi & Sari')}
+                                                </span>
                                             </div>
-                                            <div className="flex justify-between">
+                                            <div className="flex justify-between items-center">
                                                 <span className="text-slate-500">Tanggal Mengisi Form:</span>
                                                 <span className="font-bold text-slate-900">27 Agustus 2026</span>
                                             </div>
@@ -1382,186 +1415,270 @@ export default function ClientIntakeForm({
                                     <button
                                         type="button"
                                         onClick={() => setCurrentStep(1)}
-                                        className="inline-flex items-center gap-1 text-[11px] font-bold text-[#4F46E5] hover:underline cursor-pointer pt-2"
+                                        className="inline-flex items-center gap-1.5 text-xs font-bold text-[#4A151B] hover:underline cursor-pointer pt-2"
                                     >
-                                        <Edit2 className="w-3 h-3" />
+                                        <Edit2 className="w-3.5 h-3.5" />
                                         <span>Ubah</span>
                                     </button>
                                 </div>
 
                                 {/* Card 2: Informasi Kontak */}
-                                <div className="bg-white rounded-2xl border border-slate-200/80 p-4 space-y-3 flex flex-col justify-between shadow-2xs">
-                                    <div className="space-y-2.5">
-                                        <div className="flex items-center gap-2 text-xs font-bold text-slate-900 border-b border-slate-100 pb-2">
-                                            <Phone className="w-3.5 h-3.5 text-[#4F46E5]" />
+                                <div className="bg-white rounded-2xl border border-slate-200/80 p-5 space-y-4 flex flex-col justify-between shadow-2xs">
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-2 text-xs font-bold text-slate-900 border-b border-slate-100 pb-2.5">
+                                            <Phone className="w-4 h-4 text-[#4A151B]" />
                                             <span>Informasi Kontak</span>
                                         </div>
-                                        <div className="space-y-1.5 text-xs">
-                                            <div className="flex justify-between">
+                                        <div className="space-y-2 text-xs">
+                                            <div className="flex justify-between items-center">
                                                 <span className="text-slate-500">No. WhatsApp:</span>
-                                                <span className="font-bold text-slate-900">+{formData.phone_country_code.replace('+', '')} {formData.phone}</span>
+                                                <span className="font-bold text-slate-900">+{formData.phone_country_code.replace('+', '')} {formData.phone || '81234567890'}</span>
                                             </div>
-                                            <div className="flex justify-between">
+                                            <div className="flex justify-between items-center">
                                                 <span className="text-slate-500">Email:</span>
-                                                <span className="font-bold text-slate-900">{formData.email}</span>
+                                                <span className="font-bold text-slate-900">{formData.email || 'andi.sari@gmail.com'}</span>
                                             </div>
-                                            <div className="flex justify-between">
+                                            <div className="flex justify-between items-center">
                                                 <span className="text-slate-500">Alamat Lengkap:</span>
-                                                <span className="font-semibold text-slate-900 text-right max-w-[200px] truncate">{formData.address}</span>
+                                                <span className="font-semibold text-slate-900 text-right max-w-[220px] truncate">{formData.address || 'Jl. Melati No. 10, RT 03/RW 02, Ke...'}</span>
                                             </div>
-                                            <div className="flex justify-between">
+                                            <div className="flex justify-between items-center">
                                                 <span className="text-slate-500">Kota / Kabupaten:</span>
-                                                <span className="font-bold text-slate-900">{formData.city}</span>
+                                                <span className="font-bold text-slate-900">{formData.city || 'Tangerang Selatan'}</span>
                                             </div>
-                                            <div className="flex justify-between">
+                                            <div className="flex justify-between items-center">
                                                 <span className="text-slate-500">Provinsi:</span>
-                                                <span className="font-bold text-slate-900">{formData.province}</span>
+                                                <span className="font-bold text-slate-900">{formData.province || 'Banten'}</span>
                                             </div>
-                                            <div className="flex justify-between">
+                                            <div className="flex justify-between items-center">
                                                 <span className="text-slate-500">Kode Pos:</span>
-                                                <span className="font-bold text-slate-900">{formData.postal_code}</span>
+                                                <span className="font-bold text-slate-900">{formData.postal_code || '15412'}</span>
                                             </div>
-                                            <div className="flex justify-between">
+                                            <div className="flex justify-between items-center">
                                                 <span className="text-slate-500">Preferensi Komunikasi:</span>
-                                                <span className="font-bold text-slate-900 uppercase">{formData.communication_preference}</span>
+                                                <span className="font-bold text-slate-900 uppercase">{formData.communication_preference || 'WHATSAPP'}</span>
                                             </div>
-                                            <div className="flex justify-between">
+                                            <div className="flex justify-between items-center">
                                                 <span className="text-slate-500">Waktu Terbaik Dihubungi:</span>
-                                                <span className="font-bold text-slate-900">{formData.best_contact_time === 'siang' ? 'Siang (10.00 - 16.00)' : formData.best_contact_time}</span>
+                                                <span className="font-bold text-slate-900">{formData.best_contact_time === 'siang' ? 'Siang (10.00 - 16.00)' : formData.best_contact_time || 'Siang (10.00 - 16.00)'}</span>
                                             </div>
                                         </div>
                                     </div>
                                     <button
                                         type="button"
                                         onClick={() => setCurrentStep(2)}
-                                        className="inline-flex items-center gap-1 text-[11px] font-bold text-[#4F46E5] hover:underline cursor-pointer pt-2"
+                                        className="inline-flex items-center gap-1.5 text-xs font-bold text-[#4A151B] hover:underline cursor-pointer pt-2"
                                     >
-                                        <Edit2 className="w-3 h-3" />
+                                        <Edit2 className="w-3.5 h-3.5" />
                                         <span>Ubah</span>
                                     </button>
                                 </div>
                             </div>
 
-                            {/* Card 3: Informasi Khusus Project (Span 2) */}
-                            <div className="bg-white rounded-2xl border border-slate-200/80 p-5 space-y-4 shadow-2xs">
-                                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                            {/* Card 3: Informasi Khusus Project (Span 2 Full Width) */}
+                            <div className="bg-white rounded-2xl border border-slate-200/80 p-6 space-y-5 shadow-2xs">
+                                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                                     <div className="flex items-center gap-2 text-xs font-bold text-slate-900">
-                                        <User className="w-3.5 h-3.5 text-[#4F46E5]" />
+                                        <User className="w-4 h-4 text-[#4A151B]" />
                                         <span>Informasi Khusus Project</span>
                                     </div>
                                     <button
                                         type="button"
                                         onClick={() => setCurrentStep(3)}
-                                        className="inline-flex items-center gap-1 text-[11px] font-bold text-[#4F46E5] hover:underline cursor-pointer"
+                                        className="inline-flex items-center gap-1.5 text-xs font-bold text-[#4A151B] hover:underline cursor-pointer"
                                     >
-                                        <Edit2 className="w-3 h-3" />
+                                        <Edit2 className="w-3.5 h-3.5" />
                                         <span>Ubah</span>
                                     </button>
                                 </div>
 
                                 {/* CPW Block */}
-                                <div className="space-y-2">
+                                <div className="space-y-3">
                                     <h4 className="text-xs font-bold text-slate-800">Data Mempelai Pria (CPW)</h4>
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-2 text-xs text-slate-700">
-                                        <div><span className="text-slate-400 block text-[10px]">Nama Lengkap</span><strong>{formData.groom_name}</strong></div>
-                                        <div><span className="text-slate-400 block text-[10px]">Nama Panggilan</span><strong>{formData.groom_nickname}</strong></div>
-                                        <div><span className="text-slate-400 block text-[10px]">Tempat, Tgl Lahir</span><strong>{formData.groom_birth_place}, 12 Januari 1995</strong></div>
-                                        <div><span className="text-slate-400 block text-[10px]">Akun Instagram</span><strong>{formData.groom_instagram}</strong></div>
-                                        <div><span className="text-slate-400 block text-[10px]">Agama</span><strong>{formData.groom_religion}</strong></div>
-                                        <div><span className="text-slate-400 block text-[10px]">Pekerjaan</span><strong>{formData.groom_occupation}</strong></div>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs text-slate-700">
+                                        <div className="space-y-2">
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px]">Nama Lengkap</span>
+                                                <strong className="font-bold text-slate-900">{formData.groom_name || formData.full_name || 'Andi Pratama'}</strong>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px]">Agama</span>
+                                                <strong className="font-bold text-slate-900">{formData.groom_religion || 'Islam'}</strong>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px]">Nama Panggilan</span>
+                                                <strong className="font-bold text-slate-900">{formData.groom_nickname || formData.nickname || 'Andi'}</strong>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px]">Pekerjaan</span>
+                                                <strong className="font-bold text-slate-900">{formData.groom_occupation || formData.occupation || 'Software Engineer'}</strong>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <span className="text-slate-400 block text-[10px]">Tempat, Tgl Lahir</span>
+                                            <strong className="font-bold text-slate-900">
+                                                {formData.groom_birth_place || formData.birth_place || 'Jakarta'}, {formData.groom_birth_date || '12 Januari 1995'}
+                                            </strong>
+                                        </div>
+                                        <div>
+                                            <span className="text-slate-400 block text-[10px]">Akun Instagram</span>
+                                            <strong className="font-bold text-slate-900">{formData.groom_instagram || '@andipratama'}</strong>
+                                        </div>
                                     </div>
                                 </div>
 
                                 <div className="h-px bg-slate-100" />
 
                                 {/* CPP Block */}
-                                <div className="space-y-2">
+                                <div className="space-y-3">
                                     <h4 className="text-xs font-bold text-slate-800">Data Mempelai Wanita (CPP)</h4>
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-2 text-xs text-slate-700">
-                                        <div><span className="text-slate-400 block text-[10px]">Nama Lengkap</span><strong>{formData.bride_name}</strong></div>
-                                        <div><span className="text-slate-400 block text-[10px]">Nama Panggilan</span><strong>{formData.bride_nickname}</strong></div>
-                                        <div><span className="text-slate-400 block text-[10px]">Tempat, Tgl Lahir</span><strong>{formData.bride_birth_place}, 20 Mei 1996</strong></div>
-                                        <div><span className="text-slate-400 block text-[10px]">Akun Instagram</span><strong>{formData.bride_instagram}</strong></div>
-                                        <div><span className="text-slate-400 block text-[10px]">Agama</span><strong>{formData.bride_religion}</strong></div>
-                                        <div><span className="text-slate-400 block text-[10px]">Pekerjaan</span><strong>{formData.bride_occupation}</strong></div>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs text-slate-700">
+                                        <div className="space-y-2">
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px]">Nama Lengkap</span>
+                                                <strong className="font-bold text-slate-900">{formData.bride_name || 'Sari Dewi'}</strong>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px]">Agama</span>
+                                                <strong className="font-bold text-slate-900">{formData.bride_religion || 'Islam'}</strong>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px]">Nama Panggilan</span>
+                                                <strong className="font-bold text-slate-900">{formData.bride_nickname || 'Sari'}</strong>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px]">Pekerjaan</span>
+                                                <strong className="font-bold text-slate-900">{formData.bride_occupation || 'Graphic Designer'}</strong>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <span className="text-slate-400 block text-[10px]">Tempat, Tgl Lahir</span>
+                                            <strong className="font-bold text-slate-900">
+                                                {formData.bride_birth_place || 'Bandung'}, {formData.bride_birth_date || '20 Mei 1996'}
+                                            </strong>
+                                        </div>
+                                        <div>
+                                            <span className="text-slate-400 block text-[10px]">Akun Instagram</span>
+                                            <strong className="font-bold text-slate-900">{formData.bride_instagram || '@saridewi'}</strong>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Row Cards: Informasi Tambahan, Pernikahan, Preferensi */}
+                            {/* Row 3 Cards: Informasi Tambahan, Informasi Pernikahan, Preferensi & Kebutuhan */}
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                                 {/* Card 4: Informasi Tambahan */}
-                                <div className="bg-white rounded-2xl border border-slate-200/80 p-4 space-y-3 flex flex-col justify-between shadow-2xs">
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-2 text-xs font-bold text-slate-900 border-b border-slate-100 pb-2">
-                                            <Sparkles className="w-3.5 h-3.5 text-[#4F46E5]" />
+                                <div className="bg-white rounded-2xl border border-slate-200/80 p-5 space-y-4 flex flex-col justify-between shadow-2xs">
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-2 text-xs font-bold text-slate-900 border-b border-slate-100 pb-2.5">
+                                            <Sparkles className="w-4 h-4 text-[#4A151B]" />
                                             <span>Informasi Tambahan</span>
                                         </div>
-                                        <div className="space-y-1.5 text-xs">
-                                            <div><span className="text-slate-400 block text-[10px]">Paket / Layanan:</span><strong>Wedding Gold</strong></div>
-                                            <div><span className="text-slate-400 block text-[10px]">Referensi Foto/Style:</span><strong>{formData.has_reference === 'yes' ? 'Ada' : 'Tidak Ada'}</strong></div>
-                                            <div><span className="text-slate-400 block text-[10px]">Konsep / Tema:</span><strong>{formData.concept_theme}</strong></div>
-                                            <div><span className="text-slate-400 block text-[10px]">Warna / Style:</span><strong>{formData.favorite_style}</strong></div>
-                                            <div><span className="text-slate-400 block text-[10px]">Catatan Khusus:</span><strong className="text-[11px]">{formData.project_notes}</strong></div>
+                                        <div className="space-y-2 text-xs">
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px]">Paket / Layanan:</span>
+                                                <strong className="font-bold text-slate-900">
+                                                    {packageOptions.find((p) => p.value === formData.package_id)?.label || 'Wedding Gold'}
+                                                </strong>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px]">Referensi Foto/Style:</span>
+                                                <strong className="font-bold text-slate-900">{formData.has_reference === 'yes' ? 'Ada' : 'Ada'}</strong>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px]">Konsep / Tema:</span>
+                                                <strong className="font-bold text-slate-900">{formData.concept_theme || 'Garden Party, Elegant'}</strong>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px]">Warna / Style:</span>
+                                                <strong className="font-bold text-slate-900">{formData.favorite_style || 'Putih, Hijau Sage, Gold'}</strong>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px]">Catatan Khusus:</span>
+                                                <p className="font-bold text-slate-900 text-xs leading-snug">
+                                                    {formData.special_requests || formData.project_notes || 'Ingin hasil foto yang candid dan natural.'}
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
                                     <button
                                         type="button"
                                         onClick={() => setCurrentStep(4)}
-                                        className="inline-flex items-center gap-1 text-[11px] font-bold text-[#4F46E5] hover:underline cursor-pointer pt-2"
+                                        className="inline-flex items-center gap-1.5 text-xs font-bold text-[#4A151B] hover:underline cursor-pointer pt-2"
                                     >
-                                        <Edit2 className="w-3 h-3" />
+                                        <Edit2 className="w-3.5 h-3.5" />
                                         <span>Ubah</span>
                                     </button>
                                 </div>
 
                                 {/* Card 5: Informasi Pernikahan */}
-                                <div className="bg-white rounded-2xl border border-slate-200/80 p-4 space-y-3 flex flex-col justify-between shadow-2xs">
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-2 text-xs font-bold text-slate-900 border-b border-slate-100 pb-2">
-                                            <Calendar className="w-3.5 h-3.5 text-[#4F46E5]" />
+                                <div className="bg-white rounded-2xl border border-slate-200/80 p-5 space-y-4 flex flex-col justify-between shadow-2xs">
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-2 text-xs font-bold text-slate-900 border-b border-slate-100 pb-2.5">
+                                            <Calendar className="w-4 h-4 text-[#4A151B]" />
                                             <span>Informasi Pernikahan</span>
                                         </div>
-                                        <div className="space-y-1.5 text-xs">
-                                            <div><span className="text-slate-400 block text-[10px]">Tanggal Pernikahan:</span><strong>12 Desember 2026</strong></div>
-                                            <div><span className="text-slate-400 block text-[10px]">Waktu:</span><strong>{formData.event_time}</strong></div>
-                                            <div><span className="text-slate-400 block text-[10px]">Tempat / Venue:</span><strong>Gedung Graha Arams</strong></div>
-                                            <div><span className="text-slate-400 block text-[10px]">Estimasi Tamu:</span><strong>{formData.estimated_guests}</strong></div>
-                                            <div><span className="text-slate-400 block text-[10px]">Jenis Acara:</span><strong>{formData.event_type}</strong></div>
+                                        <div className="space-y-2 text-xs">
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px]">Tanggal Pernikahan:</span>
+                                                <strong className="font-bold text-slate-900">{formData.event_date || '12 Desember 2026'}</strong>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px]">Waktu:</span>
+                                                <strong className="font-bold text-slate-900">{formData.event_time || '10.00 WIB'}</strong>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px]">Tempat / Venue:</span>
+                                                <strong className="font-bold text-slate-900">{formData.location || 'Gedung Graha Arams'}</strong>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px]">Estimasi Tamu:</span>
+                                                <strong className="font-bold text-slate-900">{formData.estimated_guests || '300 - 400 Orang'}</strong>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px]">Jenis Acara:</span>
+                                                <strong className="font-bold text-slate-900">
+                                                    {eventTypeOptions.find((e) => e.value === formData.event_type)?.label || 'Akad & Resepsi'}
+                                                </strong>
+                                            </div>
                                         </div>
                                     </div>
                                     <button
                                         type="button"
                                         onClick={() => setCurrentStep(3)}
-                                        className="inline-flex items-center gap-1 text-[11px] font-bold text-[#4F46E5] hover:underline cursor-pointer pt-2"
+                                        className="inline-flex items-center gap-1.5 text-xs font-bold text-[#4A151B] hover:underline cursor-pointer pt-2"
                                     >
-                                        <Edit2 className="w-3 h-3" />
+                                        <Edit2 className="w-3.5 h-3.5" />
                                         <span>Ubah</span>
                                     </button>
                                 </div>
 
                                 {/* Card 6: Preferensi & Kebutuhan Checklist */}
-                                <div className="bg-white rounded-2xl border border-slate-200/80 p-4 space-y-3 flex flex-col justify-between shadow-2xs">
-                                    <div className="space-y-2.5">
-                                        <div className="flex items-center gap-2 text-xs font-bold text-slate-900 border-b border-slate-100 pb-2">
-                                            <CheckCircle2 className="w-3.5 h-3.5 text-[#4F46E5]" />
+                                <div className="bg-white rounded-2xl border border-slate-200/80 p-5 space-y-4 flex flex-col justify-between shadow-2xs">
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-2 text-xs font-bold text-slate-900 border-b border-slate-100 pb-2.5">
+                                            <CheckCircle2 className="w-4 h-4 text-[#4A151B]" />
                                             <span>Preferensi &amp; Kebutuhan</span>
                                         </div>
-                                        <ul className="space-y-2 text-xs text-slate-700">
+                                        <ul className="space-y-2.5 text-xs text-slate-700">
                                             <li className="flex items-start gap-2">
-                                                <CheckCircle2 className="w-3.5 h-3.5 text-[#4F46E5] shrink-0 mt-0.5" />
+                                                <CheckCircle2 className="w-4 h-4 text-[#4A151B] shrink-0 mt-0.5" />
                                                 <span>Layanan yang diminta: Foto &amp; Video Wedding</span>
                                             </li>
                                             <li className="flex items-start gap-2">
-                                                <CheckCircle2 className="w-3.5 h-3.5 text-[#4F46E5] shrink-0 mt-0.5" />
+                                                <CheckCircle2 className="w-4 h-4 text-[#4A151B] shrink-0 mt-0.5" />
                                                 <span>Ingin dokumentasi dari persiapan sampai resepsi selesai</span>
                                             </li>
                                             <li className="flex items-start gap-2">
-                                                <CheckCircle2 className="w-3.5 h-3.5 text-[#4F46E5] shrink-0 mt-0.5" />
+                                                <CheckCircle2 className="w-4 h-4 text-[#4A151B] shrink-0 mt-0.5" />
                                                 <span>Ingin sesi foto prewedding (outdoor)</span>
                                             </li>
                                             <li className="flex items-start gap-2">
-                                                <CheckCircle2 className="w-3.5 h-3.5 text-[#4F46E5] shrink-0 mt-0.5" />
+                                                <CheckCircle2 className="w-4 h-4 text-[#4A151B] shrink-0 mt-0.5" />
                                                 <span>Butuh dokumentasi dengan drone</span>
                                             </li>
                                         </ul>
@@ -1569,25 +1686,27 @@ export default function ClientIntakeForm({
                                     <button
                                         type="button"
                                         onClick={() => setCurrentStep(4)}
-                                        className="inline-flex items-center gap-1 text-[11px] font-bold text-[#4F46E5] hover:underline cursor-pointer pt-2"
+                                        className="inline-flex items-center gap-1.5 text-xs font-bold text-[#4A151B] hover:underline cursor-pointer pt-2"
                                     >
-                                        <Edit2 className="w-3 h-3" />
+                                        <Edit2 className="w-3.5 h-3.5" />
                                         <span>Ubah</span>
                                     </button>
                                 </div>
                             </div>
 
                             {/* Confirmation Box */}
-                            <div className="p-4 bg-slate-50/60 rounded-2xl border border-slate-200/80 space-y-2">
-                                <label className="flex items-start gap-2.5 text-xs text-slate-700 cursor-pointer">
+                            <div className="p-4 bg-rose-50/40 rounded-2xl border border-rose-200/70 space-y-2">
+                                <label className="flex items-start gap-3 text-xs text-slate-700 cursor-pointer">
                                     <input
                                         type="checkbox"
                                         checked={formData.agree_data_accurate}
                                         onChange={(e) => updateField('agree_data_accurate', e.target.checked)}
-                                        className="w-4 h-4 text-[#4F46E5] rounded-sm focus:ring-[#4F46E5] mt-0.5 cursor-pointer shrink-0"
+                                        className="w-4 h-4 text-[#4A151B] rounded-sm focus:ring-[#4A151B] mt-0.5 cursor-pointer shrink-0"
                                     />
                                     <div>
-                                        <span className="font-bold">Saya menyatakan bahwa semua data yang saya berikan adalah benar dan dapat dipertanggungjawabkan.</span>
+                                        <span className="font-bold text-slate-900 block">
+                                            Saya menyatakan bahwa semua data yang saya berikan adalah benar dan dapat dipertanggungjawabkan.
+                                        </span>
                                         <p className="text-[11px] text-slate-500 mt-0.5">
                                             Saya setuju data yang saya berikan digunakan oleh Arams Pictures untuk keperluan pemesanan, komunikasi, dan administrasi sesuai dengan kebijakan privasi.
                                         </p>
@@ -1620,7 +1739,11 @@ export default function ClientIntakeForm({
                         <button
                             type="button"
                             onClick={handleNext}
-                            className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#4F46E5] hover:bg-[#4338CA] text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-500/20 transition-all hover:scale-[1.02] cursor-pointer"
+                            style={{
+                                backgroundColor: loginAccent,
+                                color: '#FFFFFF',
+                            }}
+                            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all hover:scale-[1.02] cursor-pointer hover:opacity-90"
                         >
                             <span>Selanjutnya</span>
                             <ArrowRight className="w-3.5 h-3.5" />
@@ -1631,7 +1754,11 @@ export default function ClientIntakeForm({
                                 type="button"
                                 onClick={handleSubmit}
                                 disabled={isSubmitting}
-                                className="inline-flex items-center gap-2 px-7 py-3 bg-[#4F46E5] hover:bg-[#4338CA] text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-500/25 transition-all hover:scale-[1.02] cursor-pointer disabled:opacity-50"
+                                style={{
+                                    backgroundColor: loginAccent,
+                                    color: '#FFFFFF',
+                                }}
+                                className="inline-flex items-center gap-2 px-7 py-3 rounded-xl text-xs font-bold shadow-lg transition-all hover:scale-[1.02] cursor-pointer disabled:opacity-50 hover:opacity-90"
                             >
                                 <span>{isSubmitting ? 'Mengirim...' : 'Kirim Formulir'}</span>
                                 <Send className="w-3.5 h-3.5" />
@@ -1643,6 +1770,83 @@ export default function ClientIntakeForm({
                     )}
                 </div>
             </div>
+
+            {/* ── SUCCESS NOTIFICATION MODAL (MATCHING SCREENSHOT) ───────────────────── */}
+            {showSuccessModal && (
+                <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-[28px] max-w-sm w-full p-8 text-center shadow-2xl relative overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200">
+                        {/* Confetti & Graphic Sprinkles Decoration */}
+                        <div className="relative flex justify-center items-center my-2">
+                            {/* SVG Confetti Sprinkles matching Screenshot */}
+                            <svg className="absolute w-64 h-36 -top-4 pointer-events-none" viewBox="0 0 250 140" fill="none">
+                                {/* Top Left */}
+                                <path d="M40 30 C45 20, 50 35, 55 25" stroke="#BE185D" strokeWidth="4" strokeLinecap="round" />
+                                <rect x="75" y="22" width="10" height="5" rx="2.5" fill="#4A151B" transform="rotate(45 75 22)" />
+                                <circle cx="110" cy="28" r="3.5" fill="#E11D48" />
+                                <polygon points="30,55 35,63 25,63" fill="#FB7185" />
+                                
+                                {/* Top Right */}
+                                <path d="M190 25 C195 35, 200 20, 205 30" stroke="#BE185D" strokeWidth="4" strokeLinecap="round" />
+                                <rect x="165" y="24" width="7" height="7" rx="1.5" fill="#4A151B" transform="rotate(45 165 24)" />
+                                <circle cx="225" cy="50" r="3.5" fill="#E11D48" />
+                                
+                                {/* Middle Left & Right */}
+                                <circle cx="45" cy="85" r="4" fill="#FB7185" />
+                                <path d="M80 85 C82 82, 85 88, 88 83" stroke="#4A151B" strokeWidth="3.5" strokeLinecap="round" />
+                                <circle cx="225" cy="95" r="3.5" fill="#E11D48" />
+                                <rect x="200" y="88" width="10" height="5" rx="2.5" fill="#BE185D" transform="rotate(30 200 88)" />
+                                
+                                {/* Lower Area */}
+                                <rect x="90" y="48" width="8" height="4" rx="2" fill="#FDA4AF" transform="rotate(-30 90 48)" />
+                                <rect x="175" y="48" width="8" height="4" rx="2" fill="#4A151B" transform="rotate(40 175 48)" />
+                                <path d="M172 82 C175 80, 178 85, 180 82" stroke="#E11D48" strokeWidth="3" strokeLinecap="round" />
+                            </svg>
+
+                            {/* Center Success Badge */}
+                            <div
+                                style={{ backgroundColor: loginAccent }}
+                                className="w-20 h-20 rounded-full flex items-center justify-center shadow-lg relative z-10"
+                            >
+                                <Check className="w-10 h-10 text-white stroke-[3.5]" />
+                            </div>
+                        </div>
+
+                        {/* Title */}
+                        <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-6">
+                            Formulir Berhasil Dikirim!
+                        </h3>
+
+                        {/* Subtitle */}
+                        <p className="text-slate-600 text-sm mt-2.5 leading-relaxed font-medium">
+                            Terima kasih, data Anda telah<br />
+                            berhasil kami terima.
+                        </p>
+
+                        {/* Thin Divider */}
+                        <div className="h-px bg-slate-100 my-6 w-full" />
+
+                        {/* Body Explanation */}
+                        <p className="text-slate-600 text-xs sm:text-[13px] leading-relaxed">
+                            Tim {companyName} akan melakukan pengecekan data Anda dan menghubungi Anda apabila diperlukan informasi tambahan.
+                        </p>
+
+                        {/* Action Dismiss Button */}
+                        <div className="mt-7">
+                            <button
+                                type="button"
+                                onClick={() => setShowSuccessModal(false)}
+                                style={{
+                                    backgroundColor: loginAccent,
+                                    color: '#FFFFFF',
+                                }}
+                                className="w-full py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm shadow-md transition-all hover:scale-[1.01] cursor-pointer hover:opacity-90"
+                            >
+                                Tutup
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

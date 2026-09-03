@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import React, { useState, useEffect } from 'react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { ClientLayout } from '@/layouts/ClientLayout';
 import {
     Calendar,
@@ -21,7 +21,7 @@ import {
     MapPin,
     MessageCircle,
     MessageSquare,
-    MoreHorizontal,
+    MoreVertical,
     Package as PackageIcon,
     Play,
     Send,
@@ -41,6 +41,8 @@ import {
     RefreshCw,
     Plus,
     Link as LinkIcon,
+    ArrowRight,
+    BadgeCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatRupiah } from '@/lib/formatters';
@@ -70,17 +72,22 @@ interface ClientProjectDetailProps {
         project_number: string;
         name: string;
         category?: { id: string; name: string } | null;
+        category_name?: string;
         package?: { id: string; name: string; description?: string } | null;
+        package_name?: string;
         status: string;
         workflow_step: string;
         progress: number;
         event_date?: string;
+        event_time?: string;
         location?: string;
+        notes?: string;
         total_amount: number;
         paid_amount: number;
         payment_status: string;
         photographer?: string;
         supervisor?: string;
+        editor?: { id: string; name: string; avatar?: string } | null;
         file_links?: FileLinkItem[];
         payments?: PaymentItem[];
     };
@@ -101,13 +108,15 @@ export default function ClientProjectDetail({
         id: '01a0473f-8eed-730c-a81b-3973c3d66eb3',
         project_number: 'PRJ-2608-0001',
         name: 'Wedding Andi & Sari',
-        category: { id: '1', name: 'Wedding' },
-        package: { id: '1', name: 'Wedding Day' },
+        category_name: 'Wedding',
+        package_name: 'Wedding Day',
         status: 'completed',
         workflow_step: 'selesai',
         progress: 100,
         event_date: '12 Desember 2026',
+        event_time: '10.00 WIB',
         location: 'Gedung Graha Arams, Tangerang Selatan',
+        notes: 'Konsep: Garden Party, Elegant. Warna: Putih, Hijau Sage, Gold.',
         total_amount: 25000000,
         paid_amount: 25000000,
         payment_status: 'paid',
@@ -128,6 +137,17 @@ export default function ClientProjectDetail({
         ],
     },
 }: ClientProjectDetailProps) {
+    const { props: pageProps } = usePage<any>();
+    const appSettings = pageProps?.appSettings || {};
+
+    // Dynamic portal tokens
+    const portalPrimaryAccent = appSettings.portal_primary_accent || '#4A151B';
+    const portalHeroBg = appSettings.portal_hero_bg || '#240B10';
+    const portalCardBg = appSettings.portal_card_bg || '#FFFFFF';
+    const portalCardBorder = appSettings.portal_card_border || 'rgba(226, 232, 240, 0.8)';
+    const portalHeadingColor = appSettings.portal_heading_color || '#240B10';
+    const portalFontHeading = appSettings.portal_font_heading || 'Plus Jakarta Sans';
+
     const [activeSection, setActiveSection] = useState('timeline');
     const [reviewText, setReviewText] = useState('');
     const [rating, setRating] = useState(5);
@@ -208,11 +228,46 @@ export default function ClientProjectDetail({
         { id: 'detail', label: 'Detail Project', icon: Info },
     ];
 
+    const scrollToSection = (id: string) => {
+        setActiveSection(id);
+        const element = document.getElementById(`section-${id}`);
+        if (element) {
+            const yOffset = -90;
+            const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+            window.scrollTo({ top: y, behavior: 'smooth' });
+        }
+    };
+
+    useEffect(() => {
+        const handleScroll = () => {
+            const sectionIds = ['timeline', 'files', 'catatan', 'pembayaran', 'highlight', 'detail'];
+            const scrollPosition = window.scrollY + 140;
+
+            for (let i = sectionIds.length - 1; i >= 0; i--) {
+                const id = sectionIds[i];
+                const el = document.getElementById(`section-${id}`);
+                if (el) {
+                    const top = el.offsetTop;
+                    if (scrollPosition >= top) {
+                        setActiveSection(id);
+                        break;
+                    }
+                }
+            }
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
     const handleSubmitReview = (e: React.FormEvent) => {
         e.preventDefault();
         toast.success('Terima kasih! Ulasan Anda berhasil dikirim.');
         setReviewText('');
     };
+
+    const categoryDisplayName = project?.category_name || project?.category?.name || 'Wedding';
+    const packageDisplayName = project?.package_name || project?.package?.name || 'Wedding Day';
 
     return (
         <ClientLayout>
@@ -221,7 +276,11 @@ export default function ClientProjectDetail({
             <div className="space-y-6">
                 {/* ── Breadcrumb ─────────────────────────────────────────────── */}
                 <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-                    <Link href="/client/projects" className="hover:text-[#4A151B] transition-colors">
+                    <Link
+                        href="/client/projects"
+                        style={{ color: portalPrimaryAccent }}
+                        className="hover:underline transition-colors"
+                    >
                         Project Saya
                     </Link>
                     <span>&gt;</span>
@@ -229,64 +288,66 @@ export default function ClientProjectDetail({
                 </div>
 
                 {/* ── HERO BANNER (MATCHING SCREENSHOT 2) ───────────────────── */}
-                <div className="relative rounded-3xl bg-[#240B10] text-white p-6 sm:p-8 lg:p-10 shadow-lg overflow-hidden border border-[#3D141C] flex flex-col md:flex-row items-center justify-between gap-6">
-                    {/* Background Overlay */}
-                    <div className="absolute inset-0 z-0">
-                        <img
-                            src="/images/wedding-couple.jpg"
-                            alt="Wedding Couple"
-                            className="w-full h-full object-cover opacity-25 filter brightness-90"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-r from-[#240B10] via-[#240B10]/90 to-transparent" />
-                    </div>
-
+                <div
+                    style={{
+                        backgroundColor: portalCardBg,
+                        borderColor: portalCardBorder,
+                    }}
+                    className="relative rounded-3xl border p-6 sm:p-8 lg:p-10 shadow-xs overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6 transition-colors"
+                >
                     {/* Left Meta Information */}
-                    <div className="relative z-10 space-y-4 max-w-2xl">
+                    <div className="relative z-10 space-y-4 max-w-2xl w-full">
                         <div className="space-y-1.5">
                             <div className="flex items-center gap-3">
-                                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-black text-white tracking-tight leading-tight">
+                                <h1
+                                    style={{
+                                        fontFamily: `'${portalFontHeading}', serif`,
+                                        color: portalHeadingColor,
+                                    }}
+                                    className="text-2xl sm:text-3xl lg:text-4xl font-serif font-black tracking-tight leading-tight"
+                                >
                                     {project.name}
                                 </h1>
-                                <span className="px-3 py-0.5 rounded-lg text-xs font-bold bg-emerald-100/90 text-emerald-900">
+                                <span className="px-3 py-0.5 rounded-lg text-xs font-bold bg-[#EBF7EE] text-[#1E7E34] border border-[#C3E6CB]">
                                     Selesai
                                 </span>
                             </div>
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-rose-100/80 font-medium pt-1">
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 font-medium pt-1">
                                 <div className="flex items-center gap-1.5">
-                                    <Calendar className="w-3.5 h-3.5 text-rose-300" />
+                                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
                                     <span>{project.event_date || '12 Desember 2026'}</span>
                                 </div>
                                 <span>•</span>
                                 <div className="flex items-center gap-1.5">
-                                    <MapPin className="w-3.5 h-3.5 text-rose-300" />
+                                    <MapPin className="w-3.5 h-3.5 text-slate-400" />
                                     <span>{project.location || 'Gedung Graha Arams, Tangerang Selatan'}</span>
                                 </div>
                             </div>
                         </div>
 
                         {/* 4 Key Pills */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2 border-t border-white/10 text-xs">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-3 border-t border-slate-200/70 text-xs">
                             <div>
-                                <span className="text-[10px] text-rose-300/70 block uppercase font-bold">Kategori Project</span>
-                                <strong className="text-white font-bold">{project.category?.name || 'Wedding'}</strong>
+                                <span className="text-[10px] text-slate-400 block font-medium">Kategori Project</span>
+                                <strong className="text-slate-900 font-bold">{categoryDisplayName}</strong>
                             </div>
                             <div>
-                                <span className="text-[10px] text-rose-300/70 block uppercase font-bold">Tipe Project</span>
-                                <strong className="text-white font-bold">{project.package?.name || 'Wedding Day'}</strong>
+                                <span className="text-[10px] text-slate-400 block font-medium">Tipe Project</span>
+                                <strong className="text-slate-900 font-bold">{packageDisplayName}</strong>
                             </div>
                             <div>
-                                <span className="text-[10px] text-rose-300/70 block uppercase font-bold">Photographer</span>
-                                <strong className="text-white font-bold">{project.photographer || 'Arams Team'}</strong>
+                                <span className="text-[10px] text-slate-400 block font-medium">Photographer</span>
+                                <strong className="text-slate-900 font-bold">{project.photographer || 'Arams Team'}</strong>
                             </div>
                             <div>
-                                <span className="text-[10px] text-rose-300/70 block uppercase font-bold">Supervisor</span>
-                                <strong className="text-white font-bold">{project.supervisor || 'Bima Arams'}</strong>
+                                <span className="text-[10px] text-slate-400 block font-medium">Supervisor</span>
+                                <strong className="text-slate-900 font-bold">{project.supervisor || 'Bima Arams'}</strong>
                             </div>
                         </div>
                     </div>
 
                     {/* Right Portrait Showcase */}
-                    <div className="relative z-10 hidden lg:block w-48 h-36 rounded-2xl overflow-hidden shadow-md border border-white/20 shrink-0">
+                    <div className="relative z-10 hidden md:block w-52 lg:w-64 h-36 lg:h-40 rounded-2xl overflow-hidden shadow-xs border border-slate-200/80 shrink-0">
                         <img src="/images/wedding-couple.jpg" alt="Wedding Couple" className="w-full h-full object-cover" />
                     </div>
                 </div>
@@ -294,10 +355,16 @@ export default function ClientProjectDetail({
                 {/* ── 2-COLUMN MAIN CONTENT (MATCHING SCREENSHOT 2) ─────────── */}
                 <div className="flex flex-col lg:flex-row gap-6 items-start">
                     
-                    {/* LEFT COLUMN: Vertical Nav Tabs & Help Box */}
-                    <div className="w-full lg:w-48 xl:w-52 shrink-0 space-y-4">
+                    {/* LEFT COLUMN: Sticky Vertical Nav Tabs & Help Box */}
+                    <div className="w-full lg:w-48 xl:w-52 shrink-0 space-y-4 lg:sticky lg:top-6 z-20">
                         {/* Nav Pills */}
-                        <div className="bg-white rounded-2xl border border-slate-200/80 p-2 shadow-2xs space-y-1">
+                        <div
+                            style={{
+                                backgroundColor: portalCardBg,
+                                borderColor: portalCardBorder,
+                            }}
+                            className="rounded-2xl border p-2 shadow-2xs space-y-1"
+                        >
                             {navItems.map((item) => {
                                 const Icon = item.icon;
                                 const isActive = activeSection === item.id;
@@ -305,10 +372,18 @@ export default function ClientProjectDetail({
                                     <button
                                         key={item.id}
                                         type="button"
-                                        onClick={() => setActiveSection(item.id)}
+                                        onClick={() => scrollToSection(item.id)}
+                                        style={
+                                            isActive
+                                                ? {
+                                                      backgroundColor: portalPrimaryAccent,
+                                                      color: '#FFFFFF',
+                                                  }
+                                                : {}
+                                        }
                                         className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2.5 cursor-pointer text-left ${
                                             isActive
-                                                ? 'bg-[#380E13] text-white shadow-xs'
+                                                ? 'shadow-xs'
                                                 : 'text-slate-700 hover:bg-slate-50'
                                         }`}
                                     >
@@ -320,9 +395,20 @@ export default function ClientProjectDetail({
                         </div>
 
                         {/* Help Box */}
-                        <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-2xs space-y-3">
+                        <div
+                            style={{
+                                backgroundColor: portalCardBg,
+                                borderColor: portalCardBorder,
+                            }}
+                            className="rounded-2xl border p-4 shadow-2xs space-y-3"
+                        >
                             <div>
-                                <h4 className="font-bold text-xs text-slate-900">Butuh Bantuan?</h4>
+                                <h4
+                                    style={{ color: portalHeadingColor }}
+                                    className="font-bold text-xs"
+                                >
+                                    Butuh Bantuan?
+                                </h4>
                                 <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
                                     Hubungi admin kami jika Anda memiliki pertanyaan terkait project ini.
                                 </p>
@@ -331,7 +417,11 @@ export default function ClientProjectDetail({
                                 href="https://wa.me/6281234567890"
                                 target="_blank"
                                 rel="noreferrer"
-                                className="w-full py-2 px-3 rounded-xl bg-[#240B10] hover:bg-[#380E13] text-white text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
+                                style={{
+                                    backgroundColor: portalPrimaryAccent,
+                                    color: '#FFFFFF',
+                                }}
+                                className="w-full py-2.5 px-3 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-2xs hover:opacity-90"
                             >
                                 <MessageCircle className="w-3.5 h-3.5" />
                                 <span>Hubungi Admin</span>
@@ -343,10 +433,23 @@ export default function ClientProjectDetail({
                     <div className="flex-1 space-y-6 w-full">
                         
                         {/* 1. TIMELINE PROJECT CARD */}
-                        <section className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-2xs space-y-6">
+                        <section
+                            id="section-timeline"
+                            style={{
+                                backgroundColor: portalCardBg,
+                                borderColor: portalCardBorder,
+                            }}
+                            className="rounded-3xl border p-6 sm:p-8 shadow-2xs space-y-6 scroll-mt-24 transition-colors"
+                        >
                             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                                 <div>
-                                    <h3 className="text-base font-serif font-bold text-slate-900">
+                                    <h3
+                                        style={{
+                                            fontFamily: `'${portalFontHeading}', serif`,
+                                            color: portalHeadingColor,
+                                        }}
+                                        className="text-base font-serif font-bold"
+                                    >
                                         Timeline Project
                                     </h3>
                                     <p className="text-xs text-slate-500">
@@ -365,17 +468,23 @@ export default function ClientProjectDetail({
                                     <div className="absolute left-4 right-4 top-3.5 h-0.5 bg-slate-200 -z-0" />
                                     {timeline.steps.map((step) => (
                                         <div key={step.step} className="flex flex-col items-center relative z-10 flex-1">
-                                            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold bg-[#380E13] text-white shadow-xs">
+                                            <div
+                                                style={{
+                                                    backgroundColor: portalPrimaryAccent,
+                                                    color: '#FFFFFF',
+                                                }}
+                                                className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shadow-xs"
+                                            >
                                                 {step.step}
                                             </div>
-                                            <span className="text-[10px] font-bold mt-1 text-center text-slate-800 hidden sm:block">
+                                            <span className="text-[10px] font-bold mt-1.5 text-center text-slate-800 hidden sm:block">
                                                 {step.title}
                                             </span>
                                             <span className="text-[9px] text-emerald-600 font-semibold hidden sm:block">
                                                 {step.status_label}
                                             </span>
                                             {step.date && (
-                                                <span className="text-[8px] text-slate-400 hidden sm:block">
+                                                <span className="text-[8px] text-slate-400 hidden sm:block mt-0.5">
                                                     {step.date}
                                                 </span>
                                             )}
@@ -385,13 +494,13 @@ export default function ClientProjectDetail({
                             </div>
 
                             {/* Project Completed Banner */}
-                            <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-2xl p-4 flex items-center gap-3 text-xs text-emerald-950">
-                                <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                            <div className="bg-[#EBF7EE] border border-[#C3E6CB] rounded-2xl p-4 flex items-center gap-3 text-xs text-[#1E7E34]">
+                                <div className="w-7 h-7 rounded-full bg-[#28A745] text-white flex items-center justify-center shrink-0">
                                     <Check className="w-4 h-4 stroke-[3]" />
                                 </div>
                                 <div>
-                                    <strong className="font-bold text-emerald-900 block">Project telah selesai!</strong>
-                                    <span className="text-emerald-800 text-[11px]">Terima kasih telah mempercayakan momen berharga Anda kepada Arams Pictures.</span>
+                                    <strong className="font-bold text-slate-900 block text-xs">Project telah selesai!</strong>
+                                    <span className="text-slate-600 text-[11px]">Terima kasih telah mempercayakan momen berharga Anda kepada Arams Pictures.</span>
                                 </div>
                             </div>
                         </section>
@@ -402,7 +511,7 @@ export default function ClientProjectDetail({
                             {/* Left Side (Files & Catatan) - Span 7 */}
                             <div className="lg:col-span-7 space-y-6">
                                 {/* File Terbaru */}
-                                <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-2xs space-y-4">
+                                <div id="section-files" className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-2xs space-y-4 scroll-mt-24">
                                     <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                                         <div>
                                             <h4 className="text-sm font-bold text-slate-900">File Terbaru</h4>
@@ -414,20 +523,20 @@ export default function ClientProjectDetail({
                                         </button>
                                     </div>
 
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                                         {fileList.map((file) => (
                                             <div
                                                 key={file.id}
-                                                className="bg-[#FAF8F5] border border-slate-200/80 rounded-2xl p-3.5 flex flex-col justify-between space-y-3 hover:border-slate-300 transition-colors"
+                                                className="bg-[#FAF8F5] border border-slate-200/80 rounded-2xl p-3 flex flex-col justify-between space-y-3 hover:border-slate-300 transition-colors"
                                             >
                                                 <div className="space-y-2">
                                                     {file.is_link ? (
-                                                        <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center">
+                                                        <div className="w-8 h-8 rounded-xl bg-rose-100 text-[#4A151B] flex items-center justify-center">
                                                             <LinkIcon className="w-4 h-4" />
                                                         </div>
                                                     ) : (
-                                                        <div className="w-8 h-8 rounded-xl bg-rose-100 text-[#4A151B] flex items-center justify-center">
-                                                            <Folder className="w-4 h-4" />
+                                                        <div className="w-8 h-8 rounded-xl bg-[#F4ECEE] text-[#4A151B] flex items-center justify-center">
+                                                            <Folder className="w-4 h-4 fill-[#4A151B]" />
                                                         </div>
                                                     )}
                                                     <div>
@@ -444,7 +553,7 @@ export default function ClientProjectDetail({
                                                     type="button"
                                                     className="inline-flex items-center gap-1.5 text-xs font-bold text-[#4A151B] hover:underline cursor-pointer pt-1"
                                                 >
-                                                    <Download className="w-3 h-3" />
+                                                    <ExternalLink className="w-3 h-3" />
                                                     <span>{file.is_link ? 'Buka Link' : 'Buka'}</span>
                                                 </button>
                                             </div>
@@ -452,14 +561,29 @@ export default function ClientProjectDetail({
                                     </div>
                                 </div>
 
-                                {/* Catatan Terbaru */}
-                                <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-2xs space-y-4">
+                                 {/* Catatan Terbaru */}
+                                <div
+                                    id="section-catatan"
+                                    style={{
+                                        backgroundColor: portalCardBg,
+                                        borderColor: portalCardBorder,
+                                    }}
+                                    className="rounded-3xl border p-5 sm:p-6 shadow-2xs space-y-4 scroll-mt-24 transition-colors"
+                                >
                                     <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                                         <div>
-                                            <h4 className="text-sm font-bold text-slate-900">Catatan Terbaru</h4>
+                                            <h4
+                                                style={{ color: portalHeadingColor }}
+                                                className="text-sm font-bold"
+                                            >
+                                                Catatan Terbaru
+                                            </h4>
                                             <p className="text-[11px] text-slate-400">Catatan dari tim kami untuk Anda.</p>
                                         </div>
-                                        <button className="text-xs font-bold text-[#4A151B] hover:underline flex items-center gap-1">
+                                        <button
+                                            style={{ color: portalPrimaryAccent }}
+                                            className="text-xs font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                                        >
                                             <span>Lihat Semua Catatan</span>
                                             <ChevronRight className="w-3.5 h-3.5" />
                                         </button>
@@ -472,16 +596,19 @@ export default function ClientProjectDetail({
                                                 className="bg-[#FAF8F5] border border-slate-200/70 rounded-2xl p-3.5 flex items-start gap-3.5"
                                             >
                                                 {/* Date Badge */}
-                                                <div className="w-12 h-12 rounded-xl bg-white border border-slate-200 flex flex-col items-center justify-center shrink-0 shadow-2xs text-center">
+                                                <div className="w-11 h-11 rounded-xl bg-white border border-slate-200 flex flex-col items-center justify-center shrink-0 shadow-2xs text-center">
                                                     <span className="font-black text-sm text-slate-900 leading-none">{note.date}</span>
-                                                    <span className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">{note.monthYear}</span>
+                                                    <span className="text-[8px] text-slate-400 font-bold uppercase mt-0.5">{note.monthYear}</span>
                                                 </div>
 
                                                 {/* Note Content */}
                                                 <div className="flex-1 space-y-1">
                                                     <div className="flex items-center justify-between">
                                                         <h5 className="font-bold text-xs text-slate-900">{note.title}</h5>
-                                                        <span className="text-[10px] text-slate-400">{note.author} • {note.role}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[10px] text-slate-400">{note.author} <span className="font-semibold text-slate-500">({note.role})</span></span>
+                                                            <MoreVertical className="w-3.5 h-3.5 text-slate-400 cursor-pointer" />
+                                                        </div>
                                                     </div>
                                                     <p className="text-[11px] text-slate-600 leading-relaxed">
                                                         {note.content}
@@ -494,7 +621,7 @@ export default function ClientProjectDetail({
                                     <button
                                         type="button"
                                         onClick={() => toast.info('Fitur penambahan catatan klien siap digunakan.')}
-                                        className="w-full py-2.5 rounded-xl border border-dashed border-slate-300 hover:border-slate-400 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                                        className="w-full py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
                                     >
                                         <Plus className="w-3.5 h-3.5" />
                                         <span>Tambah Catatan Baru</span>
@@ -505,9 +632,21 @@ export default function ClientProjectDetail({
                             {/* Right Side (Highlight Pembayaran & Berikan Ulasan) - Span 5 */}
                             <div className="lg:col-span-5 space-y-6">
                                 {/* Highlight Pembayaran */}
-                                <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-2xs space-y-4">
+                                <div
+                                    id="section-pembayaran"
+                                    style={{
+                                        backgroundColor: portalCardBg,
+                                        borderColor: portalCardBorder,
+                                    }}
+                                    className="rounded-3xl border p-5 sm:p-6 shadow-2xs space-y-4 scroll-mt-24 transition-colors"
+                                >
                                     <div className="border-b border-slate-100 pb-3">
-                                        <h4 className="text-sm font-bold text-slate-900">Highlight Pembayaran</h4>
+                                        <h4
+                                            style={{ color: portalHeadingColor }}
+                                            className="text-sm font-bold"
+                                        >
+                                            Highlight Pembayaran
+                                        </h4>
                                         <p className="text-[11px] text-slate-400">Ringkasan pembayaran project Anda.</p>
                                     </div>
 
@@ -529,17 +668,25 @@ export default function ClientProjectDetail({
                                     {/* Progress 100% */}
                                     <div className="space-y-1">
                                         <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                                            <div className="h-full bg-[#380E13] rounded-full" style={{ width: '100%' }} />
+                                            <div
+                                                className="h-full rounded-full transition-all"
+                                                style={{
+                                                    backgroundColor: portalPrimaryAccent,
+                                                    width: '100%',
+                                                }}
+                                            />
                                         </div>
                                         <div className="text-right text-[10px] font-bold text-slate-500">100%</div>
                                     </div>
 
                                     {/* Success Lunas Box */}
-                                    <div className="p-3 rounded-2xl bg-emerald-50/80 border border-emerald-200 flex items-start gap-2.5 text-xs text-emerald-950">
-                                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                                    <div className="p-3 rounded-2xl bg-[#EBF7EE] border border-[#C3E6CB] flex items-start gap-2.5 text-xs text-[#1E7E34]">
+                                        <div className="w-5 h-5 rounded-full bg-[#28A745] text-white flex items-center justify-center shrink-0 mt-0.5">
+                                            <Check className="w-3 h-3 stroke-[3]" />
+                                        </div>
                                         <div>
-                                            <strong className="font-bold text-emerald-900">Pembayaran Lunas</strong>
-                                            <p className="text-[11px] text-emerald-800 mt-0.5 leading-snug">
+                                            <strong className="font-bold text-slate-900">Pembayaran Lunas</strong>
+                                            <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
                                                 Terima kasih atas pelunasan pembayaran project ini.
                                             </p>
                                         </div>
@@ -547,16 +694,29 @@ export default function ClientProjectDetail({
 
                                     <button
                                         type="button"
-                                        className="w-full py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-[#4A151B] text-center transition-colors shadow-2xs block"
+                                        onClick={() => toast.info('Detail tagihan dan invoice project sudah lunas.')}
+                                        style={{ color: portalPrimaryAccent }}
+                                        className="w-full py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-center transition-colors shadow-2xs block cursor-pointer"
                                     >
                                         Lihat Detail Pembayaran →
                                     </button>
                                 </div>
 
                                 {/* Berikan Ulasan Anda */}
-                                <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-2xs space-y-4">
+                                <div
+                                    style={{
+                                        backgroundColor: portalCardBg,
+                                        borderColor: portalCardBorder,
+                                    }}
+                                    className="rounded-3xl border p-5 sm:p-6 shadow-2xs space-y-4 transition-colors"
+                                >
                                     <div>
-                                        <h4 className="text-sm font-bold text-slate-900">Berikan Ulasan Anda</h4>
+                                        <h4
+                                            style={{ color: portalHeadingColor }}
+                                            className="text-sm font-bold"
+                                        >
+                                            Berikan Ulasan Anda
+                                        </h4>
                                         <p className="text-[11px] text-slate-400">Bagaimana pengalaman Anda bersama Arams Pictures?</p>
                                     </div>
 
@@ -598,7 +758,11 @@ export default function ClientProjectDetail({
 
                                         <button
                                             type="submit"
-                                            className="w-full py-2.5 rounded-xl bg-[#380E13] hover:bg-[#240B10] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                                            style={{
+                                                backgroundColor: portalPrimaryAccent,
+                                                color: '#FFFFFF',
+                                            }}
+                                            className="w-full py-2.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer hover:opacity-90"
                                         >
                                             Kirim Ulasan
                                         </button>
@@ -608,13 +772,28 @@ export default function ClientProjectDetail({
                         </div>
 
                         {/* 3. HIGHLIGHT PROJECT SECTION */}
-                        <section className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-2xs space-y-4">
+                        <section
+                            id="section-highlight"
+                            style={{
+                                backgroundColor: portalCardBg,
+                                borderColor: portalCardBorder,
+                            }}
+                            className="rounded-3xl border p-6 shadow-2xs space-y-4 scroll-mt-24 transition-colors"
+                        >
                             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                                 <div>
-                                    <h4 className="text-sm font-bold text-slate-900">Highlight Project</h4>
+                                    <h4
+                                        style={{ color: portalHeadingColor }}
+                                        className="text-sm font-bold"
+                                    >
+                                        Highlight Project
+                                    </h4>
                                     <p className="text-[11px] text-slate-400">Beberapa momen terbaik dari project Anda.</p>
                                 </div>
-                                <button className="text-xs font-bold text-[#4A151B] hover:underline flex items-center gap-1">
+                                <button
+                                    style={{ color: portalPrimaryAccent }}
+                                    className="text-xs font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                                >
                                     <span>Lihat Semua Highlight</span>
                                     <ChevronRight className="w-3.5 h-3.5" />
                                 </button>
@@ -630,13 +809,27 @@ export default function ClientProjectDetail({
                         </section>
 
                         {/* 4. ULASAN CLIENT SECTION */}
-                        <section className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-2xs space-y-4">
+                        <section
+                            style={{
+                                backgroundColor: portalCardBg,
+                                borderColor: portalCardBorder,
+                            }}
+                            className="rounded-3xl border p-6 shadow-2xs space-y-4 transition-colors"
+                        >
                             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                                 <div>
-                                    <h4 className="text-sm font-bold text-slate-900">Ulasan Client</h4>
+                                    <h4
+                                        style={{ color: portalHeadingColor }}
+                                        className="text-sm font-bold"
+                                    >
+                                        Ulasan Client
+                                    </h4>
                                     <p className="text-[11px] text-slate-400">Terima kasih atas kepercayaan Anda.</p>
                                 </div>
-                                <button className="text-xs font-bold text-[#4A151B] hover:underline flex items-center gap-1">
+                                <button
+                                    style={{ color: portalPrimaryAccent }}
+                                    className="text-xs font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                                >
                                     <span>Lihat Semua Ulasan</span>
                                     <ChevronRight className="w-3.5 h-3.5" />
                                 </button>
@@ -666,12 +859,125 @@ export default function ClientProjectDetail({
                                 </div>
 
                                 <div className="flex items-center gap-1 self-end sm:self-center shrink-0">
-                                    <button className="w-7 h-7 rounded-full border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:bg-slate-50">
+                                    <button className="w-7 h-7 rounded-full border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:bg-slate-50 cursor-pointer">
                                         <ChevronLeft className="w-3.5 h-3.5" />
                                     </button>
-                                    <button className="w-7 h-7 rounded-full border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:bg-slate-50">
+                                    <button className="w-7 h-7 rounded-full border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:bg-slate-50 cursor-pointer">
                                         <ChevronRight className="w-3.5 h-3.5" />
                                     </button>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* 5. DETAIL PROJECT SECTION (MATCHING BUTTON "Detail Project") */}
+                        <section
+                            id="section-detail"
+                            style={{
+                                backgroundColor: portalCardBg,
+                                borderColor: portalCardBorder,
+                            }}
+                            className="rounded-3xl border p-6 sm:p-8 shadow-2xs space-y-6 scroll-mt-24 transition-colors"
+                        >
+                            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                                <div className="flex items-center gap-2.5">
+                                    <div
+                                        style={{
+                                            backgroundColor: `${portalPrimaryAccent}15`,
+                                            color: portalPrimaryAccent,
+                                        }}
+                                        className="w-8 h-8 rounded-xl flex items-center justify-center"
+                                    >
+                                        <Info className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                        <h3
+                                            style={{
+                                                fontFamily: `'${portalFontHeading}', serif`,
+                                                color: portalHeadingColor,
+                                            }}
+                                            className="text-base font-serif font-bold"
+                                        >
+                                            Detail &amp; Spesifikasi Project
+                                        </h3>
+                                        <p className="text-xs text-slate-500">
+                                            Rangkuman informasi lengkap pemesanan dan tim yang bertugas.
+                                        </p>
+                                    </div>
+                                </div>
+                                <span className="px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">
+                                    Status: Selesai
+                                </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
+                                {/* Left Info Box */}
+                                <div className="space-y-3.5 bg-[#FAF8F5] p-5 rounded-2xl border border-slate-200/70">
+                                    <h4 className="font-bold text-slate-900 uppercase tracking-wider text-[11px] border-b border-slate-200/60 pb-2">
+                                        Informasi Umum
+                                    </h4>
+                                    <div className="space-y-2.5">
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-500">Nomor Project:</span>
+                                            <span className="font-bold text-slate-900 font-mono">{project.project_number}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-500">Nama Project:</span>
+                                            <span className="font-bold text-slate-900">{project.name}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-500">Kategori:</span>
+                                            <span className="font-bold text-slate-900">{categoryDisplayName}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-500">Paket Layanan:</span>
+                                            <span className="font-bold text-slate-900">{packageDisplayName}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-500">Tanggal Acara:</span>
+                                            <span className="font-bold text-slate-900">{project.event_date || '12 Desember 2026'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-500">Waktu Acara:</span>
+                                            <span className="font-bold text-slate-900">{project.event_time || '10:00 WIB'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-500">Lokasi / Venue:</span>
+                                            <span className="font-semibold text-slate-900 text-right max-w-[200px]">{project.location || 'Gedung Graha Arams'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Right Info Box */}
+                                <div className="space-y-3.5 bg-[#FAF8F5] p-5 rounded-2xl border border-slate-200/70">
+                                    <h4 className="font-bold text-slate-900 uppercase tracking-wider text-[11px] border-b border-slate-200/60 pb-2">
+                                        Tim Bertugas &amp; Catatan
+                                    </h4>
+                                    <div className="space-y-2.5">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-slate-500">Supervisor:</span>
+                                            <span className="font-bold text-slate-900">{project.supervisor || 'Bima Arams'}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-slate-500">Photographer:</span>
+                                            <span className="font-bold text-slate-900">{project.photographer || 'Arams Team'}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-slate-500">Editor:</span>
+                                            <span className="font-bold text-slate-900">{project.editor?.name || 'Arams Editor'}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-slate-500">Status Pembayaran:</span>
+                                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                                Lunas (100%)
+                                            </span>
+                                        </div>
+                                        <div className="pt-2 border-t border-slate-200/60">
+                                            <span className="text-slate-500 block text-[10px] mb-1">Catatan Klien:</span>
+                                            <p className="text-slate-700 italic text-[11px] leading-relaxed">
+                                                "{project.notes || 'Konsep: Garden Party, Elegant. Warna: Putih, Hijau Sage, Gold.'}"
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </section>

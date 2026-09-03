@@ -1,0 +1,398 @@
+- generic [ref=f9e3]:
+  - region "Notifications alt+T"
+  - complementary [ref=f9e4]:
+    - link "Arams Photography Arams Photography Photografer" [ref=f9e6] [cursor=pointer]:
+      - /url: /dashboard
+      - generic [ref=f9e7]:
+        - img "Arams Photography" [ref=f9e9]
+        - generic [ref=f9e10]:
+          - generic [ref=f9e11]: Arams Photography
+          - generic [ref=f9e12]: Photografer
+    - generic [ref=f9e13]:
+      - link "Dashboard" [ref=f9e14] [cursor=pointer]:
+        - /url: /dashboard
+      - link "Clients" [ref=f9e21] [cursor=pointer]:
+        - /url: /clients
+      - link "Projects & Orders" [ref=f9e28] [cursor=pointer]:
+        - /url: /projects
+      - link "Finance" [ref=f9e33] [cursor=pointer]:
+        - /url: /finance
+      - link "Calendar / Schedule" [ref=f9e37] [cursor=pointer]:
+        - /url: /calendar
+      - button "Master Data" [ref=f9e42] [cursor=pointer]
+      - link "Sumber Klien" [ref=f9e51] [cursor=pointer]:
+        - /url: /client-sources
+      - link "Users" [ref=f9e58] [cursor=pointer]:
+        - /url: /users
+      - link "Reports" [ref=f9e72] [cursor=pointer]:
+        - /url: /reports
+      - link "Files" [ref=f9e76] [cursor=pointer]:
+        - /url: /files
+      - link "Settings" [ref=f9e80] [cursor=pointer]:
+        - /url: /settings
+      - generic [ref=f9e86]:
+        - generic [ref=f9e87]: Butuh Bantuan?
+        - paragraph [ref=f9e92]: Tim support kami siap membantu operasional studio Anda.
+        - link "Contact Support" [ref=f9e93] [cursor=pointer]:
+          - /url: https://wa.me/6281234567890
+    - generic [ref=f9e94]:
+      - button "Logout" [ref=f9e95] [cursor=pointer]
+      - generic [ref=f9e100]: © 2026 Arams PhotographyAll rights reserved.
+  - generic [ref=f9e101]:
+    - banner [ref=f9e102]:
+      - generic [ref=f9e104]:
+        - heading "Buat Project Baru" [level=1] [ref=f9e105]
+        - navigation [ref=f9e106]:
+          - link "Projects & Orders" [ref=f9e107] [cursor=pointer]:
+            - /url: /projects
+          - generic [ref=f9e108]: ›
+          - generic [ref=f9e109]: Buat Project Baru
+      - generic [ref=f9e110]:
+        - generic [ref=f9e112]:
+          - textbox "Search project, client, photographer..." [ref=f9e116]
+          - generic [ref=f9e117]: ⌘K
+        - button "Notifikasi Studio" [ref=f9e119] [cursor=pointer]
+        - button "Andi Pratama Andi Pratama Owner" [ref=f9e125] [cursor=pointer]:
+          - img "Andi Pratama" [ref=f9e126]
+          - generic [ref=f9e127]:
+            - generic [ref=f9e128]: Andi Pratama
+            - generic [ref=f9e129]: Owner
+    - main [ref=f9e132]:
+      - generic [ref=f9e134]:
+        - generic [ref=f9e135]:
+          - generic [ref=f9e136]:
+            - generic [ref=f9e137]:
+              - link "Projects & Orders" [ref=f9e138] [cursor=pointer]:
+                - /url: /projects
+              - generic [ref=f9e139]: ›
+              - generic [ref=f9e140]: Buat Project Baru
+            - heading "Buat Project Baru" [level=1] [ref=f9e141]
+            - paragraph [ref=f9e142]: Lengkapi informasi project. Data paket, layanan, deliverables dan workflow akan terisi otomatis.
+          - generic [ref=f9e143]:
+            - button "Simpan sebagai Draft" [ref=f9e144] [cursor=pointer]
+            - button "Simpan & Buat Invoice DP" [ref=f9e145] [cursor=pointer]
+        - generic [ref=f9e150]:
+          - button "1 Informasi Project" [ref=f9e151] [cursor=pointer]:
+            - generic [ref=f9e152]: "1"
+            - generic [ref=f9e153]: Informasi Project
+          - button "2 Personel & Penugasan" [ref=f9e156] [cursor=pointer]:
+            - generic [ref=f9e157]: "2"
+            - generic [ref=f9e158]: Personel & Penugasan
+          - button "3 Add-on & Biaya Operasional" [ref=f9e160] [cursor=pointer]:
+            - generic [ref=f9e161]: "3"
+            - generic [ref=f9e162]: Add-on & Biaya Operasional
+          - button "4 Review & Konfirmasi" [ref=f9e164] [cursor=pointer]:
+            - generic [ref=f9e165]: "4"
+            - generic [ref=f9e166]: Review & Konfirmasi
+        - generic [ref=f9e168]:
+          - generic [ref=f9e169]:
+            - generic [ref=f9e170]:
+              - heading "Informasi Project" [level=3] [ref=f9e172]
+              - generic [ref=f9e173]:
+                - generic [ref=f9e174]:
+                  - generic [ref=f9e175]: Tanggal Project *
+                  - textbox [ref=f9e177]: 2026-08-27
+                - generic [ref=f9e178]:
+                  - generic [ref=f9e179]: Nama Project *
+                  - textbox "The Wedding of Budi & Sari" [ref=f9e180]
+              - generic [ref=f9e181]:
+                - generic [ref=f9e182]: Client *
+                - generic [ref=f9e183]:
+                  - combobox [ref=f9e184]:
+                    - option "-- Pilih Client --"
+                    - option "Andi Pratama (0812-3456-7890)"
+                    - option "Andi Pratama (081234567890)"
+                    - option "Andi Pratama & Sari Wulandari (0822 1111 2222)"
+                    - option "Bagas & Sarah Wedding (081299998888)"
+                    - option "Budi Santoso (0812-9876-5432)" [selected]
+                    - option "Citra Kirana (0812345670)"
+                    - option "Citra Lestari (0816 9999 0000)"
+                    - option "Denny Setiawan (0812 3333 4444)"
+                    - option "Dewi Lestari (0813-1111-2222)"
+                    - option "Dimas Anggara & Nadia Saphira (081299887766)"
+                    - option "Fajar Nugroho (0812-7777-8888)"
+                    - option "GlowCare Indonesia (0821-9988-1122)"
+                    - option "Jessica Mila (0812345675)"
+                    - option "Keluarga Wijaya (0821 7777 8888)"
+                    - option "Kevin Sanjaya (0812345674)"
+                    - option "Kevin Sanjaya & Jessica Mila (0813 9876 5432)"
+                    - option "Klien Eksklusif 11 (0812-4559-3110)"
+                    - option "Klien Eksklusif 12 (0812-5030-4238)"
+                    - option "Klien Eksklusif 13 (0812-3288-4177)"
+                    - option "Klien Eksklusif 14 (0812-8217-3903)"
+                    - option "Klien Eksklusif 15 (0812-7149-7299)"
+                    - option "Klien Eksklusif 16 (0812-1803-6583)"
+                    - option "Klien Eksklusif 17 (0812-6793-6101)"
+                    - option "Klien Eksklusif 18 (0812-7074-8766)"
+                    - option "Klien Eksklusif 19 (0812-7287-1322)"
+                    - option "Klien Eksklusif 20 (0812-6667-4993)"
+                    - option "Klien Eksklusif 21 (0812-6039-2141)"
+                    - option "Klien Eksklusif 22 (0812-4474-6952)"
+                    - option "Klien Eksklusif 23 (0812-2560-2010)"
+                    - option "Klien Eksklusif 24 (0812-2937-6081)"
+                    - option "Klien Eksklusif 25 (0812-8486-3507)"
+                    - option "Klien Eksklusif 26 (0812-9137-4513)"
+                    - option "Klien Eksklusif 27 (0812-5641-8889)"
+                    - option "Klien Eksklusif 28 (0812-9412-8359)"
+                    - option "Klien Eksklusif 29 (0812-5923-1766)"
+                    - option "Klien Eksklusif 30 (0812-2346-8716)"
+                    - option "Klien Eksklusif 31 (0812-6843-1836)"
+                    - option "Klien Eksklusif 32 (0812-6290-9188)"
+                    - option "Klien Eksklusif 33 (0812-6807-8263)"
+                    - option "Klien Eksklusif 34 (0812-9923-5556)"
+                    - option "Klien Eksklusif 35 (0812-4184-8336)"
+                    - option "Klien Eksklusif 36 (0812-8953-3284)"
+                    - option "Klien Eksklusif 37 (0812-1866-3297)"
+                    - option "Klien Eksklusif 38 (0812-3200-3198)"
+                    - option "Klien Eksklusif 39 (0812-6847-4819)"
+                    - option "Klien Eksklusif 40 (0812-8522-9517)"
+                    - option "Klien Eksklusif 41 (0812-2172-9543)"
+                    - option "Klien Eksklusif 42 (0812-8085-6090)"
+                    - option "Komunitas Fotografi ID / Dika Prabowo (0822 2222 3333)"
+                    - option "Michael Tan (0819 1234 5678)"
+                    - option "PT Bank Mandiri (Persero) (0812345672)"
+                    - option "PT. Maju Jaya (021-1234-5678)"
+                    - option "PT. Solusi Maju Bersama / Rina Anggraini (0817 5555 6666)"
+                    - option "Rika Ayu (0812-5555-6666)"
+                    - option "Roberts Family (0811-2233-4455)"
+                    - option "Sari Dewi & Andi Pratama (+6281234567890)"
+                    - option "TechNova Indonesia (021-9988-7766)"
+                    - option "Wanderlust ID (0813-8877-6655)"
+                  - button "Tambah Klien Baru" [ref=f9e185] [cursor=pointer]
+              - generic [ref=f9e187]:
+                - generic [ref=f9e188]: Kategori Project *
+                - combobox [ref=f9e189]:
+                  - option "Perorangan"
+                  - option "Family"
+                  - option "Traveling"
+                  - option "Komunitas"
+                  - option "Birthday"
+                  - option "Event"
+                  - option "Produk / Brand / Commercial"
+                  - option "Corporate"
+                  - option "Wedding" [selected]
+                  - option "Prewedding"
+                  - option "Newborn"
+                  - option "Maternity"
+                  - option "Lainnya (Kebutuhan khusus)"
+              - generic [ref=f9e190]:
+                - generic [ref=f9e191]:
+                  - generic [ref=f9e192]: Paket *
+                  - generic [ref=f9e193]: Rekomendasi
+                - combobox [ref=f9e194]:
+                  - option "Royal Wedding Package - Rp 50.000.000"
+                  - option "Premium Wedding Package - Rp 25.000.000" [selected]
+                  - option "Essential Akad / Holy Matrimony - Rp 15.000.000"
+                - generic [ref=f9e195]:
+                  - generic [ref=f9e196]:
+                    - generic [ref=f9e197]: Wedding - Premium Wedding Package
+                    - generic [ref=f9e202]: Rp 25.000.000
+                  - paragraph [ref=f9e203]: Durasi Standby 10 Jam | Photographer 2 | Videographer 2
+                  - button "Lihat Detail Paket" [ref=f9e204] [cursor=pointer]
+              - generic [ref=f9e208]:
+                - generic [ref=f9e209]: Lokasi Project *
+                - textbox "Grand Ballroom, Hotel Indonesia Kempinski" [ref=f9e211]
+              - generic [ref=f9e215]:
+                - generic [ref=f9e216]: Catatan Project
+                - textbox "Tambahkan catatan jika ada..." [ref=f9e217]
+              - generic [ref=f9e218]:
+                - generic [ref=f9e219]: Referensi / Sumber Klien
+                - combobox [ref=f9e220]:
+                  - option "Instagram" [selected]
+                  - option "TikTok"
+                  - option "Google Search"
+                  - option "Bridestory"
+                  - option "Wedding Organizer"
+                  - option "Rekomendasi Klien"
+                  - option "Teman / Keluarga"
+                - generic [ref=f9e221]:
+                  - textbox "Nama yang dirujuk" [ref=f9e222]: Rina Amelia
+                  - textbox "Link Referensi" [ref=f9e223]: https://instagram.com/rinaamelia
+            - generic [ref=f9e224]:
+              - generic [ref=f9e225]:
+                - heading "Paket, Layanan & Benefit (Otomatis dari Master Data)" [level=3] [ref=f9e227]
+                - generic [ref=f9e228]:
+                  - generic [ref=f9e229]:
+                    - generic [ref=f9e230]: Layanan
+                    - generic [ref=f9e231]:
+                      - generic [ref=f9e232]: Fotografi
+                      - generic [ref=f9e237]: Videografi Cinematic
+                      - generic [ref=f9e242]: Editing Foto
+                      - generic [ref=f9e247]: Editing Video
+                      - generic [ref=f9e252]: Desain Album
+                      - generic [ref=f9e257]: Cetak Album
+                  - generic [ref=f9e262]:
+                    - generic [ref=f9e263]: Benefit / Deliverables Utama
+                    - generic [ref=f9e264]:
+                      - generic [ref=f9e265]: Sneak Peek Photo
+                      - generic [ref=f9e270]: All Unedited Photo
+                      - generic [ref=f9e275]: Edited Photo
+                      - generic [ref=f9e280]: Wedding Album (30x30)
+                      - generic [ref=f9e285]: Full Documentation Video
+                      - generic [ref=f9e290]: Flashdisk + Box Exclusive
+                      - generic [ref=f9e295]: Printed Photo 4R (50 pcs)
+                      - generic [ref=f9e300]: By Owner (1 Hari)
+                - generic [ref=f9e305]:
+                  - generic [ref=f9e306]:
+                    - generic [ref=f9e307]: Harga Paket
+                    - text: Rp 25.000.000
+                  - generic [ref=f9e308]:
+                    - generic [ref=f9e309]: Durasi / Standby
+                    - generic [ref=f9e310]: 10 Jam
+                  - generic [ref=f9e311]:
+                    - generic [ref=f9e312]: Photographer
+                    - text: 2 Orang
+                  - generic [ref=f9e313]:
+                    - generic [ref=f9e314]: Videographer
+                    - text: 2 Orang
+              - generic [ref=f9e315]:
+                - heading "Deliverables & Timeline (Otomatis dari Workflow Wedding - Premium)" [level=3] [ref=f9e317]
+                - table [ref=f9e319]:
+                  - rowgroup [ref=f9e320]:
+                    - row [ref=f9e321]:
+                      - columnheader "Tahap" [ref=f9e322]
+                      - columnheader "Deliverable" [ref=f9e323]
+                      - columnheader "Target Deadline" [ref=f9e324]
+                  - rowgroup [ref=f9e325]:
+                    - row [ref=f9e326]:
+                      - cell "1 Booking & Persiapan" [ref=f9e327]:
+                        - generic [ref=f9e328]:
+                          - generic [ref=f9e329]: "1"
+                          - generic [ref=f9e330]: Booking & Persiapan
+                      - cell "Sneak Peek Photo" [ref=f9e331]
+                      - cell "H+1" [ref=f9e332]
+                    - row [ref=f9e333]:
+                      - cell "2 Pra Acara" [ref=f9e334]:
+                        - generic [ref=f9e335]:
+                          - generic [ref=f9e336]: "2"
+                          - generic [ref=f9e337]: Pra Acara
+                      - cell "All Unedited Photo" [ref=f9e338]
+                      - cell "H+3" [ref=f9e339]
+                    - row [ref=f9e340]:
+                      - cell "3 Hari H (Shooting)" [ref=f9e341]:
+                        - generic [ref=f9e342]:
+                          - generic [ref=f9e343]: "3"
+                          - generic [ref=f9e344]: Hari H (Shooting)
+                      - cell "Flashdrive + 4R in Box" [ref=f9e345]
+                      - cell "H+7" [ref=f9e346]
+                    - row [ref=f9e347]:
+                      - cell "4 Editing" [ref=f9e348]:
+                        - generic [ref=f9e349]:
+                          - generic [ref=f9e350]: "4"
+                          - generic [ref=f9e351]: Editing
+                      - cell "Edited Photo" [ref=f9e352]
+                      - cell "H+14" [ref=f9e353]
+                    - row [ref=f9e354]:
+                      - cell "5 Review & Revisi" [ref=f9e355]:
+                        - generic [ref=f9e356]:
+                          - generic [ref=f9e357]: "5"
+                          - generic [ref=f9e358]: Review & Revisi
+                      - cell "Video Cinematic" [ref=f9e359]
+                      - cell "H+30" [ref=f9e360]
+                    - row [ref=f9e361]:
+                      - cell "6 Finishing" [ref=f9e362]:
+                        - generic [ref=f9e363]:
+                          - generic [ref=f9e364]: "6"
+                          - generic [ref=f9e365]: Finishing
+                      - cell "Layout Album" [ref=f9e366]
+                      - cell "H+30" [ref=f9e367]
+                    - row [ref=f9e368]:
+                      - cell "7 Delivery" [ref=f9e369]:
+                        - generic [ref=f9e370]:
+                          - generic [ref=f9e371]: "7"
+                          - generic [ref=f9e372]: Delivery
+                      - cell "Wedding Album (Cetak)" [ref=f9e373]
+                      - cell "H+60" [ref=f9e374]
+                    - row [ref=f9e375]:
+                      - cell "8 Selesai" [ref=f9e376]:
+                        - generic [ref=f9e377]:
+                          - generic [ref=f9e378]: "8"
+                          - generic [ref=f9e379]: Selesai
+                      - cell "Full Documentation Video By Owner" [ref=f9e380]
+                      - cell "H+60" [ref=f9e381]
+            - generic [ref=f9e382]:
+              - generic [ref=f9e383]:
+                - heading "Ringkasan Project" [level=3] [ref=f9e384]
+                - generic [ref=f9e385]:
+                  - generic [ref=f9e386]:
+                    - generic [ref=f9e387]: Subtotal Paket
+                    - generic [ref=f9e388]: Rp 25.000.000
+                  - generic [ref=f9e389]:
+                    - generic [ref=f9e390]: Add-on / Ala Carte
+                    - generic [ref=f9e391]: Rp 2.950.000
+                  - generic [ref=f9e392]:
+                    - generic [ref=f9e393]: Biaya Operasional
+                    - generic [ref=f9e394]: Rp 3.850.000
+                  - generic [ref=f9e395]:
+                    - generic [ref=f9e396]: Diskon
+                    - generic [ref=f9e397]: "- Rp 1.250.000"
+                  - generic [ref=f9e398]:
+                    - generic [ref=f9e399]: Total Project
+                    - generic [ref=f9e400]: Rp 30.550.000
+              - generic [ref=f9e401]:
+                - heading "Invoice DP (Otomatis)" [level=3] [ref=f9e404]
+                - generic [ref=f9e407]:
+                  - generic [ref=f9e408]:
+                    - generic [ref=f9e409]: Persentase DP
+                    - combobox [ref=f9e410]:
+                      - option "20%"
+                      - option "30%"
+                      - option "50%" [selected]
+                      - option "100% (Lunas)"
+                  - generic [ref=f9e411]:
+                    - generic [ref=f9e412]: Nominal DP
+                    - generic [ref=f9e413]: Rp 15.275.000
+                  - paragraph [ref=f9e414]: Invoice DP akan otomatis dibuat setelah project disimpan.
+              - generic [ref=f9e415]:
+                - heading "Informasi Pembayaran" [level=3] [ref=f9e416]
+                - generic [ref=f9e417]:
+                  - generic [ref=f9e418]:
+                    - text: Metode Pembayaran
+                    - combobox [ref=f9e419]:
+                      - option "Transfer Bank" [selected]
+                      - option "Kas Tunai / Cash"
+                      - option "QRIS / Instant"
+                  - generic [ref=f9e420]:
+                    - text: Bank
+                    - textbox [ref=f9e421]: BCA - 123 456 7890
+                  - generic [ref=f9e422]:
+                    - text: Atas Nama
+                    - textbox [ref=f9e423]: Arams Pictures
+                  - generic [ref=f9e424]:
+                    - text: Jatuh Tempo DP
+                    - textbox [ref=f9e425]: 2026-08-30
+          - generic [ref=f9e426]:
+            - generic [ref=f9e427]:
+              - heading "Notes / Catatan Tambahan" [level=4] [ref=f9e428]
+              - textbox "Tambahkan catatan untuk tim, client atau kebutuhan khusus..." [ref=f9e429]
+              - generic [ref=f9e430]:
+                - text: Visible untuk
+                - generic [ref=f9e431]:
+                  - generic [ref=f9e432] [cursor=pointer]:
+                    - checkbox "Supervisor" [checked] [ref=f9e433]
+                    - generic [ref=f9e434]: Supervisor
+                  - generic [ref=f9e435] [cursor=pointer]:
+                    - checkbox "Photographer" [checked] [ref=f9e436]
+                    - generic [ref=f9e437]: Photographer
+                  - generic [ref=f9e438] [cursor=pointer]:
+                    - checkbox "Editor" [ref=f9e439]
+                    - generic [ref=f9e440]: Editor
+                  - generic [ref=f9e441] [cursor=pointer]:
+                    - checkbox "Client (Opsional)" [ref=f9e442]
+                    - generic [ref=f9e443]: Client (Opsional)
+            - generic [ref=f9e444]:
+              - heading "Requirement Khusus" [level=4] [ref=f9e445]
+              - textbox "Tulis requirement khusus atau instruksi penting untuk tim..." [ref=f9e446]: Client ingin hasil foto dengan tone warm & bright. Video highlight maksimal durasi 5 menit. Album cover pakai bahan linen warna navy.
+              - generic [ref=f9e447]:
+                - generic [ref=f9e448]: "Contoh:"
+                - paragraph [ref=f9e449]: • Client ingin hasil foto dengan tone warm & bright
+                - paragraph [ref=f9e450]: • Video highlight maksimal durasi 5 menit
+                - paragraph [ref=f9e451]: • Album cover pakai bahan linen warna navy
+            - generic [ref=f9e452]:
+              - heading "Yang akan dibuat otomatis" [level=4] [ref=f9e456]
+              - generic [ref=f9e457]:
+                - generic [ref=f9e458]: Invoice DP (Draft)
+                - generic [ref=f9e463]: Timeline Project
+                - generic [ref=f9e468]: Workflow & Deadline
+                - generic [ref=f9e473]: Nomor Project Unik
+          - button "Lanjut ke Step 2" [ref=f9e479] [cursor=pointer]

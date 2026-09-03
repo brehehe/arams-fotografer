@@ -19,6 +19,8 @@ class UpdatePackageRequest extends FormRequest
             'description' => 'nullable|string',
             'base_price' => 'required|numeric|min:0',
             'duration_hours' => 'required|integer|min:1',
+            'included_services' => 'nullable|array',
+            'included_deliverables' => 'nullable|array',
             'status' => 'required|string|in:active,inactive',
         ];
     }

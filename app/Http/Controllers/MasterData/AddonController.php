@@ -23,13 +23,22 @@ class AddonController extends Controller
                 ->orWhere('description', 'like', "%{$search}%");
         }
 
-        $addons = $query->latest('id')->paginate(10)->withQueryString();
+        if ($type = $request->input('type')) {
+            if ($type !== 'all') {
+                $query->where('type', $type);
+            }
+        }
+
+        $perPage = (int) $request->input('per_page', 10);
+        $addons = $query->latest('id')->paginate($perPage)->withQueryString();
         $categories = Category::where('status', 'active')->select('id', 'name', 'color')->get();
 
         $stats = [
             'total'            => Addon::count() ?: 16,
             'active'           => Addon::where('status', 'active')->count() ?: 15,
             'inactive'         => Addon::where('status', '!=', 'active')->count() ?: 1,
+            'total_addons'     => Addon::where('type', 'addon')->count(),
+            'total_ops'        => Addon::where('type', 'operational')->count(),
             'used_in_projects' => 84,
         ];
 
@@ -37,7 +46,7 @@ class AddonController extends Controller
             'addons'     => $addons,
             'categories' => $categories,
             'stats'      => $stats,
-            'filters'    => $request->only(['search']),
+            'filters'    => $request->only(['search', 'type', 'per_page']),
         ]);
     }
 

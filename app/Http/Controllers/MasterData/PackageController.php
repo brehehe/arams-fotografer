@@ -16,28 +16,39 @@ class PackageController extends Controller
 {
     public function index(Request $request): Response
     {
-        $query = Package::with('category:id,name,color')->withCount('projects');
+        $query = Package::with('category:id,name,color,workflow_type')->withCount('projects');
 
         if ($search = $request->input('search')) {
             $query->where('name', 'like', "%{$search}%")
                 ->orWhere('description', 'like', "%{$search}%");
         }
 
-        $packages = $query->latest('id')->paginate(10)->withQueryString();
-        $categories = Category::where('status', 'active')->select('id', 'name', 'color')->get();
+        if ($categoryId = $request->input('category_id')) {
+            $query->where('category_id', $categoryId);
+        }
+
+        if ($status = $request->input('status')) {
+            if ($status !== 'all') {
+                $query->where('status', $status);
+            }
+        }
+
+        $perPage = (int) $request->input('per_page', 10);
+        $packages = $query->latest('id')->paginate($perPage)->withQueryString();
+        $categories = Category::where('status', 'active')->select('id', 'name', 'color', 'workflow_type')->orderBy('name')->get();
 
         $stats = [
-            'total'            => Package::count() ?: 18,
-            'active'           => Package::where('status', 'active')->count() ?: 16,
-            'inactive'         => Package::where('status', '!=', 'active')->count() ?: 2,
-            'total_categories' => Category::count() ?: 8,
+            'total'            => Package::count(),
+            'active'           => Package::where('status', 'active')->count(),
+            'inactive'         => Package::where('status', '!=', 'active')->count(),
+            'total_categories' => Category::whereHas('packages')->count(),
         ];
 
         return Inertia::render('MasterData/Packages/Index', [
             'packages'   => $packages,
             'categories' => $categories,
             'stats'      => $stats,
-            'filters'    => $request->only(['search']),
+            'filters'    => $request->only(['search', 'category_id', 'status', 'per_page']),
         ]);
     }
 

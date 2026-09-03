@@ -1,0 +1,522 @@
+- generic [ref=f5e3]:
+  - region "Notifications alt+T"
+  - complementary [ref=f5e4]:
+    - link "Arams Photography Arams Photography Photografer" [ref=f5e6] [cursor=pointer]:
+      - /url: /dashboard
+      - generic [ref=f5e7]:
+        - img "Arams Photography" [ref=f5e9]
+        - generic [ref=f5e10]:
+          - generic [ref=f5e11]: Arams Photography
+          - generic [ref=f5e12]: Photografer
+    - generic [ref=f5e13]:
+      - link "Dashboard" [ref=f5e14] [cursor=pointer]:
+        - /url: /dashboard
+      - link "Clients" [ref=f5e21] [cursor=pointer]:
+        - /url: /clients
+      - link "Projects & Orders" [ref=f5e28] [cursor=pointer]:
+        - /url: /projects
+      - link "Finance" [ref=f5e33] [cursor=pointer]:
+        - /url: /finance
+      - link "Calendar / Schedule" [ref=f5e37] [cursor=pointer]:
+        - /url: /calendar
+      - button "Master Data" [ref=f5e42] [cursor=pointer]
+      - link "Sumber Klien" [ref=f5e51] [cursor=pointer]:
+        - /url: /client-sources
+      - link "Users" [ref=f5e58] [cursor=pointer]:
+        - /url: /users
+      - link "Reports" [ref=f5e72] [cursor=pointer]:
+        - /url: /reports
+      - link "Files" [ref=f5e76] [cursor=pointer]:
+        - /url: /files
+      - link "Settings" [ref=f5e80] [cursor=pointer]:
+        - /url: /settings
+      - generic [ref=f5e86]:
+        - generic [ref=f5e87]: Butuh Bantuan?
+        - paragraph [ref=f5e92]: Tim support kami siap membantu operasional studio Anda.
+        - link "Contact Support" [ref=f5e93] [cursor=pointer]:
+          - /url: https://wa.me/6281234567890
+    - generic [ref=f5e94]:
+      - button "Logout" [ref=f5e95] [cursor=pointer]
+      - generic [ref=f5e100]: © 2026 Arams PhotographyAll rights reserved.
+  - generic [ref=f5e101]:
+    - banner [ref=f5e102]:
+      - generic [ref=f5e104]:
+        - heading "Finance" [level=1] [ref=f5e105]
+        - navigation [ref=f5e106]:
+          - link "Dashboard" [ref=f5e107] [cursor=pointer]:
+            - /url: /dashboard
+          - generic [ref=f5e108]: ›
+          - generic [ref=f5e109]: Finance
+      - generic [ref=f5e110]:
+        - generic [ref=f5e112]:
+          - textbox "Search project, client, photographer..." [ref=f5e116]
+          - generic [ref=f5e117]: ⌘K
+        - button "Notifikasi Studio" [ref=f5e119] [cursor=pointer]
+        - button "Andi Pratama Andi Pratama Owner" [ref=f5e125] [cursor=pointer]:
+          - img "Andi Pratama" [ref=f5e126]
+          - generic [ref=f5e127]:
+            - generic [ref=f5e128]: Andi Pratama
+            - generic [ref=f5e129]: Owner
+    - main [ref=f5e132]:
+      - generic [ref=f5e133]:
+        - generic [ref=f5e134]:
+          - generic [ref=f5e135]:
+            - heading "Finance" [level=1] [ref=f5e136]
+            - paragraph [ref=f5e137]: Ringkasan keuangan dan invoice dari seluruh project.
+          - generic [ref=f5e138]:
+            - button "Cek Biaya Pengeluaran" [ref=f5e139] [cursor=pointer]
+            - button "Export Laporan" [ref=f5e145] [cursor=pointer]
+        - generic [ref=f5e152]:
+          - generic [ref=f5e153]:
+            - generic [ref=f5e154]: Total Nilai Transaksi
+            - generic [ref=f5e163]:
+              - heading "Rp 1.816.500.000" [level=2] [ref=f5e164]
+              - paragraph [ref=f5e165]: Total nilai dari semua project
+          - generic [ref=f5e166]:
+            - generic [ref=f5e167]: Sudah Diterima
+            - generic [ref=f5e176]:
+              - heading "Rp 1.309.887.496" [level=2] [ref=f5e177]
+              - paragraph [ref=f5e178]: 72,11% dari total transaksi
+          - generic [ref=f5e179]:
+            - generic [ref=f5e180]: Belum Diterima
+            - generic [ref=f5e189]:
+              - heading "Rp 506.612.504" [level=2] [ref=f5e190]
+              - paragraph [ref=f5e191]: 27,89% dari total transaksi
+          - generic [ref=f5e192]:
+            - generic [ref=f5e193]: Rata-rata Pembayaran
+            - generic [ref=f5e202]:
+              - heading "Rp 48.690.476" [level=2] [ref=f5e203]
+              - paragraph [ref=f5e204]: Rata-rata per invoice
+        - generic [ref=f5e205]:
+          - generic [ref=f5e206]:
+            - generic [ref=f5e207]:
+              - generic [ref=f5e208]:
+                - generic [ref=f5e209]: Analitik Keuangan Bulanan
+                - generic [ref=f5e210]: •
+                - generic [ref=f5e211]: Tahun 2026
+              - heading "Tren Keuangan & Tagihan per Bulan" [level=3] [ref=f5e212]
+              - paragraph [ref=f5e213]: Visualisasi komparasi nilai tagihan kontrak, realisasi kas masuk, dan sisa piutang per bulan.
+            - button "Tahun Ini" [ref=f5e216] [cursor=pointer]
+          - generic [ref=f5e220]:
+            - generic [ref=f5e221]:
+              - generic [ref=f5e222]: Total Tagihan / Kontrak
+              - generic [ref=f5e225]: Kas Sudah Diterima
+              - generic [ref=f5e228]: Sisa Belum Diterima
+            - generic [ref=f5e231]: Arahkan kursor ke tiap bulan untuk melihat rincian nominal riil
+          - generic [ref=f5e233]:
+            - generic [ref=f5e234]:
+              - generic [ref=f5e235] [cursor=pointer]: Jan
+              - generic [ref=f5e240] [cursor=pointer]: Feb
+              - generic [ref=f5e245] [cursor=pointer]: Mar
+              - generic [ref=f5e251] [cursor=pointer]: Apr
+              - generic [ref=f5e257] [cursor=pointer]: Mei
+              - generic [ref=f5e263] [cursor=pointer]: Jun
+              - generic [ref=f5e269] [cursor=pointer]: Jul
+              - generic [ref=f5e275] [cursor=pointer]: Agt
+              - generic [ref=f5e281] [cursor=pointer]: Sep
+              - generic [ref=f5e286] [cursor=pointer]: Okt
+              - generic [ref=f5e291] [cursor=pointer]: Nov
+              - generic [ref=f5e296] [cursor=pointer]: Des
+            - generic [ref=f5e302]:
+              - generic [ref=f5e303]: "0"
+              - generic [ref=f5e304]: Rp 155,8 jt
+              - generic [ref=f5e305]: Rp 311,6 jt
+              - generic [ref=f5e306]: Rp 467,4 jt
+              - generic [ref=f5e307]: Rp 623,3 jt
+              - generic [ref=f5e308]: Rp 779,1 jt
+        - generic [ref=f5e309]:
+          - generic [ref=f5e310]:
+            - generic [ref=f5e311]:
+              - heading "Daftar Invoice Terkini" [level=3] [ref=f5e312]
+              - paragraph [ref=f5e313]: Menampilkan 9 invoice riil yang diterbitkan dari project studio
+            - button "Lihat Semua Invoice (9)" [ref=f5e314] [cursor=pointer]
+          - table [ref=f5e321]:
+            - rowgroup [ref=f5e322]:
+              - row [ref=f5e323]:
+                - columnheader "NO. INV" [ref=f5e324]
+                - columnheader "PROJECT & KLIEN" [ref=f5e325]
+                - columnheader "TANGGAL" [ref=f5e326]
+                - columnheader "PAKET" [ref=f5e327]
+                - columnheader "ADD-ON / ALA CARTE" [ref=f5e328]
+                - columnheader "BIAYA OPERASIONAL" [ref=f5e329]
+                - columnheader "TOTAL PROJECT" [ref=f5e330]
+                - columnheader "SUDAH DITERIMA" [ref=f5e331]
+                - columnheader "SISA" [ref=f5e332]
+                - columnheader "STATUS" [ref=f5e333]
+                - columnheader "AKSI" [ref=f5e334]
+            - rowgroup [ref=f5e335]:
+              - row [ref=f5e336]:
+                - cell "INV-2026-09-0002" [ref=f5e337]
+                - 'cell "Wedding Sari Dewi & Andi Pratama Klien: Sari Dewi & Andi Pratama" [ref=f5e340]':
+                  - link "Wedding Sari Dewi & Andi Pratama" [ref=f5e341] [cursor=pointer]:
+                    - /url: /projects/01a0605a-5263-7126-9e15-0b2a0ae09f40
+                  - generic [ref=f5e342]: "Klien: Sari Dewi & Andi Pratama"
+                - cell "02/09/2026" [ref=f5e343]
+                - cell "Rp 7.000.000" [ref=f5e344]
+                - cell "Rp 0" [ref=f5e345]
+                - cell "Rp 0" [ref=f5e346]
+                - cell "Rp 7.000.000" [ref=f5e347]
+                - cell "Rp 0 (0%)" [ref=f5e348]
+                - cell "Rp 7.000.000" [ref=f5e349]
+                - cell "Belum Dibayar" [ref=f5e350]
+                - cell [ref=f5e352]:
+                  - button [ref=f5e353]
+              - row [ref=f5e358]:
+                - cell "INV-2608-0002" [ref=f5e359]
+                - 'cell "Wedding Andi & Sarah Klien: Andi Pratama" [ref=f5e362]':
+                  - link "Wedding Andi & Sarah" [ref=f5e363] [cursor=pointer]:
+                    - /url: /projects/01a0473f-8eed-730c-a81b-3973c3d66eb3
+                  - generic [ref=f5e364]: "Klien: Andi Pratama"
+                - cell "28/08/2026" [ref=f5e365]
+                - cell "Rp 50.000.000" [ref=f5e366]
+                - cell "Rp 0" [ref=f5e367]
+                - cell "Rp 0" [ref=f5e368]
+                - cell "Rp 50.000.000" [ref=f5e369]
+                - cell "Rp 50.000.000 (100%)" [ref=f5e370]
+                - cell "Rp 0" [ref=f5e371]
+                - cell "Lunas" [ref=f5e372]
+                - cell [ref=f5e374]:
+                  - button [ref=f5e375]
+              - row [ref=f5e380]:
+                - cell "INV-2608-0001" [ref=f5e381]
+                - 'cell "Wedding Andi & Sarah Klien: Andi Pratama" [ref=f5e384]':
+                  - link "Wedding Andi & Sarah" [ref=f5e385] [cursor=pointer]:
+                    - /url: /projects/01a0473f-8eed-730c-a81b-3973c3d66eb3
+                  - generic [ref=f5e386]: "Klien: Andi Pratama"
+                - cell "28/08/2026" [ref=f5e387]
+                - cell "Rp 50.000.000" [ref=f5e388]
+                - cell "Rp 0" [ref=f5e389]
+                - cell "Rp 0" [ref=f5e390]
+                - cell "Rp 50.000.000" [ref=f5e391]
+                - cell "Rp 50.000.000 (100%)" [ref=f5e392]
+                - cell "Rp 0" [ref=f5e393]
+                - cell "Lunas" [ref=f5e394]
+                - cell [ref=f5e396]:
+                  - button [ref=f5e397]
+              - row [ref=f5e402]:
+                - cell "INV-2026-09-0001" [ref=f5e403]
+                - 'cell "Corporate Kevin Sanjaya Klien: Kevin Sanjaya" [ref=f5e406]':
+                  - link "Corporate Kevin Sanjaya" [ref=f5e407] [cursor=pointer]:
+                    - /url: /projects/01a05c48-f23d-710c-87d0-d2c0fc030c01
+                  - generic [ref=f5e408]: "Klien: Kevin Sanjaya"
+                - cell "26/05/2026" [ref=f5e409]
+                - cell "Rp 7.000.000" [ref=f5e410]
+                - cell "Rp 5.000.000" [ref=f5e411]
+                - cell "Rp 0" [ref=f5e412]
+                - cell "Rp 7.000.000" [ref=f5e413]
+                - cell "Rp 0 (0%)" [ref=f5e414]
+                - cell "Rp 7.000.000" [ref=f5e415]
+                - cell "Belum Dibayar" [ref=f5e416]
+                - cell [ref=f5e418]:
+                  - button [ref=f5e419]
+              - row [ref=f5e424]:
+                - cell "INV-2506-0001 DP" [ref=f5e425]:
+                  - generic [ref=f5e426]:
+                    - generic [ref=f5e427]: INV-2506-0001
+                    - generic [ref=f5e428]: DP
+                - 'cell "Andi & Sinta Wedding Klien: Andi Pratama" [ref=f5e429]':
+                  - link "Andi & Sinta Wedding" [ref=f5e430] [cursor=pointer]:
+                    - /url: /projects/01a043ef-81d7-7049-a973-ff3971f31a5d
+                  - generic [ref=f5e431]: "Klien: Andi Pratama"
+                - cell "01/05/2026" [ref=f5e432]
+                - cell "Rp 50.000.000" [ref=f5e433]
+                - cell "Rp 0" [ref=f5e434]
+                - cell "Rp 0" [ref=f5e435]
+                - cell "Rp 50.000.000" [ref=f5e436]
+                - cell "Rp 40.000.000 (80%)" [ref=f5e437]
+                - cell "Rp 10.000.000" [ref=f5e438]
+                - cell "Menunggu" [ref=f5e439]
+                - cell [ref=f5e441]:
+                  - button [ref=f5e442]
+              - row [ref=f5e447]:
+                - cell "INV-2505-0002" [ref=f5e448]
+                - 'cell "Budi & Lestari Prewedding Klien: Budi Santoso" [ref=f5e451]':
+                  - link "Budi & Lestari Prewedding" [ref=f5e452] [cursor=pointer]:
+                    - /url: /projects/01a043ef-81e7-72e4-9fab-3600b135261d
+                  - generic [ref=f5e453]: "Klien: Budi Santoso"
+                - cell "01/05/2026" [ref=f5e454]
+                - cell "Rp 25.000.000" [ref=f5e455]
+                - cell "Rp 0" [ref=f5e456]
+                - cell "Rp 0" [ref=f5e457]
+                - cell "Rp 25.000.000" [ref=f5e458]
+                - cell "Rp 25.000.000 (100%)" [ref=f5e459]
+                - cell "Rp 0" [ref=f5e460]
+                - cell "Lunas" [ref=f5e461]
+                - cell [ref=f5e463]:
+                  - button [ref=f5e464]
+              - row [ref=f5e469]:
+                - cell "INV-2504-0010" [ref=f5e470]
+                - 'cell "Skincare Brand Campaign GlowCare Klien: GlowCare Indonesia" [ref=f5e473]':
+                  - link "Skincare Brand Campaign GlowCare" [ref=f5e474] [cursor=pointer]:
+                    - /url: /projects/01a043ef-81fb-727e-98d0-786e9b4d5869
+                  - generic [ref=f5e475]: "Klien: GlowCare Indonesia"
+                - cell "20/04/2026" [ref=f5e476]
+                - cell "Rp 75.000.000" [ref=f5e477]
+                - cell "Rp 0" [ref=f5e478]
+                - cell "Rp 0" [ref=f5e479]
+                - cell "Rp 75.000.000" [ref=f5e480]
+                - cell "Rp 75.000.000 (100%)" [ref=f5e481]
+                - cell "Rp 0" [ref=f5e482]
+                - cell "Lunas" [ref=f5e483]
+                - cell [ref=f5e485]:
+                  - button [ref=f5e486]
+              - row [ref=f5e491]:
+                - cell "INV-2504-0005 DP" [ref=f5e492]:
+                  - generic [ref=f5e493]:
+                    - generic [ref=f5e494]: INV-2504-0005
+                    - generic [ref=f5e495]: DP
+                - 'cell "Company Event PT. Maju Klien: PT. Maju Jaya" [ref=f5e496]':
+                  - link "Company Event PT. Maju" [ref=f5e497] [cursor=pointer]:
+                    - /url: /projects/01a043ef-81f6-71b9-98de-7d0b7a400cbf
+                  - generic [ref=f5e498]: "Klien: PT. Maju Jaya"
+                - cell "18/04/2026" [ref=f5e499]
+                - cell "Rp 40.000.000" [ref=f5e500]
+                - cell "Rp 0" [ref=f5e501]
+                - cell "Rp 0" [ref=f5e502]
+                - cell "Rp 40.000.000" [ref=f5e503]
+                - cell "Rp 30.000.000 (75%)" [ref=f5e504]
+                - cell "Rp 10.000.000" [ref=f5e505]
+                - cell "Menunggu" [ref=f5e506]
+                - cell [ref=f5e508]:
+                  - button [ref=f5e509]
+              - row [ref=f5e514]:
+                - cell "INV-2503-0007" [ref=f5e515]
+                - 'cell "Ulang Tahun Keira Klien: Dewi Lestari" [ref=f5e518]':
+                  - link "Ulang Tahun Keira" [ref=f5e519] [cursor=pointer]:
+                    - /url: /projects/01a043ef-81ee-7103-82b3-0d85386f7ae9
+                  - generic [ref=f5e520]: "Klien: Dewi Lestari"
+                - cell "15/03/2026" [ref=f5e521]
+                - cell "Rp 8.500.000" [ref=f5e522]
+                - cell "Rp 0" [ref=f5e523]
+                - cell "Rp 0" [ref=f5e524]
+                - cell "Rp 8.500.000" [ref=f5e525]
+                - cell "Rp 8.500.000 (100%)" [ref=f5e526]
+                - cell "Rp 0" [ref=f5e527]
+                - cell "Lunas" [ref=f5e528]
+                - cell [ref=f5e530]:
+                  - button [ref=f5e531]
+        - generic [ref=f5e536]:
+          - generic [ref=f5e537]:
+            - heading "Status Invoice" [level=3] [ref=f5e538]
+            - generic [ref=f5e540]:
+              - generic:
+                - generic: Total
+                - generic: "9"
+                - generic: Invoice
+            - generic [ref=f5e546]:
+              - generic [ref=f5e547]:
+                - generic [ref=f5e548]: Lunas
+                - generic [ref=f5e551]: 5 (55.56%)
+              - generic [ref=f5e552]:
+                - generic [ref=f5e553]: Menunggu Pembayaran
+                - generic [ref=f5e556]: 2 (22.22%)
+              - generic [ref=f5e557]:
+                - generic [ref=f5e558]: Belum Dibayar
+                - generic [ref=f5e561]: 2 (22.22%)
+          - generic [ref=f5e562]:
+            - generic [ref=f5e563]:
+              - heading "Top 5 Project (Berdasarkan Nilai Transaksi)" [level=3] [ref=f5e564]
+              - generic [ref=f5e565]:
+                - generic [ref=f5e566]:
+                  - generic [ref=f5e567]:
+                    - generic [ref=f5e568]:
+                      - generic [ref=f5e569]: "1"
+                      - generic [ref=f5e570]:
+                        - generic "Wedding Kevin & Jessica" [ref=f5e571]
+                        - generic [ref=f5e572]: Kevin Sanjaya & Jessica Mila
+                    - generic [ref=f5e573]: Rp 85.000.000
+                  - generic [ref=f5e575]:
+                    - generic [ref=f5e576]:
+                      - generic [ref=f5e577]: "Sudah diterima:"
+                      - generic [ref=f5e578]: Rp 85.000.000
+                    - generic [ref=f5e579]: 100%
+                - generic [ref=f5e582]:
+                  - generic [ref=f5e583]:
+                    - generic [ref=f5e584]:
+                      - generic [ref=f5e585]: "2"
+                      - generic [ref=f5e586]:
+                        - generic "Skincare Brand Campaign GlowCare" [ref=f5e587]
+                        - generic [ref=f5e588]: GlowCare Indonesia
+                    - generic [ref=f5e589]: Rp 75.000.000
+                  - generic [ref=f5e591]:
+                    - generic [ref=f5e592]:
+                      - generic [ref=f5e593]: "Sudah diterima:"
+                      - generic [ref=f5e594]: Rp 75.000.000
+                    - generic [ref=f5e595]: 100%
+                - generic [ref=f5e598]:
+                  - generic [ref=f5e599]:
+                    - generic [ref=f5e600]:
+                      - generic [ref=f5e601]: "3"
+                      - generic [ref=f5e602]:
+                        - generic "TechNova Product Launch Summit" [ref=f5e603]
+                        - generic [ref=f5e604]: TechNova Indonesia
+                    - generic [ref=f5e605]: Rp 60.000.000
+                  - generic [ref=f5e607]:
+                    - generic [ref=f5e608]:
+                      - generic [ref=f5e609]: "Sudah diterima:"
+                      - generic [ref=f5e610]: Rp 30.000.000
+                    - generic [ref=f5e611]: 50%
+                - generic [ref=f5e614]:
+                  - generic [ref=f5e615]:
+                    - generic [ref=f5e616]:
+                      - generic [ref=f5e617]: "4"
+                      - generic [ref=f5e618]:
+                        - generic "Perorangan - Andi Pratama" [ref=f5e619]
+                        - generic [ref=f5e620]: Andi Pratama
+                    - generic [ref=f5e621]: Rp 50.500.000
+                  - generic [ref=f5e623]:
+                    - generic [ref=f5e624]:
+                      - generic [ref=f5e625]: "Sudah diterima:"
+                      - generic [ref=f5e626]: Rp 0
+                    - generic [ref=f5e627]: 0%
+                - generic [ref=f5e629]:
+                  - generic [ref=f5e630]:
+                    - generic [ref=f5e631]:
+                      - generic [ref=f5e632]: "5"
+                      - generic [ref=f5e633]:
+                        - generic "Wedding Andi & Sarah" [ref=f5e634]
+                        - generic [ref=f5e635]: Andi Pratama
+                    - generic [ref=f5e636]: Rp 50.000.000
+                  - generic [ref=f5e638]:
+                    - generic [ref=f5e639]:
+                      - generic [ref=f5e640]: "Sudah diterima:"
+                      - generic [ref=f5e641]: Rp 50.000.000
+                    - generic [ref=f5e642]: 100%
+            - link "Lihat Semua Project" [ref=f5e646] [cursor=pointer]:
+              - /url: /projects
+          - generic [ref=f5e650]:
+            - heading "Metode Pembayaran" [level=3] [ref=f5e651]
+            - generic [ref=f5e653]:
+              - generic:
+                - generic: Total
+                - generic: "21"
+                - generic: Transaksi
+            - generic [ref=f5e658]:
+              - generic [ref=f5e659]:
+                - generic [ref=f5e662]:
+                  - generic [ref=f5e663]: Transfer BCA
+                  - generic [ref=f5e664]: "8820192837"
+                - generic [ref=f5e665]:
+                  - generic [ref=f5e666]: 20 (95.24%)
+                  - text: Rp 997,5 jt
+              - generic [ref=f5e667]:
+                - generic [ref=f5e670]:
+                  - generic [ref=f5e671]: Transfer Mandiri
+                  - generic [ref=f5e672]: "1370019283921"
+                - generic [ref=f5e673]:
+                  - generic [ref=f5e674]: 1 (4.76%)
+                  - text: Rp 25 jt
+        - generic [ref=f5e675]:
+          - generic [ref=f5e676]:
+            - generic [ref=f5e677]:
+              - generic [ref=f5e678]:
+                - generic [ref=f5e679]: Laporan Finansial Studio
+                - generic [ref=f5e680]: •
+                - generic [ref=f5e681]: Buku Kas Terpadu 2026
+              - heading "Laporan Keuangan Terpadu (Pemasukan & Pengeluaran)" [level=3] [ref=f5e682]
+              - paragraph [ref=f5e683]: Semua arus kas masuk (omzet & pelunasan invoice) dan arus kas keluar (biaya operasional project & komisi referral) disajikan utuh dalam satu laporan.
+            - generic [ref=f5e684]:
+              - button "Cetak Laporan" [ref=f5e685] [cursor=pointer]
+              - button "Export CSV" [ref=f5e691] [cursor=pointer]
+          - generic [ref=f5e696]:
+            - generic [ref=f5e697]:
+              - generic [ref=f5e698]:
+                - generic [ref=f5e704]:
+                  - generic [ref=f5e705]: TOTAL PEMASUKAN
+                  - text: Omzet & Tagihan Project
+                - generic [ref=f5e706]: Inflow
+              - generic [ref=f5e707]: Rp 1.816.500.000
+              - generic [ref=f5e709]:
+                - generic [ref=f5e710]:
+                  - generic [ref=f5e711]: "Kas Sudah Diterima:"
+                  - generic [ref=f5e712]: Rp 1.309.887.496 (72,11%)
+                - generic [ref=f5e713]:
+                  - generic [ref=f5e714]: "Belum Diterima (Piutang):"
+                  - generic [ref=f5e715]: Rp 506.612.504 (27,89%)
+            - generic [ref=f5e716]:
+              - generic [ref=f5e717]:
+                - generic [ref=f5e723]:
+                  - generic [ref=f5e724]: TOTAL PENGELUARAN
+                  - text: Beban Operasional & Referral
+                - generic [ref=f5e725]: Outflow
+              - generic [ref=f5e726]: Rp 1.700.000
+              - generic [ref=f5e728]:
+                - generic [ref=f5e729]:
+                  - generic [ref=f5e730]: "Biaya Operasional Project:"
+                  - generic [ref=f5e731]: Rp 0
+                - generic [ref=f5e732]:
+                  - generic [ref=f5e733]: "Beban Komisi & Apresiasi:"
+                  - generic [ref=f5e734]: Rp 1.700.000
+            - generic [ref=f5e735]:
+              - generic [ref=f5e736]:
+                - generic [ref=f5e742]:
+                  - generic [ref=f5e743]: ESTIMASI LABA BERSIH
+                  - generic [ref=f5e744]: Net Profit (Margin 99,91%)
+                - generic [ref=f5e745]: Net Profit
+              - generic [ref=f5e746]: Rp 1.814.800.000
+              - generic [ref=f5e748]:
+                - generic [ref=f5e749]:
+                  - generic [ref=f5e750]: "Rumus Profit:"
+                  - generic [ref=f5e751]: Pemasukan − Pengeluaran
+                - generic [ref=f5e752]:
+                  - generic [ref=f5e753]: "Kas Bersih Saat Ini:"
+                  - generic [ref=f5e754]: Rp 1.308.187.496
+          - generic [ref=f5e755]:
+            - button "Ringkasan Terpadu (Pemasukan vs Pengeluaran)" [ref=f5e756] [cursor=pointer]
+            - button "Buku Kas Terpadu (27 Transaksi)" [ref=f5e761] [cursor=pointer]
+            - button "Rincian Biaya Operasional (9)" [ref=f5e766] [cursor=pointer]
+            - button "Rincian Komisi Referral (6)" [ref=f5e771] [cursor=pointer]
+          - generic [ref=f5e777]:
+            - generic [ref=f5e778]:
+              - generic [ref=f5e779]:
+                - generic [ref=f5e780]:
+                  - heading "Rincian Pemasukan (Income)" [level=4] [ref=f5e783]
+                  - generic [ref=f5e784]: + Rp 1.816.500.000
+                - generic [ref=f5e785]:
+                  - generic [ref=f5e786]:
+                    - generic [ref=f5e787]: "Paket Foto & Video Utama:"
+                    - generic [ref=f5e788]: Rp 1.379.500.000
+                  - generic [ref=f5e789]:
+                    - generic [ref=f5e790]: "Add-on & Ala Carte (Album, Print, Frame):"
+                    - generic [ref=f5e791]: Rp 22.000.000
+                  - generic [ref=f5e792]:
+                    - generic [ref=f5e793]: "Komponen Biaya di Invoice:"
+                    - generic [ref=f5e794]: Rp 0
+                  - generic [ref=f5e795]:
+                    - generic [ref=f5e796]: "Total Nilai Tagihan (Omzet):"
+                    - generic [ref=f5e797]: Rp 1.816.500.000
+                  - generic [ref=f5e798]:
+                    - generic [ref=f5e799]: "Kas Riil Sudah Diterima:"
+                    - generic [ref=f5e800]: Rp 1.309.887.496
+                  - generic [ref=f5e801]:
+                    - generic [ref=f5e802]: "Piutang Klien (Belum Lunas):"
+                    - generic [ref=f5e803]: Rp 506.612.504
+              - generic [ref=f5e804]:
+                - generic [ref=f5e805]:
+                  - heading "Rincian Pengeluaran (Expenses)" [level=4] [ref=f5e808]
+                  - generic [ref=f5e809]: "- Rp 1.700.000"
+                - generic [ref=f5e810]:
+                  - generic [ref=f5e811]:
+                    - generic [ref=f5e812]: "Beban Operasional Project (Akomodasi, Transport, Crew):"
+                    - generic [ref=f5e813]: Rp 0
+                  - generic [ref=f5e814]:
+                    - generic [ref=f5e815]: "Beban Komisi & Apresiasi Referral (Mitra):"
+                    - generic [ref=f5e816]: Rp 1.700.000
+                  - generic [ref=f5e817]:
+                    - generic [ref=f5e818]: "Total Seluruh Beban Pengeluaran:"
+                    - generic [ref=f5e819]: Rp 1.700.000
+                  - generic [ref=f5e820]:
+                    - generic [ref=f5e821]: "Jumlah Project Berbiaya Operasional:"
+                    - generic [ref=f5e822]: 9 Project
+                  - generic [ref=f5e823]:
+                    - generic [ref=f5e824]: "Jumlah Voucher Komisi Referral:"
+                    - generic [ref=f5e825]: 6 Voucher
+                  - generic [ref=f5e826]:
+                    - generic [ref=f5e827]: "Pencatatan ke Modul Finance:"
+                    - generic [ref=f5e828]: ✓ Terhubung Otomatis
+            - generic [ref=f5e829]:
+              - generic [ref=f5e830]:
+                - generic [ref=f5e831]: "Perhitungan Neraca Bersih:"
+                - generic [ref=f5e832]: Total Pemasukan (Rp 1.816.500.000) − Total Pengeluaran (Rp 1.700.000) =
+                - generic [ref=f5e833]: Laba Bersih Rp 1.814.800.000 (99,91%)
+              - button "Lihat Buku Kas Terpadu Transaksi" [ref=f5e834] [cursor=pointer]

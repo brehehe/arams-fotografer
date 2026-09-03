@@ -13,6 +13,7 @@ use App\Http\Controllers\MasterData\NoteTemplateController;
 use App\Http\Controllers\MasterData\PackageController;
 use App\Http\Controllers\MasterData\PaymentMethodController;
 use App\Http\Controllers\MasterData\ServiceController;
+use App\Http\Controllers\MasterData\WorkflowController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingController;
@@ -74,6 +75,15 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('services', ServiceController::class)->except(['create', 'edit', 'show']);
         Route::resource('packages', PackageController::class)->except(['create', 'edit', 'show']);
         Route::resource('addons', AddonController::class)->except(['create', 'edit', 'show']);
+        Route::put('workflows/packages/{package}/deliverables', [WorkflowController::class, 'updatePackageDeliverables'])->name('workflows.packages.deliverables');
+        Route::post('workflows/packages/{package}/deliverables', [WorkflowController::class, 'addPackageDeliverable'])->name('workflows.packages.deliverables.add');
+        Route::delete('workflows/packages/{package}/deliverables/{deliverableId}', [WorkflowController::class, 'destroyPackageDeliverable'])->name('workflows.packages.deliverables.destroy');
+        Route::post('workflows/packages', [WorkflowController::class, 'storePackage'])->name('workflows.packages.store');
+        Route::put('workflows/packages/{package}', [WorkflowController::class, 'updatePackage'])->name('workflows.packages.update');
+        Route::delete('workflows/packages/{package}', [WorkflowController::class, 'destroyPackage'])->name('workflows.packages.destroy');
+        Route::put('workflows/categories/{category}/workflow-type', [WorkflowController::class, 'updateCategoryWorkflowType'])->name('workflows.categories.workflow-type');
+        Route::resource('workflows', WorkflowController::class)->except(['create', 'edit', 'show']);
+        Route::get('workflow-template', fn() => redirect()->route('master-data.workflows.index'));
         Route::resource('payment-methods', PaymentMethodController::class)->except(['create', 'edit', 'show']);
         Route::resource('notes', NoteTemplateController::class)->except(['create', 'edit', 'show']);
     });
@@ -83,6 +93,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/sumber-klien', fn() => redirect()->route('client-sources.index'));
     Route::get('/sumber-klien/{id}', fn($id) => redirect()->route('client-sources.show', $id));
     Route::post('/client-sources/{client_source}/appreciation', [ClientSourceController::class, 'storeAppreciation'])->name('client-sources.appreciation.store');
+    Route::put('/client-sources/{client_source}/appreciation/{appreciation}', [ClientSourceController::class, 'updateAppreciation'])->name('client-sources.appreciation.update');
     Route::delete('/client-sources/{client_source}/appreciation/{appreciation}', [ClientSourceController::class, 'destroyAppreciation'])->name('client-sources.appreciation.destroy');
 
     // 5. Users
@@ -91,8 +102,12 @@ Route::middleware(['auth'])->group(function () {
     // 6. Finance, Invoices & Payments
     Route::get('/payments/create', fn () => redirect()->route('finance.index'));
     Route::get('/finance', [FinanceController::class, 'index'])->name('finance.index');
+    Route::get('/finance/invoices', [FinanceController::class, 'index'])->name('finance.invoices.index');
+    Route::get('/invoices', fn () => redirect()->route('finance.index'));
     Route::post('/finance/payments', [FinanceController::class, 'storePayment'])->name('finance.payments.store');
     Route::post('/finance/invoices', [FinanceController::class, 'storeInvoice'])->name('finance.invoices.store');
+    Route::post('/finance/transactions', [FinanceController::class, 'storeTransaction'])->name('finance.transactions.store');
+    Route::delete('/finance/transactions/{transaction}', [FinanceController::class, 'destroyTransaction'])->name('finance.transactions.destroy');
 
     // 7. Calendar
     Route::get('/calendar', [CalendarController::class, 'index'])->name('calendar.index');

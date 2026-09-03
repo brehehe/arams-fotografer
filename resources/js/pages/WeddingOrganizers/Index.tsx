@@ -295,7 +295,7 @@ export default function WeddingOrganizersIndex({
     };
 
     return (
-        <div className="space-y-6 pb-12">
+        <div className="w-full max-w-full space-y-6 pb-12">
             <Head title="Wedding Organizer (WO) - Lensaria Photography" />
 
             {/* Breadcrumb & Header Title */}

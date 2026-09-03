@@ -41,6 +41,12 @@ import {
 } from 'lucide-react';
 import { formatRupiah, formatRupiahCompact, formatNumber } from '@/lib/formatters';
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
     Table,
     TableHeader,
     TableBody,
@@ -266,7 +272,15 @@ export default function ClientsIndex({
     // Modals state
     const [createModalOpen, setCreateModalOpen] = useState(false);
     const [detailModalClient, setDetailModalClient] = useState<ClientItem | null>(null);
-    const [activeDropdownId, setActiveDropdownId] = useState<string | number | null>(null);
+    const [copied, setCopied] = useState(false);
+
+    const handleCopyFormLink = () => {
+        const url = typeof window !== 'undefined' ? `${window.location.origin}/form-klien` : 'http://localhost:8000/form-klien';
+        navigator.clipboard.writeText(url);
+        setCopied(true);
+        toast.success('Link Formulir Booking Online Klien berhasil disalin ke clipboard!');
+        setTimeout(() => setCopied(false), 2500);
+    };
 
     // Confirmation Alert state
     const [confirmDelete, setConfirmDelete] = useState<{
@@ -531,12 +545,6 @@ export default function ClientsIndex({
         }
     };
 
-    // Close action dropdowns on outside click
-    useEffect(() => {
-        const handleClickOutside = () => setActiveDropdownId(null);
-        window.addEventListener('click', handleClickOutside);
-        return () => window.removeEventListener('click', handleClickOutside);
-    }, []);
 
     // Filter Trigger
     const applyFilters = (newParams: Record<string, any> = {}) => {
@@ -756,7 +764,31 @@ export default function ClientsIndex({
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-2.5 sm:gap-3">
+                    <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap sm:flex-nowrap">
+                        {/* Copy Link Form Klien Button */}
+                        <button
+                            type="button"
+                            onClick={handleCopyFormLink}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold shadow-2xs transition-all hover:scale-[1.02] cursor-pointer"
+                        >
+                            {copied ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            ) : (
+                                <Copy className="w-3.5 h-3.5 text-slate-500" />
+                            )}
+                            <span>{copied ? 'Link Disalin!' : 'Salin Link Form'}</span>
+                        </button>
+
+                        <a
+                            href="/form-klien"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl text-xs font-bold shadow-2xs transition-all hover:scale-[1.02] cursor-pointer"
+                        >
+                            <ExternalLink className="w-3.5 h-3.5 text-amber-700" />
+                            <span>Buka Form Klien</span>
+                        </a>
+
                         <button
                             type="button"
                             onClick={() => setCreateModalOpen(true)}
@@ -900,6 +932,42 @@ export default function ClientsIndex({
 
                 {/* Main Content: Daftar Clients */}
                 <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+                    {/* Status Tabs Bar */}
+                    <div className="px-5 sm:px-6 pt-5 pb-3 border-b border-slate-100 flex items-center gap-2 overflow-x-auto no-scrollbar">
+                        {[
+                            { id: 'Semua', label: 'Semua Klien', count: stats.total_clients || clients.total },
+                            { id: 'lead', label: 'Booking Online (Lead)', badge: 'Baru' },
+                            { id: 'active', label: 'Klien Aktif', count: stats.active_clients },
+                            { id: 'completed', label: 'Project Selesai' },
+                        ].map((tab) => {
+                            const isTabActive = status === tab.id;
+                            return (
+                                <button
+                                    key={tab.id}
+                                    type="button"
+                                    onClick={() => handleStatusChange(tab.id)}
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer border ${
+                                        isTabActive
+                                            ? 'bg-[#380E13] text-white border-[#380E13] shadow-xs'
+                                            : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200/60'
+                                    }`}
+                                >
+                                    <span>{tab.label}</span>
+                                    {tab.badge && (
+                                        <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${isTabActive ? 'bg-amber-400 text-slate-900' : 'bg-amber-100 text-amber-800'}`}>
+                                            {tab.badge}
+                                        </span>
+                                    )}
+                                    {tab.count !== undefined && (
+                                        <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold ${isTabActive ? 'bg-white/20 text-white' : 'bg-slate-200/80 text-slate-700'}`}>
+                                            {tab.count}
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+
                     {/* Card Header with Search, Filter & Export */}
                     <div className="p-5 sm:p-6 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                         <div>
@@ -1144,65 +1212,51 @@ export default function ClientsIndex({
 
                                                         {/* 3-dots Menu Button */}
                                                         <div className="relative">
-                                                            <button
-                                                                type="button"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setActiveDropdownId(
-                                                                        activeDropdownId === c.id ? null : c.id
-                                                                    );
-                                                                }}
-                                                                className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors cursor-pointer shadow-2xs"
-                                                            >
-                                                                <MoreVertical className="w-4 h-4" />
-                                                            </button>
-
-                                                            {/* Dropdown Menu */}
-                                                            {activeDropdownId === c.id && (
-                                                                <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl z-30 py-1 divide-y divide-slate-50 animate-in fade-in zoom-in-95 duration-100 text-left">
-                                                                    <div className="p-1">
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => {
-                                                                                setDetailModalClient(c);
-                                                                                setActiveDropdownId(null);
-                                                                            }}
-                                                                            className="w-full px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 rounded-lg flex items-center gap-2 cursor-pointer"
-                                                                        >
-                                                                            <Eye className="w-3.5 h-3.5 text-slate-500" />
-                                                                            <span>Lihat Ringkasan</span>
-                                                                        </button>
-                                                                        {c.phone && (
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <button
+                                                                        type="button"
+                                                                        className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors cursor-pointer shadow-2xs"
+                                                                    >
+                                                                        <MoreVertical className="w-4 h-4" />
+                                                                    </button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end" className="w-44 bg-white border border-slate-200/90 rounded-xl shadow-xl p-1 z-50 text-xs">
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => setDetailModalClient(c)}
+                                                                        className="px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50 rounded-lg flex items-center gap-2 cursor-pointer font-medium"
+                                                                    >
+                                                                        <Eye className="w-3.5 h-3.5 text-slate-500" />
+                                                                        <span>Lihat Ringkasan</span>
+                                                                    </DropdownMenuItem>
+                                                                    {c.phone && (
+                                                                        <DropdownMenuItem asChild>
                                                                             <a
                                                                                 href={`https://wa.me/${c.phone.replace(/[^0-9]/g, '')}`}
                                                                                 target="_blank"
                                                                                 rel="noreferrer"
-                                                                                className="w-full px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 rounded-lg flex items-center gap-2 cursor-pointer"
+                                                                                className="px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50 rounded-lg flex items-center gap-2 cursor-pointer font-medium"
                                                                             >
                                                                                 <Phone className="w-3.5 h-3.5 text-emerald-600" />
                                                                                 <span>Chat WhatsApp</span>
                                                                             </a>
-                                                                        )}
-                                                                    </div>
-                                                                    <div className="p-1">
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => {
-                                                                                setActiveDropdownId(null);
-                                                                                setConfirmDelete({
-                                                                                    isOpen: true,
-                                                                                    clientId: c.id as number,
-                                                                                    clientName: c.name,
-                                                                                });
-                                                                            }}
-                                                                            className="w-full px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 rounded-lg flex items-center gap-2 cursor-pointer font-semibold"
-                                                                        >
-                                                                            <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                                                                            <span>Hapus Klien</span>
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-                                                            )}
+                                                                        </DropdownMenuItem>
+                                                                    )}
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => {
+                                                                            setConfirmDelete({
+                                                                                isOpen: true,
+                                                                                clientId: c.id as number,
+                                                                                clientName: c.name,
+                                                                            });
+                                                                        }}
+                                                                        className="px-2.5 py-1.5 text-xs text-rose-600 hover:bg-rose-50 rounded-lg flex items-center gap-2 cursor-pointer font-semibold focus:bg-rose-50 focus:text-rose-600"
+                                                                    >
+                                                                        <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                                                                        <span>Hapus Klien</span>
+                                                                    </DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
                                                         </div>
                                                     </div>
                                                 </TableCell>

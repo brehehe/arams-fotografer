@@ -37,7 +37,8 @@ class NoteTemplateController extends Controller
             }
         }
 
-        $templates = $query->latest('updated_at')->paginate(10)->withQueryString();
+        $perPage = (int) $request->input('per_page', 10);
+        $templates = $query->latest('updated_at')->paginate($perPage)->withQueryString();
 
         // Calculate dynamic stats
         $totalCount = NoteTemplate::count();
@@ -62,7 +63,7 @@ class NoteTemplateController extends Controller
 
         return Inertia::render('MasterData/Notes/Index', [
             'templates' => $templates,
-            'filters' => $request->only(['search', 'type', 'status']),
+            'filters' => $request->only(['search', 'type', 'status', 'per_page']),
             'stats' => $stats,
             'type_counts' => $typeCounts,
         ]);

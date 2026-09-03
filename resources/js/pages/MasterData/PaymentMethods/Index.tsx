@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
+import { Pagination } from '@/components/ui/pagination';
 import {
     Wallet,
     CheckCircle2,
@@ -50,6 +51,7 @@ interface PaymentMethodsIndexProps {
         total: number;
         from: number;
         to: number;
+        per_page?: number;
     };
     payment_methods?: {
         data: PaymentMethodItem[];
@@ -58,10 +60,12 @@ interface PaymentMethodsIndexProps {
         total: number;
         from: number;
         to: number;
+        per_page?: number;
     };
     stats?: Stats;
     filters?: {
         search?: string;
+        per_page?: number;
     };
 }
 
@@ -134,6 +138,7 @@ export default function PaymentMethodsIndex({
     const rawPaginated = paymentMethods || payment_methods || { data: [], current_page: 1, last_page: 1, total: 0, from: 0, to: 0 };
     const [searchQuery, setSearchQuery] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [perPage, setPerPage] = useState(filters?.per_page || 10);
     const [modalOpen, setModalOpen] = useState(false);
     const [editItem, setEditItem] = useState<PaymentMethodItem | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -293,6 +298,32 @@ export default function PaymentMethodsIndex({
         }
     };
 
+    const applyFilters = (newParams: Record<string, any> = {}) => {
+        router.get(
+            '/master-data/payment-methods',
+            {
+                search: newParams.search !== undefined ? newParams.search : searchQuery || undefined,
+                per_page: newParams.per_page !== undefined ? newParams.per_page : perPage,
+                page: newParams.page || 1,
+            },
+            { preserveState: true }
+        );
+    };
+
+    const handleSearchSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        applyFilters({ search: searchQuery, page: 1 });
+    };
+
+    const handlePageChange = (newPage: number) => {
+        applyFilters({ page: newPage });
+    };
+
+    const handlePerPageChange = (newPerPage: number) => {
+        setPerPage(newPerPage);
+        applyFilters({ per_page: newPerPage, page: 1 });
+    };
+
     const handleDelete = (id: number | string) => {
         if (confirm('Yakin ingin menghapus metode pembayaran ini?')) {
             router.delete(`/master-data/payment-methods/${id}`);
@@ -323,7 +354,7 @@ export default function PaymentMethodsIndex({
     };
 
     return (
-        <div className="space-y-6 pb-20">
+        <div className="w-full max-w-full space-y-6 pb-20">
             <Head title="Metode Pembayaran - Master Data" />
 
             {/* ── 1. BREADCRUMB & HEADER ── */}
@@ -582,22 +613,17 @@ export default function PaymentMethodsIndex({
                 </div>
 
                 {/* Pagination */}
-                <div className="p-4 sm:px-5 flex items-center justify-between border-t border-slate-100 bg-slate-50/30 text-xs text-slate-500 font-medium">
-                    <span>
-                        Menampilkan 1 - {filteredData.length} dari {stats.total || 7} metode pembayaran
-                    </span>
-                    <div className="flex items-center gap-1">
-                        <button type="button" className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 disabled:opacity-40" disabled>
-                            <ChevronLeft className="w-3.5 h-3.5" />
-                        </button>
-                        <button type="button" className="w-7 h-7 rounded-lg bg-[#3B46F1] text-white font-bold flex items-center justify-center text-xs shadow-2xs">
-                            1
-                        </button>
-                        <button type="button" className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 disabled:opacity-40" disabled>
-                            <ChevronRight className="w-3.5 h-3.5" />
-                        </button>
-                    </div>
-                </div>
+                <Pagination
+                    currentPage={rawPaginated.current_page || 1}
+                    lastPage={rawPaginated.last_page || 1}
+                    total={rawPaginated.total || filteredData.length}
+                    from={rawPaginated.from}
+                    to={rawPaginated.to}
+                    perPage={perPage}
+                    itemLabel="metode pembayaran"
+                    onPageChange={handlePageChange}
+                    onPerPageChange={handlePerPageChange}
+                />
             </div>
 
             {/* ── 4. MODAL: TAMBAH / EDIT METODE PEMBAYARAN ── */}

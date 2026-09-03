@@ -1,16 +1,16 @@
 import React, { useState, useMemo } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
+import { toast } from 'sonner';
+import { Pagination } from '@/components/ui/pagination';
 import {
     Box,
     CheckCircle2,
     MinusCircle,
-    FolderKanban,
     Plus,
     Search,
     Download,
     Edit2,
     Trash2,
-    ChevronLeft,
     ChevronRight,
     ChevronDown,
     X,
@@ -18,7 +18,8 @@ import {
     Video,
     BookOpen,
     Layers,
-    Sparkles,
+    Tag,
+    Folder,
 } from 'lucide-react';
 
 interface ServiceItem {
@@ -26,7 +27,7 @@ interface ServiceItem {
     name: string;
     description?: string;
     category_id?: number | string;
-    category?: { id: number; name: string; color: string };
+    category?: { id: number | string; name: string; color?: string };
     status?: string;
     projects_count?: number;
     used_count?: number;
@@ -36,7 +37,13 @@ interface Stats {
     total?: number;
     active?: number;
     inactive?: number;
-    used_in_projects?: number;
+    total_categories?: number;
+}
+
+interface CategoryOption {
+    id: number | string;
+    name: string;
+    color?: string;
 }
 
 interface ServicesIndexProps {
@@ -47,11 +54,16 @@ interface ServicesIndexProps {
         total: number;
         from: number;
         to: number;
+        per_page?: number;
+        links?: Array<{ url: string | null; label: string; active: boolean }>;
     };
-    categories?: Array<{ id: number; name: string; color?: string }>;
+    categories?: CategoryOption[];
     stats?: Stats;
     filters?: {
         search?: string;
+        category_id?: string;
+        status?: string;
+        per_page?: number;
     };
 }
 
@@ -71,7 +83,9 @@ function DroneIcon(props: React.SVGProps<SVGSVGElement>) {
 
 const SERVICE_ICONS: Record<string, React.ReactNode> = {
     Photography: <Camera className="w-4 h-4 text-indigo-600" />,
+    Fotografi: <Camera className="w-4 h-4 text-indigo-600" />,
     Videography: <Video className="w-4 h-4 text-indigo-600" />,
+    'Videografi Cinematic': <Video className="w-4 h-4 text-indigo-600" />,
     'Photography + Videography': (
         <div className="flex items-center -space-x-1">
             <Camera className="w-3.5 h-3.5 text-indigo-600" />
@@ -79,17 +93,20 @@ const SERVICE_ICONS: Record<string, React.ReactNode> = {
         </div>
     ),
     Album: <BookOpen className="w-4 h-4 text-indigo-600" />,
+    'Cetak Album': <BookOpen className="w-4 h-4 text-indigo-600" />,
     Drone: <DroneIcon className="w-4 h-4 text-indigo-600" />,
 };
 
 export default function ServicesIndex({
-    services = { data: [], current_page: 1, last_page: 1, total: 0, from: 0, to: 0 },
+    services = { data: [], current_page: 1, last_page: 1, total: 0, from: 0, to: 0, links: [] },
     categories = [],
-    stats = { total: 5, active: 5, inactive: 0, used_in_projects: 128 },
+    stats = { total: 0, active: 0, inactive: 0, total_categories: 0 },
     filters = {},
 }: ServicesIndexProps) {
     const [searchQuery, setSearchQuery] = useState(filters.search || '');
-    const [statusFilter, setStatusFilter] = useState('all');
+    const [categoryFilter, setCategoryFilter] = useState(filters.category_id || 'all');
+    const [statusFilter, setStatusFilter] = useState(filters.status || 'all');
+    const [perPage, setPerPage] = useState(filters?.per_page || 10);
     const [modalOpen, setModalOpen] = useState(false);
     const [editItem, setEditItem] = useState<ServiceItem | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -102,32 +119,8 @@ export default function ServicesIndex({
         status: 'active',
     });
 
-    // Demo services matching Screenshot 2
-    const demoServices: ServiceItem[] = useMemo(() => [
-        { id: 1, name: 'Photography', description: 'Jasa pengambilan foto untuk berbagai jenis project.', status: 'active', used_count: 96 },
-        { id: 2, name: 'Videography', description: 'Jasa pembuatan video untuk berbagai jenis project.', status: 'active', used_count: 62 },
-        { id: 3, name: 'Photography + Videography', description: 'Paket kombinasi foto dan video dalam satu layanan.', status: 'active', used_count: 48 },
-        { id: 4, name: 'Album', description: 'Jasa pembuatan album cetak (custom design).', status: 'active', used_count: 27 },
-        { id: 5, name: 'Drone', description: 'Pengambilan foto dan video udara menggunakan drone.', status: 'active', used_count: 19 },
-    ], []);
+    const serviceList = services.data || [];
 
-    const rawData = services.data && services.data.length > 0 ? services.data : demoServices;
-
-    const filteredData = useMemo(() => {
-        return rawData.filter((srv) => {
-            if (searchQuery) {
-                const q = searchQuery.toLowerCase();
-                if (!srv.name.toLowerCase().includes(q) && !(srv.description || '').toLowerCase().includes(q)) {
-                    return false;
-                }
-            }
-            if (statusFilter !== 'all') {
-                if (statusFilter === 'active' && srv.status !== 'active') return false;
-                if (statusFilter === 'inactive' && srv.status === 'active') return false;
-            }
-            return true;
-        });
-    }, [rawData, searchQuery, statusFilter]);
 
     const handleOpenCreate = () => {
         setEditItem(null);
@@ -151,43 +144,92 @@ export default function ServicesIndex({
         setModalOpen(true);
     };
 
+    const applyFilters = (newParams: Record<string, any> = {}) => {
+        router.get(
+            '/master-data/services',
+            {
+                search: newParams.search !== undefined ? newParams.search : searchQuery || undefined,
+                category_id: (newParams.category_id !== undefined ? newParams.category_id : categoryFilter) !== 'all' ? (newParams.category_id || categoryFilter) : undefined,
+                status: (newParams.status !== undefined ? newParams.status : statusFilter) !== 'all' ? (newParams.status || statusFilter) : undefined,
+                per_page: newParams.per_page !== undefined ? newParams.per_page : perPage,
+                page: newParams.page || 1,
+            },
+            { preserveState: true }
+        );
+    };
+
+    const handleSearchSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        applyFilters({ search: searchQuery, page: 1 });
+    };
+
+    const handleCategoryFilterChange = (val: string) => {
+        setCategoryFilter(val);
+        applyFilters({ category_id: val, page: 1 });
+    };
+
+    const handleStatusFilterChange = (val: string) => {
+        setStatusFilter(val);
+        applyFilters({ status: val, page: 1 });
+    };
+
+    const handlePageChange = (newPage: number) => {
+        applyFilters({ page: newPage });
+    };
+
+    const handlePerPageChange = (newPerPage: number) => {
+        setPerPage(newPerPage);
+        applyFilters({ per_page: newPerPage, page: 1 });
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
         if (editItem) {
             router.put(`/master-data/services/${editItem.id}`, form, {
                 onSuccess: () => {
+                    toast.success(`Layanan "${form.name}" berhasil diperbarui!`);
                     setModalOpen(false);
                     setIsSubmitting(false);
                 },
-                onError: () => setIsSubmitting(false),
+                onError: (errs) => {
+                    toast.error('Gagal memperbarui: ' + Object.values(errs).join(', '));
+                    setIsSubmitting(false);
+                },
             });
         } else {
             router.post('/master-data/services', form, {
                 onSuccess: () => {
+                    toast.success(`Layanan "${form.name}" berhasil ditambahkan!`);
                     setModalOpen(false);
                     setIsSubmitting(false);
                 },
-                onError: () => setIsSubmitting(false),
+                onError: (errs) => {
+                    toast.error('Gagal menambah: ' + Object.values(errs).join(', '));
+                    setIsSubmitting(false);
+                },
             });
         }
     };
 
-    const handleDelete = (id: number | string) => {
-        if (confirm('Yakin ingin menghapus jenis layanan ini?')) {
-            router.delete(`/master-data/services/${id}`);
+    const handleDelete = (srv: ServiceItem) => {
+        if (confirm(`Yakin ingin menghapus jenis layanan "${srv.name}"?`)) {
+            router.delete(`/master-data/services/${srv.id}`, {
+                onSuccess: () => toast.success(`Layanan "${srv.name}" berhasil dihapus!`),
+                onError: (errs) => toast.error('Gagal menghapus: ' + Object.values(errs).join(', ')),
+            });
         }
     };
 
     // Export CSV
     const handleExport = () => {
         const rows = [
-            ['No', 'Nama Layanan', 'Deskripsi', 'Digunakan di Project', 'Status'],
-            ...filteredData.map((s, i) => [
+            ['No', 'Nama Layanan', 'Kategori', 'Deskripsi', 'Status'],
+            ...serviceList.map((s, i) => [
                 i + 1,
                 s.name,
+                s.category?.name || 'Umum',
                 s.description || '-',
-                s.used_count || s.projects_count || 0,
                 s.status === 'active' ? 'Aktif' : 'Nonaktif',
             ]),
         ];
@@ -195,21 +237,21 @@ export default function ServicesIndex({
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement('a');
         link.setAttribute('href', encodedUri);
-        link.setAttribute('download', `Jenis_Layanan_${new Date().toISOString().split('T')[0]}.csv`);
+        link.setAttribute('download', `Layanan_Master_${new Date().toISOString().split('T')[0]}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
     };
 
     return (
-        <div className="space-y-6 pb-20">
+        <div className="w-full max-w-full space-y-6 pb-20">
             <Head title="Jenis Layanan - Master Data" />
 
             {/* ── 1. BREADCRUMB & HEADER ── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="space-y-1">
                     <nav className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
-                        <Link href="/master-data/services" className="hover:text-primary-accent transition-colors">
+                        <Link href="/master-data/categories" className="hover:text-primary-accent transition-colors">
                             Master Data
                         </Link>
                         <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
@@ -217,33 +259,42 @@ export default function ServicesIndex({
                     </nav>
                     <h1 className="text-2xl font-black text-slate-900 tracking-tight">Jenis Layanan</h1>
                     <p className="text-xs text-slate-500">
-                        Kelola jenis layanan yang ditawarkan dalam setiap project.
+                        Kelola master jenis layanan fotografi & videografi yang digunakan pada paket dan rincian project.
                     </p>
                 </div>
 
-                <button
-                    type="button"
-                    onClick={handleOpenCreate}
-                    className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#4F46E5] hover:bg-[#4338CA] text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-500/20 transition-all cursor-pointer shrink-0"
-                >
-                    <Plus className="w-4 h-4" />
-                    Tambah Jenis Layanan
-                </button>
+                <div className="flex items-center gap-2">
+                    <Link
+                        href="/master-data/packages"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer"
+                    >
+                        <Box className="w-4 h-4 text-indigo-600" />
+                        <span>Kelola Paket</span>
+                    </Link>
+                    <button
+                        type="button"
+                        onClick={handleOpenCreate}
+                        className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#4F46E5] hover:bg-[#4338CA] text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-500/20 transition-all cursor-pointer shrink-0"
+                    >
+                        <Plus className="w-4 h-4" />
+                        <span>Tambah Layanan</span>
+                    </button>
+                </div>
             </div>
 
             {/* ── 2. TOP 4 STAT CARDS ── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Card 1: Total Jenis Layanan */}
+                {/* Card 1: Total Layanan */}
                 <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-[#EEF2FF] flex items-center justify-center shrink-0">
-                        <Box className="w-6 h-6 text-[#4F46E5]" />
+                        <Layers className="w-6 h-6 text-[#4F46E5]" />
                     </div>
                     <div>
-                        <span className="text-xs font-bold text-slate-600 block">Total Jenis Layanan</span>
+                        <span className="text-xs font-bold text-slate-600 block">Total Layanan</span>
                         <h2 className="text-2xl font-black text-slate-900 tracking-tight font-sans">
-                            {stats.total || filteredData.length}
+                            {stats.total ?? serviceList.length}
                         </h2>
-                        <p className="text-[11px] text-slate-400 font-medium">Semua layanan</p>
+                        <p className="text-[11px] text-slate-400 font-medium">Layanan terdaftar</p>
                     </div>
                 </div>
 
@@ -255,9 +306,9 @@ export default function ServicesIndex({
                     <div>
                         <span className="text-xs font-bold text-slate-600 block">Layanan Aktif</span>
                         <h2 className="text-2xl font-black text-[#059669] tracking-tight font-sans">
-                            {stats.active || 5}
+                            {stats.active ?? 0}
                         </h2>
-                        <p className="text-[11px] text-slate-400 font-medium">Sedang aktif</p>
+                        <p className="text-[11px] text-slate-400 font-medium">Bisa dipilih di paket</p>
                     </div>
                 </div>
 
@@ -268,24 +319,24 @@ export default function ServicesIndex({
                     </div>
                     <div>
                         <span className="text-xs font-bold text-slate-600 block">Layanan Nonaktif</span>
-                        <h2 className="text-2xl font-black text-slate-900 tracking-tight font-sans">
+                        <h2 className="text-2xl font-black text-[#DC2626] tracking-tight font-sans">
                             {stats.inactive ?? 0}
                         </h2>
-                        <p className="text-[11px] text-slate-400 font-medium">Tidak aktif</p>
+                        <p className="text-[11px] text-slate-400 font-medium">Dinonaktifkan</p>
                     </div>
                 </div>
 
-                {/* Card 4: Digunakan di Project */}
+                {/* Card 4: Kategori Terkait */}
                 <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-[#FFFBEB] flex items-center justify-center shrink-0">
-                        <FolderKanban className="w-6 h-6 text-[#D97706]" />
+                        <Folder className="w-6 h-6 text-[#D97706]" />
                     </div>
                     <div>
-                        <span className="text-xs font-bold text-slate-600 block">Digunakan di Project</span>
+                        <span className="text-xs font-bold text-slate-600 block">Kategori Terkait</span>
                         <h2 className="text-2xl font-black text-slate-900 tracking-tight font-sans">
-                            {stats.used_in_projects || 128}
+                            {stats.total_categories ?? categories.length}
                         </h2>
-                        <p className="text-[11px] text-slate-400 font-medium">Total penggunaan</p>
+                        <p className="text-[11px] text-slate-400 font-medium">Kategori aktif</p>
                     </div>
                 </div>
             </div>
@@ -294,9 +345,9 @@ export default function ServicesIndex({
             <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
                 {/* Toolbar */}
                 <div className="p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100">
-                    <div className="flex flex-wrap items-center gap-3 flex-1">
+                    <form onSubmit={handleSearchSubmit} className="flex flex-wrap items-center gap-3 flex-1">
                         {/* Search Input */}
-                        <div className="relative min-w-[240px] max-w-sm flex-1">
+                        <div className="relative min-w-[220px] max-w-sm flex-1">
                             <input
                                 type="text"
                                 placeholder="Cari jenis layanan..."
@@ -307,11 +358,28 @@ export default function ServicesIndex({
                             <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                         </div>
 
+                        {/* Category Filter */}
+                        <div className="relative min-w-[160px]">
+                            <select
+                                value={categoryFilter}
+                                onChange={(e) => handleCategoryFilterChange(e.target.value)}
+                                className="w-full appearance-none pl-3.5 pr-8 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
+                            >
+                                <option value="all">Semua Kategori</option>
+                                {categories.map((c) => (
+                                    <option key={c.id} value={c.id}>
+                                        {c.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        </div>
+
                         {/* Status Filter */}
-                        <div className="relative min-w-[140px]">
+                        <div className="relative min-w-[130px]">
                             <select
                                 value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
+                                onChange={(e) => handleStatusFilterChange(e.target.value)}
                                 className="w-full appearance-none pl-3.5 pr-8 py-2 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
                             >
                                 <option value="all">Semua Status</option>
@@ -320,7 +388,7 @@ export default function ServicesIndex({
                             </select>
                             <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                         </div>
-                    </div>
+                    </form>
 
                     <button
                         type="button"
@@ -328,7 +396,7 @@ export default function ServicesIndex({
                         className="inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-indigo-200 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-50/70 transition-all cursor-pointer shadow-2xs"
                     >
                         <Download className="w-3.5 h-3.5 text-indigo-600" />
-                        Export
+                        <span>Export CSV</span>
                     </button>
                 </div>
 
@@ -337,41 +405,51 @@ export default function ServicesIndex({
                     <table className="w-full text-left text-xs border-collapse">
                         <thead>
                             <tr className="border-b border-slate-100 bg-slate-50/40 text-[10px] font-bold tracking-wider text-slate-500 uppercase">
-                                <th className="py-3 px-5 w-14">NO</th>
+                                <th className="py-3 px-5 w-12">NO</th>
                                 <th className="py-3 px-4">NAMA LAYANAN</th>
+                                <th className="py-3 px-4">KATEGORI</th>
                                 <th className="py-3 px-4">DESKRIPSI</th>
-                                <th className="py-3 px-4 text-center">DIGUNAKAN DI PROJECT</th>
                                 <th className="py-3 px-4 text-center">STATUS</th>
                                 <th className="py-3 px-5 text-center">AKSI</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {filteredData.length > 0 ? (
-                                filteredData.map((srv, idx) => {
-                                    const iconEl = SERVICE_ICONS[srv.name] || <Layers className="w-4 h-4 text-indigo-600" />;
+                            {serviceList.length > 0 ? (
+                                serviceList.map((srv, idx) => {
+                                    const iconEl = SERVICE_ICONS[srv.name] || <Tag className="w-4 h-4 text-indigo-600" />;
                                     const isActive = srv.status === 'active';
 
                                     return (
                                         <tr key={srv.id} className="hover:bg-slate-50/60 transition-colors">
                                             <td className="py-3.5 px-5 font-bold text-slate-400">
-                                                {idx + 1}
+                                                {((services.current_page || 1) - 1) * 10 + idx + 1}
                                             </td>
 
                                             <td className="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">
                                                 <div className="flex items-center gap-2.5">
-                                                    <div className="w-8 h-8 rounded-xl bg-indigo-50/80 border border-indigo-100 flex items-center justify-center shrink-0">
+                                                    <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
                                                         {iconEl}
                                                     </div>
-                                                    <span>{srv.name}</span>
+                                                    <span className="font-bold text-slate-900">{srv.name}</span>
                                                 </div>
+                                            </td>
+
+                                            <td className="py-3.5 px-4 whitespace-nowrap">
+                                                {srv.category ? (
+                                                    <Link
+                                                        href={`/master-data/categories`}
+                                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors border border-slate-200"
+                                                    >
+                                                        <Folder className="w-3 h-3 text-slate-500" />
+                                                        <span>{srv.category.name}</span>
+                                                    </Link>
+                                                ) : (
+                                                    <span className="text-slate-400 font-medium text-xs">Umum</span>
+                                                )}
                                             </td>
 
                                             <td className="py-3.5 px-4 text-slate-600 font-medium max-w-md">
                                                 {srv.description || '-'}
-                                            </td>
-
-                                            <td className="py-3.5 px-4 text-center font-bold text-slate-800">
-                                                {srv.used_count ?? srv.projects_count ?? 0}
                                             </td>
 
                                             <td className="py-3.5 px-4 text-center whitespace-nowrap">
@@ -398,7 +476,7 @@ export default function ServicesIndex({
                                                     </button>
                                                     <button
                                                         type="button"
-                                                        onClick={() => handleDelete(srv.id)}
+                                                        onClick={() => handleDelete(srv)}
                                                         className="w-8 h-8 rounded-lg border border-rose-200 hover:bg-rose-50 text-rose-500 flex items-center justify-center transition-colors cursor-pointer"
                                                         title="Hapus Layanan"
                                                     >
@@ -412,8 +490,8 @@ export default function ServicesIndex({
                             ) : (
                                 <tr>
                                     <td colSpan={6} className="py-12 text-center text-slate-400">
-                                        <Box className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                                        <p className="text-xs font-semibold text-slate-600">Tidak ada jenis layanan yang sesuai.</p>
+                                        <Layers className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                                        <p className="text-xs font-semibold text-slate-600">Tidak ada layanan yang sesuai.</p>
                                     </td>
                                 </tr>
                             )}
@@ -422,22 +500,17 @@ export default function ServicesIndex({
                 </div>
 
                 {/* Pagination */}
-                <div className="p-4 sm:px-5 flex items-center justify-between border-t border-slate-100 bg-slate-50/30 text-xs text-slate-500 font-medium">
-                    <span>
-                        Menampilkan 1 - {filteredData.length} dari {stats.total || filteredData.length} layanan
-                    </span>
-                    <div className="flex items-center gap-1">
-                        <button type="button" className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 disabled:opacity-40" disabled>
-                            <ChevronLeft className="w-3.5 h-3.5" />
-                        </button>
-                        <button type="button" className="w-7 h-7 rounded-lg bg-[#3B46F1] text-white font-bold flex items-center justify-center text-xs shadow-2xs">
-                            1
-                        </button>
-                        <button type="button" className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 disabled:opacity-40" disabled>
-                            <ChevronRight className="w-3.5 h-3.5" />
-                        </button>
-                    </div>
-                </div>
+                <Pagination
+                    currentPage={services.current_page || 1}
+                    lastPage={services.last_page || 1}
+                    total={services.total || serviceList.length}
+                    from={services.from}
+                    to={services.to}
+                    perPage={perPage}
+                    itemLabel="layanan"
+                    onPageChange={handlePageChange}
+                    onPerPageChange={handlePerPageChange}
+                />
             </div>
 
             {/* ── 4. MODAL: TAMBAH / EDIT LAYANAN ── */}
@@ -456,6 +529,25 @@ export default function ServicesIndex({
                         <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
                             <div>
                                 <label className="block font-bold text-slate-700 mb-1">
+                                    Kategori Project <span className="text-rose-500">*</span>
+                                </label>
+                                <select
+                                    required
+                                    value={form.category_id}
+                                    onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+                                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
+                                >
+                                    <option value="" disabled>Pilih Kategori</option>
+                                    {categories.map((c) => (
+                                        <option key={c.id} value={c.id}>
+                                            {c.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block font-bold text-slate-700 mb-1">
                                     Nama Layanan <span className="text-rose-500">*</span>
                                 </label>
                                 <input
@@ -463,25 +555,10 @@ export default function ServicesIndex({
                                     required
                                     value={form.name}
                                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                    placeholder="Contoh: Photography, Videography, dll"
+                                    placeholder="Contoh: Fotografi, Videografi, Album Cetak, Drone"
                                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                                 />
                             </div>
-
-                            {categories && categories.length > 0 && (
-                                <div>
-                                    <label className="block font-bold text-slate-700 mb-1">Kategori Utama</label>
-                                    <select
-                                        value={form.category_id}
-                                        onChange={(e) => setForm({ ...form, category_id: e.target.value })}
-                                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
-                                    >
-                                        {categories.map(c => (
-                                            <option key={c.id} value={c.id}>{c.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            )}
 
                             <div>
                                 <label className="block font-bold text-slate-700 mb-1">Deskripsi</label>
@@ -489,7 +566,7 @@ export default function ServicesIndex({
                                     rows={3}
                                     value={form.description}
                                     onChange={(e) => setForm({ ...form, description: e.target.value })}
-                                    placeholder="Deskripsi singkat mengenai jenis layanan ini..."
+                                    placeholder="Deskripsi singkat mengenai layanan ini..."
                                     className="w-full px-3.5 py-2 rounded-xl border border-slate-200 font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none"
                                 />
                             </div>

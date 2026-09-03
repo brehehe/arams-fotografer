@@ -16,20 +16,16 @@ import {
     Trash2,
     Check,
     ChevronRight,
+    Wallet,
+    CreditCard,
+    ExternalLink,
+    Receipt,
+    RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-    Table,
-    TableHeader,
-    TableBody,
-    TableHead,
-    TableRow,
-    TableCell,
-    TableEmpty,
-    TableFooter,
     Modal,
     AlertConfirmation,
-    Badge,
 } from '@/components/ui';
 
 interface ReferralHistoryItem {
@@ -42,13 +38,31 @@ interface ReferralHistoryItem {
     status: string;
 }
 
+interface PaymentMethodItem {
+    id: string;
+    name: string;
+    code: string;
+    account_number?: string;
+    account_holder?: string;
+}
+
 interface AppreciationItem {
     id: string;
     status: 'given' | 'pending' | string;
     date: string;
     type: string;
     amount: number;
+    payment_method_id?: string | null;
+    finance_reference?: string | null;
+    is_recorded_in_finance?: boolean;
+    payment_method?: PaymentMethodItem | null;
     notes?: string;
+}
+
+interface FinanceSummary {
+    total_expenses: number;
+    pending_expenses: number;
+    connected_to_finance: boolean;
 }
 
 interface ClientSourceShowProps {
@@ -74,24 +88,31 @@ interface ClientSourceShowProps {
     referral_history?: ReferralHistoryItem[];
     total_amount?: number;
     appreciations?: AppreciationItem[];
+    payment_methods?: PaymentMethodItem[];
+    finance_summary?: FinanceSummary;
 }
 
 export default function ClientSourceShow({
     source,
     metrics = {
-        total_referral_clients: 12,
-        total_projects: 12,
-        total_project_value: 28750000,
-        last_referral_date: '27 Agustus 2026',
-        last_referral_project: 'Kevin & Jessica (Wedding)',
+        total_referral_clients: 0,
+        total_projects: 0,
+        total_project_value: 0,
+        last_referral_date: '-',
+        last_referral_project: '-',
     },
     referral_history = [],
-    total_amount = 28750000,
+    total_amount = 0,
     appreciations = [],
+    payment_methods = [],
+    finance_summary = {
+        total_expenses: 0,
+        pending_expenses: 0,
+        connected_to_finance: true,
+    },
 }: ClientSourceShowProps) {
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [noteModalOpen, setNoteModalOpen] = useState(false);
-    const [appreciationModalOpen, setAppreciationModalOpen] = useState(false);
     const [confirmCancelAppreciation, setConfirmCancelAppreciation] = useState<{ isOpen: boolean; id?: string }>({
         isOpen: false,
     });
@@ -108,20 +129,20 @@ export default function ClientSourceShow({
 
     const [noteContent, setNoteContent] = useState(source.description || '');
 
-    const latestAppreciation = appreciations[0] || {
-        status: 'given',
-        date: '2026-08-25',
-        type: 'Voucher Belanja',
-        amount: 500000,
-        notes: 'Terima kasih banyak atas rekomendasi dan kepercayaannya. Semoga hubungan baik kita terus terjalin.',
-    };
+    // State for Appreciation Form (Create / Edit)
+    const [isEditingAppreciation, setIsEditingAppreciation] = useState(false);
+    const [editingAppreciationId, setEditingAppreciationId] = useState<string | null>(null);
+
+    const defaultPaymentMethodId = payment_methods[0]?.id || '';
 
     const [appreciationForm, setAppreciationForm] = useState({
-        status: latestAppreciation.status || 'given',
-        date: latestAppreciation.date || '2026-08-25',
-        type: latestAppreciation.type || 'Voucher Belanja',
-        amount: latestAppreciation.amount || 500000,
-        notes: latestAppreciation.notes || 'Terima kasih banyak atas rekomendasi dan kepercayaannya. Semoga hubungan baik kita terus terjalin.',
+        status: 'given',
+        date: new Date().toISOString().split('T')[0],
+        type: 'Komisi Tunai',
+        amount: 500000,
+        payment_method_id: defaultPaymentMethodId,
+        is_recorded_in_finance: true,
+        notes: '',
     });
 
     const formatCurrency = (val: number) => {
@@ -130,7 +151,7 @@ export default function ClientSourceShow({
             currency: 'IDR',
             minimumFractionDigits: 0,
             maximumFractionDigits: 0,
-        }).format(val);
+        }).format(val || 0);
     };
 
     const initials = source.name
@@ -139,10 +160,10 @@ export default function ClientSourceShow({
         .map((w) => w[0])
         .slice(0, 2)
         .join('')
-        .toUpperCase() || 'RS';
+        .toUpperCase() || 'SK';
 
     const getCategoryBadgeColor = (cat: string) => {
-        switch (cat.toLowerCase()) {
+        switch ((cat || '').toLowerCase()) {
             case 'wedding':
                 return 'bg-blue-50 text-blue-700 border-blue-200';
             case 'prewedding':
@@ -150,7 +171,11 @@ export default function ClientSourceShow({
             case 'engagement':
                 return 'bg-amber-50 text-amber-700 border-amber-200';
             case 'event':
+            case 'corporate':
                 return 'bg-purple-50 text-purple-700 border-purple-200';
+            case 'newborn':
+            case 'birthday':
+                return 'bg-emerald-50 text-emerald-700 border-emerald-200';
             default:
                 return 'bg-slate-100 text-slate-700 border-slate-200';
         }
@@ -190,29 +215,80 @@ export default function ClientSourceShow({
         );
     };
 
+    const handleEditAppreciation = (item: AppreciationItem) => {
+        setIsEditingAppreciation(true);
+        setEditingAppreciationId(item.id);
+        setAppreciationForm({
+            status: item.status || 'given',
+            date: item.date ? item.date.split('T')[0] : new Date().toISOString().split('T')[0],
+            type: item.type || 'Komisi Tunai',
+            amount: Number(item.amount) || 0,
+            payment_method_id: item.payment_method_id || defaultPaymentMethodId,
+            is_recorded_in_finance: item.is_recorded_in_finance ?? true,
+            notes: item.notes || '',
+        });
+        toast.info(`Mengubah apresiasi (${item.type})`);
+    };
+
+    const handleResetAppreciationForm = () => {
+        setIsEditingAppreciation(false);
+        setEditingAppreciationId(null);
+        setAppreciationForm({
+            status: 'given',
+            date: new Date().toISOString().split('T')[0],
+            type: 'Komisi Tunai',
+            amount: 500000,
+            payment_method_id: defaultPaymentMethodId,
+            is_recorded_in_finance: true,
+            notes: '',
+        });
+    };
+
     const handleSaveAppreciation = (e: React.FormEvent) => {
         e.preventDefault();
-        router.post(`/client-sources/${source.id}/appreciation`, appreciationForm, {
-            onSuccess: () => {
-                setAppreciationModalOpen(false);
-                toast.success('Apresiasi referral berhasil dicatat.');
-            },
-            onError: () => {
-                toast.error('Gagal mencatat apresiasi.');
-            },
-        });
+
+        if (isEditingAppreciation && editingAppreciationId) {
+            router.put(`/client-sources/${source.id}/appreciation/${editingAppreciationId}`, appreciationForm, {
+                onSuccess: () => {
+                    handleResetAppreciationForm();
+                    toast.success('Apresiasi referral berhasil diperbarui.');
+                },
+                onError: () => {
+                    toast.error('Gagal memperbarui apresiasi.');
+                },
+            });
+        } else {
+            router.post(`/client-sources/${source.id}/appreciation`, appreciationForm, {
+                onSuccess: () => {
+                    handleResetAppreciationForm();
+                    toast.success(
+                        appreciationForm.is_recorded_in_finance
+                            ? 'Apresiasi berhasil disimpan dan dicatat ke Finance!'
+                            : 'Apresiasi referral berhasil dicatat.'
+                    );
+                },
+                onError: () => {
+                    toast.error('Gagal mencatat apresiasi.');
+                },
+            });
+        }
     };
 
     const handleCancelAppreciation = () => {
         if (!confirmCancelAppreciation.id) {
             setConfirmCancelAppreciation({ isOpen: false });
-            toast.info('Pencatatan apresiasi dinonaktifkan.');
             return;
         }
         router.delete(`/client-sources/${source.id}/appreciation/${confirmCancelAppreciation.id}`, {
             onSuccess: () => {
                 setConfirmCancelAppreciation({ isOpen: false });
-                toast.success('Apresiasi referral berhasil dibatalkan.');
+                if (editingAppreciationId === confirmCancelAppreciation.id) {
+                    handleResetAppreciationForm();
+                }
+                toast.success('Apresiasi referral berhasil dihapus.');
+            },
+            onError: () => {
+                toast.error('Gagal menghapus apresiasi.');
             },
         });
     };
@@ -224,11 +300,18 @@ export default function ClientSourceShow({
             {/* ── HEADER TITLE & TOP ACTIONS ─────────────────────────────────── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
+                    <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
+                        <Link href="/client-sources" className="hover:text-indigo-600 transition-colors">
+                            Sumber Klien
+                        </Link>
+                        <span>/</span>
+                        <span className="font-semibold text-slate-800">{source.name}</span>
+                    </div>
                     <h1 className="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">
                         Detail Sumber Klien
                     </h1>
                     <p className="text-slate-500 text-sm mt-1">
-                        Informasi lengkap tentang sumber klien / referral dan riwayat kontribusinya.
+                        Data referral nyata terhubung langsung dengan database klien, project, dan modul Finance.
                     </p>
                 </div>
 
@@ -302,9 +385,9 @@ export default function ClientSourceShow({
                         </div>
 
                         <div className="px-4 py-2 rounded-2xl bg-slate-50 border border-slate-200/60 text-xs">
-                            <span className="text-slate-400 text-[11px] block">Dibuat Otomatis</span>
+                            <span className="text-slate-400 text-[11px] block">Terdaftar Sejak</span>
                             <span className="font-bold text-slate-700 mt-0.5 block">
-                                {source.created_at ? new Date(source.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '29 Mei 2026, 14:32 WIB'}
+                                {source.created_at ? new Date(source.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
                             </span>
                         </div>
                     </div>
@@ -313,11 +396,11 @@ export default function ClientSourceShow({
                 {/* Bottom notice */}
                 <div className="pt-3 border-t border-slate-100 flex items-center gap-2 text-xs text-slate-400">
                     <Info className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                    <span>Sumber ini dibuat otomatis saat pertama kali digunakan oleh client.</span>
+                    <span>Data terhubung secara real-time dengan basis data klien dan transaksi proyek Arams.</span>
                 </div>
             </div>
 
-            {/* ── 2. FOUR DEDICATED STAT CARDS (BELOW PROFILE CARD) ─────────── */}
+            {/* ── 2. METRIC STAT CARDS (REAL DATABASE) ────────────────────────── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Card 1: Total Referral */}
                 <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
@@ -328,10 +411,10 @@ export default function ClientSourceShow({
                         <span className="text-xs font-semibold text-slate-500 block truncate">
                             Total Referral (Client)
                         </span>
-                        <div className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">
+                        <div className="text-2xl font-black text-slate-900 tracking-tight mt-0.5 font-sans">
                             {metrics.total_referral_clients}
                         </div>
-                        <span className="text-[11px] text-slate-400 font-medium">Client</span>
+                        <span className="text-[11px] text-slate-400 font-medium">Klien terdaftar</span>
                     </div>
                 </div>
 
@@ -344,10 +427,10 @@ export default function ClientSourceShow({
                         <span className="text-xs font-semibold text-slate-500 block truncate">
                             Total Project
                         </span>
-                        <div className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">
+                        <div className="text-2xl font-black text-slate-900 tracking-tight mt-0.5 font-sans">
                             {metrics.total_projects}
                         </div>
-                        <span className="text-[11px] text-slate-400 font-medium">Project</span>
+                        <span className="text-[11px] text-slate-400 font-medium">Proyek aktif</span>
                     </div>
                 </div>
 
@@ -360,11 +443,11 @@ export default function ClientSourceShow({
                         <span className="text-xs font-semibold text-slate-500 block truncate">
                             Total Nilai Project
                         </span>
-                        <div className="text-xl font-black text-slate-900 tracking-tight mt-0.5 truncate" title={formatCurrency(metrics.total_project_value)}>
+                        <div className="text-xl font-black text-[#C89445] tracking-tight mt-0.5 truncate font-sans" title={formatCurrency(metrics.total_project_value)}>
                             {formatCurrency(metrics.total_project_value)}
                         </div>
                         <span className="text-[11px] text-slate-400 font-medium truncate block">
-                            Nilai dari semua project
+                            Nilai dari seluruh project
                         </span>
                     </div>
                 </div>
@@ -388,24 +471,62 @@ export default function ClientSourceShow({
                 </div>
             </div>
 
-            {/* ── TWO-COLUMN CONTENT AREA ────────────────────────────────────── */}
+            {/* ── 3. FINANCE INTEGRATION STATUS BANNER ────────────────────────── */}
+            <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-5 text-white shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                    <div className="w-11 h-11 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center text-emerald-400 shrink-0">
+                        <Wallet className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-bold text-white">Integrasi Pengeluaran Finance</h3>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                Terhubung
+                            </span>
+                        </div>
+                        <p className="text-xs text-slate-300 mt-0.5">
+                            Setiap komisi atau apresiasi referral otomatis tercatat sebagai beban pengeluaran operasional di buku kas studio.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-4 shrink-0 w-full md:w-auto justify-between md:justify-end border-t border-white/10 md:border-t-0 pt-3 md:pt-0">
+                    <div>
+                        <span className="text-[10px] text-slate-400 font-semibold block uppercase tracking-wider">Total Dibayarkan</span>
+                        <span className="text-base font-extrabold text-[#C89445] font-sans">
+                            {formatCurrency(finance_summary.total_expenses)}
+                        </span>
+                    </div>
+
+                    <Link
+                        href="/finance"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                    >
+                        <span>Lihat di Finance</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                    </Link>
+                </div>
+            </div>
+
+            {/* ── 4. TWO-COLUMN CONTENT AREA ─────────────────────────────────── */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 {/* ── LEFT COLUMN (7 COLS): REFERRAL HISTORY & NOTES ────────── */}
                 <div className="lg:col-span-7 space-y-6">
-                    {/* Riwayat Referral Table Card */}
+                    {/* Riwayat Referral Table Card (Real DB) */}
                     <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 space-y-4">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-sm font-extrabold text-slate-900">
-                                Riwayat Referral (Client &amp; Project)
-                            </h3>
-                            <button
-                                type="button"
-                                onClick={() => toast.info('Menampilkan seluruh riwayat referral')}
-                                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer transition-colors"
-                            >
-                                <span>Lihat Semua Riwayat</span>
-                                <ChevronRight className="w-3.5 h-3.5" />
-                            </button>
+                            <div>
+                                <h3 className="text-sm font-extrabold text-slate-900">
+                                    Riwayat Referral (Client &amp; Project)
+                                </h3>
+                                <p className="text-[11px] text-slate-500 mt-0.5">
+                                    Daftar project klien yang bersumber dari {source.name}.
+                                </p>
+                            </div>
+                            <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">
+                                {referral_history.length} Project
+                            </span>
                         </div>
 
                         <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white">
@@ -417,68 +538,67 @@ export default function ClientSourceShow({
                                         <th className="py-3 px-3.5 min-w-28">PROJECT</th>
                                         <th className="py-3 px-3.5 min-w-28">TANGGAL PROJECT</th>
                                         <th className="py-3 px-3.5 min-w-32 text-right">NILAI PROJECT</th>
-                                        <th className="py-3 px-3.5 min-w-28 text-center">STATUS PROJECT</th>
+                                        <th className="py-3 px-3.5 min-w-28 text-center">STATUS</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 font-medium">
-                                    {referral_history.map((item, idx) => (
-                                        <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
-                                            <td className="py-3 px-3.5 text-center text-slate-400 font-bold">
-                                                {idx + 1}
-                                            </td>
-                                            <td className="py-3 px-3.5 font-bold text-slate-900">
-                                                {item.client}
-                                            </td>
-                                            <td className="py-3 px-3.5">
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-lg text-[11px] font-bold border ${getCategoryBadgeColor(item.project_category)}`}>
-                                                    {item.project}
-                                                </span>
-                                            </td>
-                                            <td className="py-3 px-3.5 text-slate-500 font-medium">
-                                                {item.event_date}
-                                            </td>
-                                            <td className="py-3 px-3.5 text-right font-bold text-slate-900">
-                                                {formatCurrency(item.amount)}
-                                            </td>
-                                            <td className="py-3 px-3.5 text-center">
-                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                    {item.status}
-                                                </span>
+                                    {referral_history.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={6} className="py-8 text-center text-slate-400">
+                                                <Users className="w-7 h-7 mx-auto text-slate-300 mb-1.5" />
+                                                <p className="font-semibold text-xs text-slate-600">Belum ada project tercatat</p>
+                                                <p className="text-[11px] text-slate-400 mt-0.5">
+                                                    Klien baru yang memilih sumber ini akan otomatis muncul di sini.
+                                                </p>
                                             </td>
                                         </tr>
-                                    ))}
+                                    ) : (
+                                        referral_history.map((item, idx) => (
+                                            <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
+                                                <td className="py-3 px-3.5 text-center text-slate-400 font-bold">
+                                                    {idx + 1}
+                                                </td>
+                                                <td className="py-3 px-3.5 font-bold text-slate-900">
+                                                    {item.client}
+                                                </td>
+                                                <td className="py-3 px-3.5">
+                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-lg text-[11px] font-bold border ${getCategoryBadgeColor(item.project_category)}`}>
+                                                        {item.project}
+                                                    </span>
+                                                </td>
+                                                <td className="py-3 px-3.5 text-slate-500 font-medium">
+                                                    {item.event_date}
+                                                </td>
+                                                <td className="py-3 px-3.5 text-right font-bold text-slate-900 font-sans">
+                                                    {formatCurrency(item.amount)}
+                                                </td>
+                                                <td className="py-3 px-3.5 text-center">
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                        {item.status}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
-                                <tfoot>
-                                    <tr className="bg-slate-50/90 font-extrabold text-slate-900 border-t border-slate-200/80">
-                                        <td colSpan={4} className="py-3 px-3.5 uppercase tracking-wider text-xs font-bold text-slate-700">
-                                            Total
-                                        </td>
-                                        <td className="py-3 px-3.5 text-right text-xs font-black text-slate-900">
-                                            {formatCurrency(total_amount)}
-                                        </td>
-                                        <td className="py-3 px-3.5"></td>
-                                    </tr>
-                                </tfoot>
+                                {referral_history.length > 0 && (
+                                    <tfoot>
+                                        <tr className="bg-slate-50/90 font-extrabold text-slate-900 border-t border-slate-200/80">
+                                            <td colSpan={4} className="py-3 px-3.5 uppercase tracking-wider text-xs font-bold text-slate-700">
+                                                Total Nilai Transaksi
+                                            </td>
+                                            <td className="py-3 px-3.5 text-right text-xs font-black text-[#C89445] font-sans">
+                                                {formatCurrency(total_amount)}
+                                            </td>
+                                            <td className="py-3 px-3.5"></td>
+                                        </tr>
+                                    </tfoot>
+                                )}
                             </table>
                         </div>
 
-                        {/* Pagination footer */}
                         <div className="flex items-center justify-between pt-1 text-xs text-slate-500">
-                            <span>Menampilkan 1 - 10 dari 12 project</span>
-                            <div className="flex items-center gap-1.5">
-                                <button type="button" className="px-2.5 py-1 border border-slate-200 rounded-lg text-slate-400 font-bold hover:bg-slate-50 cursor-pointer">
-                                    &lt;
-                                </button>
-                                <button type="button" className="w-7 h-7 rounded-lg bg-[#4F46E5] text-white text-xs font-bold shadow-xs flex items-center justify-center">
-                                    1
-                                </button>
-                                <button type="button" className="w-7 h-7 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold flex items-center justify-center cursor-pointer">
-                                    2
-                                </button>
-                                <button type="button" className="px-2.5 py-1 border border-slate-200 rounded-lg text-slate-600 font-bold hover:bg-slate-50 cursor-pointer">
-                                    &gt;
-                                </button>
-                            </div>
+                            <span>Menampilkan {referral_history.length} data proyek terhubung</span>
                         </div>
                     </div>
 
@@ -487,7 +607,7 @@ export default function ClientSourceShow({
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <h3 className="text-sm font-extrabold text-slate-900">
-                                    Catatan Sumber (Opsional)
+                                    Catatan Sumber
                                 </h3>
                             </div>
                             <button
@@ -496,33 +616,39 @@ export default function ClientSourceShow({
                                 className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/80 rounded-xl text-xs font-bold transition-colors cursor-pointer"
                             >
                                 <Plus className="w-3.5 h-3.5 text-indigo-600" />
-                                <span>Tambah Catatan</span>
+                                <span>{source.description ? 'Ubah Catatan' : 'Tambah Catatan'}</span>
                             </button>
                         </div>
 
                         <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/60 text-xs text-slate-700 leading-relaxed font-medium">
-                            {source.description || 'Channel organik Instagram @arams.pictures'}
+                            {source.description || 'Belum ada catatan khusus untuk sumber klien ini.'}
                         </div>
                     </div>
                 </div>
 
                 {/* ── RIGHT COLUMN (5 COLS): APRESIASI REFERRAL & RIWAYAT ──── */}
                 <div className="lg:col-span-5 space-y-6">
-                    {/* Apresiasi Referral Form Card */}
+                    {/* Apresiasi Referral Form Card (Terintegrasi Finance) */}
                     <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 space-y-4">
                         <div className="flex items-start justify-between">
                             <div>
                                 <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
                                     <Gift className="w-4 h-4 text-indigo-600" />
-                                    <span>Apresiasi Referral</span>
+                                    <span>{isEditingAppreciation ? 'Ubah Apresiasi Referral' : 'Apresiasi Referral'}</span>
                                 </h3>
                                 <p className="text-[11px] text-slate-400 mt-0.5">
-                                    Pencatatan apresiasi dilakukan secara manual oleh Owner/Admin.
+                                    Pencatatan komisi/reward yang otomatis tersinkronisasi dengan Finance.
                                 </p>
                             </div>
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
-                                Sudah Diberikan
-                            </span>
+                            {isEditingAppreciation && (
+                                <button
+                                    type="button"
+                                    onClick={handleResetAppreciationForm}
+                                    className="text-[11px] font-bold text-rose-600 hover:underline cursor-pointer"
+                                >
+                                    Batal Edit
+                                </button>
+                            )}
                         </div>
 
                         <form onSubmit={handleSaveAppreciation} className="space-y-3.5 pt-1 text-xs">
@@ -558,14 +684,13 @@ export default function ClientSourceShow({
                             {/* Tanggal Apresiasi */}
                             <div>
                                 <label className="font-bold text-slate-700 block mb-1">Tanggal Apresiasi</label>
-                                <div className="relative">
-                                    <input
-                                        type="date"
-                                        value={appreciationForm.date}
-                                        onChange={(e) => setAppreciationForm({ ...appreciationForm, date: e.target.value })}
-                                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 font-semibold focus:bg-white focus:border-indigo-600 outline-hidden"
-                                    />
-                                </div>
+                                <input
+                                    type="date"
+                                    required
+                                    value={appreciationForm.date}
+                                    onChange={(e) => setAppreciationForm({ ...appreciationForm, date: e.target.value })}
+                                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 font-semibold focus:bg-white focus:border-indigo-600 outline-hidden"
+                                />
                             </div>
 
                             {/* Bentuk Apresiasi */}
@@ -576,8 +701,8 @@ export default function ClientSourceShow({
                                     onChange={(e) => setAppreciationForm({ ...appreciationForm, type: e.target.value })}
                                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 font-semibold focus:bg-white focus:border-indigo-600 outline-hidden cursor-pointer"
                                 >
-                                    <option value="Voucher Belanja">Voucher Belanja</option>
                                     <option value="Komisi Tunai">Komisi Tunai</option>
+                                    <option value="Voucher Belanja">Voucher Belanja</option>
                                     <option value="Hadiah / Gift">Hadiah / Gift</option>
                                     <option value="Diskon Layanan">Diskon Layanan</option>
                                     <option value="Lainnya">Lainnya</option>
@@ -586,69 +711,97 @@ export default function ClientSourceShow({
 
                             {/* Nominal / Nilai */}
                             <div>
-                                <label className="font-bold text-slate-700 block mb-1">Nominal / Nilai (Jika ada)</label>
+                                <label className="font-bold text-slate-700 block mb-1">Nominal / Nilai (Rp)</label>
                                 <div className="flex items-center">
                                     <span className="px-3.5 py-2.5 bg-slate-100 border border-r-0 border-slate-200 rounded-l-xl text-xs font-bold text-slate-500">
                                         Rp
                                     </span>
                                     <input
                                         type="number"
+                                        min={0}
                                         value={appreciationForm.amount}
                                         onChange={(e) => setAppreciationForm({ ...appreciationForm, amount: Number(e.target.value) })}
-                                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-r-xl text-xs font-bold text-slate-900 focus:bg-white focus:border-indigo-600 outline-hidden"
+                                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-r-xl text-xs font-bold text-slate-900 focus:bg-white focus:border-indigo-600 outline-hidden font-sans"
                                     />
                                 </div>
+                            </div>
+
+                            {/* ── KONEKSI KE FINANCE (PENGELUARAN) ── */}
+                            <div className="p-3.5 rounded-2xl bg-indigo-50/60 border border-indigo-100/80 space-y-3">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={appreciationForm.is_recorded_in_finance}
+                                        onChange={(e) => setAppreciationForm({ ...appreciationForm, is_recorded_in_finance: e.target.checked })}
+                                        className="w-4 h-4 text-indigo-600 rounded-sm border-slate-300 focus:ring-indigo-500"
+                                    />
+                                    <span className="font-bold text-xs text-indigo-950">
+                                        Sambungkan ke Finance (Catat sebagai Pengeluaran Operasional)
+                                    </span>
+                                </label>
+
+                                {appreciationForm.is_recorded_in_finance && (
+                                    <div className="space-y-2 pt-1 border-t border-indigo-100/60">
+                                        <label className="block text-[11px] font-bold text-indigo-900">
+                                            Metode Pembayaran / Sumber Kas
+                                        </label>
+                                        <select
+                                            value={appreciationForm.payment_method_id}
+                                            onChange={(e) => setAppreciationForm({ ...appreciationForm, payment_method_id: e.target.value })}
+                                            className="w-full px-3 py-2 bg-white border border-indigo-200 rounded-xl text-xs text-slate-800 font-semibold focus:border-indigo-600 outline-hidden cursor-pointer"
+                                        >
+                                            {payment_methods.map((pm) => (
+                                                <option key={pm.id} value={pm.id}>
+                                                    {pm.name} {pm.account_number ? `(${pm.account_number})` : ''}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <p className="text-[10px] text-indigo-700 flex items-center gap-1">
+                                            <Receipt className="w-3 h-3" />
+                                            <span>Nomor referensi kas otomatis: EXP-REF-...</span>
+                                        </p>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Catatan */}
                             <div>
                                 <label className="font-bold text-slate-700 block mb-1">Catatan</label>
                                 <textarea
-                                    rows={3}
+                                    rows={2}
+                                    placeholder="Contoh: Komisi referral transfer fee project Kevin & Jessica"
                                     value={appreciationForm.notes}
                                     onChange={(e) => setAppreciationForm({ ...appreciationForm, notes: e.target.value })}
                                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 leading-relaxed focus:bg-white focus:border-indigo-600 outline-hidden resize-none font-medium"
                                 />
                             </div>
 
-                            {/* Action Buttons matching Gambar 3 */}
-                            <div className="grid grid-cols-2 gap-3 pt-2">
+                            {/* Action Buttons */}
+                            <div className="pt-2">
                                 <button
                                     type="submit"
-                                    className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+                                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#4F46E5] hover:bg-[#4338CA] text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-500/20 cursor-pointer"
                                 >
-                                    <Edit2 className="w-3.5 h-3.5 text-indigo-600" />
-                                    <span>Lihat / Ubah Apresiasi</span>
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() => setConfirmCancelAppreciation({ isOpen: true, id: latestAppreciation?.id })}
-                                    className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-                                >
-                                    <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                                    <span>Batalkan Apresiasi</span>
+                                    <CheckCircle2 className="w-4 h-4" />
+                                    <span>
+                                        {isEditingAppreciation ? 'Simpan Perubahan Apresiasi' : 'Simpan & Sambungkan ke Finance'}
+                                    </span>
                                 </button>
                             </div>
                         </form>
                     </div>
 
-                    {/* Riwayat Apresiasi List Card */}
+                    {/* Riwayat Apresiasi List Card (Real DB) */}
                     <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 space-y-4">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1.5">
                                 <h3 className="text-sm font-extrabold text-slate-900">
                                     Riwayat Apresiasi
                                 </h3>
-                                <Info className="w-3.5 h-3.5 text-slate-400" />
+                                <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                                    {appreciations.length}
+                                </span>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => toast.info('Menampilkan seluruh riwayat apresiasi')}
-                                className="text-xs font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer"
-                            >
-                                Lihat Semua
-                            </button>
                         </div>
 
                         <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white">
@@ -656,32 +809,94 @@ export default function ClientSourceShow({
                                 <thead>
                                     <tr className="bg-slate-50/90 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200/80 whitespace-nowrap">
                                         <th className="py-3 px-3.5 min-w-24">TANGGAL</th>
-                                        <th className="py-3 px-3.5 min-w-32">BENTUK APRESIASI</th>
-                                        <th className="py-3 px-3.5 min-w-24">NILAI</th>
-                                        <th className="py-3 px-3.5 min-w-56">CATATAN</th>
+                                        <th className="py-3 px-3.5 min-w-32">BENTUK</th>
+                                        <th className="py-3 px-3.5 min-w-28">NILAI &amp; FINANCE</th>
+                                        <th className="py-3 px-3.5 min-w-44">CATATAN &amp; KAS</th>
+                                        <th className="py-3 px-3.5 w-16 text-right">AKSI</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    <tr>
-                                        <td className="py-3 px-3.5 text-slate-500 font-medium whitespace-nowrap">
-                                            25 Agu 2026
-                                        </td>
-                                        <td className="py-3 px-3.5 font-bold text-slate-900 whitespace-nowrap">
-                                            Voucher Belanja
-                                        </td>
-                                        <td className="py-3 px-3.5 font-bold text-slate-900 whitespace-nowrap">
-                                            Rp 500.000
-                                        </td>
-                                        <td className="py-3 px-3.5 text-slate-600 text-xs leading-relaxed min-w-56">
-                                            Terima kasih banyak atas rekomendasi dan kepercayaannya. Semoga hubungan baik kita terus terjalin.
-                                        </td>
-                                    </tr>
+                                <tbody className="divide-y divide-slate-100 font-medium">
+                                    {appreciations.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={5} className="py-6 text-center text-slate-400">
+                                                Belum ada data apresiasi yang dicatat untuk sumber ini.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        appreciations.map((appr) => (
+                                            <tr key={appr.id} className="hover:bg-slate-50/70 transition-colors">
+                                                <td className="py-3 px-3.5 text-slate-600 font-medium whitespace-nowrap">
+                                                    {appr.date
+                                                        ? new Date(appr.date).toLocaleDateString('id-ID', {
+                                                              day: 'numeric',
+                                                              month: 'short',
+                                                              year: 'numeric',
+                                                          })
+                                                        : '-'}
+                                                </td>
+                                                <td className="py-3 px-3.5 font-bold text-slate-900 whitespace-nowrap">
+                                                    <div>{appr.type}</div>
+                                                    <span
+                                                        className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md mt-1 ${
+                                                            appr.status === 'given'
+                                                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                                : 'bg-amber-50 text-amber-700 border border-amber-200'
+                                                        }`}
+                                                    >
+                                                        {appr.status === 'given' ? '✓ Diberikan' : '⏳ Pending'}
+                                                    </span>
+                                                </td>
+                                                <td className="py-3 px-3.5 font-bold text-slate-900 whitespace-nowrap">
+                                                    <div className="font-sans">{formatCurrency(appr.amount)}</div>
+                                                    {appr.is_recorded_in_finance ? (
+                                                        <div className="flex items-center gap-1 text-[10px] text-indigo-700 font-mono mt-0.5">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 shrink-0" />
+                                                            <span>{appr.finance_reference || 'Finance OK'}</span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-[10px] text-slate-400">Non-Finance</span>
+                                                    )}
+                                                </td>
+                                                <td className="py-3 px-3.5 text-slate-600 text-xs leading-relaxed min-w-44">
+                                                    <div>{appr.notes || '-'}</div>
+                                                    {appr.payment_method && (
+                                                        <div className="text-[10px] text-slate-500 mt-0.5 font-medium">
+                                                            Sumber: <span className="font-bold text-slate-700">{appr.payment_method.name}</span>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="py-3 px-3.5 text-right whitespace-nowrap">
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleEditAppreciation(appr)}
+                                                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
+                                                            title="Edit Apresiasi"
+                                                        >
+                                                            <Edit2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setConfirmCancelAppreciation({ isOpen: true, id: appr.id })}
+                                                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                                            title="Hapus Apresiasi"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
                                 </tbody>
                             </table>
                         </div>
 
-                        <div className="text-[11px] text-slate-400">
-                            Menampilkan 1 dari 1 data
+                        <div className="text-[11px] text-slate-400 flex items-center justify-between">
+                            <span>Menampilkan {appreciations.length} data apresiasi</span>
+                            <span className="font-semibold text-slate-600">
+                                Total: {formatCurrency(finance_summary.total_expenses)}
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -807,9 +1022,9 @@ export default function ClientSourceShow({
                 onClose={() => setConfirmCancelAppreciation({ isOpen: false })}
                 onConfirm={handleCancelAppreciation}
                 variant="danger"
-                title="Batalkan Apresiasi"
-                description="Apakah Anda yakin ingin membatalkan pencatatan apresiasi ini?"
-                confirmText="Ya, Batalkan Apresiasi"
+                title="Hapus Apresiasi"
+                description="Apakah Anda yakin ingin membatalkan/menghapus catatan apresiasi ini? Transaksi pengeluaran terkait akan dibatalkan."
+                confirmText="Ya, Hapus Apresiasi"
                 cancelText="Batal"
             />
         </div>

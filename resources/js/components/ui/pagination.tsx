@@ -1,5 +1,5 @@
 import * as React from "react"
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export interface PaginationProps {
@@ -14,28 +14,30 @@ export interface PaginationProps {
   onPerPageChange?: (perPage: number) => void
   itemLabel?: string
   className?: string
+  showPerPage?: boolean
 }
 
 export function Pagination({
-  currentPage,
-  lastPage,
-  total,
-  from = 0,
-  to = 0,
+  currentPage = 1,
+  lastPage = 1,
+  total = 0,
+  from,
+  to,
   perPage = 10,
   perPageOptions = [10, 25, 50, 100],
   onPageChange,
   onPerPageChange,
-  itemLabel = "klien",
+  itemLabel = "data",
   className,
+  showPerPage = true,
 }: PaginationProps) {
-  // Generate visible page numbers
+  // Generate visible page numbers (smart window around current page, max 5 visible)
   const getPageNumbers = () => {
-    const pages: (number | string)[] = []
+    const pages: number[] = []
     const maxVisible = 5
 
     if (lastPage <= maxVisible) {
-      for (let i = 1; i <= lastPage; i++) {
+      for (let i = 1; i <= Math.max(1, lastPage); i++) {
         pages.push(i)
       }
     } else {
@@ -55,114 +57,82 @@ export function Pagination({
   }
 
   const pageNumbers = getPageNumbers()
-
-  if (total === 0) return null
+  const displayFrom = total === 0 ? 0 : (from ?? (currentPage - 1) * perPage + 1)
+  const displayTo = total === 0 ? 0 : (to ?? Math.min(currentPage * perPage, total))
 
   return (
     <div
       className={cn(
-        "flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 text-xs text-slate-500",
+        "px-5 py-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500",
         className
       )}
     >
       {/* Left: Range Info */}
-      <div className="font-medium text-slate-600">
-        Menampilkan{" "}
-        <span className="font-bold text-slate-900 font-mono">
-          {from || (currentPage - 1) * perPage + 1}
-        </span>{" "}
-        -{" "}
-        <span className="font-bold text-slate-900 font-mono">
-          {to || Math.min(currentPage * perPage, total)}
-        </span>{" "}
-        dari{" "}
-        <span className="font-bold text-slate-900 font-mono">{total}</span> {itemLabel}
+      <div>
+        Menampilkan {displayFrom} - {displayTo} dari {total} {itemLabel}
       </div>
 
-      {/* Right: Rows per page & Navigation Buttons */}
-      <div className="flex items-center gap-4 flex-wrap justify-center sm:justify-end">
-        {/* Rows per page selector */}
-        {onPerPageChange && (
-          <div className="flex items-center gap-2">
-            <span className="text-slate-500 font-medium">Rows per page</span>
+      {/* Right: Per Page Dropdown & Pagination Buttons */}
+      <div className="flex items-center gap-3">
+        {/* Per Page Dropdown */}
+        {showPerPage && onPerPageChange && (
+          <div className="relative">
             <select
               value={perPage}
               onChange={(e) => onPerPageChange(Number(e.target.value))}
-              className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 outline-hidden focus:border-[#E8630A] transition-colors cursor-pointer shadow-2xs"
+              className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer"
             >
               {perPageOptions.map((opt) => (
                 <option key={opt} value={opt}>
-                  {opt}
+                  {opt} per halaman
                 </option>
               ))}
             </select>
           </div>
         )}
 
-        {/* Page Nav Buttons */}
+        {/* Pagination Buttons */}
         <div className="flex items-center gap-1">
-          {/* First Page */}
-          <button
-            type="button"
-            disabled={currentPage <= 1}
-            onClick={() => onPageChange(1)}
-            className="w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-slate-600 transition-colors cursor-pointer shadow-2xs"
-            title="Halaman Pertama"
-          >
-            <ChevronsLeft className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Prev Page */}
+          {/* Prev Button */}
           <button
             type="button"
             disabled={currentPage <= 1}
             onClick={() => onPageChange(currentPage - 1)}
-            className="w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-slate-600 transition-colors cursor-pointer shadow-2xs"
+            className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             title="Halaman Sebelumnya"
           >
-            <ChevronLeft className="w-3.5 h-3.5" />
+            <ChevronLeft className="w-4 h-4" />
           </button>
 
-          {/* Numbered Pages */}
-          {pageNumbers.map((p, idx) => {
-            const isCurrent = p === currentPage
+          {/* Page numbers */}
+          {pageNumbers.map((pg) => {
+            const isCurrent = pg === currentPage
             return (
               <button
-                key={idx}
+                key={pg}
                 type="button"
-                onClick={() => onPageChange(p as number)}
+                onClick={() => onPageChange(pg)}
                 className={cn(
-                  "w-8 h-8 rounded-lg text-xs font-bold font-mono transition-all cursor-pointer shadow-2xs flex items-center justify-center",
+                  "w-8 h-8 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center justify-center",
                   isCurrent
-                    ? "bg-primary-accent text-white border-primary-accent shadow-sm"
-                    : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"
+                    ? "bg-slate-900 text-white"
+                    : "border border-slate-200 text-slate-700 hover:bg-slate-50"
                 )}
               >
-                {p}
+                {pg}
               </button>
             )
           })}
 
-          {/* Next Page */}
+          {/* Next Button */}
           <button
             type="button"
             disabled={currentPage >= lastPage}
             onClick={() => onPageChange(currentPage + 1)}
-            className="w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-slate-600 transition-colors cursor-pointer shadow-2xs"
+            className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             title="Halaman Berikutnya"
           >
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Last Page */}
-          <button
-            type="button"
-            disabled={currentPage >= lastPage}
-            onClick={() => onPageChange(lastPage)}
-            className="w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-slate-600 transition-colors cursor-pointer shadow-2xs"
-            title="Halaman Terakhir"
-          >
-            <ChevronsRight className="w-3.5 h-3.5" />
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>

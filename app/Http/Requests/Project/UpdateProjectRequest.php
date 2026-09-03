@@ -36,6 +36,7 @@ class UpdateProjectRequest extends FormRequest
             'discount' => 'nullable|numeric|min:0',
             'tax' => 'nullable|numeric|min:0',
             'total_amount' => 'required|numeric|min:0',
+            'thumbnail' => 'nullable|string',
             'notes' => 'nullable|string',
             'custom_timeline' => 'nullable|array',
             'selected_addons' => 'nullable|array',

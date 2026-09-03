@@ -23,7 +23,8 @@ class PaymentMethodController extends Controller
                 ->orWhere('account_number', 'like', "%{$search}%");
         }
 
-        $paymentMethods = $query->orderBy('name')->paginate(10)->withQueryString();
+        $perPage = (int) $request->input('per_page', 10);
+        $paymentMethods = $query->orderBy('name')->paginate($perPage)->withQueryString();
 
         $stats = [
             'total'            => PaymentMethod::count() ?: 7,
@@ -35,7 +36,7 @@ class PaymentMethodController extends Controller
         return Inertia::render('MasterData/PaymentMethods/Index', [
             'paymentMethods' => $paymentMethods,
             'stats'          => $stats,
-            'filters'        => $request->only(['search']),
+            'filters'        => $request->only(['search', 'per_page']),
         ]);
     }
 

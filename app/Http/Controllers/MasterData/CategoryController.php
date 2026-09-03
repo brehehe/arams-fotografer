@@ -16,26 +16,27 @@ class CategoryController extends Controller
 {
     public function index(Request $request): Response
     {
-        $query = Category::withCount(['projects', 'packages']);
+        $query = Category::withCount(['projects', 'packages', 'services']);
 
         if ($search = $request->input('search')) {
             $query->where('name', 'like', "%{$search}%")
                 ->orWhere('description', 'like', "%{$search}%");
         }
 
-        $categories = $query->orderBy('sort_order')->paginate(10)->withQueryString();
+        $perPage = (int) $request->input('per_page', 10);
+        $categories = $query->orderBy('sort_order')->paginate($perPage)->withQueryString();
 
         $stats = [
-            'total'            => Category::count() ?: 12,
-            'active'           => Category::where('status', 'active')->count() ?: 10,
-            'inactive'         => Category::where('status', '!=', 'active')->count() ?: 2,
-            'used_in_projects' => \App\Models\Project::whereNotNull('category_id')->count() ?: 86,
+            'total'            => Category::count(),
+            'active'           => Category::where('status', 'active')->count(),
+            'inactive'         => Category::where('status', '!=', 'active')->count(),
+            'used_in_projects' => \App\Models\Project::whereNotNull('category_id')->count(),
         ];
 
         return Inertia::render('MasterData/Categories/Index', [
             'categories' => $categories,
             'stats'      => $stats,
-            'filters'    => $request->only(['search']),
+            'filters'    => $request->only(['search', 'per_page']),
         ]);
     }
 

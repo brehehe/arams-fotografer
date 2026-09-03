@@ -37,6 +37,8 @@ export default function LensariaLayout({
     const headerBorderColor = pageProps?.appSettings?.header_border_color || 'rgba(226, 232, 240, 0.8)';
     const breadcrumbColor = pageProps?.appSettings?.breadcrumb_color || '#64748B';
     const breadcrumbActiveColor = pageProps?.appSettings?.breadcrumb_active_color || '#0F172A';
+    const headerSearchBg = pageProps?.appSettings?.header_search_bg || '';
+    const headerSearchText = pageProps?.appSettings?.header_search_text || '';
     const cardHeadingColor = pageProps?.appSettings?.card_heading_color || '#1E293B';
     const fontFamily = pageProps?.appSettings?.font_family_body || 'Plus Jakarta Sans';
     const fontHeading = pageProps?.appSettings?.font_family_heading || 'Plus Jakarta Sans';
@@ -77,6 +79,8 @@ export default function LensariaLayout({
                     --header-border: ${headerBorderColor};
                     --breadcrumb-color: ${breadcrumbColor};
                     --breadcrumb-active-color: ${breadcrumbActiveColor};
+                    --header-search-bg: ${headerSearchBg};
+                    --header-search-text: ${headerSearchText};
                     --card-heading-color: ${cardHeadingColor};
                     --font-heading: '${fontHeading}', system-ui, sans-serif;
                 }
@@ -140,9 +144,18 @@ export default function LensariaLayout({
                 main .tab-inactive {
                     color: var(--app-muted-color) !important;
                 }
+                /* Inside white cards or containers, ensure inactive tabs are always dark slate for high contrast */
+                .bg-white div[class*="border-b"] > button.border-transparent,
+                .bg-white .tab-inactive,
+                [class*="bg-white"] div[class*="border-b"] > button.border-transparent,
+                [class*="bg-white"] .tab-inactive {
+                    color: #64748B !important;
+                }
                 main div[class*="border-b"] > button.border-transparent:hover,
-                main .tab-inactive:hover {
-                    color: var(--app-heading-color) !important;
+                main .tab-inactive:hover,
+                .bg-white div[class*="border-b"] > button.border-transparent:hover,
+                .bg-white .tab-inactive:hover {
+                    color: #0F172A !important;
                     opacity: 0.95 !important;
                 }
             `}</style>

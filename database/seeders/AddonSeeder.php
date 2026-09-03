@@ -16,8 +16,10 @@ class AddonSeeder extends Seeder
         $corporateCat = Category::where('name', 'like', '%Corporate%')->first();
 
         $addons = [
+            // ── TYPE: ADDON (Ala Carte / Layanan Tambahan) ─────────────────
             [
                 'name' => 'Extra 1 Fotografer Senior',
+                'type' => 'addon',
                 'category_id' => $weddingCat?->id,
                 'price' => 1500000,
                 'unit' => 'orang/hari',
@@ -26,6 +28,7 @@ class AddonSeeder extends Seeder
             ],
             [
                 'name' => 'Drone Aerial Cinematic 4K',
+                'type' => 'addon',
                 'category_id' => $weddingCat?->id,
                 'price' => 2000000,
                 'unit' => 'sesi',
@@ -34,6 +37,7 @@ class AddonSeeder extends Seeder
             ],
             [
                 'name' => 'Same Day Edit (SDE) Video Teaser',
+                'type' => 'addon',
                 'category_id' => $weddingCat?->id,
                 'price' => 2500000,
                 'unit' => 'video',
@@ -42,6 +46,7 @@ class AddonSeeder extends Seeder
             ],
             [
                 'name' => 'Tambahan Durasi Liputan (Overtime)',
+                'type' => 'addon',
                 'category_id' => $eventCat?->id ?? $weddingCat?->id,
                 'price' => 500000,
                 'unit' => 'jam',
@@ -50,6 +55,7 @@ class AddonSeeder extends Seeder
             ],
             [
                 'name' => 'Luxury Velvet Photobook 30x40 (20 Halaman)',
+                'type' => 'addon',
                 'category_id' => $weddingCat?->id,
                 'price' => 1800000,
                 'unit' => 'album',
@@ -58,6 +64,7 @@ class AddonSeeder extends Seeder
             ],
             [
                 'name' => 'Cetak Kanvas 60x90 + Frame Gold Ukir',
+                'type' => 'addon',
                 'category_id' => $prewedCat?->id ?? $weddingCat?->id,
                 'price' => 850000,
                 'unit' => 'buah',
@@ -66,6 +73,7 @@ class AddonSeeder extends Seeder
             ],
             [
                 'name' => 'Flashdrive Wooden Box Custom Gravir',
+                'type' => 'addon',
                 'category_id' => $prewedCat?->id,
                 'price' => 250000,
                 'unit' => 'item',
@@ -74,10 +82,85 @@ class AddonSeeder extends Seeder
             ],
             [
                 'name' => 'Live Streaming Multi-Camera Resepsi (3 Cam)',
+                'type' => 'addon',
                 'category_id' => $corporateCat?->id ?? $eventCat?->id,
                 'price' => 3500000,
                 'unit' => 'sesi',
                 'description' => 'Broadcast live streaming YouTube/Zoom dengan switcher multi-kamera & audio mixer pro.',
+                'status' => 'active',
+            ],
+
+            // ── TYPE: OPERATIONAL (Biaya Operasional Project) ───────────────
+            [
+                'name' => 'Transportasi',
+                'type' => 'operational',
+                'category_id' => null,
+                'price' => 500000,
+                'unit' => 'perjalanan',
+                'description' => 'Bensin / Tiket Perjalanan Tim',
+                'status' => 'active',
+            ],
+            [
+                'name' => 'Akomodasi',
+                'type' => 'operational',
+                'category_id' => null,
+                'price' => 800000,
+                'unit' => 'malam',
+                'description' => 'Hotel / Penginapan Tim',
+                'status' => 'active',
+            ],
+            [
+                'name' => 'Konsumsi & Makan Tim',
+                'type' => 'operational',
+                'category_id' => null,
+                'price' => 350000,
+                'unit' => 'hari',
+                'description' => 'Konsumsi makan & minum tim liputan',
+                'status' => 'active',
+            ],
+            [
+                'name' => 'Toll & Parkir',
+                'type' => 'operational',
+                'category_id' => null,
+                'price' => 150000,
+                'unit' => 'paket',
+                'description' => 'Biaya tol & parkir venue acara',
+                'status' => 'active',
+            ],
+            [
+                'name' => 'Sewa Peralatan',
+                'type' => 'operational',
+                'category_id' => null,
+                'price' => 750000,
+                'unit' => 'item',
+                'description' => 'Sewa lighting / lensa tambahan',
+                'status' => 'active',
+            ],
+            [
+                'name' => 'Crew / Freelance Eksternal',
+                'type' => 'operational',
+                'category_id' => null,
+                'price' => 1000000,
+                'unit' => 'orang/hari',
+                'description' => 'Photographer / Videographer asisten tambahan',
+                'status' => 'active',
+            ],
+            [
+                'name' => 'Cetak Vendor Eksternal',
+                'type' => 'operational',
+                'category_id' => null,
+                'price' => 1200000,
+                'unit' => 'paket',
+                'description' => 'Cetak foto instan / photobooth eksternal',
+                'status' => 'active',
+            ],
+            [
+                'name' => 'Izin Lokasi / Retribusi',
+                'type' => 'operational',
+                'category_id' => null,
+                'price' => 500000,
+                'unit' => 'lokasi',
+                'description' => 'Tiket masuk spot / retribusi venue',
                 'status' => 'active',
             ],
         ];

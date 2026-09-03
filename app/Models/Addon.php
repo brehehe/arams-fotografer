@@ -16,6 +16,7 @@ class Addon extends Model
     protected $fillable = [
         'category_id',
         'name',
+        'type',
         'description',
         'price',
         'unit',

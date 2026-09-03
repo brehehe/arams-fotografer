@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { ClientLayout } from '@/layouts/ClientLayout';
 import {
     Calendar,
@@ -47,6 +47,20 @@ interface ClientProjectsProps {
 }
 
 export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
+    const { props: pageProps } = usePage<any>();
+    const appSettings = pageProps?.appSettings || {};
+
+    // Dynamic portal tokens
+    const portalPrimaryAccent = appSettings.portal_primary_accent || '#4A151B';
+    const portalHeroBg = appSettings.portal_hero_bg || '#240B10';
+    const portalHeroGradient = appSettings.portal_hero_gradient || '';
+    const portalHeroText = appSettings.portal_hero_text_color || '#FFFFFF';
+    const portalCardBg = appSettings.portal_card_bg || '#FFFFFF';
+    const portalCardBorder = appSettings.portal_card_border || 'rgba(226, 232, 240, 0.8)';
+    const portalHeadingColor = appSettings.portal_heading_color || '#240B10';
+    const portalFontHeading = appSettings.portal_font_heading || 'Plus Jakarta Sans';
+    const portalFooterText = appSettings.portal_footer_text || '#FDA4AF';
+
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
 
@@ -180,7 +194,14 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
 
             <div className="space-y-6">
                 {/* ── 1. HERO BANNER (MATCHING SCREENSHOT 3) ────────────────── */}
-                <div className="relative rounded-3xl bg-[#240B10] text-white p-6 sm:p-8 lg:p-10 shadow-lg overflow-hidden border border-[#3D141C] flex flex-col md:flex-row items-center justify-between gap-6">
+                <div
+                    style={{
+                        background: portalHeroGradient || portalHeroBg,
+                        color: portalHeroText,
+                        borderColor: portalCardBorder,
+                    }}
+                    className="relative rounded-3xl p-6 sm:p-8 lg:p-10 shadow-lg overflow-hidden border flex flex-col md:flex-row items-center justify-between gap-6 transition-colors"
+                >
                     {/* Background Overlay */}
                     <div className="absolute inset-0 z-0">
                         <img
@@ -188,15 +209,26 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                             alt="Arams Pictures"
                             className="w-full h-full object-cover opacity-20 filter brightness-90"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-r from-[#240B10] via-[#240B10]/90 to-transparent" />
+                        <div
+                            style={{
+                                background: `linear-gradient(to right, ${portalHeroBg} 0%, ${portalHeroBg}e6 60%, transparent 100%)`,
+                            }}
+                            className="absolute inset-0"
+                        />
                     </div>
 
                     {/* Left Title */}
                     <div className="relative z-10 space-y-2 max-w-xl">
-                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-black text-white tracking-tight leading-tight">
+                        <h1
+                            style={{
+                                fontFamily: `'${portalFontHeading}', serif`,
+                                color: portalHeroText,
+                            }}
+                            className="text-2xl sm:text-3xl lg:text-4xl font-serif font-black tracking-tight leading-tight"
+                        >
                             Project Saya
                         </h1>
-                        <p className="text-xs sm:text-sm text-rose-100/80 leading-relaxed max-w-md">
+                        <p className="text-xs sm:text-sm opacity-85 leading-relaxed max-w-md">
                             Berikut adalah daftar project yang telah dan sedang Anda kerjakan bersama Arams Pictures.
                         </p>
                     </div>
@@ -228,9 +260,17 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                                     key={tab.id}
                                     type="button"
                                     onClick={() => setStatusFilter(tab.id)}
+                                    style={
+                                        isActive
+                                            ? {
+                                                  backgroundColor: portalPrimaryAccent,
+                                                  color: '#FFFFFF',
+                                              }
+                                            : {}
+                                    }
                                     className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
                                         isActive
-                                            ? 'bg-[#380E13] text-white shadow-xs'
+                                            ? 'shadow-xs'
                                             : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200/80'
                                     }`}
                                 >
@@ -250,7 +290,7 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 placeholder="Cari project..."
-                                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-hidden focus:border-[#4A151B] text-slate-900 placeholder:text-slate-400 transition-colors shadow-2xs"
+                                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-hidden text-slate-900 placeholder:text-slate-400 transition-colors shadow-2xs"
                             />
                         </div>
 
@@ -276,7 +316,11 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                         return (
                             <div
                                 key={p.id}
-                                className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-2xs hover:shadow-md transition-all flex flex-col lg:flex-row gap-6 items-stretch"
+                                style={{
+                                    backgroundColor: portalCardBg,
+                                    borderColor: portalCardBorder,
+                                }}
+                                className="rounded-3xl border p-5 sm:p-6 shadow-2xs hover:shadow-md transition-all flex flex-col lg:flex-row gap-6 items-stretch"
                             >
                                 {/* Left Thumbnail with Badge */}
                                 <div className="relative w-full lg:w-56 h-44 sm:h-48 lg:h-auto rounded-2xl overflow-hidden bg-slate-100 shrink-0 shadow-2xs">
@@ -287,10 +331,19 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                                     />
                                     <div className="absolute bottom-2.5 left-2.5">
                                         <span
-                                            className={`px-3 py-1 rounded-lg text-[10px] font-bold shadow-xs ${
+                                            style={
+                                                !isCompleted
+                                                    ? {
+                                                          backgroundColor: `${portalPrimaryAccent}15`,
+                                                          color: portalPrimaryAccent,
+                                                          borderColor: `${portalPrimaryAccent}35`,
+                                                      }
+                                                    : {}
+                                            }
+                                            className={`px-3 py-1 rounded-lg text-[10px] font-bold shadow-xs border ${
                                                 isCompleted
-                                                    ? 'bg-emerald-100 text-emerald-800'
-                                                    : 'bg-[#FAF3EB] text-[#8C4A15] border border-[#E8CDB5]'
+                                                    ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                                                    : ''
                                             }`}
                                         >
                                             {isCompleted ? 'Selesai' : 'Dalam Proses'}
@@ -301,7 +354,13 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                                 {/* Center: Title, Stepper, Status */}
                                 <div className="flex-1 flex flex-col justify-between space-y-4">
                                     <div className="space-y-1">
-                                        <h3 className="font-serif font-black text-xl text-slate-900 leading-tight">
+                                        <h3
+                                            style={{
+                                                color: portalHeadingColor,
+                                                fontFamily: `'${portalFontHeading}', serif`,
+                                            }}
+                                            className="font-serif font-black text-xl leading-tight"
+                                        >
                                             {p.name}
                                         </h3>
                                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 font-medium">
@@ -327,9 +386,17 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                                                 return (
                                                     <div
                                                         key={stepNum}
+                                                        style={
+                                                            isStepDone
+                                                                ? {
+                                                                      backgroundColor: portalPrimaryAccent,
+                                                                      color: '#FFFFFF',
+                                                                  }
+                                                                : {}
+                                                        }
                                                         className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold relative z-10 transition-all ${
                                                             isStepDone
-                                                                ? 'bg-[#380E13] text-white shadow-2xs'
+                                                                ? 'shadow-2xs'
                                                                 : 'bg-slate-100 text-slate-400 border border-slate-200'
                                                         }`}
                                                     >
@@ -382,7 +449,8 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
 
                                     <Link
                                         href={`/client/projects/${p.id}`}
-                                        className="w-full py-2.5 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[#380E13] font-bold text-xs shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center"
+                                        style={{ color: portalPrimaryAccent }}
+                                        className="w-full py-2.5 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 font-bold text-xs shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center"
                                     >
                                         <span>Lihat Detail</span>
                                         <ArrowRight className="w-3.5 h-3.5" />
@@ -403,7 +471,13 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                         <button className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center hover:bg-slate-50 cursor-pointer text-slate-400">
                             <ChevronLeft className="w-4 h-4" />
                         </button>
-                        <button className="w-8 h-8 rounded-lg bg-[#380E13] text-white font-bold flex items-center justify-center shadow-xs cursor-pointer">
+                        <button
+                            style={{
+                                backgroundColor: portalPrimaryAccent,
+                                color: '#FFFFFF',
+                            }}
+                            className="w-8 h-8 rounded-lg font-bold flex items-center justify-center shadow-xs cursor-pointer"
+                        >
                             1
                         </button>
                         <button className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center hover:bg-slate-50 cursor-pointer text-slate-400">

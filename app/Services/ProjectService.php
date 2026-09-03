@@ -7,10 +7,13 @@ use App\Models\Client;
 use App\Models\Package;
 use App\Models\Project;
 use App\Models\User;
+use App\Services\FinanceService;
+use App\Traits\HasWebpUpload;
 use Illuminate\Http\Request;
 
 class ProjectService
 {
+    use HasWebpUpload;
     /**
      * Get paginated projects with filters, lookups, and KPI stats.
      */
@@ -42,14 +45,16 @@ class ProjectService
             });
         }
 
-        // Status Tab Filter (Semua, Berlangsung, Selesai, Ditunda, Dibatalkan)
+        // Status Tab Filter (Semua, Draft, Berlangsung, Selesai, Ditunda, Dibatalkan)
         if ($tab = $request->input('tab')) {
-            if ($tab === 'berlangsung') {
+            if ($tab === 'draft') {
+                $query->where('status', 'draft');
+            } elseif ($tab === 'berlangsung') {
                 $query->whereIn('status', ['in_progress', 'editing', 'active']);
             } elseif ($tab === 'selesai') {
                 $query->where('status', 'completed');
             } elseif ($tab === 'ditunda') {
-                $query->whereIn('status', ['draft', 'on_hold', 'pending', 'booking']);
+                $query->whereIn('status', ['on_hold', 'pending', 'booking']);
             } elseif ($tab === 'dibatalkan') {
                 $query->where('status', 'cancelled');
             }
@@ -57,12 +62,14 @@ class ProjectService
 
         if ($status = $request->input('status')) {
             if ($status !== 'all' && $status !== 'Semua Status') {
-                if ($status === 'berlangsung') {
+                if ($status === 'draft') {
+                    $query->where('status', 'draft');
+                } elseif ($status === 'berlangsung') {
                     $query->whereIn('status', ['in_progress', 'editing']);
                 } elseif ($status === 'selesai') {
                     $query->where('status', 'completed');
-                } elseif ($status === 'menunggu' || $status === 'draft') {
-                    $query->whereIn('status', ['draft', 'booking', 'pending']);
+                } elseif ($status === 'menunggu') {
+                    $query->whereIn('status', ['booking', 'pending', 'on_hold']);
                 } elseif ($status === 'dibatalkan') {
                     $query->where('status', 'cancelled');
                 } else {
@@ -96,9 +103,10 @@ class ProjectService
         // Stats cards calculation directly from Database
         $stats = Project::selectRaw("
             COUNT(*) as total,
+            COUNT(CASE WHEN status = 'draft' THEN 1 END) as draft,
             COUNT(CASE WHEN status IN ('in_progress', 'editing', 'active') THEN 1 END) as berlangsung,
             COUNT(CASE WHEN status = 'completed' THEN 1 END) as selesai,
-            COUNT(CASE WHEN status IN ('draft', 'booking', 'pending', 'on_hold') THEN 1 END) as menunggu,
+            COUNT(CASE WHEN status IN ('booking', 'pending', 'on_hold') THEN 1 END) as menunggu,
             COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as dibatalkan,
             COALESCE(AVG(CASE WHEN progress IS NOT NULL THEN progress ELSE 0 END), 0) as avg_progress
         ")->first();
@@ -171,6 +179,7 @@ class ProjectService
             ->get();
 
         $totalCount = (int) ($stats->total ?? 0);
+        $draftCount = (int) ($stats->draft ?? 0);
         $berlangsungCount = (int) ($stats->berlangsung ?? 0);
         $selesaiCount = (int) ($stats->selesai ?? 0);
         $menungguCount = (int) ($stats->menunggu ?? 0);
@@ -189,6 +198,7 @@ class ProjectService
             'recent_activities' => $recentActivities,
             'stats' => [
                 'total' => $totalCount,
+                'draft' => $draftCount,
                 'berlangsung' => $berlangsungCount,
                 'selesai' => $selesaiCount,
                 'menunggu' => $menungguCount,
@@ -244,6 +254,7 @@ class ProjectService
             'packages' => $packages,
             'payment_methods' => $paymentMethods,
             'company_settings' => $companySettings,
+            'workflow_definitions' => \App\Http\Controllers\MasterData\WorkflowController::getWorkflowDefinitions(),
         ];
     }
 
@@ -300,6 +311,14 @@ class ProjectService
     }
 
     /**
+     * Generate unique invoice number via FinanceService.
+     */
+    public function generateInvoiceNumber(): string
+    {
+        return app(FinanceService::class)->generateInvoiceNumber();
+    }
+
+    /**
      * Create a new project with auto-numbering, initial invoice creation, and activity log.
      */
     public function createProject(array $data, ?User $causer = null): Project
@@ -334,8 +353,8 @@ class ProjectService
 
         $data['status'] = $data['status'] ?? 'in_progress';
         $data['progress'] = $data['status'] === 'completed' ? 100 : ($data['status'] === 'draft' ? 0 : 20);
-        $data['payment_status'] = $data['payment_status'] ?? ($dpAmount > 0 ? 'partial' : 'unpaid');
-        $data['paid_amount'] = $data['paid_amount'] ?? ($data['payment_status'] === 'paid' ? ($data['total_amount'] ?? 0) : ($data['payment_status'] === 'partial' ? $dpAmount : 0));
+        $data['payment_status'] = $data['payment_status'] ?? ($data['status'] === 'draft' ? 'unpaid' : ($data['paid_amount'] ?? 0 > 0 ? 'partial' : 'unpaid'));
+        $data['paid_amount'] = (float) ($data['paid_amount'] ?? ($data['payment_status'] === 'paid' ? ($data['total_amount'] ?? 0) : 0));
 
         // Append operational free-text staff to notes if present
         $extraNotes = [];
@@ -354,6 +373,14 @@ class ProjectService
             $data['created_at'] = \Carbon\Carbon::parse($createdAtDate)->setTimeFrom(now());
         }
 
+        if (!empty($data['thumbnail']) && is_string($data['thumbnail']) && str_starts_with($data['thumbnail'], 'data:image')) {
+            try {
+                $data['thumbnail'] = $this->uploadAsWebp($data['thumbnail'], 'projects');
+            } catch (\Throwable $e) {
+                // Keep data or set null if conversion fails
+            }
+        }
+
         $project = Project::create($data);
 
         // Attach selected project addons if any
@@ -363,11 +390,12 @@ class ProjectService
                 $unitPrice = (float) ($item['unit_price'] ?? 0);
                 $totalPrice = (float) ($item['total_price'] ?? ($unitPrice * $qty));
                 $rawId = (string) ($item['id'] ?? '');
-                $isCustom = !empty($item['is_custom']) || empty($rawId) || str_starts_with($rawId, 'custom_');
+                $isValidUuid = \Illuminate\Support\Str::isUuid($rawId);
+                $isCustom = !empty($item['is_custom']) || empty($rawId) || !$isValidUuid;
 
                 \App\Models\ProjectAddon::create([
                     'project_id' => $project->id,
-                    'addon_id' => $isCustom ? null : $rawId,
+                    'addon_id' => ($isCustom || !$isValidUuid) ? null : $rawId,
                     'custom_name' => $isCustom ? ($item['name'] ?? 'Biaya Tambahan') : null,
                     'qty' => $qty,
                     'unit' => $item['unit'] ?? 'item',
@@ -429,6 +457,21 @@ class ProjectService
         $addons = $data['selected_addons'] ?? null;
         unset($data['selected_addons']);
 
+        if (array_key_exists('thumbnail', $data)) {
+            if (!empty($data['thumbnail']) && is_string($data['thumbnail']) && str_starts_with($data['thumbnail'], 'data:image')) {
+                try {
+                    $data['thumbnail'] = $this->uploadAsWebp($data['thumbnail'], 'projects', 80, 1920, null, $project->thumbnail);
+                } catch (\Throwable $e) {
+                    // Fallback
+                }
+            } elseif (empty($data['thumbnail'])) {
+                if ($project->thumbnail) {
+                    $this->deleteWebpImage($project->thumbnail);
+                }
+                $data['thumbnail'] = null;
+            }
+        }
+
         $project->update($data);
 
         // Sync selected project addons if array passed
@@ -439,11 +482,12 @@ class ProjectService
                 $unitPrice = (float) ($item['unit_price'] ?? 0);
                 $totalPrice = (float) ($item['total_price'] ?? ($unitPrice * $qty));
                 $rawId = (string) ($item['id'] ?? '');
-                $isCustom = !empty($item['is_custom']) || empty($rawId) || str_starts_with($rawId, 'custom_');
+                $isValidUuid = \Illuminate\Support\Str::isUuid($rawId);
+                $isCustom = !empty($item['is_custom']) || empty($rawId) || !$isValidUuid;
 
                 \App\Models\ProjectAddon::create([
                     'project_id' => $project->id,
-                    'addon_id' => $isCustom ? null : $rawId,
+                    'addon_id' => ($isCustom || !$isValidUuid) ? null : $rawId,
                     'custom_name' => $isCustom ? ($item['name'] ?? 'Biaya Tambahan Kustom') : null,
                     'qty' => $qty,
                     'unit' => $item['unit'] ?? 'item',
@@ -468,13 +512,30 @@ class ProjectService
     public function updateStatus(Project $project, array $data, ?User $causer = null): Project
     {
         $oldStatus = $project->status;
-        $project->update($data);
+        $filtered = array_filter($data, fn ($val) => !is_null($val));
+
+        if (isset($filtered['status']) && $filtered['status'] === 'completed' && !isset($filtered['progress'])) {
+            $filtered['progress'] = 100;
+        }
+
+        $project->update($filtered);
+
+        $logMsg = "Project {$project->name} diperbarui.";
+        if (isset($filtered['status'])) {
+            $logMsg .= " Status: {$oldStatus} → {$project->status}.";
+        }
+        if (isset($filtered['workflow_step'])) {
+            $logMsg .= " Tahap: {$project->workflow_step}.";
+        }
+        if (isset($filtered['progress'])) {
+            $logMsg .= " Progres: {$project->progress}%.";
+        }
 
         activity()
             ->causedBy($causer ?? auth()->user())
             ->performedOn($project)
             ->event('status_change')
-            ->log("Status project {$project->name} diubah dari {$oldStatus} menjadi {$project->status}");
+            ->log($logMsg);
 
         return $project;
     }
@@ -486,9 +547,11 @@ class ProjectService
     {
         $clients = Client::select('id', 'name', 'email', 'phone', 'city', 'instagram')->orderBy('name')->get();
         $categories = Category::where('status', 'active')->select('id', 'name', 'slug', 'color', 'workflow_type')->orderBy('sort_order')->get();
-        $packages = Package::where('status', 'active')->select('id', 'name', 'category_id', 'base_price', 'duration_hours', 'description')->get();
+        $packages = Package::where('status', 'active')->select('id', 'name', 'category_id', 'base_price', 'duration_hours', 'description', 'included_services', 'included_deliverables')->get();
         $weddingOrganizers = \App\Models\WeddingOrganizer::whereIn('status', ['partner', 'active'])->select('id', 'name', 'pic_name', 'phone', 'city', 'tier')->orderBy('name')->get();
-        $addons = \App\Models\Addon::where('status', 'active')->with('category:id,name')->select('id', 'name', 'category_id', 'price', 'unit', 'description')->orderBy('name')->get();
+        $addons = \App\Models\Addon::where('status', 'active')->with('category:id,name')->select('id', 'name', 'type', 'category_id', 'price', 'unit', 'description')->orderBy('name')->get();
+        $clientSources = \App\Models\ClientSource::where('status', 'active')->select('id', 'name', 'type', 'phone', 'email')->orderBy('name')->get();
+        $services = \App\Models\Service::where('status', 'active')->select('id', 'name', 'category_id', 'description')->get();
         $teamMembers = User::where('status', 'active')
             ->with('roles:id,name')
             ->select('id', 'name', 'email', 'avatar')
@@ -534,6 +597,8 @@ class ProjectService
             'packages' => $packages,
             'wedding_organizers' => $weddingOrganizers,
             'addons' => $addons,
+            'client_sources' => $clientSources,
+            'services' => $services,
             'supervisors' => $supervisors,
             'team_members' => $teamMembers,
             'note_templates' => $noteTemplates,
@@ -541,6 +606,7 @@ class ProjectService
             'company_settings' => $companySettings,
             'next_project_number' => $nextProjectNumber,
             'next_invoice_number' => $nextInvoiceNumber,
+            'workflow_definitions' => \App\Http\Controllers\MasterData\WorkflowController::getWorkflowDefinitions(),
         ];
     }
 
@@ -613,13 +679,16 @@ class ProjectService
             ->get();
 
         $companySettings = [
-            'name' => \App\Models\Setting::get('company_name', 'ARAMS PICTURES'),
+            'name' => \App\Models\Setting::get('company_name', 'Arams Photography'),
+            'legal_name' => \App\Models\Setting::get('company_legal_name', 'Arams Pictures Studio'),
+            'subtitle' => \App\Models\Setting::get('company_subtitle', 'Photografer'),
             'logo' => \App\Models\Setting::get('company_logo'),
-            'tagline' => \App\Models\Setting::get('company_tagline', 'CAPTURING MOMENTS, CREATING MEMORIES'),            'phone' => \App\Models\Setting::get('company_phone', '0813 9876 5432'),
-            'email' => \App\Models\Setting::get('company_email', 'arams.pictures@gmail.com'),
-            'address' => \App\Models\Setting::get('company_address', 'Jl. Studio Raya No. 10 Jakarta Selatan 12345, Indonesia'),
-            'instagram' => \App\Models\Setting::get('company_instagram', '@arams.pictures'),
-            'website' => \App\Models\Setting::get('company_website', 'www.arams-pictures.com'),
+            'tagline' => \App\Models\Setting::get('company_tagline', 'Capturing Moments, Creating Timeless Memories'),
+            'phone' => \App\Models\Setting::get('company_phone', '+62 812-3456-7890'),
+            'email' => \App\Models\Setting::get('company_email', 'hello@lensaria.com'),
+            'address' => \App\Models\Setting::get('company_address', 'Jl. Senopati No. 45, Kebayoran Baru, Jakarta Selatan 12190'),
+            'instagram' => \App\Models\Setting::get('company_instagram', 'aramspictures'),
+            'website' => \App\Models\Setting::get('company_website', 'https://www.arams.com'),
         ];
 
         return [

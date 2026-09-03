@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import {
     Briefcase,
@@ -22,6 +22,12 @@ import {
 } from 'lucide-react';
 import { formatRupiah, formatDate } from '@/lib/formatters';
 import { FormattedNumberInput, AlertConfirmation } from '@/components/ui';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface ProjectItem {
     id: string | number;
@@ -88,6 +94,7 @@ interface ProjectsIndexProps {
     }>;
     stats: {
         total: number;
+        draft?: number;
         berlangsung: number;
         selesai: number;
         menunggu: number;
@@ -106,7 +113,7 @@ export default function ProjectsIndex({
     supervisors = [],
     upcoming_deadlines = [],
     recent_activities = [],
-    stats = { total: 24, berlangsung: 12, selesai: 8, menunggu: 2, dibatalkan: 2, avg_progress: 58 },
+    stats = { total: 24, draft: 0, berlangsung: 12, selesai: 8, menunggu: 2, dibatalkan: 2, avg_progress: 58 },
 }: ProjectsIndexProps) {
     const activeTab = filters?.tab || 'all';
     const [search, setSearch] = useState(filters?.search || '');
@@ -114,7 +121,6 @@ export default function ProjectsIndex({
     const [selectedStatus, setSelectedStatus] = useState(filters?.status || 'all');
     const [selectedSupervisor, setSelectedSupervisor] = useState(filters?.supervisor_id || 'all');
     const [selectedDate, setSelectedDate] = useState(filters?.date || '');
-    const [activeActionMenu, setActiveActionMenu] = useState<string | number | null>(null);
 
     const [createModalOpen, setCreateModalOpen] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id?: string | number; name?: string }>({
@@ -138,6 +144,7 @@ export default function ProjectsIndex({
 
     const statusTabs = [
         { key: 'all', label: 'Semua' },
+        { key: 'draft', label: 'Draft' },
         { key: 'berlangsung', label: 'Berlangsung' },
         { key: 'selesai', label: 'Selesai' },
         { key: 'ditunda', label: 'Ditunda' },
@@ -256,11 +263,18 @@ export default function ProjectsIndex({
                 pillClass: 'bg-amber-50 text-amber-700 border border-amber-200/60',
             };
         }
-        if (st === 'draft' || st === 'booking' || st === 'menunggu') {
+        if (st === 'draft') {
+            return {
+                label: 'Draft',
+                dotClass: 'bg-slate-400',
+                pillClass: 'bg-slate-100 text-slate-700 border border-slate-300/80 font-bold',
+            };
+        }
+        if (st === 'booking' || st === 'menunggu') {
             return {
                 label: 'Booking',
-                dotClass: 'bg-slate-400',
-                pillClass: 'bg-slate-100 text-slate-600 border border-slate-200/60',
+                dotClass: 'bg-blue-400',
+                pillClass: 'bg-blue-50 text-blue-700 border border-blue-200/60',
             };
         }
         if (st === 'ditunda' || st === 'pending' || st === 'on_hold') {
@@ -301,6 +315,21 @@ export default function ProjectsIndex({
     const totalProjectsCount = projects.total || 0;
     const fromIndex = projects.from || (displayProjects.length > 0 ? 1 : 0);
     const toIndex = projects.to || displayProjects.length;
+    const lastPage = projects.last_page || 1;
+    const currentPage = projects.current_page || 1;
+
+    const pageNumbers = useMemo(() => {
+        if (lastPage <= 5) {
+            return Array.from({ length: lastPage }, (_, i) => i + 1);
+        }
+        if (currentPage <= 3) {
+            return [1, 2, 3, 4, 5];
+        }
+        if (currentPage >= lastPage - 2) {
+            return [lastPage - 4, lastPage - 3, lastPage - 2, lastPage - 1, lastPage];
+        }
+        return [currentPage - 2, currentPage - 1, currentPage, currentPage + 1, currentPage + 2];
+    }, [lastPage, currentPage]);
 
     // Direct Database Deadlines
     const displayUpcomingDeadlines = upcoming_deadlines || [];
@@ -310,6 +339,7 @@ export default function ProjectsIndex({
 
     // Dynamic Donut & Stats directly from Database
     const statTotal = stats.total || 0;
+    const statDraft = stats.draft || 0;
     const statBerlangsung = stats.berlangsung || 0;
     const statSelesai = stats.selesai || 0;
     const statMenunggu = stats.menunggu || 0;
@@ -322,7 +352,7 @@ export default function ProjectsIndex({
     const dibatalkanPct = statTotal > 0 ? Math.round((statDibatalkan / statTotal) * 100) : 0;
 
     return (
-        <div className="space-y-5 pb-12">
+        <div className="w-full max-w-full space-y-5 pb-12">
             <Head title="Projects & Orders - ARAMS PHOTOGRAPHY" />
 
             {/* ── 1. TOP HEADER & ACTION BUTTONS ─────────────────────────────────── */}
@@ -368,6 +398,8 @@ export default function ProjectsIndex({
                         const count =
                             tab.key === 'all'
                                 ? (stats.total || displayProjects.length)
+                                : tab.key === 'draft'
+                                ? statDraft
                                 : tab.key === 'berlangsung'
                                 ? statBerlangsung
                                 : tab.key === 'selesai'
@@ -438,6 +470,7 @@ export default function ProjectsIndex({
                             className="w-full pl-3 pr-8 py-1.5 bg-slate-50/80 hover:bg-slate-100/80 border border-slate-200 rounded-xl text-xs text-slate-700 font-medium outline-hidden cursor-pointer appearance-none"
                         >
                             <option value="all">Semua Status</option>
+                            <option value="draft">Draft</option>
                             <option value="berlangsung">Berlangsung</option>
                             <option value="selesai">Selesai</option>
                             <option value="menunggu">Menunggu / Booking</option>
@@ -684,65 +717,59 @@ export default function ProjectsIndex({
                                                     </td>
 
                                                     {/* Aksi Dropdown */}
-                                                    <td className="py-3.5 px-3 text-center relative">
-                                                        <div className="inline-block text-left">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    setActiveActionMenu(activeActionMenu === p.id ? null : p.id)
-                                                                }
-                                                                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
-                                                            >
-                                                                <MoreVertical className="w-4 h-4" />
-                                                            </button>
-
-                                                            {activeActionMenu === p.id && (
-                                                                <>
-                                                                    <div
-                                                                        className="fixed inset-0 z-20"
-                                                                        onClick={() => setActiveActionMenu(null)}
-                                                                    />
-                                                                    <div className="absolute right-0 mt-1 w-40 bg-white rounded-xl shadow-xl border border-slate-100 z-30 py-1 text-left animate-in fade-in zoom-in-95 duration-100">
-                                                                        <Link
-                                                                            href={`/projects/${p.id}`}
-                                                                            className="flex items-center gap-2 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 font-medium"
-                                                                        >
-                                                                            <Eye className="w-3.5 h-3.5 text-slate-400" />
-                                                                            <span>Lihat Detail</span>
-                                                                        </Link>
-                                                                        <Link
-                                                                            href={`/projects/${p.id}/invoice`}
-                                                                            className="flex items-center gap-2 px-3 py-1.5 text-xs text-[#3B46F1] hover:bg-indigo-50 font-medium"
-                                                                        >
-                                                                            <FileText className="w-3.5 h-3.5 text-[#3B46F1]" />
-                                                                            <span>Lihat Invoice</span>
-                                                                        </Link>
-                                                                        <Link
-                                                                            href={`/projects/${p.id}/edit`}
-                                                                            className="flex items-center gap-2 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 font-medium"
-                                                                        >
-                                                                            <Edit3 className="w-3.5 h-3.5 text-slate-400" />
-                                                                            <span>Edit Project</span>
-                                                                        </Link>
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => {
-                                                                                setActiveActionMenu(null);
-                                                                                setConfirmDelete({
-                                                                                    isOpen: true,
-                                                                                    id: p.id,
-                                                                                    name: p.name,
-                                                                                });
-                                                                            }}
-                                                                            className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 font-medium cursor-pointer"
-                                                                        >
-                                                                            <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                                                                            <span>Hapus</span>
-                                                                        </button>
-                                                                    </div>
-                                                                </>
-                                                            )}
-                                                        </div>
+                                                    <td className="py-3.5 px-3 text-center">
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <button
+                                                                    type="button"
+                                                                    className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                                                                >
+                                                                    <MoreVertical className="w-4 h-4" />
+                                                                </button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end" className="w-40 bg-white rounded-xl shadow-xl border border-slate-200/90 p-1 z-50 text-xs">
+                                                                <DropdownMenuItem asChild>
+                                                                    <Link
+                                                                        href={`/projects/${p.id}`}
+                                                                        className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50 font-medium rounded-lg cursor-pointer"
+                                                                    >
+                                                                        <Eye className="w-3.5 h-3.5 text-slate-400" />
+                                                                        <span>Lihat Detail</span>
+                                                                    </Link>
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem asChild>
+                                                                    <Link
+                                                                        href={`/projects/${p.id}/invoice`}
+                                                                        className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-[#3B46F1] hover:bg-indigo-50 font-medium rounded-lg cursor-pointer"
+                                                                    >
+                                                                        <FileText className="w-3.5 h-3.5 text-[#3B46F1]" />
+                                                                        <span>Lihat Invoice</span>
+                                                                    </Link>
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem asChild>
+                                                                    <Link
+                                                                        href={`/projects/${p.id}/edit`}
+                                                                        className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50 font-medium rounded-lg cursor-pointer"
+                                                                    >
+                                                                        <Edit3 className="w-3.5 h-3.5 text-slate-400" />
+                                                                        <span>Edit Project</span>
+                                                                    </Link>
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem
+                                                                    onClick={() => {
+                                                                        setConfirmDelete({
+                                                                            isOpen: true,
+                                                                            id: p.id,
+                                                                            name: p.name,
+                                                                        });
+                                                                    }}
+                                                                    className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-rose-600 hover:bg-rose-50 font-medium rounded-lg cursor-pointer focus:bg-rose-50 focus:text-rose-600"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                                                                    <span>Hapus</span>
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
                                                     </td>
                                                 </tr>
                                             );
@@ -763,11 +790,11 @@ export default function ProjectsIndex({
                             <div className="flex items-center gap-1">
                                 <button
                                     type="button"
-                                    disabled={projects.current_page <= 1}
+                                    disabled={currentPage <= 1}
                                     onClick={() =>
                                         router.get(
                                             '/projects',
-                                            { ...filters, page: projects.current_page - 1 },
+                                            { ...filters, page: currentPage - 1 },
                                             { preserveState: true }
                                         )
                                     }
@@ -776,7 +803,7 @@ export default function ProjectsIndex({
                                     <ChevronLeft className="w-3.5 h-3.5" />
                                 </button>
 
-                                {[1, 2, 3].map((page) => {
+                                {pageNumbers.map((page: number) => {
                                     return (
                                         <button
                                             key={page}
@@ -789,7 +816,7 @@ export default function ProjectsIndex({
                                                 )
                                             }
                                             className={`w-7 h-7 flex items-center justify-center rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                                page === (projects.current_page || 1)
+                                                page === currentPage
                                                     ? 'border-2 border-primary-accent text-primary-accent badge-primary-accent font-bold'
                                                     : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
                                             }`}
@@ -801,11 +828,11 @@ export default function ProjectsIndex({
 
                                 <button
                                     type="button"
-                                    disabled={projects.current_page >= (projects.last_page || 3)}
+                                    disabled={currentPage >= lastPage}
                                     onClick={() =>
                                         router.get(
                                             '/projects',
-                                            { ...filters, page: (projects.current_page || 1) + 1 },
+                                            { ...filters, page: currentPage + 1 },
                                             { preserveState: true }
                                         )
                                     }
@@ -934,7 +961,6 @@ export default function ProjectsIndex({
                                         strokeWidth="9"
                                         strokeDasharray="251.2"
                                         strokeDashoffset={251.2 - (251.2 * (berlangsungPct || 0)) / 100}
-                                        strokeDashoffset-start="83"
                                         fill="none"
                                         strokeLinecap="round"
                                         className="opacity-90"

@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
+import { toast } from 'sonner';
+import { Pagination } from '@/components/ui/pagination';
 import {
     Folder,
     CheckCircle2,
@@ -25,6 +27,10 @@ import {
     Plane,
     User,
     Tag,
+    Layers,
+    GitBranch,
+    Box,
+    ExternalLink,
 } from 'lucide-react';
 
 interface CategoryItem {
@@ -34,8 +40,11 @@ interface CategoryItem {
     description?: string;
     icon?: string;
     color?: string;
+    workflow_type?: string;
     status?: string;
     projects_count?: number;
+    packages_count?: number;
+    services_count?: number;
 }
 
 interface Stats {
@@ -53,10 +62,13 @@ interface CategoriesIndexProps {
         total: number;
         from: number;
         to: number;
+        per_page?: number;
+        links?: Array<{ url: string | null; label: string; active: boolean }>;
     };
     stats?: Stats;
     filters?: {
         search?: string;
+        per_page?: number;
     };
 }
 
@@ -87,12 +99,13 @@ const CATEGORY_BG: Record<string, string> = {
 };
 
 export default function CategoriesIndex({
-    categories = { data: [], current_page: 1, last_page: 1, total: 0, from: 0, to: 0 },
-    stats = { total: 12, active: 10, inactive: 2, used_in_projects: 86 },
+    categories = { data: [], current_page: 1, last_page: 1, total: 0, from: 0, to: 0, links: [] },
+    stats = { total: 0, active: 0, inactive: 0, used_in_projects: 0 },
     filters = {},
 }: CategoriesIndexProps) {
     const [searchQuery, setSearchQuery] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [perPage, setPerPage] = useState(filters?.per_page || 10);
     const [createModalOpen, setCreateModalOpen] = useState(false);
     const [editItem, setEditItem] = useState<CategoryItem | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -101,29 +114,16 @@ export default function CategoriesIndex({
     const [form, setForm] = useState({
         name: '',
         description: '',
+        workflow_type: 'wedding',
         color: '#6366F1',
         icon: 'Tag',
         status: 'active',
     });
 
-    // Demo data fallback matching Screenshot 1
-    const demoCategories: CategoryItem[] = useMemo(() => [
-        { id: 1, name: 'Wedding', description: 'Kategori untuk project pernikahan (akad, resepsi, prewedding, dll)', status: 'active', projects_count: 28 },
-        { id: 2, name: 'Prewedding', description: 'Sesi foto sebelum pernikahan', status: 'active', projects_count: 16 },
-        { id: 3, name: 'Family', description: 'Foto keluarga / family portrait', status: 'active', projects_count: 12 },
-        { id: 4, name: 'Maternity', description: 'Foto kehamilan / maternity session', status: 'active', projects_count: 8 },
-        { id: 5, name: 'Newborn', description: 'Foto bayi baru lahir', status: 'active', projects_count: 6 },
-        { id: 6, name: 'Birthday', description: 'Event ulang tahun', status: 'active', projects_count: 7 },
-        { id: 7, name: 'Company Profile', description: 'Foto untuk kebutuhan profil perusahaan', status: 'active', projects_count: 9 },
-        { id: 8, name: 'Event', description: 'Event formal / informal (seminar, gathering, dll)', status: 'active', projects_count: 15 },
-        { id: 9, name: 'Traveling', description: 'Foto traveling / dokumentasi perjalanan', status: 'inactive', projects_count: 4 },
-        { id: 10, name: 'Personal', description: 'Foto personal / individu', status: 'active', projects_count: 5 },
-    ], []);
-
-    const rawData = categories.data && categories.data.length > 0 ? categories.data : demoCategories;
+    const categoryList = categories.data || [];
 
     const filteredData = useMemo(() => {
-        return rawData.filter((cat) => {
+        return categoryList.filter((cat) => {
             if (searchQuery) {
                 const q = searchQuery.toLowerCase();
                 if (!cat.name.toLowerCase().includes(q) && !(cat.description || '').toLowerCase().includes(q)) {
@@ -136,13 +136,14 @@ export default function CategoriesIndex({
             }
             return true;
         });
-    }, [rawData, searchQuery, statusFilter]);
+    }, [categoryList, searchQuery, statusFilter]);
 
     const handleOpenCreate = () => {
         setEditItem(null);
         setForm({
             name: '',
             description: '',
+            workflow_type: 'non_wedding',
             color: '#6366F1',
             icon: 'Tag',
             status: 'active',
@@ -155,6 +156,7 @@ export default function CategoriesIndex({
         setForm({
             name: item.name,
             description: item.description || '',
+            workflow_type: item.workflow_type || 'non_wedding',
             color: item.color || '#6366F1',
             icon: item.icon || 'Tag',
             status: item.status || 'active',
@@ -168,36 +170,75 @@ export default function CategoriesIndex({
         if (editItem) {
             router.put(`/master-data/categories/${editItem.id}`, form, {
                 onSuccess: () => {
+                    toast.success(`Kategori "${form.name}" berhasil diperbarui!`);
                     setCreateModalOpen(false);
                     setIsSubmitting(false);
                 },
-                onError: () => setIsSubmitting(false),
+                onError: (errs) => {
+                    toast.error('Gagal memperbarui: ' + Object.values(errs).join(', '));
+                    setIsSubmitting(false);
+                },
             });
         } else {
             router.post('/master-data/categories', form, {
                 onSuccess: () => {
+                    toast.success(`Kategori "${form.name}" berhasil ditambahkan!`);
                     setCreateModalOpen(false);
                     setIsSubmitting(false);
                 },
-                onError: () => setIsSubmitting(false),
+                onError: (errs) => {
+                    toast.error('Gagal menambah: ' + Object.values(errs).join(', '));
+                    setIsSubmitting(false);
+                },
             });
         }
     };
 
-    const handleDelete = (id: number | string) => {
-        if (confirm('Yakin ingin menghapus kategori ini?')) {
-            router.delete(`/master-data/categories/${id}`);
+    const handleDelete = (cat: CategoryItem) => {
+        if (confirm(`Yakin ingin menghapus kategori "${cat.name}"? Paket dan layanan yang terkait mungkin terpengaruh.`)) {
+            router.delete(`/master-data/categories/${cat.id}`, {
+                onSuccess: () => toast.success(`Kategori "${cat.name}" berhasil dihapus!`),
+                onError: (errs) => toast.error('Gagal menghapus: ' + Object.values(errs).join(', ')),
+            });
         }
+    };
+
+    const applyFilters = (newParams: Record<string, any> = {}) => {
+        router.get(
+            '/master-data/categories',
+            {
+                search: newParams.search !== undefined ? newParams.search : searchQuery || undefined,
+                per_page: newParams.per_page !== undefined ? newParams.per_page : perPage,
+                page: newParams.page || 1,
+            },
+            { preserveState: true }
+        );
+    };
+
+    const handleSearchSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        applyFilters({ search: searchQuery, page: 1 });
+    };
+
+    const handlePageChange = (newPage: number) => {
+        applyFilters({ page: newPage });
+    };
+
+    const handlePerPageChange = (newPerPage: number) => {
+        setPerPage(newPerPage);
+        applyFilters({ per_page: newPerPage, page: 1 });
     };
 
     // Export CSV
     const handleExport = () => {
         const rows = [
-            ['No', 'Nama Kategori', 'Deskripsi', 'Jumlah Project', 'Status'],
+            ['No', 'Nama Kategori', 'Workflow', 'Paket', 'Layanan', 'Jumlah Project', 'Status'],
             ...filteredData.map((c, i) => [
                 i + 1,
                 c.name,
-                c.description || '-',
+                c.workflow_type || 'non_wedding',
+                c.packages_count || 0,
+                c.services_count || 0,
                 c.projects_count || 0,
                 c.status === 'active' ? 'Aktif' : 'Nonaktif',
             ]),
@@ -212,8 +253,33 @@ export default function CategoriesIndex({
         document.body.removeChild(link);
     };
 
+    const getWorkflowBadge = (wfType?: string) => {
+        if (wfType === 'wedding') {
+            return (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                    <GitBranch className="w-3 h-3 text-purple-500" />
+                    Wedding (8 Tahap)
+                </span>
+            );
+        }
+        if (wfType === 'custom') {
+            return (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                    <GitBranch className="w-3 h-3 text-amber-500" />
+                    Custom (6 Tahap)
+                </span>
+            );
+        }
+        return (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200">
+                <GitBranch className="w-3 h-3 text-sky-500" />
+                Non-Wedding (5 Tahap)
+            </span>
+        );
+    };
+
     return (
-        <div className="space-y-6 pb-20">
+        <div className="w-full max-w-full space-y-6 pb-20">
             <Head title="Kategori Project - Master Data" />
 
             {/* ── 1. BREADCRUMB & HEADER ── */}
@@ -228,18 +294,27 @@ export default function CategoriesIndex({
                     </nav>
                     <h1 className="text-2xl font-black text-slate-900 tracking-tight">Kategori Project</h1>
                     <p className="text-xs text-slate-500">
-                        Kelola kategori project yang digunakan untuk mengelompokkan jenis project.
+                        Kelola kategori project yang terhubung langsung dengan Alur Workflow, Paket, Layanan, dan Project.
                     </p>
                 </div>
 
-                <button
-                    type="button"
-                    onClick={handleOpenCreate}
-                    className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#4F46E5] hover:bg-[#4338CA] text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-500/20 transition-all cursor-pointer shrink-0"
-                >
-                    <Plus className="w-4 h-4" />
-                    Tambah Kategori
-                </button>
+                <div className="flex items-center gap-2">
+                    <Link
+                        href="/master-data/workflows"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer"
+                    >
+                        <GitBranch className="w-4 h-4 text-indigo-600" />
+                        <span>Atur Workflow</span>
+                    </Link>
+                    <button
+                        type="button"
+                        onClick={handleOpenCreate}
+                        className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#4F46E5] hover:bg-[#4338CA] text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-500/20 transition-all cursor-pointer shrink-0"
+                    >
+                        <Plus className="w-4 h-4" />
+                        <span>Tambah Kategori</span>
+                    </button>
+                </div>
             </div>
 
             {/* ── 2. TOP 4 STAT CARDS ── */}
@@ -252,9 +327,9 @@ export default function CategoriesIndex({
                     <div>
                         <span className="text-xs font-bold text-slate-600 block">Total Kategori</span>
                         <h2 className="text-2xl font-black text-slate-900 tracking-tight font-sans">
-                            {stats.total || filteredData.length}
+                            {stats.total ?? categoryList.length}
                         </h2>
-                        <p className="text-[11px] text-slate-400 font-medium">Kategori aktif</p>
+                        <p className="text-[11px] text-slate-400 font-medium">Kategori di database</p>
                     </div>
                 </div>
 
@@ -266,7 +341,7 @@ export default function CategoriesIndex({
                     <div>
                         <span className="text-xs font-bold text-slate-600 block">Kategori Aktif</span>
                         <h2 className="text-2xl font-black text-[#059669] tracking-tight font-sans">
-                            {stats.active || 10}
+                            {stats.active ?? 0}
                         </h2>
                         <p className="text-[11px] text-slate-400 font-medium">Sedang digunakan</p>
                     </div>
@@ -280,9 +355,9 @@ export default function CategoriesIndex({
                     <div>
                         <span className="text-xs font-bold text-slate-600 block">Kategori Nonaktif</span>
                         <h2 className="text-2xl font-black text-[#DC2626] tracking-tight font-sans">
-                            {stats.inactive || 2}
+                            {stats.inactive ?? 0}
                         </h2>
-                        <p className="text-[11px] text-slate-400 font-medium">Tidak digunakan</p>
+                        <p className="text-[11px] text-slate-400 font-medium">Tidak aktif</p>
                     </div>
                 </div>
 
@@ -294,9 +369,9 @@ export default function CategoriesIndex({
                     <div>
                         <span className="text-xs font-bold text-slate-600 block">Digunakan di Project</span>
                         <h2 className="text-2xl font-black text-slate-900 tracking-tight font-sans">
-                            {stats.used_in_projects || 86}
+                            {stats.used_in_projects ?? 0}
                         </h2>
-                        <p className="text-[11px] text-slate-400 font-medium">Project</p>
+                        <p className="text-[11px] text-slate-400 font-medium">Project aktif</p>
                     </div>
                 </div>
             </div>
@@ -305,7 +380,7 @@ export default function CategoriesIndex({
             <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
                 {/* Toolbar */}
                 <div className="p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100">
-                    <div className="flex flex-wrap items-center gap-3 flex-1">
+                    <form onSubmit={handleSearchSubmit} className="flex flex-wrap items-center gap-3 flex-1">
                         {/* Search Input */}
                         <div className="relative min-w-[240px] max-w-sm flex-1">
                             <input
@@ -331,7 +406,7 @@ export default function CategoriesIndex({
                             </select>
                             <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                         </div>
-                    </div>
+                    </form>
 
                     <button
                         type="button"
@@ -339,7 +414,7 @@ export default function CategoriesIndex({
                         className="inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-indigo-200 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-50/70 transition-all cursor-pointer shadow-2xs"
                     >
                         <Download className="w-3.5 h-3.5 text-indigo-600" />
-                        Export
+                        <span>Export CSV</span>
                     </button>
                 </div>
 
@@ -348,10 +423,12 @@ export default function CategoriesIndex({
                     <table className="w-full text-left text-xs border-collapse">
                         <thead>
                             <tr className="border-b border-slate-100 bg-slate-50/40 text-[10px] font-bold tracking-wider text-slate-500 uppercase">
-                                <th className="py-3 px-5 w-14">NO</th>
+                                <th className="py-3 px-5 w-12">NO</th>
                                 <th className="py-3 px-4">NAMA KATEGORI</th>
-                                <th className="py-3 px-4">DESKRIPSI</th>
-                                <th className="py-3 px-4 text-center">JUMLAH PROJECT</th>
+                                <th className="py-3 px-4">ALUR WORKFLOW</th>
+                                <th className="py-3 px-4 text-center">PAKET</th>
+                                <th className="py-3 px-4 text-center">LAYANAN</th>
+                                <th className="py-3 px-4 text-center">PROJECTS</th>
                                 <th className="py-3 px-4 text-center">STATUS</th>
                                 <th className="py-3 px-5 text-center">AKSI</th>
                             </tr>
@@ -366,7 +443,7 @@ export default function CategoriesIndex({
                                     return (
                                         <tr key={cat.id} className="hover:bg-slate-50/60 transition-colors">
                                             <td className="py-3.5 px-5 font-bold text-slate-400">
-                                                {idx + 1}
+                                                {((categories.current_page || 1) - 1) * 10 + idx + 1}
                                             </td>
 
                                             <td className="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">
@@ -374,12 +451,47 @@ export default function CategoriesIndex({
                                                     <div className={`w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 ${bgStyle}`}>
                                                         {iconEl}
                                                     </div>
-                                                    <span>{cat.name}</span>
+                                                    <div>
+                                                        <span className="block font-bold text-slate-900">{cat.name}</span>
+                                                        {cat.description && (
+                                                            <span className="block text-[10.5px] text-slate-400 font-normal max-w-xs truncate" title={cat.description}>
+                                                                {cat.description}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </td>
 
-                                            <td className="py-3.5 px-4 text-slate-600 font-medium max-w-md">
-                                                {cat.description || '-'}
+                                            <td className="py-3.5 px-4 whitespace-nowrap">
+                                                <Link
+                                                    href="/master-data/workflows"
+                                                    className="hover:opacity-80 transition-opacity"
+                                                    title="Buka Alur Workflow di Master Data"
+                                                >
+                                                    {getWorkflowBadge(cat.workflow_type)}
+                                                </Link>
+                                            </td>
+
+                                            <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                                                <Link
+                                                    href={`/master-data/packages?category_id=${cat.id}`}
+                                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50/70 hover:bg-indigo-100 text-[#3B46F1] font-bold text-[11px] transition-colors border border-indigo-100"
+                                                    title="Lihat paket dalam kategori ini"
+                                                >
+                                                    <Box className="w-3 h-3 text-indigo-500" />
+                                                    <span>{cat.packages_count ?? 0} Paket</span>
+                                                </Link>
+                                            </td>
+
+                                            <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                                                <Link
+                                                    href={`/master-data/services?category_id=${cat.id}`}
+                                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-[11px] transition-colors border border-slate-200"
+                                                    title="Lihat layanan dalam kategori ini"
+                                                >
+                                                    <Layers className="w-3 h-3 text-slate-400" />
+                                                    <span>{cat.services_count ?? 0} Layanan</span>
+                                                </Link>
                                             </td>
 
                                             <td className="py-3.5 px-4 text-center font-bold text-slate-800">
@@ -410,7 +522,7 @@ export default function CategoriesIndex({
                                                     </button>
                                                     <button
                                                         type="button"
-                                                        onClick={() => handleDelete(cat.id)}
+                                                        onClick={() => handleDelete(cat)}
                                                         className="w-8 h-8 rounded-lg border border-rose-200 hover:bg-rose-50 text-rose-500 flex items-center justify-center transition-colors cursor-pointer"
                                                         title="Hapus Kategori"
                                                     >
@@ -423,7 +535,7 @@ export default function CategoriesIndex({
                                 })
                             ) : (
                                 <tr>
-                                    <td colSpan={6} className="py-12 text-center text-slate-400">
+                                    <td colSpan={8} className="py-12 text-center text-slate-400">
                                         <Folder className="w-8 h-8 text-slate-300 mx-auto mb-2" />
                                         <p className="text-xs font-semibold text-slate-600">Tidak ada kategori yang sesuai.</p>
                                     </td>
@@ -434,25 +546,17 @@ export default function CategoriesIndex({
                 </div>
 
                 {/* Pagination */}
-                <div className="p-4 sm:px-5 flex items-center justify-between border-t border-slate-100 bg-slate-50/30 text-xs text-slate-500 font-medium">
-                    <span>
-                        Menampilkan 1 - {filteredData.length > 0 ? Math.min(filteredData.length, 10) : 0} dari {stats.total || filteredData.length} kategori
-                    </span>
-                    <div className="flex items-center gap-1">
-                        <button type="button" className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 disabled:opacity-40" disabled>
-                            <ChevronLeft className="w-3.5 h-3.5" />
-                        </button>
-                        <button type="button" className="w-7 h-7 rounded-lg bg-[#3B46F1] text-white font-bold flex items-center justify-center text-xs shadow-2xs">
-                            1
-                        </button>
-                        <button type="button" className="w-7 h-7 rounded-lg border border-slate-200 text-slate-600 font-semibold flex items-center justify-center text-xs hover:bg-slate-100">
-                            2
-                        </button>
-                        <button type="button" className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100">
-                            <ChevronRight className="w-3.5 h-3.5" />
-                        </button>
-                    </div>
-                </div>
+                <Pagination
+                    currentPage={categories.current_page || 1}
+                    lastPage={categories.last_page || 1}
+                    total={categories.total || categoryList.length}
+                    from={categories.from}
+                    to={categories.to}
+                    perPage={perPage}
+                    itemLabel="kategori"
+                    onPageChange={handlePageChange}
+                    onPerPageChange={handlePerPageChange}
+                />
             </div>
 
             {/* ── 4. MODAL: TAMBAH / EDIT KATEGORI ── */}
@@ -478,15 +582,33 @@ export default function CategoriesIndex({
                                     required
                                     value={form.name}
                                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                    placeholder="Contoh: Wedding, Prewedding, dll"
+                                    placeholder="Contoh: Wedding, Prewedding, Event, dll"
                                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                                 />
                             </div>
 
                             <div>
+                                <label className="block font-bold text-slate-700 mb-1">
+                                    Alur Workflow Utama <span className="text-rose-500">*</span>
+                                </label>
+                                <select
+                                    value={form.workflow_type}
+                                    onChange={(e) => setForm({ ...form, workflow_type: e.target.value })}
+                                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
+                                >
+                                    <option value="wedding">Workflow Wedding (8 Tahapan - Akad/Resepsi)</option>
+                                    <option value="non_wedding">Workflow Non-Wedding (5 Tahapan - Prewed/Portrait/Event)</option>
+                                    <option value="custom">Workflow Custom / Bundling (6 Tahapan - Multi Sesi)</option>
+                                </select>
+                                <p className="text-[10px] text-slate-400 mt-1">
+                                    Menentukan template alur kerja dan deadline deliverables otomatis di proyek.
+                                </p>
+                            </div>
+
+                            <div>
                                 <label className="block font-bold text-slate-700 mb-1">Deskripsi</label>
                                 <textarea
-                                    rows={3}
+                                    rows={2}
                                     value={form.description}
                                     onChange={(e) => setForm({ ...form, description: e.target.value })}
                                     placeholder="Deskripsi singkat mengenai kategori project ini..."

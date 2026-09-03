@@ -34,6 +34,7 @@ import {
     Modal,
     AlertConfirmation,
     Badge,
+    Pagination,
 } from '@/components/ui';
 
 interface ProjectOption {
@@ -87,6 +88,7 @@ interface FilesIndexProps {
         project_id?: string;
         sender?: string;
         type?: string;
+        per_page?: number;
     };
     default_expiry_days?: number;
 }
@@ -108,6 +110,7 @@ export default function FilesIndex({
     const [selectedSender, setSelectedSender] = useState(filters.sender || 'all');
     const [selectedType, setSelectedType] = useState(filters.type || 'all');
     const [selectedStatus, setSelectedStatus] = useState(filters.status || 'all');
+    const [perPage, setPerPage] = useState(filters.per_page || file_links.per_page || 10);
 
     const [modalOpen, setModalOpen] = useState(false);
     const [activeActionId, setActiveActionId] = useState<string | null>(null);
@@ -250,19 +253,29 @@ export default function FilesIndex({
 
     const displayFiles = file_links.data && file_links.data.length > 0 ? file_links.data : fallbackFiles;
 
-    const handleFilter = (customParams = {}) => {
+    const handleFilter = (customParams: Record<string, any> = {}) => {
         router.get(
             '/files',
             {
-                search: search || undefined,
-                project_id: selectedProject !== 'all' ? selectedProject : undefined,
-                sender: selectedSender !== 'all' ? selectedSender : undefined,
-                type: selectedType !== 'all' ? selectedType : undefined,
-                status: selectedStatus !== 'all' ? selectedStatus : undefined,
-                ...customParams,
+                search: customParams.search !== undefined ? customParams.search : search || undefined,
+                project_id: (customParams.project_id !== undefined ? customParams.project_id : selectedProject) !== 'all' ? (customParams.project_id || selectedProject) : undefined,
+                sender: (customParams.sender !== undefined ? customParams.sender : selectedSender) !== 'all' ? (customParams.sender || selectedSender) : undefined,
+                type: (customParams.type !== undefined ? customParams.type : selectedType) !== 'all' ? (customParams.type || selectedType) : undefined,
+                status: (customParams.status !== undefined ? customParams.status : selectedStatus) !== 'all' ? (customParams.status || selectedStatus) : undefined,
+                per_page: customParams.per_page !== undefined ? customParams.per_page : perPage,
+                page: customParams.page || 1,
             },
             { preserveState: true }
         );
+    };
+
+    const handlePageChange = (newPage: number) => {
+        handleFilter({ page: newPage });
+    };
+
+    const handlePerPageChange = (newPerPage: number) => {
+        setPerPage(newPerPage);
+        handleFilter({ per_page: newPerPage, page: 1 });
     };
 
     const handleReset = () => {
@@ -370,7 +383,7 @@ export default function FilesIndex({
     };
 
     return (
-        <div className="space-y-6 pb-12">
+        <div className="w-full max-w-full space-y-6 pb-12">
             <Head title="Files - Arams Pictures" />
 
             {/* ── HEADER TITLE & ACTION BUTTONS (Gambar 2) ─────────────────── */}
@@ -774,58 +787,19 @@ export default function FilesIndex({
             </Table>
 
             {/* Pagination Footer */}
-            <div className="p-4 bg-white rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 shadow-2xs">
-                <div className="flex items-center gap-1.5">
-                    <span className="text-slate-400">@</span>
-                    <span>Menampilkan 1 - 10 dari 68 link</span>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                    <button
-                        type="button"
-                        disabled
-                        className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-400 font-bold opacity-40 cursor-not-allowed"
-                    >
-                        &lt;
-                    </button>
-
-                    <button
-                        type="button"
-                        className="w-8 h-8 rounded-lg text-xs font-bold bg-[#4F46E5] text-white shadow-xs flex items-center justify-center"
-                    >
-                        1
-                    </button>
-
-                    <button
-                        type="button"
-                        className="w-8 h-8 rounded-lg text-xs font-bold border border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center justify-center cursor-pointer"
-                    >
-                        2
-                    </button>
-
-                    <button
-                        type="button"
-                        className="w-8 h-8 rounded-lg text-xs font-bold border border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center justify-center cursor-pointer"
-                    >
-                        3
-                    </button>
-
-                    <span className="px-1 text-slate-400">...</span>
-
-                    <button
-                        type="button"
-                        className="w-8 h-8 rounded-lg text-xs font-bold border border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center justify-center cursor-pointer"
-                    >
-                        7
-                    </button>
-
-                    <button
-                        type="button"
-                        className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 cursor-pointer"
-                    >
-                        &gt;
-                    </button>
-                </div>
+            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+                <Pagination
+                    className="border-t-0"
+                    currentPage={file_links.current_page || 1}
+                    lastPage={file_links.last_page || 1}
+                    total={file_links.total || displayFiles.length}
+                    from={file_links.from}
+                    to={file_links.to}
+                    perPage={perPage}
+                    itemLabel="link"
+                    onPageChange={handlePageChange}
+                    onPerPageChange={handlePerPageChange}
+                />
             </div>
 
             {/* ── 4-COLUMN INFO BOX AT BOTTOM (Gambar 2) ──────────────────────── */}

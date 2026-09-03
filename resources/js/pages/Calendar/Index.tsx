@@ -116,8 +116,14 @@ export default function CalendarIndex({
 }: CalendarIndexProps) {
     // Current View State
     const [viewMode, setViewMode] = useState<'bulan' | 'minggu' | 'hari' | 'daftar'>('minggu');
-    const [currentWeekOffset, setCurrentWeekOffset] = useState<number>(0);
+    const [currentDate, setCurrentDate] = useState<Date>(new Date(2026, 4, 27)); // Reference: 27 Mei 2026
+    const [selectedDate, setSelectedDate] = useState<string>('2026-05-27');
+    const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<CalendarItem | null>(null);
+
+    // List view filters
+    const [listSearch, setListSearch] = useState('');
+    const [listTypeFilter, setListTypeFilter] = useState('Semua');
 
     // Modal & Drawer State
     const [addModalOpen, setAddModalOpen] = useState(false);
@@ -149,33 +155,153 @@ export default function CalendarIndex({
         reminder: '30 menit sebelumnya',
     });
 
-    // Compute Days for the active Week
-    // Base reference date: Wednesday, May 27, 2026 (or today shifted by week offset)
+    const monthNames = [
+        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    const monthNamesShort = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
+    const dayNames = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+    const dayNamesFull = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+
+    // 1. Compute Days for the active Week
     const weekDays = useMemo(() => {
-        const baseDate = new Date(2026, 4, 25); // May 25, 2026 (Monday)
-        baseDate.setDate(baseDate.getDate() + (currentWeekOffset * 7));
+        const d = new Date(currentDate);
+        const day = d.getDay(); // 0 is Sunday, 1 is Monday ...
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+        const monday = new Date(d.setDate(diff));
 
         const days = [];
-        const dayNames = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-        const monthNamesShort = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
-
         for (let i = 0; i < 7; i++) {
-            const d = new Date(baseDate);
-            d.setDate(baseDate.getDate() + i);
-            const dateStr = d.toISOString().split('T')[0];
-            const isToday = d.getDate() === 27 && d.getMonth() === 4 && d.getFullYear() === 2026;
+            const cur = new Date(monday);
+            cur.setDate(monday.getDate() + i);
+            const dateStr = cur.toISOString().split('T')[0];
+            const isToday = cur.getDate() === 27 && cur.getMonth() === 4 && cur.getFullYear() === 2026;
+            const isSelected = dateStr === selectedDate;
 
             days.push({
                 dayName: dayNames[i],
-                dayNum: d.getDate(),
-                monthName: monthNamesShort[d.getMonth()],
-                year: d.getFullYear(),
+                dayNameFull: dayNamesFull[i],
+                dayNum: cur.getDate(),
+                monthName: monthNamesShort[cur.getMonth()],
+                year: cur.getFullYear(),
                 dateStr: dateStr,
                 isToday: isToday,
+                isSelected: isSelected,
+                fullDate: cur,
             });
         }
         return days;
-    }, [currentWeekOffset]);
+    }, [currentDate, selectedDate]);
+
+    // 2. Compute Days for the active Month (35 or 42 cells)
+    const monthDays = useMemo(() => {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+
+        const firstDayOfMonth = new Date(year, month, 1);
+        const lastDayOfMonth = new Date(year, month + 1, 0);
+
+        let startDayOfWeek = firstDayOfMonth.getDay(); // 0=Sun, 1=Mon
+        startDayOfWeek = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1; // 0=Mon, 6=Sun
+
+        const days = [];
+        const prevMonthLastDay = new Date(year, month, 0).getDate();
+        for (let i = startDayOfWeek - 1; i >= 0; i--) {
+            const d = new Date(year, month - 1, prevMonthLastDay - i);
+            const dateStr = d.toISOString().split('T')[0];
+            days.push({
+                dateStr: dateStr,
+                dayNum: d.getDate(),
+                isCurrentMonth: false,
+                isToday: false,
+                isSelected: dateStr === selectedDate,
+                fullDate: d,
+            });
+        }
+
+        for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
+            const d = new Date(year, month, i);
+            const dateStr = d.toISOString().split('T')[0];
+            days.push({
+                dateStr: dateStr,
+                dayNum: i,
+                isCurrentMonth: true,
+                isToday: d.getDate() === 27 && d.getMonth() === 4 && d.getFullYear() === 2026,
+                isSelected: dateStr === selectedDate,
+                fullDate: d,
+            });
+        }
+
+        const remaining = (7 - (days.length % 7)) % 7;
+        for (let i = 1; i <= remaining; i++) {
+            const d = new Date(year, month + 1, i);
+            const dateStr = d.toISOString().split('T')[0];
+            days.push({
+                dateStr: dateStr,
+                dayNum: d.getDate(),
+                isCurrentMonth: false,
+                isToday: false,
+                isSelected: dateStr === selectedDate,
+                fullDate: d,
+            });
+        }
+
+        return days;
+    }, [currentDate, selectedDate]);
+
+    // 3. Navigation Controls
+    const handlePrev = () => {
+        const d = new Date(currentDate);
+        if (viewMode === 'minggu') {
+            d.setDate(d.getDate() - 7);
+        } else if (viewMode === 'bulan' || viewMode === 'daftar') {
+            d.setMonth(d.getMonth() - 1);
+        } else if (viewMode === 'hari') {
+            d.setDate(d.getDate() - 1);
+            setSelectedDate(d.toISOString().split('T')[0]);
+        }
+        setCurrentDate(d);
+    };
+
+    const handleNext = () => {
+        const d = new Date(currentDate);
+        if (viewMode === 'minggu') {
+            d.setDate(d.getDate() + 7);
+        } else if (viewMode === 'bulan' || viewMode === 'daftar') {
+            d.setMonth(d.getMonth() + 1);
+        } else if (viewMode === 'hari') {
+            d.setDate(d.getDate() + 1);
+            setSelectedDate(d.toISOString().split('T')[0]);
+        }
+        setCurrentDate(d);
+    };
+
+    const handleToday = () => {
+        const today = new Date(2026, 4, 27);
+        setCurrentDate(today);
+        setSelectedDate('2026-05-27');
+    };
+
+    // 4. Header Date Label
+    const dateLabel = useMemo(() => {
+        if (viewMode === 'bulan' || viewMode === 'daftar') {
+            return `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+        }
+        if (viewMode === 'hari') {
+            const parts = selectedDate.split('-');
+            if (parts.length === 3) {
+                const selD = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                let dow = selD.getDay();
+                dow = dow === 0 ? 6 : dow - 1;
+                return `${dayNamesFull[dow]}, ${selD.getDate()} ${monthNames[selD.getMonth()]} ${selD.getFullYear()}`;
+            }
+            return selectedDate;
+        }
+        if (weekDays.length === 7) {
+            return `${weekDays[0].dayNum} – ${weekDays[6].dayNum} ${weekDays[6].monthName} ${weekDays[6].year}`;
+        }
+        return `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+    }, [viewMode, currentDate, selectedDate, weekDays]);
 
     // Sample default events for the mock week if no backend events exist
     const defaultWeekEvents: CalendarItem[] = useMemo(() => {
@@ -436,7 +562,7 @@ export default function CalendarIndex({
     };
 
     return (
-        <div className="space-y-6 pb-20">
+        <div className="w-full max-w-full space-y-6 pb-20">
             <Head title="Calendar & Schedule - Arams Pictures" />
 
             {/* ── 1. BREADCRUMBS & PAGE HEADER ── */}
@@ -457,14 +583,14 @@ export default function CalendarIndex({
             </div>
 
             {/* ── 2. CALENDAR MAIN CONTAINER ── */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-visible">
                 {/* Top Calendar Toolbar */}
-                <div className="p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 bg-white">
+                <div className="p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 bg-white relative">
                     {/* Left: Hari Ini, Arrows, Date Range Dropdown */}
                     <div className="flex items-center gap-3">
                         <button
                             type="button"
-                            onClick={() => setCurrentWeekOffset(0)}
+                            onClick={handleToday}
                             className="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all cursor-pointer shadow-2xs"
                         >
                             Hari ini
@@ -473,26 +599,117 @@ export default function CalendarIndex({
                         <div className="flex items-center gap-1">
                             <button
                                 type="button"
-                                onClick={() => setCurrentWeekOffset(prev => prev - 1)}
+                                onClick={handlePrev}
                                 className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-all cursor-pointer shadow-2xs"
+                                title="Sebelumnya"
                             >
                                 <ChevronLeft className="w-4 h-4" />
                             </button>
                             <button
                                 type="button"
-                                onClick={() => setCurrentWeekOffset(prev => prev + 1)}
+                                onClick={handleNext}
                                 className="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-all cursor-pointer shadow-2xs"
+                                title="Berikutnya"
                             >
                                 <ChevronRight className="w-4 h-4" />
                             </button>
                         </div>
 
-                        {/* Date Range Badge / Dropdown */}
-                        <div className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white shadow-2xs cursor-pointer">
-                            <span>
-                                {weekDays[0].dayNum} – {weekDays[6].dayNum} {weekDays[6].monthName} {weekDays[6].year}
-                            </span>
-                            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                        {/* Date Range Badge / Dropdown Popover Button */}
+                        <div className="relative">
+                            <button
+                                type="button"
+                                onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
+                                className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 bg-white hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+                            >
+                                <span>{dateLabel}</span>
+                                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isDatePickerOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {/* Interactive Date & Month Picker Dropdown Popover */}
+                            {isDatePickerOpen && (
+                                <div className="absolute left-0 top-12 z-50 w-80 bg-white rounded-2xl border border-slate-200 shadow-2xl p-4 space-y-3.5 animate-in fade-in zoom-in-95 duration-150">
+                                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                                        <span className="text-xs font-black text-slate-900">Pilih Tanggal &amp; Bulan</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsDatePickerOpen(false)}
+                                            className="p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+
+                                    {/* Direct Date Input */}
+                                    <div className="space-y-1">
+                                        <label className="text-[11px] font-bold text-slate-600 block">Lompat ke Tanggal:</label>
+                                        <input
+                                            type="date"
+                                            value={selectedDate}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val) {
+                                                    setSelectedDate(val);
+                                                    const parts = val.split('-');
+                                                    setCurrentDate(new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])));
+                                                }
+                                            }}
+                                            className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 font-semibold focus:ring-2 focus:ring-[#3B46F1] outline-hidden cursor-pointer"
+                                        />
+                                    </div>
+
+                                    {/* Year Selector */}
+                                    <div className="space-y-1">
+                                        <label className="text-[11px] font-bold text-slate-600 block">Tahun:</label>
+                                        <div className="flex items-center gap-1.5">
+                                            {[2025, 2026, 2027].map((yr) => (
+                                                <button
+                                                    key={yr}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const d = new Date(currentDate);
+                                                        d.setFullYear(yr);
+                                                        setCurrentDate(d);
+                                                    }}
+                                                    className={`flex-1 py-1 text-xs rounded-lg font-bold border transition-colors cursor-pointer ${
+                                                        currentDate.getFullYear() === yr
+                                                            ? 'bg-[#3B46F1] text-white border-indigo-600'
+                                                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                                                    }`}
+                                                >
+                                                    {yr}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Month Selector Grid */}
+                                    <div className="space-y-1">
+                                        <label className="text-[11px] font-bold text-slate-600 block">Bulan:</label>
+                                        <div className="grid grid-cols-4 gap-1.5">
+                                            {monthNamesShort.map((m, idx) => (
+                                                <button
+                                                    key={m}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const d = new Date(currentDate);
+                                                        d.setMonth(idx);
+                                                        setCurrentDate(d);
+                                                        setIsDatePickerOpen(false);
+                                                    }}
+                                                    className={`py-1.5 text-[11px] font-bold rounded-lg border transition-colors cursor-pointer text-center ${
+                                                        currentDate.getMonth() === idx
+                                                            ? 'bg-[#3B46F1] text-white border-indigo-600'
+                                                            : 'bg-slate-50 text-slate-700 border-slate-100 hover:bg-indigo-50 hover:text-indigo-600'
+                                                    }`}
+                                                >
+                                                    {m}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -517,7 +734,14 @@ export default function CalendarIndex({
 
                         <button
                             type="button"
-                            onClick={() => setAddModalOpen(true)}
+                            onClick={() => {
+                                setAddForm(prev => ({
+                                    ...prev,
+                                    start_date: selectedDate,
+                                    end_date: selectedDate,
+                                }));
+                                setAddModalOpen(true);
+                            }}
                             className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-[#4F46E5] hover:bg-[#4338CA] text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-500/20 transition-all cursor-pointer"
                         >
                             <Plus className="w-4 h-4" />
@@ -526,21 +750,141 @@ export default function CalendarIndex({
                     </div>
                 </div>
 
-                {/* ── WEEKLY GRID VIEW ── */}
+                {/* ════════════════════════════════════════════════════════════════ */}
+                {/* ── 1. BULAN (MONTHLY) GRID VIEW ─────────────────────────────── */}
+                {/* ════════════════════════════════════════════════════════════════ */}
+                {viewMode === 'bulan' && (
+                    <div className="p-4 sm:p-5 space-y-3">
+                        <div className="grid grid-cols-7 text-center font-bold text-xs text-slate-500 border-b border-slate-100 pb-2.5">
+                            {dayNames.map(d => (
+                                <div key={d}>{d}</div>
+                            ))}
+                        </div>
+
+                        <div className="grid grid-cols-7 gap-1.5">
+                            {monthDays.map((cell, idx) => {
+                                const dayEvents = displayEvents.filter(e => e.date === cell.dateStr);
+                                return (
+                                    <div
+                                        key={idx}
+                                        onClick={() => setSelectedDate(cell.dateStr)}
+                                        onDoubleClick={() => {
+                                            setSelectedDate(cell.dateStr);
+                                            setViewMode('hari');
+                                        }}
+                                        className={`min-h-[105px] sm:min-h-[115px] p-2 rounded-xl border transition-all cursor-pointer flex flex-col justify-between group relative ${
+                                            cell.isSelected
+                                                ? 'ring-2 ring-[#3B46F1] border-indigo-200 bg-indigo-50/30'
+                                                : cell.isCurrentMonth
+                                                ? 'bg-white border-slate-200 hover:border-indigo-300 hover:shadow-xs'
+                                                : 'bg-slate-50/50 border-slate-100 opacity-60'
+                                        }`}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <span
+                                                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                                    cell.isToday
+                                                        ? 'bg-[#3B46F1] text-white shadow-xs'
+                                                        : cell.isSelected
+                                                        ? 'bg-indigo-100 text-indigo-700'
+                                                        : cell.isCurrentMonth
+                                                        ? 'text-slate-800'
+                                                        : 'text-slate-400'
+                                                }`}
+                                            >
+                                                {cell.dayNum}
+                                            </span>
+
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setAddForm(prev => ({
+                                                        ...prev,
+                                                        start_date: cell.dateStr,
+                                                        end_date: cell.dateStr,
+                                                    }));
+                                                    setAddModalOpen(true);
+                                                }}
+                                                className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-opacity cursor-pointer"
+                                                title="Tambah Jadwal di tanggal ini"
+                                            >
+                                                <Plus className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+
+                                        {/* Event Pills inside Day Cell */}
+                                        <div className="space-y-1 mt-1 flex-1 overflow-hidden">
+                                            {dayEvents.slice(0, 2).map(evt => {
+                                                const colorStyle = getColorStyle(evt.color);
+                                                return (
+                                                    <div
+                                                        key={evt.id}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setSelectedItem(evt);
+                                                        }}
+                                                        className="px-1.5 py-0.5 rounded text-[10px] font-semibold truncate border flex items-center gap-1 hover:brightness-95 transition-all"
+                                                        style={{
+                                                            backgroundColor: colorStyle.bg,
+                                                            borderColor: colorStyle.border,
+                                                            color: colorStyle.text,
+                                                        }}
+                                                    >
+                                                        <span
+                                                            className="w-1.5 h-1.5 rounded-full shrink-0"
+                                                            style={{ backgroundColor: colorStyle.dot }}
+                                                        />
+                                                        <span className="truncate">{evt.title}</span>
+                                                    </div>
+                                                );
+                                            })}
+
+                                            {dayEvents.length > 2 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedDate(cell.dateStr);
+                                                        setViewMode('hari');
+                                                    }}
+                                                    className="text-[10px] text-indigo-600 font-bold block hover:underline"
+                                                >
+                                                    +{dayEvents.length - 2} lainnya
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {/* ════════════════════════════════════════════════════════════════ */}
+                {/* ── 2. MINGGU (WEEKLY) GRID VIEW ─────────────────────────────── */}
+                {/* ════════════════════════════════════════════════════════════════ */}
                 {viewMode === 'minggu' && (
                     <div className="overflow-x-auto">
                         <div className="min-w-[900px]">
                             {/* Grid Day Headers (7 Columns) */}
                             <div className="grid grid-cols-[80px_repeat(7,1fr)] border-b border-slate-200 bg-slate-50/40 text-center text-xs">
-                                <div className="py-3 px-2 text-[11px] font-bold text-slate-400 border-r border-slate-100"></div>
+                                <div className="py-3 px-2 text-[11px] font-bold text-slate-400 border-r border-slate-100 flex items-center justify-center">
+                                    WAKTU
+                                </div>
                                 {weekDays.map((day, idx) => (
                                     <div
                                         key={idx}
-                                        className={`py-3 px-2 border-r border-slate-100 last:border-r-0 flex flex-col items-center gap-0.5 ${
-                                            day.isToday ? 'bg-indigo-50/40' : ''
+                                        onClick={() => setSelectedDate(day.dateStr)}
+                                        className={`py-3 px-2 border-r border-slate-100 last:border-r-0 flex flex-col items-center gap-0.5 cursor-pointer transition-colors ${
+                                            day.isSelected
+                                                ? 'bg-indigo-50/70 ring-1 ring-inset ring-indigo-400'
+                                                : day.isToday
+                                                ? 'bg-indigo-50/40 hover:bg-indigo-50/60'
+                                                : 'hover:bg-slate-100/60'
                                         }`}
                                     >
-                                        <span className={`text-[11px] font-semibold ${day.isToday ? 'text-indigo-600 font-bold' : 'text-slate-600'}`}>
+                                        <span className={`text-[11px] font-semibold ${day.isSelected || day.isToday ? 'text-indigo-600 font-bold' : 'text-slate-600'}`}>
                                             {day.dayName}
                                         </span>
                                         <div className="flex items-center gap-1">
@@ -549,7 +893,9 @@ export default function CalendarIndex({
                                                     {day.dayNum}
                                                 </span>
                                             ) : (
-                                                <span className="text-xs font-bold text-slate-800">{day.dayNum}</span>
+                                                <span className={`text-xs font-bold ${day.isSelected ? 'text-indigo-700 underline' : 'text-slate-800'}`}>
+                                                    {day.dayNum}
+                                                </span>
                                             )}
                                             <span className="text-[11px] text-slate-400 font-medium">{day.monthName}</span>
                                         </div>
@@ -562,13 +908,12 @@ export default function CalendarIndex({
                                 {TIME_SLOTS.map((time, slotIdx) => (
                                     <div key={time} className="grid grid-cols-[80px_repeat(7,1fr)] min-h-[72px]">
                                         {/* Time column label */}
-                                        <div className="py-2.5 px-3 text-[11px] font-bold text-slate-400 border-r border-slate-100 text-center">
+                                        <div className="py-2.5 px-3 text-[11px] font-bold text-slate-400 border-r border-slate-100 text-center flex items-start justify-center">
                                             {time}
                                         </div>
 
                                         {/* 7 Day Slot Cells */}
                                         {weekDays.map((day, dayIdx) => {
-                                            // Find events starting in this hour slot for this day
                                             const slotHour = parseInt(time.split(':')[0], 10);
                                             const cellEvents = displayEvents.filter(e => {
                                                 if (e.date !== day.dateStr) return false;
@@ -580,8 +925,25 @@ export default function CalendarIndex({
                                             return (
                                                 <div
                                                     key={dayIdx}
-                                                    className={`border-r border-slate-100 last:border-r-0 p-1.5 relative ${
-                                                        day.isToday ? 'bg-indigo-50/10' : ''
+                                                    onClick={() => {
+                                                        setSelectedDate(day.dateStr);
+                                                    }}
+                                                    onDoubleClick={() => {
+                                                        setAddForm(prev => ({
+                                                            ...prev,
+                                                            start_date: day.dateStr,
+                                                            end_date: day.dateStr,
+                                                            start_time: time,
+                                                            end_time: `${String(parseInt(time) + 1).padStart(2, '0')}:00`,
+                                                        }));
+                                                        setAddModalOpen(true);
+                                                    }}
+                                                    className={`border-r border-slate-100 last:border-r-0 p-1.5 relative transition-colors ${
+                                                        day.isSelected
+                                                            ? 'bg-indigo-50/25'
+                                                            : day.isToday
+                                                            ? 'bg-indigo-50/10'
+                                                            : 'hover:bg-slate-50/50'
                                                     }`}
                                                 >
                                                     {cellEvents.map(evt => {
@@ -589,7 +951,10 @@ export default function CalendarIndex({
                                                         return (
                                                             <div
                                                                 key={evt.id}
-                                                                onClick={() => setSelectedItem(evt)}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setSelectedItem(evt);
+                                                                }}
                                                                 className="rounded-xl p-2.5 text-xs transition-all hover:scale-[1.01] hover:shadow-md cursor-pointer border mb-1.5 space-y-1 relative group"
                                                                 style={{
                                                                     backgroundColor: colorStyle.bg,
@@ -609,7 +974,6 @@ export default function CalendarIndex({
                                                                         </span>
                                                                     </div>
 
-                                                                    {/* Bell / Reminder icon */}
                                                                     {evt.reminder_active && (
                                                                         <button
                                                                             type="button"
@@ -622,17 +986,14 @@ export default function CalendarIndex({
                                                                     )}
                                                                 </div>
 
-                                                                {/* Client / Subtitle */}
                                                                 <p className="text-[10.5px] font-semibold opacity-90 truncate">
                                                                     {evt.client_name}
                                                                 </p>
 
-                                                                {/* Time range */}
                                                                 <div className="text-[9.5px] font-medium opacity-80 flex items-center gap-1">
                                                                     <span>{evt.start_time || '09:00'} - {evt.end_time || '12:00'}</span>
                                                                 </div>
 
-                                                                {/* Location with Pin */}
                                                                 {evt.location && (
                                                                     <div className="text-[9.5px] font-medium opacity-80 flex items-center gap-1 truncate pt-0.5">
                                                                         <MapPin className="w-2.5 h-2.5 shrink-0 opacity-70" />
@@ -652,50 +1013,223 @@ export default function CalendarIndex({
                     </div>
                 )}
 
-                {/* ── DAFTAR / LIST VIEW ── */}
-                {viewMode === 'daftar' && (
-                    <div className="divide-y divide-slate-100 p-4 sm:p-6 space-y-4">
-                        {displayEvents.map(evt => {
-                            const colorStyle = getColorStyle(evt.color);
-                            return (
-                                <div
-                                    key={evt.id}
-                                    onClick={() => setSelectedItem(evt)}
-                                    className="p-4 rounded-xl border border-slate-200/80 hover:border-indigo-200 transition-all flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-50/50"
+                {/* ════════════════════════════════════════════════════════════════ */}
+                {/* ── 3. HARI (DAILY) TIMELINE VIEW ────────────────────────────── */}
+                {/* ════════════════════════════════════════════════════════════════ */}
+                {viewMode === 'hari' && (
+                    <div className="p-5 space-y-6">
+                        {/* Day Header Banner */}
+                        <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                                <span className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider">Jadwal Harian</span>
+                                <h3 className="text-lg font-black text-slate-900 mt-0.5">{dateLabel}</h3>
+                                <p className="text-xs text-slate-500">
+                                    {displayEvents.filter(e => e.date === selectedDate).length} jadwal terdaftar pada hari ini
+                                </p>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setAddForm(prev => ({
+                                            ...prev,
+                                            start_date: selectedDate,
+                                            end_date: selectedDate,
+                                        }));
+                                        setAddModalOpen(true);
+                                    }}
+                                    className="px-3.5 py-2 bg-[#3B46F1] text-white rounded-xl text-xs font-bold hover:bg-[#323BD8] transition-colors cursor-pointer"
                                 >
-                                    <div className="flex items-center gap-4">
-                                        <div
-                                            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-bold"
-                                            style={{ backgroundColor: colorStyle.bg, color: colorStyle.dot }}
-                                        >
-                                            <CalendarIcon className="w-5 h-5" />
+                                    + Tambah di Hari Ini
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setViewMode('minggu')}
+                                    className="px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-50 transition-colors cursor-pointer"
+                                >
+                                    Buka Mode Minggu
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Hour by Hour Schedule Timeline */}
+                        <div className="space-y-2 divide-y divide-slate-100">
+                            {TIME_SLOTS.map(time => {
+                                const slotHour = parseInt(time.split(':')[0], 10);
+                                const hourEvents = displayEvents.filter(e => {
+                                    if (e.date !== selectedDate) return false;
+                                    if (!e.start_time) return false;
+                                    const eventHour = parseInt(e.start_time.split(':')[0], 10);
+                                    return eventHour === slotHour;
+                                });
+
+                                return (
+                                    <div key={time} className="pt-3 flex gap-4 items-start group">
+                                        <div className="w-16 text-xs font-black text-slate-400 text-right shrink-0 pt-1">
+                                            {time}
                                         </div>
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <h4 className="font-bold text-slate-900 text-sm">{evt.title}</h4>
-                                                <span
-                                                    className="px-2 py-0.5 rounded text-[10px] font-bold"
+
+                                        <div className="flex-1 space-y-2">
+                                            {hourEvents.length > 0 ? (
+                                                hourEvents.map(evt => {
+                                                    const colorStyle = getColorStyle(evt.color);
+                                                    return (
+                                                        <div
+                                                            key={evt.id}
+                                                            onClick={() => setSelectedItem(evt)}
+                                                            className="p-3.5 rounded-xl border transition-all hover:shadow-md cursor-pointer flex items-start justify-between gap-4"
+                                                            style={{
+                                                                backgroundColor: colorStyle.bg,
+                                                                borderColor: colorStyle.border,
+                                                                color: colorStyle.text,
+                                                            }}
+                                                        >
+                                                            <div className="space-y-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-black text-sm text-slate-900">{evt.title}</span>
+                                                                    <span
+                                                                        className="px-2 py-0.5 rounded text-[10px] font-bold border"
+                                                                        style={{ backgroundColor: colorStyle.bg, color: colorStyle.text }}
+                                                                    >
+                                                                        {evt.type}
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-xs font-semibold opacity-90">{evt.client_name}</p>
+                                                                <div className="text-xs font-medium opacity-80 flex items-center gap-3 pt-0.5">
+                                                                    <span>🕒 {evt.start_time} - {evt.end_time}</span>
+                                                                    {evt.location && <span>📍 {evt.location}</span>}
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="flex items-center gap-2">
+                                                                {evt.reminder_active && (
+                                                                    <span className="p-1.5 bg-rose-50 border border-rose-200 text-rose-600 rounded-lg text-xs font-bold flex items-center gap-1">
+                                                                        <Bell className="w-3.5 h-3.5" />
+                                                                        <span>Reminder</span>
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setAddForm(prev => ({
+                                                            ...prev,
+                                                            start_date: selectedDate,
+                                                            end_date: selectedDate,
+                                                            start_time: time,
+                                                            end_time: `${String(slotHour + 1).padStart(2, '0')}:00`,
+                                                        }));
+                                                        setAddModalOpen(true);
+                                                    }}
+                                                    className="w-full py-2.5 px-3 border border-dashed border-slate-200 rounded-xl text-left text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50/20 text-xs font-semibold transition-all cursor-pointer flex items-center gap-2 opacity-50 hover:opacity-100"
+                                                >
+                                                    <Plus className="w-3.5 h-3.5" />
+                                                    <span>Tambah jadwal pada jam {time}</span>
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {/* ════════════════════════════════════════════════════════════════ */}
+                {/* ── 4. DAFTAR (LIST / AGENDA) VIEW ───────────────────────────── */}
+                {/* ════════════════════════════════════════════════════════════════ */}
+                {viewMode === 'daftar' && (
+                    <div className="p-5 space-y-4">
+                        {/* Search and Category Filter Toolbar */}
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                            <input
+                                type="text"
+                                value={listSearch}
+                                onChange={(e) => setListSearch(e.target.value)}
+                                placeholder="Cari judul, klien, atau lokasi..."
+                                className="w-full sm:w-72 px-3.5 py-2 text-xs rounded-xl border border-slate-200 font-medium focus:ring-2 focus:ring-[#3B46F1] outline-hidden"
+                            />
+
+                            <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto">
+                                {['Semua', 'Project', 'Meeting', 'Deadline', 'Corporate'].map((cat) => (
+                                    <button
+                                        key={cat}
+                                        type="button"
+                                        onClick={() => setListTypeFilter(cat)}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                                            listTypeFilter === cat
+                                                ? 'bg-[#3B46F1] text-white'
+                                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                        }`}
+                                    >
+                                        {cat}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* List Items */}
+                        <div className="divide-y divide-slate-100">
+                            {displayEvents
+                                .filter(e => {
+                                    const matchSearch =
+                                        !listSearch ||
+                                        e.title.toLowerCase().includes(listSearch.toLowerCase()) ||
+                                        e.client_name.toLowerCase().includes(listSearch.toLowerCase()) ||
+                                        (e.location && e.location.toLowerCase().includes(listSearch.toLowerCase()));
+                                    const matchType =
+                                        listTypeFilter === 'Semua' ||
+                                        e.type.toLowerCase() === listTypeFilter.toLowerCase() ||
+                                        e.category_name.toLowerCase() === listTypeFilter.toLowerCase();
+                                    return matchSearch && matchType;
+                                })
+                                .map(evt => {
+                                    const colorStyle = getColorStyle(evt.color);
+                                    return (
+                                        <div
+                                            key={evt.id}
+                                            onClick={() => setSelectedItem(evt)}
+                                            className="py-3.5 px-3 rounded-xl hover:bg-slate-50 transition-all flex items-center justify-between gap-4 cursor-pointer"
+                                        >
+                                            <div className="flex items-center gap-3.5">
+                                                <div
+                                                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-bold shadow-2xs"
                                                     style={{ backgroundColor: colorStyle.bg, color: colorStyle.dot }}
                                                 >
-                                                    {evt.type}
+                                                    <CalendarIcon className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <h4 className="font-bold text-slate-900 text-sm">{evt.title}</h4>
+                                                        <span
+                                                            className="px-2 py-0.5 rounded text-[10px] font-bold border"
+                                                            style={{ backgroundColor: colorStyle.bg, color: colorStyle.dot, borderColor: colorStyle.border }}
+                                                        >
+                                                            {evt.type}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-xs text-slate-500 font-medium mt-0.5">
+                                                        {evt.client_name} · 📍 {evt.location || 'Studio'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right shrink-0">
+                                                <span className="text-xs font-bold text-slate-800 block font-sans">
+                                                    {formatDate(evt.date)}
+                                                </span>
+                                                <span className="text-[11px] text-slate-500 font-medium">
+                                                    {evt.start_time} - {evt.end_time}
                                                 </span>
                                             </div>
-                                            <p className="text-xs text-slate-500 font-medium mt-0.5">
-                                                {evt.client_name} · 📍 {evt.location || 'Studio'}
-                                            </p>
                                         </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <span className="text-xs font-bold text-slate-800 block font-sans">
-                                            {formatDate(evt.date)}
-                                        </span>
-                                        <span className="text-[11px] text-slate-500 font-medium">
-                                            {evt.start_time} - {evt.end_time}
-                                        </span>
-                                    </div>
-                                </div>
-                            );
-                        })}
+                                    );
+                                })}
+                        </div>
                     </div>
                 )}
             </div>

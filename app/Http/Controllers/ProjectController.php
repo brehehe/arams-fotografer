@@ -57,15 +57,19 @@ class ProjectController extends Controller
         $project = $this->projectService->createProject($request->validated(), $request->user());
         $invoice = $project->created_invoice ?? null;
 
+        $isDraft = $project->status === 'draft';
+        $successMsg = $isDraft ? 'Draft project berhasil disimpan!' : 'Project baru berhasil dibuat!';
+
         if ($request->wantsJson()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Project baru berhasil dibuat!',
+                'message' => $successMsg,
                 'project' => [
                     'id' => $project->id,
                     'name' => $project->name,
                     'project_number' => $project->project_number,
                     'total_amount' => $project->total_amount,
+                    'status' => $project->status,
                 ],
                 'invoice' => $invoice ? [
                     'id' => $invoice->id,
@@ -77,11 +81,12 @@ class ProjectController extends Controller
         }
 
         return redirect()->route('projects.show', $project->id)
-            ->with('success', 'Project baru berhasil dibuat!')
+            ->with('success', $successMsg)
             ->with('created_project', [
                 'id' => $project->id,
                 'name' => $project->name,
                 'project_number' => $project->project_number,
+                'status' => $project->status,
                 'invoice_id' => $invoice?->id,
                 'invoice_number' => $invoice?->invoice_number,
                 'dp_amount' => $invoice?->total ?? 0,

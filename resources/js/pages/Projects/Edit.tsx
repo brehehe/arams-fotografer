@@ -1,36 +1,51 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import { toast } from 'sonner';
 import {
-    Briefcase,
-    Calendar,
+    Calendar as CalendarIcon,
+    ChevronDown,
+    ChevronRight,
     ChevronLeft,
+    Check,
+    CheckCircle2,
+    Clock,
     DollarSign,
-    HeartHandshake,
-    Layers,
+    ExternalLink,
+    HelpCircle,
+    Info,
     MapPin,
-    Package as PackageIcon,
     Plus,
-    Minus,
-    Search,
-    Sparkles,
     Trash2,
+    X,
+    ArrowUpRight,
+    Search,
+    FileText,
+    Receipt,
+    Gift,
+    Briefcase,
+    Camera,
+    Video,
+    Sparkles,
     User as UserIcon,
     Users,
-    Video,
-    Camera,
-    FileText,
-    Percent,
     ArrowRight,
-    CheckCircle2,
-    Receipt,
-    HelpCircle,
-    X,
+    ArrowLeft,
+    Percent,
     Edit3,
+    Save,
+    Database,
+    PackagePlus,
+    Minus,
+    Layers,
+    Upload,
+    Image as ImageIcon,
 } from 'lucide-react';
+import { SelectSearch, SelectSearchOption } from '@/components/ui/select-search';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { FormattedNumberInput } from '@/components/ui/formatted-number-input';
-import { SelectSearch } from '@/components/ui/select-search';
 import { formatRupiah } from '@/lib/formatters';
+import { resolveWorkflow } from '@/lib/workflows';
 
 interface ClientItem {
     id: string;
@@ -44,8 +59,8 @@ interface ClientItem {
 interface CategoryItem {
     id: string;
     name: string;
-    color: string;
     slug?: string;
+    color?: string;
     workflow_type?: string;
 }
 
@@ -56,6 +71,8 @@ interface PackageItem {
     base_price: number | string;
     duration_hours?: number;
     description?: string;
+    included_services?: any[];
+    included_deliverables?: any[];
 }
 
 interface WeddingOrganizerItem {
@@ -70,10 +87,26 @@ interface WeddingOrganizerItem {
 interface AddonItem {
     id: string;
     name: string;
+    type?: string | null;
     category_id?: string | null;
     category?: { id: string; name: string } | null;
     price: number | string;
     unit: string;
+    description?: string | null;
+}
+
+interface ClientSourceItem {
+    id: string;
+    name: string;
+    type?: string;
+    phone?: string | null;
+    email?: string | null;
+}
+
+interface ServiceItem {
+    id: string;
+    name: string;
+    category_id?: string | null;
     description?: string | null;
 }
 
@@ -85,11 +118,22 @@ interface UserItem {
     role?: string;
 }
 
-interface NoteTemplateItem {
+interface PaymentMethodItem {
     id: string;
-    title: string;
-    content: string;
-    type: string;
+    name: string;
+    code?: string;
+    account_number?: string;
+    account_holder?: string;
+    icon?: string;
+}
+
+interface CompanySettings {
+    name: string;
+    phone: string;
+    email: string;
+    address: string;
+    instagram: string;
+    website: string;
 }
 
 interface ProjectsEditProps {
@@ -97,28 +141,35 @@ interface ProjectsEditProps {
     clients: ClientItem[];
     categories: CategoryItem[];
     packages: PackageItem[];
-    wedding_organizers: WeddingOrganizerItem[];
-    addons: AddonItem[];
-    team_members: UserItem[];
-    note_templates: NoteTemplateItem[];
+    wedding_organizers?: WeddingOrganizerItem[];
+    addons?: AddonItem[];
+    client_sources?: ClientSourceItem[];
+    services?: ServiceItem[];
+    supervisors?: UserItem[];
+    team_members?: UserItem[];
+    payment_methods?: PaymentMethodItem[];
+    company_settings?: CompanySettings;
+    workflow_definitions?: any[];
 }
 
-interface SelectedAddon {
+interface SelectedAddonItem {
     id: string;
     name: string;
+    unit: string;
     unit_price: number;
     qty: number;
-    unit: string;
-    total_price: number;
+    subtotal: number;
+    selected: boolean;
     is_custom?: boolean;
 }
 
-interface CustomFeeItem {
-    tempId: string;
-    name: string;
-    unit_price: number;
-    qty: number;
-    unit: string;
+interface OperationalExpenseItem {
+    id: string;
+    type: string;
+    description: string;
+    estimated_cost: number;
+    addon_id?: string | null;
+    is_custom?: boolean;
 }
 
 export default function ProjectsEdit({
@@ -128,1443 +179,2836 @@ export default function ProjectsEdit({
     packages = [],
     wedding_organizers = [],
     addons = [],
+    client_sources = [],
+    services = [],
+    supervisors = [],
     team_members = [],
-    note_templates = [],
+    payment_methods = [],
+    company_settings = {
+        name: 'ARAMS PICTURES',
+        phone: '0813 9876 5432',
+        email: 'arams.pictures@gmail.com',
+        address: 'Jl. Studio Raya No. 10 Jakarta Selatan 12345, Indonesia',
+        instagram: '@arams.pictures',
+        website: 'www.arams-pictures.com',
+    },
+    workflow_definitions = [],
 }: ProjectsEditProps) {
     const [submitting, setSubmitting] = useState(false);
+    const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
 
-    // Initial addon processing
-    const initialCatalogAddons: SelectedAddon[] = useMemo(() => {
-        if (!project.project_addons || !Array.isArray(project.project_addons)) return [];
-        return project.project_addons
-            .filter((a: any) => a.addon_id)
-            .map((a: any) => ({
-                id: String(a.addon_id),
-                name: a.addon?.name || a.custom_name || 'Add-on',
-                unit_price: Number(a.unit_price) || 0,
-                qty: Number(a.qty) || 1,
-                unit: a.unit || a.addon?.unit || 'item',
-                total_price: Number(a.total_price) || (Number(a.unit_price) * (Number(a.qty) || 1)),
-                is_custom: false,
-            }));
-    }, [project.project_addons]);
+    // Initial project dates
+    const initialProjectDate = project.created_at_date || (project.created_at ? project.created_at.substring(0, 10) : '2026-08-27');
+    const initialEventDate = project.event_date ? project.event_date.substring(0, 10) : '';
+    const initialDueDate = project.deadline ? project.deadline.substring(0, 10) : '';
 
-    const initialCustomFees: CustomFeeItem[] = useMemo(() => {
-        if (!project.project_addons || !Array.isArray(project.project_addons)) return [];
-        return project.project_addons
-            .filter((a: any) => !a.addon_id)
-            .map((a: any, idx: number) => ({
-                tempId: `custom_init_${idx}_${Date.now()}`,
-                name: a.custom_name || '',
-                unit_price: Number(a.unit_price) || 0,
-                qty: Number(a.qty) || 1,
-                unit: a.unit || 'item',
-            }));
-    }, [project.project_addons]);
-
-    // Form states pre-filled from project
-    const [clientId, setClientId] = useState<string>(project.client_id || (clients[0]?.id ?? ''));
-    const [referralValue, setReferralValue] = useState<string>(
-        project.wedding_organizer_id ? `wo_${project.wedding_organizer_id}` : (project.source ? `source_${project.source}` : '')
-    );
+    // ── STEP 1: FORM STATES ──────────────────────────────────────────────
+    const [projectDate, setProjectDate] = useState<string>(initialProjectDate);
     const [projectName, setProjectName] = useState<string>(project.name || '');
-    const [categoryId, setCategoryId] = useState<string>(
-        project.category_id || (categories[0]?.id ?? '')
-    );
+    const [clientId, setClientId] = useState<string>(project.client_id || '');
+    const [categoryId, setCategoryId] = useState<string>(project.category_id || '');
     const [packageId, setPackageId] = useState<string>(project.package_id || '');
-    const [status, setStatus] = useState<string>(project.status || 'draft');
-    const [eventDate, setEventDate] = useState<string>(
-        project.event_date ? String(project.event_date).split('T')[0] : ''
-    );
-    const [eventTime, setEventTime] = useState<string>(project.event_time || '');
-    const [endDate, setEndDate] = useState<string>(
-        project.end_date ? String(project.end_date).split('T')[0] : ''
-    );
-    const [deadline, setDeadline] = useState<string>(
-        project.deadline ? String(project.deadline).split('T')[0] : ''
-    );
-    const [location, setLocation] = useState<string>(project.location || '');
+    const [projectLocation, setProjectLocation] = useState<string>(project.location || '');
+    const [projectNotes, setProjectNotes] = useState<string>(project.notes || '');
+    const [referralSource, setReferralSource] = useState<string>(project.referral_source || client_sources[0]?.name || '');
+    const [referralName, setReferralName] = useState<string>('');
+    const [referralLink, setReferralLink] = useState<string>('');
 
-    // Crew assignments
-    const [photographerId, setPhotographerId] = useState<string>(project.photographer_id || '');
-    const [editorId, setEditorId] = useState<string>(project.editor_id || '');
-    const [supervisorId, setSupervisorId] = useState<string>(project.supervisor_id || '');
+    // Optional Project Cover Image / Thumbnail
+    const [projectThumbnail, setProjectThumbnail] = useState<string>(project.thumbnail || '');
+    const thumbnailInputRef = React.useRef<HTMLInputElement | null>(null);
 
-    // Financial calculations
-    const [basePrice, setBasePrice] = useState<number>(Number(project.price) || 0);
-    const [discount, setDiscount] = useState<number>(Number(project.discount) || 0);
-    const [tax, setTax] = useState<number>(Number(project.tax) || 0);
-    const [notes, setNotes] = useState<string>(project.notes || '');
+    const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
 
-    // Timeline States (Default vs Custom Mode)
-    const initialTimelineMode = (project.custom_timeline as any)?.mode || 'default';
-    const savedSteps = (project.custom_timeline as any)?.steps || [];
-    const initialCustomStepDates = useMemo(() => {
-        const map: Record<number, string> = {};
-        if (Array.isArray(savedSteps)) {
-            savedSteps.forEach((s: any) => {
-                if (s.step && s.date) {
-                    map[s.step] = s.date;
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('Ukuran foto maksimal 5MB');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (uploadEvent) => {
+            const dataUrl = uploadEvent.target?.result as string;
+            setProjectThumbnail(dataUrl);
+            toast.success('Foto cover project berhasil dipilih');
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleRemoveThumbnail = () => {
+        setProjectThumbnail('');
+        if (thumbnailInputRef.current) {
+            thumbnailInputRef.current.value = '';
+        }
+    };
+
+    // Step 1 Bottom Row
+    const [additionalNotes, setAdditionalNotes] = useState<string>('');
+    const [visibleFor, setVisibleFor] = useState<{ supervisor: boolean; photographer: boolean; editor: boolean; client: boolean }>({
+        supervisor: true,
+        photographer: true,
+        editor: false,
+        client: false,
+    });
+    const [specialRequirement, setSpecialRequirement] = useState<string>('');
+
+    // Financial in Step 1
+    const [discountPackage, setDiscountPackage] = useState<number>(Number(project.discount) || 0);
+    const [dpPercent, setDpPercent] = useState<number>(50);
+    const [paymentMethodName, setPaymentMethodName] = useState<string>(project.payment_method || payment_methods[0]?.name || 'Transfer BCA');
+    const [bankAccount, setBankAccount] = useState<string>(
+        payment_methods[0]?.account_number
+            ? `${payment_methods[0].name} - ${payment_methods[0].account_number}`
+            : ''
+    );
+    const [accountHolder, setAccountHolder] = useState<string>(
+        payment_methods[0]?.account_holder || company_settings.name
+    );
+    const [dpDueDate, setDpDueDate] = useState<string>(initialDueDate);
+
+    // ── STEP 2: PERSONEL & PENUGASAN ─────────────────────────────────────
+    const [supervisorId, setSupervisorId] = useState<string>(project.supervisor_id || (supervisors[0]?.id ?? ''));
+    const [photographerName, setPhotographerName] = useState<string>(
+        project.photographer_name || project.photographer?.name || team_members.find((u) => u.role?.toLowerCase().includes('photo'))?.name || ''
+    );
+    const [editorName, setEditorName] = useState<string>(
+        project.editor_name || project.editor?.name || team_members.find((u) => u.role?.toLowerCase().includes('edit'))?.name || ''
+    );
+    const [shootingEventDate, setShootingEventDate] = useState<string>(initialEventDate);
+    const [shootingDuration, setShootingDuration] = useState<string>('12 Jam');
+    const [assignmentNotes, setAssignmentNotes] = useState<string>('');
+
+    // Step 2 Requirement Checkboxes
+    const [step2Requirements, setStep2Requirements] = useState<{ [key: string]: boolean }>({
+        briefing: true,
+        survey: true,
+        rundown: true,
+        props: true,
+        wo_coordination: true,
+        backup_data: true,
+    });
+
+    // ── STEP 3: ADD-ON & BIAYA OPERASIONAL ────────────────────────────────
+    const initialAddons: SelectedAddonItem[] = useMemo(() => {
+        const list: SelectedAddonItem[] = [];
+
+        if (project.project_addons && Array.isArray(project.project_addons) && project.project_addons.length > 0) {
+            project.project_addons.forEach((pa: any) => {
+                const isOps = pa.custom_name?.startsWith('Biaya Operasional:') || pa.addon?.name?.startsWith('Biaya Operasional:');
+                if (!isOps) {
+                    list.push({
+                        id: pa.id || `pa-${Math.random()}`,
+                        name: pa.custom_name || pa.addon?.name || 'Add-on Layanan',
+                        unit: pa.unit || 'Item',
+                        unit_price: Number(pa.unit_price) || 0,
+                        qty: Number(pa.qty) || 1,
+                        subtotal: Number(pa.total_price) || (Number(pa.qty) || 1) * (Number(pa.unit_price) || 0),
+                        selected: true,
+                        is_custom: !pa.addon_id,
+                    });
                 }
             });
         }
-        return map;
-    }, [savedSteps]);
+        return list;
+    }, [project.project_addons]);
 
-    const [timelineMode, setTimelineMode] = useState<'default' | 'custom'>(initialTimelineMode);
-    const [customStepDates, setCustomStepDates] = useState<Record<number, string>>(initialCustomStepDates);
+    const initialExpenses: OperationalExpenseItem[] = useMemo(() => {
+        if (project.project_addons && Array.isArray(project.project_addons)) {
+            const expList: OperationalExpenseItem[] = [];
+            project.project_addons.forEach((pa: any) => {
+                const name = pa.custom_name || pa.addon?.name || '';
+                if (name.startsWith('Biaya Operasional:')) {
+                    const clean = name.replace('Biaya Operasional:', '').trim();
+                    const parts = clean.split('(');
+                    const type = parts[0]?.trim() || 'Operasional';
+                    const desc = parts[1] ? parts[1].replace(')', '').trim() : '-';
+                    expList.push({
+                        id: pa.id || `exp-${Math.random()}`,
+                        addon_id: pa.addon_id || null,
+                        type,
+                        description: desc,
+                        estimated_cost: Number(pa.total_price || pa.unit_price || 0),
+                        is_custom: !pa.addon_id,
+                    });
+                }
+            });
+            return expList;
+        }
+        return [];
+    }, [project.project_addons]);
 
-    // Addons State: Catalog Addons + Custom Fees
-    const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>(initialCatalogAddons);
-    const [customFees, setCustomFees] = useState<CustomFeeItem[]>(initialCustomFees);
-    const [addonSearch, setAddonSearch] = useState<string>('');
-    const [addonTab, setAddonTab] = useState<'catalog' | 'custom'>('catalog');
+    const [addonsList, setAddonsList] = useState<SelectedAddonItem[]>(initialAddons);
+    const [operationalExpenses, setOperationalExpenses] = useState<OperationalExpenseItem[]>(initialExpenses);
+    const [additionalCostNotes, setAdditionalCostNotes] = useState<string>('');
 
-    // Filtered packages based on category
-    const availablePackages = useMemo(() => {
-        if (!categoryId) return packages;
-        return packages.filter((p) => String(p.category_id) === String(categoryId));
-    }, [packages, categoryId]);
+    // Tax (Pajak PPN / PPh) State
+    const initialTaxAmount = Number(project.tax) || 0;
+    const [isTaxEnabled, setIsTaxEnabled] = useState<boolean>(initialTaxAmount > 0);
+    const [taxPercent, setTaxPercent] = useState<number>(11);
+    const [taxType, setTaxType] = useState<'percent' | 'custom'>('percent');
+    const [customTaxAmount, setCustomTaxAmount] = useState<number>(initialTaxAmount > 0 ? initialTaxAmount : 0);
 
-    // Selected client object
+    // Modal: Tambah Add-on
+    const [addAddonModalOpen, setAddAddonModalOpen] = useState(false);
+    const [addonModalTab, setAddonModalTab] = useState<'database' | 'custom'>('database');
+    const [selectedMasterAddonId, setSelectedMasterAddonId] = useState<string>('');
+    const [masterAddonQty, setMasterAddonQty] = useState<number>(1);
+    const [newAddonForm, setNewAddonForm] = useState({ name: '', unit: 'Item', price: 500000, qty: 1 });
+
+    // Modal: Tambah Biaya Operasional
+    const [addExpenseModalOpen, setAddExpenseModalOpen] = useState(false);
+    const [expenseModalTab, setExpenseModalTab] = useState<'database' | 'custom'>('database');
+    const [selectedMasterOpsId, setSelectedMasterOpsId] = useState<string>('');
+    const [presetExpenseDescription, setPresetExpenseDescription] = useState<string>('');
+    const [presetExpenseCost, setPresetExpenseCost] = useState<number>(0);
+    const [newExpenseForm, setNewExpenseForm] = useState({ type: '', description: '', cost: 250000 });
+
+    // Modal: Quick Tambah Klien
+    const [addClientModalOpen, setAddClientModalOpen] = useState(false);
+    const [newClientForm, setNewClientForm] = useState({ name: '', phone: '', email: '', city: 'Jakarta' });
+
+    // Selected Entities
     const selectedClient = useMemo(() => {
-        return clients.find((c) => String(c.id) === String(clientId));
+        return clients.find((c) => String(c.id) === String(clientId)) || clients[0];
     }, [clients, clientId]);
 
-    // Selected category object
     const selectedCategory = useMemo(() => {
-        return categories.find((c) => String(c.id) === String(categoryId));
+        return categories.find((c) => String(c.id) === String(categoryId)) || categories[0];
     }, [categories, categoryId]);
 
-    // Determine Wedding vs Non-Wedding workflow
-    const isWeddingCategory = useMemo(() => {
-        if (!selectedCategory) return false;
-        return (
-            selectedCategory.workflow_type === 'wedding' ||
-            (selectedCategory.slug?.includes('wedding') && !selectedCategory.slug?.includes('prewedding')) ||
-            (selectedCategory.name?.toLowerCase().includes('wedding') && !selectedCategory.name?.toLowerCase().includes('prewedding'))
-        );
-    }, [selectedCategory]);
+    const availablePackages = useMemo(() => {
+        if (!categoryId) return packages;
+        const filtered = packages.filter((p) => String(p.category_id) === String(categoryId));
+        return filtered.length > 0 ? filtered : packages;
+    }, [packages, categoryId]);
 
-    const activeWorkflowSteps = useMemo(() => {
-        const WEDDING_STEPS = [
-            { step: 1, title: '1. Booking & DP', desc: 'Konfirmasi jadwal & DP', offsetDays: 0, isEventRelative: 'created', dotColor: 'bg-emerald-500' },
-            { step: 2, title: '2. TM Wedding', desc: 'Technical meeting rundown', offsetDays: -7, isEventRelative: 'event', dotColor: 'bg-indigo-500' },
-            { step: 3, title: '3. Hari H', desc: 'Sesi foto & video wedding', offsetDays: 0, isEventRelative: 'event', dotColor: 'bg-blue-500' },
-            { step: 4, title: '4. Sneak Peek Photo Editing', desc: 'Kurasi foto sneak peek', offsetDays: 3, isEventRelative: 'event', dotColor: 'bg-amber-500' },
-            { step: 5, title: '5. Flashdrive + Box Delivery', desc: 'Pengiriman flashdrive & box', offsetDays: 14, isEventRelative: 'event', dotColor: 'bg-orange-500' },
-            { step: 6, title: '6. Full Version Photo & Video Editing', desc: 'Full edit retouch & video', offsetDays: 28, isEventRelative: 'event', dotColor: 'bg-purple-500' },
-            { step: 7, title: '7. Album Layout Editing', desc: 'Layouting album cetak', offsetDays: 35, isEventRelative: 'event', dotColor: 'bg-pink-500' },
-            { step: 8, title: '8. Final Delivery', desc: 'Serah terima album & link master', offsetDays: 45, isEventRelative: 'deadline_or_event', dotColor: 'bg-emerald-600' },
-        ];
-
-        const NON_WEDDING_STEPS = [
-            { step: 1, title: '1. Booking & DP', desc: 'Konfirmasi jadwal & DP', offsetDays: 0, isEventRelative: 'created', dotColor: 'bg-emerald-500' },
-            { step: 2, title: '2. Meeting / Preparation Concept', desc: 'Konsep, moodboard & wardrobe', offsetDays: -5, isEventRelative: 'event', dotColor: 'bg-indigo-500' },
-            { step: 3, title: '3. Hari H', desc: 'Sesi pemotretan di lokasi', offsetDays: 0, isEventRelative: 'event', dotColor: 'bg-blue-500' },
-            { step: 4, title: '4. Full Version Photo & Video Editing', desc: 'Retouching tone & video', offsetDays: 20, isEventRelative: 'event', dotColor: 'bg-purple-500' },
-            { step: 5, title: '5. Final Delivery', desc: 'Serah terima link & file master', offsetDays: 30, isEventRelative: 'deadline_or_event', dotColor: 'bg-emerald-500' },
-        ];
-
-        return isWeddingCategory ? WEDDING_STEPS : NON_WEDDING_STEPS;
-    }, [isWeddingCategory]);
-
-    const calculateStepDate = (stepDef: any, evDate: string, dlDate: string, createdDate?: string) => {
-        if (stepDef.isEventRelative === 'created') {
-            return createdDate ? createdDate.split('T')[0] : (project.created_at ? String(project.created_at).split('T')[0] : new Date().toISOString().split('T')[0]);
+    const selectedPackage = useMemo(() => {
+        if (packageId) {
+            const found = availablePackages.find((p) => String(p.id) === String(packageId));
+            if (found) return found;
         }
-        if (!evDate) return '';
-        if (stepDef.isEventRelative === 'deadline_or_event' && dlDate) {
-            return dlDate.split('T')[0];
+        return availablePackages[0] || null;
+    }, [availablePackages, packageId]);
+
+    const packagePrice = useMemo(() => {
+        return Number(project.price) || Number(selectedPackage?.base_price) || 0;
+    }, [project.price, selectedPackage]);
+
+    // Dynamic Workflow definition according to selected Category & Package
+    const activeWorkflow = useMemo(() => {
+        return resolveWorkflow(selectedCategory, workflow_definitions);
+    }, [selectedCategory, workflow_definitions]);
+
+    // Dynamic Services & Deliverables from Master Data Package
+    const servicesList = useMemo(() => {
+        if (selectedPackage?.included_services && Array.isArray(selectedPackage.included_services) && selectedPackage.included_services.length > 0) {
+            return selectedPackage.included_services.map((s: any) =>
+                typeof s === 'string' ? s : (s?.name || String(s))
+            );
         }
-        const d = new Date(evDate);
-        d.setDate(d.getDate() + stepDef.offsetDays);
-        return d.toISOString().split('T')[0];
-    };
-
-    const getEffectiveStepDate = (stepDef: any) => {
-        if (timelineMode === 'custom' && customStepDates[stepDef.step]) {
-            return customStepDates[stepDef.step];
+        if (services && services.length > 0) {
+            const catServices = services.filter((s) => !s.category_id || String(s.category_id) === String(categoryId));
+            if (catServices.length > 0) {
+                return catServices.map((s) => s.name);
+            }
         }
-        return calculateStepDate(stepDef, eventDate, deadline, project.created_at);
-    };
+        return [];
+    }, [selectedPackage, services, categoryId]);
 
-    const formatStepDisplayDate = (dateStr: string, fallback: string) => {
-        if (!dateStr) return fallback;
-        try {
-            return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-        } catch {
-            return fallback;
-        }
-    };
-
-    const handleResetTimelineToDefault = () => {
-        setTimelineMode('default');
-        setCustomStepDates({});
-        toast.success('Estimasi timeline dikembalikan ke mode default.');
-    };
-
-    // Handle package selection
-    const handlePackageChange = (pId: string) => {
-        setPackageId(pId);
-        const pkg = packages.find((p) => String(p.id) === String(pId));
-        if (pkg) {
-            setBasePrice(Number(pkg.base_price) || 0);
-        }
-    };
-
-    // Addon calculation (Catalog + Custom)
-    const totalCatalogAddons = useMemo(() => {
-        return selectedAddons.reduce((acc, curr) => acc + curr.total_price, 0);
-    }, [selectedAddons]);
-
-    const totalCustomFees = useMemo(() => {
-        return customFees.reduce((acc, curr) => acc + (curr.unit_price * curr.qty), 0);
-    }, [customFees]);
-
-    const totalAllAddonsPrice = useMemo(() => {
-        return totalCatalogAddons + totalCustomFees;
-    }, [totalCatalogAddons, totalCustomFees]);
-
-    // Grand total calculation
-    const grandTotal = useMemo(() => {
-        const total = Number(basePrice || 0) + totalAllAddonsPrice - Number(discount || 0) + Number(tax || 0);
-        return total > 0 ? total : 0;
-    }, [basePrice, totalAllAddonsPrice, discount, tax]);
-
-    // Catalog Addon Handlers
-    const handleToggleAddon = (addon: AddonItem) => {
-        const exists = selectedAddons.find((a) => a.id === addon.id);
-        if (exists) {
-            setSelectedAddons(selectedAddons.filter((a) => a.id !== addon.id));
-        } else {
-            const price = Number(addon.price) || 0;
-            setSelectedAddons([
-                ...selectedAddons,
-                {
-                    id: addon.id,
-                    name: addon.name,
-                    unit_price: price,
-                    qty: 1,
-                    unit: addon.unit,
-                    total_price: price,
-                    is_custom: false,
-                },
-            ]);
-        }
-    };
-
-    const handleQtyChange = (addonId: string, delta: number) => {
-        setSelectedAddons(
-            selectedAddons
-                .map((a) => {
-                    if (a.id === addonId) {
-                        const newQty = a.qty + delta;
-                        if (newQty < 1) return null;
-                        return {
-                            ...a,
-                            qty: newQty,
-                            total_price: newQty * a.unit_price,
-                        };
-                    }
-                    return a;
-                })
-                .filter(Boolean) as SelectedAddon[]
-        );
-    };
-
-    const handleDirectQtyInput = (addonId: string, newQty: number) => {
-        const validQty = Math.max(1, newQty);
-        setSelectedAddons(
-            selectedAddons.map((a) => {
-                if (a.id === addonId) {
+    const deliverablesList = useMemo(() => {
+        if (selectedPackage?.included_deliverables && Array.isArray(selectedPackage.included_deliverables) && selectedPackage.included_deliverables.length > 0) {
+            return selectedPackage.included_deliverables.map((item: any, idx: number) => {
+                if (typeof item === 'string') {
                     return {
-                        ...a,
-                        qty: validQty,
-                        total_price: validQty * a.unit_price,
+                        id: idx + 1,
+                        name: item,
+                        deadline: 'H+14',
+                        type: 'Photo',
+                        description: '',
                     };
                 }
-                return a;
-            })
-        );
-    };
-
-    // Custom Fee Handlers
-    const handleAddCustomFeeRow = () => {
-        const newFee: CustomFeeItem = {
-            tempId: `custom_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-            name: '',
-            unit_price: 250000,
-            qty: 1,
-            unit: 'item',
-        };
-        setCustomFees([...customFees, newFee]);
-        setAddonTab('custom');
-    };
-
-    const handleUpdateCustomFee = (tempId: string, field: keyof CustomFeeItem, value: any) => {
-        setCustomFees(
-            customFees.map((fee) => {
-                if (fee.tempId === tempId) {
-                    return { ...fee, [field]: value };
-                }
-                return fee;
-            })
-        );
-    };
-
-    const handleRemoveCustomFee = (tempId: string) => {
-        setCustomFees(customFees.filter((fee) => fee.tempId !== tempId));
-    };
-
-    // Note template loader
-    const handleSelectTemplate = (templateId: string) => {
-        const tpl = note_templates.find((t) => String(t.id) === String(templateId));
-        if (tpl) {
-            setNotes((prev) => (prev ? `${prev}\n\n${tpl.content}` : tpl.content));
-            toast.success(`Template "${tpl.title}" diterapkan.`);
+                return {
+                    id: item.id || idx + 1,
+                    name: item.name || 'Deliverable Item',
+                    deadline: item.deadline || item.target_deadline || 'H+14',
+                    type: item.type || 'Photo',
+                    description: item.description || '',
+                };
+            });
         }
-    };
+        return [];
+    }, [selectedPackage]);
 
-    // Build Referral Options (Clients + WO + General)
-    const referralOptions = useMemo(() => {
-        const list = [
-            { value: '', label: '-- Tanpa Referensi (Direct / Walk-in) --', subtitle: 'Klien datang langsung' },
-            { value: 'source_instagram', label: 'Instagram / Media Sosial', subtitle: 'Direct via DM / Feed' },
-            { value: 'source_website', label: 'Website / Google Search', subtitle: 'Direct online booking' },
-            { value: 'source_family', label: 'Teman / Rekomendasi Keluarga', subtitle: 'Word of mouth' },
+    // Financial Calculations
+    const totalAddonAmount = useMemo(() => {
+        return addonsList
+            .filter((a) => a.selected && a.qty > 0)
+            .reduce((acc, curr) => acc + curr.subtotal, 0);
+    }, [addonsList]);
+
+    const totalOperationalAmount = useMemo(() => {
+        return operationalExpenses.reduce((acc, curr) => acc + Number(curr.estimated_cost || 0), 0);
+    }, [operationalExpenses]);
+
+    const totalTambahanBiaya = useMemo(() => {
+        return totalAddonAmount + totalOperationalAmount;
+    }, [totalAddonAmount, totalOperationalAmount]);
+
+    const subtotalPaketSetelahDiskon = useMemo(() => {
+        return Math.max(0, packagePrice - (discountPackage || 0));
+    }, [packagePrice, discountPackage]);
+
+    const taxBaseAmount = useMemo(() => {
+        return subtotalPaketSetelahDiskon + totalTambahanBiaya;
+    }, [subtotalPaketSetelahDiskon, totalTambahanBiaya]);
+
+    const calculatedTaxAmount = useMemo(() => {
+        if (!isTaxEnabled) return 0;
+        if (taxType === 'custom') return customTaxAmount;
+        return Math.round((taxBaseAmount * taxPercent) / 100);
+    }, [isTaxEnabled, taxType, customTaxAmount, taxBaseAmount, taxPercent]);
+
+    const totalProject = useMemo(() => {
+        return subtotalPaketSetelahDiskon + totalTambahanBiaya + calculatedTaxAmount;
+    }, [subtotalPaketSetelahDiskon, totalTambahanBiaya, calculatedTaxAmount]);
+
+    const nominalDp = useMemo(() => {
+        if (dpPercent <= 0) return 0;
+        return Math.round((totalProject * dpPercent) / 100);
+    }, [totalProject, dpPercent]);
+
+    // Formatted Dates for display
+    const formattedProjectDate = useMemo(() => {
+        if (!projectDate) return '';
+        const parts = projectDate.split('-');
+        return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : projectDate;
+    }, [projectDate]);
+
+    const formattedShootingDate = useMemo(() => {
+        if (!shootingEventDate) return '';
+        const parts = shootingEventDate.split('-');
+        return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : shootingEventDate;
+    }, [shootingEventDate]);
+
+    const formattedDpDueDate = useMemo(() => {
+        if (!dpDueDate) return '-';
+        const parts = dpDueDate.split('-');
+        return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : dpDueDate;
+    }, [dpDueDate]);
+
+    // ── SELECT SEARCH OPTIONS MAPPING (100% Database Master Data) ────────
+    const clientOptions = useMemo<SelectSearchOption[]>(() => {
+        return clients.map((c) => ({
+            value: String(c.id),
+            label: c.name,
+            subtitle: [c.phone, c.city].filter(Boolean).join(' • '),
+        }));
+    }, [clients]);
+
+    const categoryOptions = useMemo<SelectSearchOption[]>(() => {
+        return categories.map((cat) => ({
+            value: String(cat.id),
+            label: cat.name,
+        }));
+    }, [categories]);
+
+    const packageOptions = useMemo<SelectSearchOption[]>(() => {
+        return availablePackages.map((pkg) => ({
+            value: String(pkg.id),
+            label: pkg.name,
+            subtitle: `${formatRupiah(pkg.base_price)} • Standby ${pkg.duration_hours || 8} Jam`,
+        }));
+    }, [availablePackages]);
+
+    const supervisorOptions = useMemo<SelectSearchOption[]>(() => {
+        const pool = supervisors.length > 0 ? supervisors : team_members;
+        return pool.map((s) => ({
+            value: String(s.id),
+            label: s.name,
+            subtitle: s.email,
+        }));
+    }, [supervisors, team_members]);
+
+    const photographerOptions = useMemo<SelectSearchOption[]>(() => {
+        const pool = team_members.length > 0 ? team_members : supervisors;
+        return pool.map((u) => ({
+            value: u.name,
+            label: u.name,
+            subtitle: `${u.role || 'Crew'} • ${u.email}`,
+        }));
+    }, [team_members, supervisors]);
+
+    const editorOptions = useMemo<SelectSearchOption[]>(() => {
+        const pool = team_members.length > 0 ? team_members : supervisors;
+        return pool.map((u) => ({
+            value: u.name,
+            label: u.name,
+            subtitle: `${u.role || 'Editor'} • ${u.email}`,
+        }));
+    }, [team_members, supervisors]);
+
+    const dpPercentOptions: SelectSearchOption[] = [
+        { value: '20', label: '20% DP' },
+        { value: '30', label: '30% DP' },
+        { value: '50', label: '50% DP (Rekomendasi)' },
+        { value: '100', label: '100% (Pelunasan Penuh)' },
+    ];
+
+    const paymentMethodOptions = useMemo<SelectSearchOption[]>(() => {
+        if (payment_methods && payment_methods.length > 0) {
+            return payment_methods.map((pm) => ({
+                value: pm.name,
+                label: pm.name,
+                subtitle: pm.account_number ? `${pm.account_number} • a.n. ${pm.account_holder || company_settings.name}` : pm.code || 'Metode Pembayaran',
+            }));
+        }
+        return [
+            { value: 'Transfer BCA', label: 'Transfer BCA', subtitle: '8820192837 • PT Lensaria Kreatif Nusantara' },
+            { value: 'Transfer Mandiri', label: 'Transfer Mandiri', subtitle: '1370019283921 • PT Lensaria Kreatif Nusantara' },
+            { value: 'Kas Tunai', label: 'Kas Tunai / Cash', subtitle: 'Studio / Kantor' },
+            { value: 'QRIS', label: 'QRIS / Instant', subtitle: 'Scan QRIS e-wallet' },
         ];
+    }, [payment_methods, company_settings]);
 
-        const otherClients = clients.filter((c) => c.id !== clientId);
-        if (otherClients.length > 0) {
-            otherClients.forEach((c) => {
-                list.push({
-                    value: `client_${c.id}`,
-                    label: `[Klien] ${c.name}`,
-                    subtitle: `Referensi dari Klien (${c.phone || c.city || 'Terdaftar'})`,
-                });
-            });
+    const shootingDurationOptions: SelectSearchOption[] = [
+        { value: '4 Jam', label: '4 Jam', subtitle: 'Liputan Sesi Singkat' },
+        { value: '8 Jam', label: '8 Jam', subtitle: 'Setengah Hari' },
+        { value: '12 Jam', label: '12 Jam', subtitle: 'Standar Hari H' },
+        { value: 'Full Day', label: 'Full Day', subtitle: 'Liputan Penuh Seharian' },
+    ];
+
+    const referralSourceOptions = useMemo<SelectSearchOption[]>(() => {
+        if (client_sources && client_sources.length > 0) {
+            return client_sources.map((cs) => ({
+                value: cs.name,
+                label: cs.name,
+                subtitle: cs.type ? `Tipe: ${cs.type}` : cs.phone || undefined,
+            }));
         }
+        return [
+            { value: 'Instagram', label: 'Instagram', subtitle: '@arams.pictures' },
+            { value: 'Wedding Organizer Indah', label: 'Wedding Organizer Indah', subtitle: 'Partner WO' },
+            { value: 'Rekomendasi Teman', label: 'Rekomendasi Teman / Klien' },
+            { value: 'Bridestory', label: 'Bridestory' },
+            { value: 'Google Search', label: 'Google Search' },
+        ];
+    }, [client_sources]);
 
-        if (wedding_organizers.length > 0) {
-            wedding_organizers.forEach((wo) => {
-                list.push({
-                    value: `wo_${wo.id}`,
-                    label: `[WO] ${wo.name}`,
-                    subtitle: `Partner Wedding Organizer (${wo.city || 'Vendor'})`,
-                });
-            });
+    const handleCategoryChange = (newCatId: string) => {
+        setCategoryId(newCatId);
+        const pkgs = packages.filter((p) => String(p.category_id) === String(newCatId));
+        if (pkgs.length > 0) {
+            setPackageId(String(pkgs[0].id));
         }
+    };
 
-        return list;
-    }, [clients, clientId, wedding_organizers]);
+    const handlePaymentMethodChange = (pmName: string) => {
+        setPaymentMethodName(pmName);
+        const found = payment_methods.find((pm) => pm.name === pmName);
+        if (found) {
+            if (found.account_number) {
+                setBankAccount(`${found.name} - ${found.account_number}`);
+            }
+            if (found.account_holder) {
+                setAccountHolder(found.account_holder);
+            }
+        }
+    };
 
-    // Submit handler
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
+    // Helper icon resolver for operational expenses
+    const getExpenseIcon = (name: string) => {
+        const lower = name.toLowerCase();
+        if (lower.includes('transport') || lower.includes('bensin') || lower.includes('perjalanan')) return '🚗';
+        if (lower.includes('akomodasi') || lower.includes('hotel') || lower.includes('penginapan')) return '🏨';
+        if (lower.includes('konsumsi') || lower.includes('makan') || lower.includes('minum')) return '🍽️';
+        if (lower.includes('toll') || lower.includes('tol') || lower.includes('parkir')) return '🅿️';
+        if (lower.includes('sewa') || lower.includes('alat') || lower.includes('lighting') || lower.includes('lensa')) return '📷';
+        if (lower.includes('crew') || lower.includes('freelance') || lower.includes('personel') || lower.includes('asisten') || lower.includes('fotografer') || lower.includes('videografer')) return '👥';
+        if (lower.includes('cetak') || lower.includes('vendor') || lower.includes('photobooth') || lower.includes('album')) return '🖨️';
+        if (lower.includes('izin') || lower.includes('retribusi') || lower.includes('tiket') || lower.includes('lokasi')) return '🎫';
+        return '💰';
+    };
 
-        if (!clientId) {
-            toast.error('Silakan pilih Klien terlebih dahulu.');
+    // Master Add-on Selection Options from Database (Filtered: type === 'addon' or non-operational)
+    const masterAddonOptions = useMemo<SelectSearchOption[]>(() => {
+        if (!addons || addons.length === 0) return [];
+        const alaCarteAddons = addons.filter((a) => a.type !== 'operational');
+        return alaCarteAddons.map((a) => ({
+            value: String(a.id),
+            label: a.name,
+            subtitle: `${formatRupiah(Number(a.price) || 0)} / ${a.unit || 'Item'} ${a.category?.name ? `• ${a.category.name}` : ''}`,
+        }));
+    }, [addons]);
+
+    const selectedMasterAddon = useMemo(() => {
+        if (!selectedMasterAddonId) return null;
+        return addons.find((a) => String(a.id) === String(selectedMasterAddonId)) || null;
+    }, [addons, selectedMasterAddonId]);
+
+    // Master Operational Selection Options from Database (type === 'operational')
+    const masterOpsOptions = useMemo<SelectSearchOption[]>(() => {
+        if (!addons || addons.length === 0) return [];
+        const ops = addons.filter((a) => a.type === 'operational');
+        return ops.map((a) => ({
+            value: String(a.id),
+            label: a.name,
+            subtitle: `${formatRupiah(Number(a.price) || 0)} / ${a.unit || 'Item'} • ${a.description || ''}`,
+        }));
+    }, [addons]);
+
+    const selectedMasterOps = useMemo(() => {
+        if (!selectedMasterOpsId) return null;
+        return addons.find((a) => String(a.id) === String(selectedMasterOpsId)) || null;
+    }, [addons, selectedMasterOpsId]);
+
+    const handleSelectMasterOps = (opsId: string) => {
+        setSelectedMasterOpsId(opsId);
+        const found = addons.find((a) => String(a.id) === String(opsId));
+        if (found) {
+            setPresetExpenseDescription(found.description || found.name);
+            setPresetExpenseCost(Number(found.price) || 0);
+        }
+    };
+
+    // Add-on Handlers
+    const handleAddonQtyChange = (id: string, newQty: number) => {
+        const qty = Math.max(1, newQty);
+        setAddonsList((prev) =>
+            prev.map((item) => {
+                if (item.id === id) {
+                    return {
+                        ...item,
+                        qty,
+                        selected: true,
+                        subtotal: qty * item.unit_price,
+                    };
+                }
+                return item;
+            })
+        );
+    };
+
+    const handleDeleteAddon = (id: string) => {
+        setAddonsList((prev) => prev.filter((item) => item.id !== id));
+        toast.info('Add-on dihapus dari project');
+    };
+
+    // Add Master Add-on from Database
+    const handleAddMasterAddon = () => {
+        if (!selectedMasterAddon) {
+            toast.error('Silakan pilih Add-on dari Master Data');
             return;
         }
+        const qtyToAdd = Math.max(1, masterAddonQty || 1);
+        const existingIndex = addonsList.findIndex((a) => String(a.id) === String(selectedMasterAddon.id));
 
-        if (!categoryId) {
-            toast.error('Silakan tentukan Kategori Project.');
-            return;
+        if (existingIndex >= 0) {
+            setAddonsList((prev) =>
+                prev.map((item, idx) => {
+                    if (idx === existingIndex) {
+                        const newQty = item.qty + qtyToAdd;
+                        return {
+                            ...item,
+                            qty: newQty,
+                            selected: true,
+                            subtotal: newQty * item.unit_price,
+                        };
+                    }
+                    return item;
+                })
+            );
+            toast.success(`Jumlah ${selectedMasterAddon.name} diperbarui (+${qtyToAdd})`);
+        } else {
+            const newAddonItem: SelectedAddonItem = {
+                id: selectedMasterAddon.id,
+                name: selectedMasterAddon.name,
+                unit: selectedMasterAddon.unit || 'Item',
+                unit_price: Number(selectedMasterAddon.price) || 0,
+                qty: qtyToAdd,
+                subtotal: qtyToAdd * (Number(selectedMasterAddon.price) || 0),
+                selected: true,
+                is_custom: false,
+            };
+            setAddonsList((prev) => [...prev, newAddonItem]);
+            toast.success(`${selectedMasterAddon.name} berhasil ditambahkan`);
         }
 
+        setSelectedMasterAddonId('');
+        setMasterAddonQty(1);
+        setAddAddonModalOpen(false);
+    };
+
+    // Add Custom Add-on
+    const handleCreateCustomAddon = () => {
+        if (!newAddonForm.name.trim()) {
+            toast.error('Nama Add-on wajib diisi');
+            return;
+        }
+        const qty = Math.max(1, newAddonForm.qty || 1);
+        const unitPrice = Number(newAddonForm.price) || 0;
+        const newAddon: SelectedAddonItem = {
+            id: `custom-addon-${Date.now()}`,
+            name: newAddonForm.name.trim(),
+            unit: newAddonForm.unit.trim() || 'Item',
+            unit_price: unitPrice,
+            qty: qty,
+            subtotal: qty * unitPrice,
+            selected: true,
+            is_custom: true,
+        };
+        setAddonsList((prev) => [...prev, newAddon]);
+        setNewAddonForm({ name: '', unit: 'Item', price: 500000, qty: 1 });
+        setAddAddonModalOpen(false);
+        toast.success('Add-on kustom berhasil ditambahkan');
+    };
+
+    // Operational Expense Handlers
+    const handleDeleteExpense = (id: string) => {
+        setOperationalExpenses((prev) => prev.filter((item) => item.id !== id));
+        toast.info('Biaya operasional dihapus');
+    };
+
+    // Add Master Operational Expense from Database
+    const handleAddMasterOps = () => {
+        if (!selectedMasterOps) {
+            toast.error('Silakan pilih Biaya Operasional dari Master Data');
+            return;
+        }
+        const cost = Number(presetExpenseCost) || 0;
+        const desc = presetExpenseDescription.trim() || selectedMasterOps.description || selectedMasterOps.name;
+
+        const newExp: OperationalExpenseItem = {
+            id: `exp-${Date.now()}`,
+            addon_id: selectedMasterOps.id,
+            type: selectedMasterOps.name,
+            description: desc,
+            estimated_cost: cost,
+            is_custom: false,
+        };
+        setOperationalExpenses((prev) => [...prev, newExp]);
+        setSelectedMasterOpsId('');
+        setPresetExpenseDescription('');
+        setPresetExpenseCost(0);
+        setAddExpenseModalOpen(false);
+        toast.success(`Biaya ${selectedMasterOps.name} berhasil ditambahkan`);
+    };
+
+    // Add Custom Expense
+    const handleCreateCustomExpense = () => {
+        if (!newExpenseForm.type.trim()) {
+            toast.error('Jenis biaya wajib diisi');
+            return;
+        }
+        const newExp: OperationalExpenseItem = {
+            id: `custom-exp-${Date.now()}`,
+            addon_id: null,
+            type: newExpenseForm.type.trim(),
+            description: newExpenseForm.description.trim() || '-',
+            estimated_cost: Number(newExpenseForm.cost) || 0,
+            is_custom: true,
+        };
+        setOperationalExpenses((prev) => [...prev, newExp]);
+        setNewExpenseForm({ type: '', description: '', cost: 250000 });
+        setAddExpenseModalOpen(false);
+        toast.success('Biaya operasional kustom berhasil ditambahkan');
+    };
+
+    // Step Validation
+    const validateStep1 = () => {
         if (!projectName.trim()) {
-            toast.error('Nama Project wajib diisi.');
-            return;
+            toast.error('Nama Project wajib diisi');
+            return false;
         }
+        if (!clientId) {
+            toast.error('Silakan pilih Klien');
+            return false;
+        }
+        if (!categoryId) {
+            toast.error('Silakan pilih Kategori Project');
+            return false;
+        }
+        return true;
+    };
 
-        for (const fee of customFees) {
-            if (!fee.name.trim()) {
-                toast.error('Nama biaya kustom tidak boleh kosong. Harap isi atau hapus baris yang kosong.');
-                setAddonTab('custom');
+    const validateStep2 = () => {
+        if (!supervisorId) {
+            toast.error('Silakan pilih Supervisor');
+            return false;
+        }
+        return true;
+    };
+
+    const handleNext = () => {
+        if (currentStep === 1) {
+            if (!validateStep1()) return;
+            setCurrentStep(2);
+        } else if (currentStep === 2) {
+            if (!validateStep2()) return;
+            setCurrentStep(3);
+        } else if (currentStep === 3) {
+            setCurrentStep(4);
+        }
+    };
+
+    const handlePrev = () => {
+        if (currentStep > 1) {
+            setCurrentStep((prev) => (prev - 1) as any);
+        }
+    };
+
+    // Submit Project Updates
+    const handleUpdateSubmit = (isDraft = false) => {
+        if (isDraft) {
+            if (!projectName.trim()) {
+                toast.error('Nama Project wajib diisi untuk menyimpan draft');
                 return;
             }
+            if (!clientId) {
+                toast.error('Silakan pilih Klien untuk menyimpan draft');
+                return;
+            }
+            if (!categoryId) {
+                toast.error('Silakan pilih Kategori Project untuk menyimpan draft');
+                return;
+            }
+        } else {
+            if (!validateStep1() || !validateStep2()) return;
         }
 
         setSubmitting(true);
 
-        let parsedWoId: string | null = null;
-        let referralNote = '';
-        if (referralValue.startsWith('wo_')) {
-            parsedWoId = referralValue.replace('wo_', '');
-        } else if (referralValue.startsWith('client_')) {
-            const refClientId = referralValue.replace('client_', '');
-            const refClient = clients.find((c) => c.id === refClientId);
-            if (refClient) {
-                referralNote = `[Referensi Klien: ${refClient.name}]`;
-            }
-        } else if (referralValue === 'source_instagram') {
-            referralNote = '[Sumber: Instagram]';
-        } else if (referralValue === 'source_website') {
-            referralNote = '[Sumber: Website]';
-        } else if (referralValue === 'source_family') {
-            referralNote = '[Sumber: Teman/Keluarga]';
-        }
+        const isUuid = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
-        const finalNotes = referralNote
-            ? (notes ? `${referralNote}\n${notes}` : referralNote)
-            : notes;
-
-        const mergedAddons = [
-            ...selectedAddons.map((a) => ({
-                id: a.id,
-                name: a.name,
-                is_custom: false,
-                qty: a.qty,
-                unit: a.unit,
-                unit_price: a.unit_price,
-                total_price: a.total_price,
-            })),
-            ...customFees.map((f) => ({
-                id: f.tempId,
-                name: f.name.trim(),
-                is_custom: true,
-                qty: f.qty,
-                unit: f.unit || 'item',
-                unit_price: f.unit_price,
-                total_price: f.unit_price * f.qty,
+        const selectedAddonsPayload = [
+            ...addonsList
+                .filter((a) => a.selected && a.qty > 0)
+                .map((a) => ({
+                    id: isUuid(a.id) ? a.id : null,
+                    name: a.name,
+                    is_custom: a.is_custom || !isUuid(a.id),
+                    qty: a.qty,
+                    unit: a.unit,
+                    unit_price: a.unit_price,
+                    total_price: a.subtotal,
+                })),
+            ...operationalExpenses.map((exp) => ({
+                id: exp.addon_id && isUuid(exp.addon_id) ? exp.addon_id : null,
+                name: `Biaya Operasional: ${exp.type} (${exp.description})`,
+                is_custom: exp.is_custom !== false,
+                qty: 1,
+                unit: 'ops',
+                unit_price: exp.estimated_cost,
+                total_price: exp.estimated_cost,
             })),
         ];
 
+        const effectiveStatus = isDraft
+            ? 'draft'
+            : (project.status === 'draft' ? 'in_progress' : (project.status || 'in_progress'));
+
         const payload = {
-            name: projectName,
+            name: projectName.trim(),
             client_id: clientId,
-            wedding_organizer_id: parsedWoId,
             category_id: categoryId,
-            package_id: packageId || null,
-            status,
-            event_date: eventDate || null,
-            event_time: eventTime || null,
-            end_date: endDate || null,
-            deadline: deadline || null,
-            location: location || null,
-            photographer_id: photographerId || null,
-            editor_id: editorId || null,
+            package_id: selectedPackage?.id || null,
+            status: effectiveStatus,
+            event_date: shootingEventDate || projectDate || null,
+            created_at_date: projectDate || null,
+            deadline: dpDueDate || null,
+            location: projectLocation || null,
             supervisor_id: supervisorId || null,
-            price: Number(basePrice) || 0,
-            discount: Number(discount) || 0,
-            tax: Number(tax) || 0,
-            total_amount: Number(grandTotal) || 0,
-            notes: finalNotes || null,
-            selected_addons: mergedAddons,
-            custom_timeline: {
-                mode: timelineMode,
-                is_wedding: isWeddingCategory,
-                steps: activeWorkflowSteps.map((s) => ({
-                    step: s.step,
-                    title: s.title,
-                    desc: s.desc,
-                    date: getEffectiveStepDate(s),
-                })),
-            },
+            photographer_name: photographerName || null,
+            editor_name: editorName || null,
+            price: packagePrice,
+            discount: discountPackage,
+            tax: calculatedTaxAmount,
+            total_amount: totalProject,
+            thumbnail: projectThumbnail || null,
+            payment_method: paymentMethodName,
+            notes: [
+                projectNotes,
+                additionalNotes ? `Catatan Tambahan: ${additionalNotes}` : '',
+                specialRequirement ? `Requirement: ${specialRequirement}` : '',
+                referralSource ? `Sumber Referensi: ${referralSource} (${referralName} - ${referralLink})` : '',
+                additionalCostNotes ? `Catatan Biaya: ${additionalCostNotes}` : '',
+            ]
+                .filter(Boolean)
+                .join('\n\n'),
+            selected_addons: selectedAddonsPayload,
         };
 
-        router.put(`/projects/${project.id}`, payload, {
-            onFinish: () => setSubmitting(false),
-            onSuccess: () => toast.success('Project berhasil diperbarui!'),
-            onError: (errors) => {
-                const firstErr = Object.values(errors)[0];
-                toast.error(typeof firstErr === 'string' ? firstErr : 'Terjadi kesalahan validasi.');
+        router.put(`/projects/${project.id}`, payload as any, {
+            onSuccess: () => {
+                toast.success(
+                    isDraft
+                        ? 'Draft project berhasil diperbarui!'
+                        : project.status === 'draft'
+                        ? 'Project berhasil diaktifkan & disimpan!'
+                        : 'Project berhasil diperbarui!'
+                );
+            },
+            onError: () => {
+                toast.error('Periksa kembali input form Anda.');
+                setSubmitting(false);
+            },
+            onFinish: () => {
+                setSubmitting(false);
             },
         });
     };
 
-    const filteredAddons = useMemo(() => {
-        if (!addonSearch) return addons;
-        return addons.filter(
-            (a) =>
-                a.name.toLowerCase().includes(addonSearch.toLowerCase()) ||
-                a.unit.toLowerCase().includes(addonSearch.toLowerCase()) ||
-                a.category?.name.toLowerCase().includes(addonSearch.toLowerCase())
-        );
-    }, [addons, addonSearch]);
-
     return (
-        <div className="space-y-6 pb-24">
-            <Head title={`Edit Project ${project.name} - Lensaria Photography`} />
+        <div className="w-full max-w-full space-y-5 pb-12">
+            <Head title={`Edit Project: ${project.name} - ARAMS PHOTOGRAPHY`} />
 
-            {/* Breadcrumbs & Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <nav className="flex items-center gap-2 text-xs text-slate-500 mb-1">
-                        <Link href="/dashboard" className="hover:text-slate-900 transition-colors">
+            {/* ── TOP HEADER SECTION ───────────────────────────────────────── */}
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                <div className="min-w-0 space-y-1">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                        {project.project_number && (
+                            <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
+                                {project.project_number}
+                            </span>
+                        )}
+                        <h1 className="text-xl lg:text-2xl font-bold text-slate-900 tracking-tight">
+                            Edit Project: {project.name}
+                        </h1>
+                        {project.status === 'draft' && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-300 text-xs font-bold uppercase tracking-wider shrink-0">
+                                <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                                Draft
+                            </span>
+                        )}
+                    </div>
+                    <nav className="flex items-center gap-1.5 text-xs text-slate-500 flex-wrap">
+                        <Link href="/dashboard" className="hover:text-slate-900 transition-colors whitespace-nowrap shrink-0">
                             Dashboard
                         </Link>
                         <span>›</span>
-                        <Link href="/projects" className="hover:text-slate-900 transition-colors">
-                            Projects
+                        <Link href="/projects" className="hover:text-slate-900 transition-colors whitespace-nowrap shrink-0">
+                            Projects &amp; Orders
                         </Link>
                         <span>›</span>
-                        <Link
-                            href={`/projects/${project.id}`}
-                            className="hover:text-slate-900 transition-colors truncate max-w-xs"
-                        >
+                        <Link href={`/projects/${project.id}`} className="hover:text-slate-900 transition-colors truncate max-w-[220px]">
                             {project.name}
                         </Link>
                         <span>›</span>
-                        <span className="font-semibold text-slate-900">Edit</span>
+                        <span className="text-slate-900 font-medium whitespace-nowrap shrink-0">Edit Project</span>
                     </nav>
-                    <div className="flex items-center gap-3">
-                        <Link
-                            href={`/projects/${project.id}`}
-                            className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors shadow-2xs"
-                        >
-                            <ChevronLeft className="w-4 h-4" />
-                        </Link>
-                        <div>
-                            <h1 className="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
-                                <span>Edit Project: {project.name}</span>
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                                    {project.project_number}
-                                </span>
-                            </h1>
-                            <p className="text-slate-500 text-sm mt-0.5">
-                                Perbarui rincian photoshoot, paket & add-on, referensi, jadwal, dan kru produksi.
-                            </p>
-                        </div>
-                    </div>
                 </div>
 
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">
                     <Link
                         href={`/projects/${project.id}`}
-                        className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 rounded-xl text-xs font-semibold shadow-2xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
                     >
-                        Batal
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                        <span>Kembali ke Detail</span>
                     </Link>
                     <button
                         type="button"
-                        onClick={handleSubmit}
+                        onClick={() => handleUpdateSubmit(true)}
                         disabled={submitting}
-                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-accent text-white rounded-xl text-xs font-bold shadow-md shadow-black/10 transition-all hover:scale-[1.02] cursor-pointer disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 rounded-xl text-xs font-semibold shadow-2xs transition-colors cursor-pointer disabled:opacity-50 whitespace-nowrap shrink-0"
                     >
-                        <CheckCircle2 className="w-4 h-4 text-white" />
-                        <span>{submitting ? 'Menyimpan...' : 'Simpan Perubahan Project'}</span>
+                        <FileText className="w-3.5 h-3.5 text-slate-500" />
+                        <span>{submitting ? 'Menyimpan...' : 'Simpan sebagai Draft'}</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => handleUpdateSubmit(false)}
+                        disabled={submitting}
+                        className="btn-primary-action inline-flex items-center gap-2 px-4 py-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white rounded-xl text-xs font-bold shadow-sm shadow-black/10 transition-all cursor-pointer disabled:opacity-50 whitespace-nowrap shrink-0"
+                    >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>
+                            {submitting
+                                ? 'Menyimpan...'
+                                : project.status === 'draft'
+                                ? 'Aktifkan & Simpan Project'
+                                : 'Simpan Perubahan Project'}
+                        </span>
                     </button>
                 </div>
             </div>
 
-            {/* Main Form Grid */}
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-                {/* Left 2 Columns: Detailed Form Sections */}
-                <div className="lg:col-span-2 space-y-6">
-                    {/* SECTION 1: Klien & Referensi */}
-                    <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-                        <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
-                            <div className="w-8 h-8 rounded-lg bg-amber-50 text-[#C89445] flex items-center justify-center font-bold">
-                                <UserIcon className="w-4 h-4" />
+                {/* ── 4-STEP WIZARD STEPPER ───────────────────────────────────── */}
+                <div className="bg-white rounded-xl border border-slate-200/80 p-4 sm:p-5 shadow-xs">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 relative">
+                        {/* Step 1 */}
+                        <button
+                            type="button"
+                            onClick={() => setCurrentStep(1)}
+                            className="flex items-center gap-3 cursor-pointer group text-left relative z-10"
+                        >
+                            <div
+                                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-all ${
+                                    currentStep === 1
+                                        ? 'bg-[#4F46E5] text-white shadow-md ring-4 ring-indigo-50'
+                                        : currentStep > 1
+                                        ? 'bg-indigo-100 text-[#4F46E5]'
+                                        : 'bg-slate-100 text-slate-500'
+                                }`}
+                            >
+                                {currentStep > 1 ? <Check className="w-4 h-4 stroke-[2.5]" /> : '1'}
                             </div>
-                            <div>
-                                <h3 className="text-sm font-bold text-slate-900">
-                                    1. Informasi Klien & Referensi
-                                </h3>
-                                <p className="text-xs text-slate-500">
-                                    Pilih klien pemesan dan sumber rekomendasi / referensi klien lain.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {/* Searchable Select: Klien Pemesan */}
-                            <div>
-                                <SelectSearch
-                                    label="Klien Pemesan"
-                                    required
-                                    placeholder="-- Cari atau Pilih Klien --"
-                                    searchPlaceholder="Ketik nama, telepon, atau kota klien..."
-                                    value={clientId}
-                                    onChange={(val) => setClientId(val)}
-                                    options={clients.map((c) => ({
-                                        value: c.id,
-                                        label: c.name,
-                                        subtitle: `${c.phone || '-'} • ${c.city || 'Kota'}`,
-                                    }))}
-                                />
-                                {selectedClient && (
-                                    <div className="mt-2 p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-[11px] text-slate-600 flex items-center justify-between">
-                                        <span>Telp: {selectedClient.phone || '-'}</span>
-                                        <span>Kota: {selectedClient.city || '-'}</span>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Searchable Select: Referensi Klien / WO */}
-                            <div>
-                                <SelectSearch
-                                    label="Referensi / Rekomendasi Dari (Opsional)"
-                                    placeholder="-- Tanpa Referensi (Direct / Walk-in) --"
-                                    searchPlaceholder="Cari referensi klien lain, partner WO, atau media..."
-                                    value={referralValue}
-                                    onChange={(val) => setReferralValue(val)}
-                                    options={referralOptions}
-                                />
-                                <span className="text-[11px] text-slate-400 mt-1 block">
-                                    Pilih rekomendasi dari klien lain, partner WO, atau media sosial.
+                            <div className="min-w-0">
+                                <span
+                                    className={`text-xs font-bold block truncate transition-colors ${
+                                        currentStep === 1 ? 'text-[#4F46E5]' : 'text-slate-700 group-hover:text-slate-900'
+                                    }`}
+                                >
+                                    Informasi Project
                                 </span>
                             </div>
-                        </div>
-
-                        {/* Project Name & Venue */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                            <div>
-                                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                                    Nama Project *
-                                </label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={projectName}
-                                    onChange={(e) => setProjectName(e.target.value)}
-                                    placeholder="Contoh: Wedding Sarah & Kevin, Maternity Session"
-                                    className="w-full px-3.5 py-2 h-[38px] rounded-xl border border-slate-200 text-xs text-slate-900 bg-white placeholder:text-slate-400 focus:border-[#C89445] outline-hidden font-bold"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                                    Lokasi / Venue Acara
-                                </label>
-                                <div className="relative">
-                                    <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                                    <input
-                                        type="text"
-                                        value={location}
-                                        onChange={(e) => setLocation(e.target.value)}
-                                        placeholder="Contoh: Grand Ballroom Hotel Mulia Senayan, Jakarta"
-                                        className="w-full pl-9 pr-3.5 py-2 h-[38px] rounded-xl border border-slate-200 text-xs text-slate-900 bg-white placeholder:text-slate-400 focus:border-[#C89445] outline-hidden"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* SECTION 2: Kategori & Paket Fotografi */}
-                    <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-                        <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
-                            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-                                <Camera className="w-4 h-4" />
-                            </div>
-                            <div>
-                                <h3 className="text-sm font-bold text-slate-900">
-                                    2. Kategori Layanan & Paket Utama
-                                </h3>
-                                <p className="text-xs text-slate-500">
-                                    Pilih jenis photoshoot dan paket penawaran yang dipesan.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {/* Searchable Select: Category */}
-                            <div>
-                                <SelectSearch
-                                    label="Kategori Project"
-                                    required
-                                    placeholder="-- Pilih Kategori Project --"
-                                    searchPlaceholder="Cari kategori (Wedding, Birthday, Commercial, dll)..."
-                                    value={categoryId}
-                                    onChange={(val) => {
-                                        setCategoryId(val);
-                                        setPackageId('');
-                                    }}
-                                    options={categories.map((c) => ({
-                                        value: c.id,
-                                        label: c.name,
-                                        icon: (
-                                            <span
-                                                className="w-2.5 h-2.5 rounded-full shrink-0"
-                                                style={{ backgroundColor: c.color || '#3B82F6' }}
-                                            />
-                                        ),
-                                    }))}
-                                />
-                            </div>
-
-                            {/* Searchable Select: Package */}
-                            <div>
-                                <SelectSearch
-                                    label="Paket Foto Utama"
-                                    placeholder="-- Pilih Paket (atau atur harga di samping) --"
-                                    searchPlaceholder="Cari nama paket foto..."
-                                    value={packageId}
-                                    onChange={(val) => handlePackageChange(val)}
-                                    options={availablePackages.map((p) => ({
-                                        value: p.id,
-                                        label: p.name,
-                                        subtitle: `${formatRupiah(p.base_price)} • ${p.duration_hours || 0} Jam`,
-                                    }))}
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* SECTION 3: Add-on & Layanan Ekstra (Catalog + Custom Fees) */}
-                    <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-                                    <Layers className="w-4 h-4" />
-                                </div>
-                                <div>
-                                    <h3 className="text-sm font-bold text-slate-900">
-                                        3. Add-on, Biaya Kustom & Layanan Ekstra
-                                    </h3>
-                                    <p className="text-xs text-slate-500">
-                                        Pilih dari katalog add-on atau sesuaikan item biaya kustom manual khusus project ini.
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Add Custom Fee Button */}
-                            <button
-                                type="button"
-                                onClick={handleAddCustomFeeRow}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 text-[#C89445] hover:bg-amber-100 border border-amber-200/80 text-xs font-bold transition-all shrink-0 cursor-pointer"
-                            >
-                                <Plus className="w-3.5 h-3.5" />
-                                <span>+ Biaya Kustom Manual</span>
-                            </button>
-                        </div>
-
-                        {/* Tabs: Katalog vs Biaya Kustom */}
-                        <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                            <button
-                                type="button"
-                                onClick={() => setAddonTab('catalog')}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
-                                    addonTab === 'catalog'
-                                        ? 'bg-slate-900 text-white'
-                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                }`}
-                            >
-                                <span>Katalog Add-on ({addons.length})</span>
-                                {selectedAddons.length > 0 && (
-                                    <span className="w-4 h-4 rounded-full bg-[#C89445] text-white text-[10px] flex items-center justify-center font-mono">
-                                        {selectedAddons.length}
-                                    </span>
-                                )}
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() => setAddonTab('custom')}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
-                                    addonTab === 'custom'
-                                        ? 'bg-slate-900 text-white'
-                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                }`}
-                            >
-                                <span>Biaya Kustom / Manual</span>
-                                {customFees.length > 0 && (
-                                    <span className="w-4 h-4 rounded-full bg-[#C89445] text-white text-[10px] flex items-center justify-center font-mono">
-                                        {customFees.length}
-                                    </span>
-                                )}
-                            </button>
-                        </div>
-
-                        {/* TAB 1: Katalog Master Data Add-ons */}
-                        {addonTab === 'catalog' && (
-                            <div className="space-y-3">
-                                <div className="relative">
-                                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                                    <input
-                                        type="text"
-                                        value={addonSearch}
-                                        onChange={(e) => setAddonSearch(e.target.value)}
-                                        placeholder="Cari item di katalog add-on..."
-                                        className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:border-[#C89445] outline-hidden font-medium"
-                                    />
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-64 overflow-y-auto pr-1">
-                                    {filteredAddons.map((addon) => {
-                                        const selected = selectedAddons.find((a) => a.id === addon.id);
-                                        return (
-                                            <div
-                                                key={addon.id}
-                                                onClick={() => handleToggleAddon(addon)}
-                                                className={`p-3 rounded-xl border transition-all cursor-pointer flex items-start justify-between gap-3 ${
-                                                    selected
-                                                        ? 'bg-amber-50/50 border-[#C89445] shadow-xs'
-                                                        : 'bg-slate-50/60 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
-                                                }`}
-                                            >
-                                                <div className="space-y-0.5">
-                                                    <div className="flex items-center gap-2">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={!!selected}
-                                                            readOnly
-                                                            className="rounded text-[#C89445] focus:ring-[#C89445] cursor-pointer"
-                                                        />
-                                                        <span className="text-xs font-bold text-slate-900">
-                                                            {addon.name}
-                                                        </span>
-                                                    </div>
-                                                    <div className="text-[11px] text-slate-500 font-mono pl-5">
-                                                        {formatRupiah(addon.price)} / {addon.unit}
-                                                    </div>
-                                                </div>
-
-                                                {/* Directly Editable Quantity Stepper on Catalog Addons */}
-                                                {selected && (
-                                                    <div
-                                                        className="flex items-center gap-1 bg-white px-2 py-1 rounded-xl border border-amber-200 shadow-2xs shrink-0"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleQtyChange(addon.id, -1)}
-                                                            className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 active:scale-95 flex items-center justify-center text-slate-800 transition-colors cursor-pointer"
-                                                        >
-                                                            <Minus className="w-3 h-3 text-slate-700" />
-                                                        </button>
-                                                        <input
-                                                            type="number"
-                                                            min={1}
-                                                            value={selected.qty}
-                                                            onChange={(e) =>
-                                                                handleDirectQtyInput(
-                                                                    addon.id,
-                                                                    parseInt(e.target.value, 10) || 1
-                                                                )
-                                                            }
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            className="w-8 text-center text-xs font-mono font-extrabold text-slate-900 bg-transparent border-0 outline-hidden p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                        />
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleQtyChange(addon.id, 1)}
-                                                            className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 active:scale-95 flex items-center justify-center text-slate-800 transition-colors cursor-pointer"
-                                                        >
-                                                            <Plus className="w-3 h-3 text-slate-700" />
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* TAB 2: Biaya Kustom / Manual */}
-                        {addonTab === 'custom' && (
-                            <div className="space-y-3">
-                                {customFees.length === 0 ? (
-                                    <div className="p-6 text-center rounded-xl bg-slate-50 border border-dashed border-slate-200 space-y-2">
-                                        <Receipt className="w-6 h-6 text-slate-400 mx-auto" />
-                                        <p className="text-xs font-semibold text-slate-600">
-                                            Belum ada biaya kustom manual yang ditambahkan.
-                                        </p>
-                                        <p className="text-[11px] text-slate-400">
-                                            Cocok untuk biaya transport luar kota, tiket pesawat, sewa studio khusus, atau perizinan lokasi.
-                                        </p>
-                                        <button
-                                            type="button"
-                                            onClick={handleAddCustomFeeRow}
-                                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary-accent text-white text-xs font-bold hover:scale-[1.02] transition-all cursor-pointer mt-1"
-                                        >
-                                            <Plus className="w-3.5 h-3.5" />
-                                            <span>Tambah Biaya Kustom Pertama</span>
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-3">
-                                        {customFees.map((fee, index) => (
-                                            <div
-                                                key={fee.tempId}
-                                                className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-200 space-y-2.5 animate-in fade-in duration-150"
-                                            >
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                                                        Item Kustom #{index + 1}
-                                                    </span>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleRemoveCustomFee(fee.tempId)}
-                                                        className="text-rose-500 hover:text-rose-700 p-1 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
-                                                        title="Hapus Biaya Kustom"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-
-                                                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
-                                                    {/* Nama Biaya */}
-                                                    <div className="sm:col-span-5">
-                                                        <input
-                                                            type="text"
-                                                            required
-                                                            value={fee.name}
-                                                            onChange={(e) =>
-                                                                handleUpdateCustomFee(fee.tempId, 'name', e.target.value)
-                                                            }
-                                                            placeholder="Nama Biaya (mis: Transport Luar Kota, Izin Lokasi)"
-                                                            className="w-full px-3 py-2 h-[38px] rounded-xl border border-slate-200 text-xs text-slate-900 bg-white placeholder:text-slate-400 focus:border-[#C89445] outline-hidden font-bold"
-                                                        />
-                                                    </div>
-
-                                                    {/* Tarif Rp */}
-                                                    <div className="sm:col-span-3">
-                                                        <FormattedNumberInput
-                                                            prefix="Rp"
-                                                            placeholder="0"
-                                                            value={fee.unit_price}
-                                                            onChange={(val) =>
-                                                                handleUpdateCustomFee(fee.tempId, 'unit_price', val)
-                                                            }
-                                                        />
-                                                    </div>
-
-                                                    {/* Qty Stepper */}
-                                                    <div className="sm:col-span-2">
-                                                        <div className="flex items-center justify-between bg-white px-2 h-[38px] rounded-xl border border-slate-200 shadow-2xs">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleUpdateCustomFee(
-                                                                        fee.tempId,
-                                                                        'qty',
-                                                                        Math.max(1, fee.qty - 1)
-                                                                    )
-                                                                }
-                                                                className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 active:scale-95 flex items-center justify-center text-slate-800 transition-all cursor-pointer shrink-0"
-                                                            >
-                                                                <Minus className="w-3 h-3 text-slate-700" />
-                                                            </button>
-                                                            <input
-                                                                type="number"
-                                                                min={1}
-                                                                value={fee.qty}
-                                                                onChange={(e) =>
-                                                                    handleUpdateCustomFee(
-                                                                        fee.tempId,
-                                                                        'qty',
-                                                                        Math.max(1, parseInt(e.target.value, 10) || 1)
-                                                                    )
-                                                                }
-                                                                className="w-8 text-center text-xs font-mono font-extrabold text-slate-900 bg-transparent border-0 outline-hidden p-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                            />
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    handleUpdateCustomFee(fee.tempId, 'qty', fee.qty + 1)
-                                                                }
-                                                                className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 active:scale-95 flex items-center justify-center text-slate-800 transition-all cursor-pointer shrink-0"
-                                                            >
-                                                                <Plus className="w-3 h-3 text-slate-700" />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Satuan */}
-                                                    <div className="sm:col-span-2">
-                                                        <input
-                                                            type="text"
-                                                            value={fee.unit}
-                                                            onChange={(e) =>
-                                                                handleUpdateCustomFee(fee.tempId, 'unit', e.target.value)
-                                                            }
-                                                            placeholder="item/trip"
-                                                            className="w-full px-3 py-2 h-[38px] rounded-xl border border-slate-200 text-xs text-slate-900 bg-white placeholder:text-slate-400 focus:border-[#C89445] outline-hidden font-mono font-medium"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex items-center justify-end text-[11px] text-slate-500 pt-1 border-t border-slate-200/50">
-                                                    <span>
-                                                        Subtotal: <strong className="text-slate-900 font-mono">{formatRupiah(fee.unit_price * fee.qty)}</strong>
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        ))}
-
-                                        <button
-                                            type="button"
-                                            onClick={handleAddCustomFeeRow}
-                                            className="w-full py-2.5 border border-dashed border-slate-300 hover:border-[#C89445] hover:bg-amber-50/30 rounded-xl text-xs font-bold text-slate-700 hover:text-[#C89445] transition-all flex items-center justify-center gap-2 cursor-pointer"
-                                        >
-                                            <Plus className="w-4 h-4" />
-                                            <span>+ Tambah Baris Biaya Kustom Lainnya</span>
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* SECTION 4: Jadwal & Timeline Pengerjaan */}
-                    <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-5">
-                        <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
-                            <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
-                                <Calendar className="w-4 h-4" />
-                            </div>
-                            <div>
-                                <h3 className="text-sm font-bold text-slate-900">
-                                    4. Jadwal & Timeline Pengerjaan Project
-                                </h3>
-                                <p className="text-xs text-slate-500">
-                                    Tentukan tanggal pemotretan, batas deadline, serta opsi timeline standar atau kustom.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div>
-                                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                                    Tanggal Hari-H / Mulai *
-                                </label>
-                                <input
-                                    type="date"
-                                    value={eventDate}
-                                    onChange={(e) => {
-                                        const newDate = e.target.value;
-                                        setEventDate(newDate);
-                                        // Auto-suggest deadline H+30 if deadline is empty
-                                        if (newDate && !deadline) {
-                                            const d = new Date(newDate);
-                                            d.setDate(d.getDate() + 30);
-                                            setDeadline(d.toISOString().split('T')[0]);
-                                        }
-                                    }}
-                                    className="w-full px-3.5 py-2 h-[38px] rounded-xl border border-slate-200 text-xs text-slate-900 bg-white focus:border-[#C89445] outline-hidden font-medium"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                                    Waktu / Jam Acara
-                                </label>
-                                <input
-                                    type="text"
-                                    value={eventTime}
-                                    onChange={(e) => setEventTime(e.target.value)}
-                                    placeholder="Contoh: 07.00 - 14.00 WIB"
-                                    className="w-full px-3.5 py-2 h-[38px] rounded-xl border border-slate-200 text-xs text-slate-900 bg-white focus:border-[#C89445] outline-hidden font-medium"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                                    Tanggal Selesai (Opsional)
-                                </label>
-                                <input
-                                    type="date"
-                                    value={endDate}
-                                    onChange={(e) => setEndDate(e.target.value)}
-                                    className="w-full px-3.5 py-2 h-[38px] rounded-xl border border-slate-200 text-xs text-slate-900 bg-white focus:border-[#C89445] outline-hidden font-medium"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                                    Deadline Final Delivery
-                                </label>
-                                <input
-                                    type="date"
-                                    value={deadline}
-                                    onChange={(e) => setDeadline(e.target.value)}
-                                    className="w-full px-3.5 py-2 h-[38px] rounded-xl border border-slate-200 text-xs text-slate-900 bg-white focus:border-[#C89445] outline-hidden font-medium"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Searchable Select: Status */}
-                        <div>
-                            <SelectSearch
-                                label="Status Project"
-                                placeholder="Pilih status..."
-                                searchPlaceholder="Cari status..."
-                                value={status}
-                                onChange={(val) => setStatus(val)}
-                                options={[
-                                    { value: 'draft', label: 'Draft (Penawaran / Booking Awal)' },
-                                    { value: 'in_progress', label: 'Dalam Proses (Terkonfirmasi / Menunggu Hari-H)' },
-                                    { value: 'editing', label: 'Tahap Editing / Post-Production' },
-                                    { value: 'completed', label: 'Selesai (Sudah Serah Terima)' },
-                                    { value: 'cancelled', label: 'Dibatalkan' },
-                                ]}
-                            />
-                        </div>
-
-                        {/* Timeline Pengerjaan & Estimasi Tahapan Workflow (DYNAMIC 8 vs 5 STEPS) */}
-                        <div className="pt-3 border-t border-slate-100 space-y-3">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                                <div className="space-y-0.5">
-                                    <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                                        <Sparkles className="w-3.5 h-3.5 text-[#C89445]" />
-                                        <span>
-                                            {isWeddingCategory
-                                                ? 'Estimasi Timeline 8 Tahapan Standar Pengerjaan (Wedding)'
-                                                : 'Estimasi Timeline 5 Tahapan Standar Pengerjaan (Non-Wedding)'}
-                                        </span>
-                                    </span>
-                                    <p className="text-[11px] text-slate-400">
-                                        {isWeddingCategory
-                                            ? 'Alur lengkap pernikahan (Booking → TM → Hari-H → Sneak Peek → Flashdrive → Full Edit → Album → Delivery)'
-                                            : 'Alur pengerjaan standar (Booking → Concept → Hari-H → Full Edit → Delivery)'}
-                                    </p>
-                                </div>
-
-                                {/* Toggle Switch Default vs Custom */}
-                                <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl shrink-0">
-                                    <button
-                                        type="button"
-                                        onClick={() => setTimelineMode('default')}
-                                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                            timelineMode === 'default'
-                                                ? 'bg-white text-slate-900 shadow-2xs'
-                                                : 'text-slate-500 hover:text-slate-900'
-                                        }`}
-                                    >
-                                        ⚡ Default Otomatis
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setTimelineMode('custom')}
-                                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                            timelineMode === 'custom'
-                                                ? 'bg-[#C89445] text-white shadow-2xs'
-                                                : 'text-slate-500 hover:text-slate-900'
-                                        }`}
-                                    >
-                                        ✏️ Atur Kustom
-                                    </button>
-                                    {timelineMode === 'custom' && (
-                                        <button
-                                            type="button"
-                                            onClick={handleResetTimelineToDefault}
-                                            className="px-2 py-1 rounded-lg text-[10px] font-bold text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                                            title="Reset ke Default Otomatis"
-                                        >
-                                            ↺ Reset
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Responsive Steps Grid: 4 columns on desktop for 8 steps, 5 columns for 5 steps */}
-                            <div className={`grid gap-2.5 ${
-                                isWeddingCategory
-                                    ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
-                                    : 'grid-cols-1 sm:grid-cols-5'
-                            }`}>
-                                {activeWorkflowSteps.map((s) => {
-                                    const effectiveDate = getEffectiveStepDate(s);
-                                    const isCustom = timelineMode === 'custom';
-
-                                    return (
-                                        <div
-                                            key={s.step}
-                                            className={`p-3 rounded-xl border space-y-1.5 transition-all ${
-                                                isCustom
-                                                    ? 'bg-amber-50/30 border-amber-200 shadow-2xs'
-                                                    : 'bg-slate-50 border-slate-200/80'
-                                            }`}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-[10px] font-bold text-slate-500">
-                                                    Tahap {s.step}
-                                                </span>
-                                                <span className={`w-2 h-2 rounded-full ${s.dotColor}`} />
-                                            </div>
-                                            <h4 className="text-xs font-bold text-slate-900 leading-tight">
-                                                {s.title}
-                                            </h4>
-                                            <p className="text-[10px] text-slate-500 leading-tight">
-                                                {s.desc}
-                                            </p>
-
-                                            {isCustom ? (
-                                                <input
-                                                    type="date"
-                                                    value={effectiveDate}
-                                                    onChange={(e) =>
-                                                        setCustomStepDates((prev) => ({
-                                                            ...prev,
-                                                            [s.step]: e.target.value,
-                                                        }))
-                                                    }
-                                                    className="w-full px-2 py-1 bg-white border border-amber-300 rounded-lg text-[10px] font-medium text-slate-900 outline-hidden focus:ring-1 focus:ring-amber-500"
-                                                />
-                                            ) : (
-                                                <p className="text-[10px] text-[#A6702E] font-bold pt-0.5">
-                                                    {effectiveDate
-                                                        ? formatStepDisplayDate(effectiveDate, 'Sesuai Jadwal')
-                                                        : s.isEventRelative === 'created'
-                                                        ? 'Saat Dibuat'
-                                                        : s.offsetDays === 0
-                                                        ? 'Hari-H'
-                                                        : s.offsetDays < 0
-                                                        ? `H${s.offsetDays}`
-                                                        : `H+${s.offsetDays}`}
-                                                </p>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* SECTION 5: Penugasan Kru / Tim Produksi (SUPERVISOR FIRST) */}
-                    <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-                        <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
-                            <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
-                                <Users className="w-4 h-4" />
-                            </div>
-                            <div>
-                                <h3 className="text-sm font-bold text-slate-900">
-                                    5. Penugasan Kru & Tim Produksi
-                                </h3>
-                                <p className="text-xs text-slate-500">
-                                    Tugaskan supervisor penanggung jawab, fotografer utama, dan editor.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            {/* 1. Supervisor / PIC Studio (FIRST) */}
-                            <div>
-                                <SelectSearch
-                                    label="Supervisor / PIC Studio"
-                                    placeholder="-- Belum Ditugaskan --"
-                                    searchPlaceholder="Cari nama supervisor..."
-                                    value={supervisorId}
-                                    onChange={(val) => setSupervisorId(val)}
-                                    options={team_members.map((u) => ({
-                                        value: u.id,
-                                        label: u.name,
-                                        subtitle: u.role || 'Supervisor / Manager',
-                                    }))}
-                                />
-                            </div>
-
-                            {/* 2. Lead Fotografer */}
-                            <div>
-                                <SelectSearch
-                                    label="Lead Fotografer"
-                                    placeholder="-- Belum Ditugaskan --"
-                                    searchPlaceholder="Cari nama fotografer..."
-                                    value={photographerId}
-                                    onChange={(val) => setPhotographerId(val)}
-                                    options={team_members.map((u) => ({
-                                        value: u.id,
-                                        label: u.name,
-                                        subtitle: u.role || 'Tim Fotografer',
-                                    }))}
-                                />
-                            </div>
-
-                            {/* 3. Photo / Video Editor */}
-                            <div>
-                                <SelectSearch
-                                    label="Photo / Video Editor"
-                                    placeholder="-- Belum Ditugaskan --"
-                                    searchPlaceholder="Cari nama editor..."
-                                    value={editorId}
-                                    onChange={(val) => setEditorId(val)}
-                                    options={team_members.map((u) => ({
-                                        value: u.id,
-                                        label: u.name,
-                                        subtitle: u.role || 'Tim Editor',
-                                    }))}
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* SECTION 6: Catatan / Brief Project */}
-                    <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center font-bold">
-                                    <FileText className="w-4 h-4" />
-                                </div>
-                                <div>
-                                    <h3 className="text-sm font-bold text-slate-900">
-                                        6. Catatan Khusus & Template Brief
-                                    </h3>
-                                    <p className="text-xs text-slate-500">
-                                        Instruksi photoshoot, konsep acara, atau klausul perjanjian.
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Searchable Select: Template Selector */}
-                            {note_templates.length > 0 && (
-                                <div className="w-full sm:w-64">
-                                    <SelectSearch
-                                        placeholder="+ Muat Template Catatan..."
-                                        searchPlaceholder="Cari template brief..."
-                                        value=""
-                                        onChange={(val) => val && handleSelectTemplate(val)}
-                                        options={note_templates.map((t) => ({
-                                            value: t.id,
-                                            label: t.title,
-                                            subtitle: t.type,
-                                        }))}
-                                    />
-                                </div>
+                            {currentStep === 1 && (
+                                <div className="absolute -bottom-4 sm:-bottom-5 left-0 right-0 h-1 bg-[#4F46E5] rounded-full" />
                             )}
-                        </div>
+                        </button>
 
-                        <textarea
-                            rows={4}
-                            value={notes}
-                            onChange={(e) => setNotes(e.target.value)}
-                            placeholder="Tuliskan catatan khusus untuk fotografer, rincian susunan acara, dresscode, request lagu video teaser, dll..."
-                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 bg-white placeholder:text-slate-400 focus:border-[#C89445] outline-hidden resize-none"
-                        />
+                        {/* Step 2 */}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if (validateStep1()) setCurrentStep(2);
+                            }}
+                            className="flex items-center gap-3 cursor-pointer group text-left relative z-10"
+                        >
+                            <div
+                                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-all ${
+                                    currentStep === 2
+                                        ? 'bg-[#4F46E5] text-white shadow-md ring-4 ring-indigo-50'
+                                        : currentStep > 2
+                                        ? 'bg-indigo-100 text-[#4F46E5]'
+                                        : 'bg-slate-100 text-slate-500'
+                                }`}
+                            >
+                                {currentStep > 2 ? <Check className="w-4 h-4 stroke-[2.5]" /> : '2'}
+                            </div>
+                            <div className="min-w-0">
+                                <span
+                                    className={`text-xs font-bold block truncate transition-colors ${
+                                        currentStep === 2 ? 'text-[#4F46E5]' : 'text-slate-700 group-hover:text-slate-900'
+                                    }`}
+                                >
+                                    Personel &amp; Penugasan
+                                </span>
+                            </div>
+                            {currentStep === 2 && (
+                                <div className="absolute -bottom-4 sm:-bottom-5 left-0 right-0 h-1 bg-[#4F46E5] rounded-full" />
+                            )}
+                        </button>
+
+                        {/* Step 3 */}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if (validateStep1() && validateStep2()) setCurrentStep(3);
+                            }}
+                            className="flex items-center gap-3 cursor-pointer group text-left relative z-10"
+                        >
+                            <div
+                                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-all ${
+                                    currentStep === 3
+                                        ? 'bg-[#4F46E5] text-white shadow-md ring-4 ring-indigo-50'
+                                        : currentStep > 3
+                                        ? 'bg-indigo-100 text-[#4F46E5]'
+                                        : 'bg-slate-100 text-slate-500'
+                                }`}
+                            >
+                                {currentStep > 3 ? <Check className="w-4 h-4 stroke-[2.5]" /> : '3'}
+                            </div>
+                            <div className="min-w-0">
+                                <span
+                                    className={`text-xs font-bold block truncate transition-colors ${
+                                        currentStep === 3 ? 'text-[#4F46E5]' : 'text-slate-700 group-hover:text-slate-900'
+                                    }`}
+                                >
+                                    Add-on &amp; Biaya Operasional
+                                </span>
+                            </div>
+                            {currentStep === 3 && (
+                                <div className="absolute -bottom-4 sm:-bottom-5 left-0 right-0 h-1 bg-[#4F46E5] rounded-full" />
+                            )}
+                        </button>
+
+                        {/* Step 4 */}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if (validateStep1() && validateStep2()) setCurrentStep(4);
+                            }}
+                            className="flex items-center gap-3 cursor-pointer group text-left relative z-10"
+                        >
+                            <div
+                                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-all ${
+                                    currentStep === 4
+                                        ? 'bg-[#4F46E5] text-white shadow-md ring-4 ring-indigo-50'
+                                        : 'bg-slate-100 text-slate-500'
+                                }`}
+                            >
+                                4
+                            </div>
+                            <div className="min-w-0">
+                                <span
+                                    className={`text-xs font-bold block truncate transition-colors ${
+                                        currentStep === 4 ? 'text-[#4F46E5]' : 'text-slate-700 group-hover:text-slate-900'
+                                    }`}
+                                >
+                                    Review &amp; Konfirmasi
+                                </span>
+                            </div>
+                            {currentStep === 4 && (
+                                <div className="absolute -bottom-4 sm:-bottom-5 left-0 right-0 h-1 bg-[#4F46E5] rounded-full" />
+                            )}
+                        </button>
                     </div>
                 </div>
 
-                {/* Right Column: Sticky Pricing Breakdown & Quick Actions */}
-                <div className="space-y-6 lg:sticky lg:top-6">
-                    {/* Ringkasan Biaya Card */}
-                    <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-                        <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
-                            <div className="w-8 h-8 rounded-lg bg-amber-50 text-[#C89445] flex items-center justify-center font-bold">
-                                <DollarSign className="w-4 h-4" />
+                {/* ═════════════════════════════════════════════════════════════════ */}
+                {/* ── STEP 1: INFORMASI PROJECT & KLIEN ───────────────────────── */}
+                {/* ═════════════════════════════════════════════════════════════════ */}
+                {currentStep === 1 && (
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start text-slate-900">
+                            {/* Card 1: Detail Utama Project (col-span-12 lg:col-span-7) */}
+                            <div className="lg:col-span-7 bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs space-y-4">
+                                <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+                                    <h3 className="font-bold text-base text-slate-900">Detail Project &amp; Klien</h3>
+                                    <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100">
+                                        Langkah 1 dari 4
+                                    </span>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 min-w-0">
+                                    <div className="space-y-1 min-w-0">
+                                        <label className="text-[11px] font-bold text-slate-600 block">
+                                            Tanggal Project <span className="text-rose-500">*</span>
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={projectDate}
+                                            onChange={(e) => {
+                                                setProjectDate(e.target.value);
+                                                if (!shootingEventDate || shootingEventDate === projectDate) {
+                                                    setShootingEventDate(e.target.value);
+                                                }
+                                            }}
+                                            className="w-full h-[42px] px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:border-[#4F46E5] focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1 min-w-0">
+                                        <label className="text-[11px] font-bold text-slate-600 block">
+                                            Estimasi Durasi Standby
+                                        </label>
+                                        <SelectSearch
+                                            options={shootingDurationOptions}
+                                            value={shootingDuration}
+                                            onChange={setShootingDuration}
+                                            clearable={false}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1 min-w-0">
+                                    <label className="text-[11px] font-bold text-slate-600 block">
+                                        Nama Project <span className="text-rose-500">*</span>
+                                    </label>
+                                    <Input
+                                        value={projectName}
+                                        onChange={(e) => setProjectName(e.target.value)}
+                                        placeholder="Contoh: Wedding Kevin &amp; Jessica"
+                                        className="h-[42px]"
+                                    />
+                                </div>
+
+                                {/* Foto / Cover Project (Opsional) */}
+                                <div className="space-y-1.5 min-w-0">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[11px] font-bold text-slate-600">
+                                            Foto / Cover Project <span className="text-slate-400 font-normal">(Opsional)</span>
+                                        </label>
+                                        {projectThumbnail && (
+                                            <button
+                                                type="button"
+                                                onClick={handleRemoveThumbnail}
+                                                className="text-[10px] font-bold text-rose-600 hover:underline cursor-pointer"
+                                            >
+                                                Hapus Foto
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <input
+                                        type="file"
+                                        ref={thumbnailInputRef}
+                                        accept="image/png,image/jpeg,image/webp,image/avif"
+                                        onChange={handleThumbnailChange}
+                                        className="hidden"
+                                    />
+
+                                    {projectThumbnail ? (
+                                        <div className="rounded-xl border border-slate-200 bg-slate-50 flex items-center gap-3 p-2.5">
+                                            <img
+                                                src={projectThumbnail}
+                                                alt="Preview Project"
+                                                className="w-14 h-14 rounded-lg object-cover border border-slate-200 shrink-0"
+                                            />
+                                            <div className="min-w-0 flex-1">
+                                                <span className="text-xs font-bold text-slate-800 block truncate">
+                                                    Foto Cover Terpasang
+                                                </span>
+                                                <span className="text-[10px] text-slate-400 block">
+                                                    PNG, JPG, atau WebP
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => thumbnailInputRef.current?.click()}
+                                                    className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-bold text-[#4F46E5] hover:underline cursor-pointer"
+                                                >
+                                                    <Upload className="w-3 h-3" />
+                                                    <span>Ganti Foto</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div
+                                            onClick={() => thumbnailInputRef.current?.click()}
+                                            className="border-2 border-dashed border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30 rounded-xl p-3 text-center cursor-pointer transition-all flex items-center justify-center gap-2.5 group"
+                                        >
+                                            <div className="w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-indigo-100 text-slate-500 group-hover:text-indigo-600 flex items-center justify-center transition-colors">
+                                                <ImageIcon className="w-4 h-4" />
+                                            </div>
+                                            <div className="text-left">
+                                                <p className="text-[11px] font-bold text-slate-700 group-hover:text-indigo-900">
+                                                    Pilih atau unggah foto cover project
+                                                </p>
+                                                <p className="text-[10px] text-slate-400">
+                                                    PNG, JPG, atau WebP hingga 5MB
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Client Selection */}
+                                <div className="space-y-1 min-w-0">
+                                    <label className="text-[11px] font-bold text-slate-600 block">
+                                        Client <span className="text-rose-500">*</span>
+                                    </label>
+                                    <SelectSearch
+                                        options={clientOptions}
+                                        value={clientId}
+                                        onChange={setClientId}
+                                        placeholder="Cari atau pilih Client..."
+                                        searchPlaceholder="Ketik nama klien atau telepon..."
+                                        clearable={false}
+                                    />
+                                </div>
+
+                                {/* Category Selection */}
+                                <div className="space-y-1 min-w-0">
+                                    <label className="text-[11px] font-bold text-slate-600 block">
+                                        Kategori Project <span className="text-rose-500">*</span>
+                                    </label>
+                                    <SelectSearch
+                                        options={categoryOptions}
+                                        value={categoryId}
+                                        onChange={handleCategoryChange}
+                                        placeholder="Pilih Kategori Project..."
+                                        searchPlaceholder="Cari kategori..."
+                                        clearable={false}
+                                    />
+                                </div>
+
+                                {/* Package Selection */}
+                                <div className="space-y-1.5 min-w-0">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[11px] font-bold text-slate-600">
+                                            Paket Layanan <span className="text-rose-500">*</span>
+                                        </label>
+                                        {selectedPackage && (
+                                            <span className="text-xs font-black text-indigo-700 font-sans">
+                                                {formatRupiah(packagePrice)}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <SelectSearch
+                                        options={packageOptions}
+                                        value={packageId || selectedPackage?.id}
+                                        onChange={setPackageId}
+                                        placeholder="Pilih Paket Layanan..."
+                                        searchPlaceholder="Cari paket..."
+                                        clearable={false}
+                                    />
+                                    {selectedPackage && (
+                                        <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-100 flex items-center justify-between text-xs mt-1.5">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <Briefcase className="w-4 h-4 text-indigo-600 shrink-0" />
+                                                <div className="min-w-0">
+                                                    <span className="font-bold text-indigo-950 block truncate">
+                                                        {selectedCategory?.name} - {selectedPackage.name}
+                                                    </span>
+                                                    <span className="text-[10px] text-slate-500">
+                                                        Standby {selectedPackage.duration_hours || 12} Jam | Termasuk Tim Foto &amp; Video
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <span className="text-xs font-black text-indigo-700 shrink-0 font-sans ml-2">
+                                                {formatRupiah(packagePrice)}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Location */}
+                                <div className="space-y-1 min-w-0">
+                                    <label className="text-[11px] font-bold text-slate-600 block">
+                                        Lokasi Project / Event <span className="text-rose-500">*</span>
+                                    </label>
+                                    <Input
+                                        icon={<MapPin className="w-4 h-4 text-slate-400" />}
+                                        value={projectLocation}
+                                        onChange={(e) => setProjectLocation(e.target.value)}
+                                        placeholder="Contoh: Grand Ballroom, Hotel Indonesia Kempinski"
+                                        className="h-[42px]"
+                                    />
+                                </div>
                             </div>
-                            <div>
-                                <h3 className="text-sm font-bold text-slate-900">
-                                    Kalkulasi Biaya Project
-                                </h3>
-                                <p className="text-[11px] text-slate-500">
-                                    Rincian paket, add-on, biaya kustom, diskon, dan grand total.
-                                </p>
+
+                            {/* Card 2: Catatan & Referensi (col-span-12 lg:col-span-5) */}
+                            <div className="lg:col-span-5 space-y-5">
+                                <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs space-y-4">
+                                    <div className="border-b border-slate-100 pb-3">
+                                        <h3 className="font-bold text-base text-slate-900">Catatan &amp; Referensi</h3>
+                                    </div>
+
+                                    <div className="space-y-1 min-w-0">
+                                        <label className="text-[11px] font-bold text-slate-600 block">Catatan Project</label>
+                                        <Textarea
+                                            minRows={2}
+                                            value={projectNotes}
+                                            onChange={(e) => setProjectNotes(e.target.value)}
+                                            placeholder="Tambahkan catatan umum project..."
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2 pt-1 border-t border-slate-100 min-w-0">
+                                        <label className="text-[11px] font-bold text-slate-600 block">Referensi / Sumber Klien</label>
+                                        <SelectSearch
+                                            options={referralSourceOptions}
+                                            value={referralSource}
+                                            onChange={setReferralSource}
+                                            placeholder="Pilih Sumber Referensi..."
+                                            clearable={false}
+                                        />
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            <Input
+                                                value={referralName}
+                                                onChange={(e) => setReferralName(e.target.value)}
+                                                placeholder="Nama perujuk"
+                                                className="h-[38px] text-[11px]"
+                                            />
+                                            <Input
+                                                value={referralLink}
+                                                onChange={(e) => setReferralLink(e.target.value)}
+                                                placeholder="Link referensi"
+                                                className="h-[38px] text-[11px]"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-1 pt-1 border-t border-slate-100 min-w-0">
+                                        <label className="text-[11px] font-bold text-slate-600 block">Requirement Khusus / Briefing</label>
+                                        <Textarea
+                                            minRows={2}
+                                            value={specialRequirement}
+                                            onChange={(e) => setSpecialRequirement(e.target.value)}
+                                            placeholder="Contoh: Tone warna warm &amp; bright, durasi teaser 1 menit..."
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1 pt-1 border-t border-slate-100 min-w-0">
+                                        <label className="text-[11px] font-bold text-slate-600 block">Notes Tambahan</label>
+                                        <Textarea
+                                            minRows={2}
+                                            value={additionalNotes}
+                                            onChange={(e) => setAdditionalNotes(e.target.value)}
+                                            placeholder="Catatan tambahan untuk tim..."
+                                        />
+                                        <div className="pt-1">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1.5">Visible untuk</span>
+                                            <div className="flex items-center gap-3 text-xs flex-wrap">
+                                                <label className="flex items-center gap-1.5 cursor-pointer text-slate-700">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={visibleFor.supervisor}
+                                                        onChange={(e) => setVisibleFor({ ...visibleFor, supervisor: e.target.checked })}
+                                                        className="rounded text-[#4F46E5]"
+                                                    />
+                                                    <span>Supervisor</span>
+                                                </label>
+                                                <label className="flex items-center gap-1.5 cursor-pointer text-slate-700">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={visibleFor.photographer}
+                                                        onChange={(e) => setVisibleFor({ ...visibleFor, photographer: e.target.checked })}
+                                                        className="rounded text-[#4F46E5]"
+                                                    />
+                                                    <span>Photographer</span>
+                                                </label>
+                                                <label className="flex items-center gap-1.5 cursor-pointer text-slate-700">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={visibleFor.editor}
+                                                        onChange={(e) => setVisibleFor({ ...visibleFor, editor: e.target.checked })}
+                                                        className="rounded text-[#4F46E5]"
+                                                    />
+                                                    <span>Editor</span>
+                                                </label>
+                                                <label className="flex items-center gap-1.5 cursor-pointer text-slate-700">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={visibleFor.client}
+                                                        onChange={(e) => setVisibleFor({ ...visibleFor, client: e.target.checked })}
+                                                        className="rounded text-[#4F46E5]"
+                                                    />
+                                                    <span>Client</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="space-y-3.5 text-xs">
-                            {/* Harga Paket */}
-                            <div>
-                                <label className="block font-bold text-slate-700 mb-1.5">
-                                    Harga Dasar Paket (Rp)
-                                </label>
-                                <FormattedNumberInput
-                                    prefix="Rp"
-                                    placeholder="0"
-                                    value={basePrice}
-                                    onChange={(val) => setBasePrice(val)}
-                                />
+                        {/* Step 1 Bottom Actions */}
+                        <div className="flex items-center justify-between pt-4 border-t border-slate-200/80">
+                            <button
+                                type="button"
+                                onClick={() => handleUpdateSubmit(true)}
+                                disabled={submitting}
+                                className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700 transition-all shadow-2xs inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                            >
+                                <FileText className="w-3.5 h-3.5 text-slate-500" />
+                                <span>Simpan sebagai Draft</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleNext}
+                                className="px-6 py-3 rounded-xl bg-[#4F46E5] hover:bg-[#4338CA] text-xs font-bold text-white transition-all shadow-md inline-flex items-center gap-2 cursor-pointer"
+                            >
+                                <span>Lanjut ke Step 2 (Personel &amp; Penugasan)</span>
+                                <ArrowRight className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* ═════════════════════════════════════════════════════════════════ */}
+                {/* ── STEP 2: PERSONEL & PENUGASAN ───────────────────────────── */}
+                {/* ═════════════════════════════════════════════════════════════════ */}
+                {currentStep === 2 && (
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start text-slate-900">
+                            {/* Card 1: Penugasan Personel (col-span-12 lg:col-span-6) */}
+                            <div className="lg:col-span-6 bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs space-y-4">
+                                <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+                                    <div>
+                                        <h3 className="font-bold text-base text-slate-900">Penugasan Tim Personel</h3>
+                                        <p className="text-[11px] text-slate-400">Tugaskan personil yang bertanggung jawab pada project ini</p>
+                                    </div>
+                                    <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100">
+                                        Langkah 2 dari 4
+                                    </span>
+                                </div>
+
+                                <div className="space-y-3.5 text-xs min-w-0">
+                                    <div className="space-y-1 min-w-0">
+                                        <label className="text-[11px] font-bold text-slate-600 block">
+                                            Supervisor <span className="text-rose-500">*</span>
+                                        </label>
+                                        <SelectSearch
+                                            options={supervisorOptions}
+                                            value={supervisorId}
+                                            onChange={setSupervisorId}
+                                            placeholder="Pilih Supervisor..."
+                                            searchPlaceholder="Cari nama supervisor..."
+                                            clearable={false}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1 min-w-0">
+                                        <label className="text-[11px] font-bold text-slate-600 block">
+                                            Photographer <span className="text-rose-500">*</span>
+                                        </label>
+                                        <SelectSearch
+                                            options={photographerOptions}
+                                            value={photographerName}
+                                            onChange={setPhotographerName}
+                                            placeholder="Pilih Photographer..."
+                                            searchPlaceholder="Cari nama photographer..."
+                                            clearable={false}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1 min-w-0">
+                                        <label className="text-[11px] font-bold text-slate-600 block">
+                                            Editor <span className="text-rose-500">*</span>
+                                        </label>
+                                        <SelectSearch
+                                            options={editorOptions}
+                                            value={editorName}
+                                            onChange={setEditorName}
+                                            placeholder="Pilih Editor..."
+                                            searchPlaceholder="Cari nama editor..."
+                                            clearable={false}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1 min-w-0 pt-2 border-t border-slate-100">
+                                        <label className="text-[11px] font-bold text-slate-600 block">Catatan Penugasan Tim</label>
+                                        <Textarea
+                                            minRows={2}
+                                            value={assignmentNotes}
+                                            onChange={(e) => setAssignmentNotes(e.target.value)}
+                                            placeholder="Catatan khusus pembagian tugas atau peralatan tim..."
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
-                            {/* Total Addon Readonly */}
-                            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
-                                <span className="font-semibold text-slate-600">
-                                    Total Add-on & Kustom ({selectedAddons.length + customFees.length} item):
-                                </span>
-                                <span className="font-mono font-bold text-slate-900">
-                                    {formatRupiah(totalAllAddonsPrice)}
-                                </span>
-                            </div>
+                            {/* Card 2: Checklist Persiapan & Requirement Khusus (col-span-12 lg:col-span-6) */}
+                            <div className="lg:col-span-6 bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs space-y-4">
+                                <div className="border-b border-slate-100 pb-3">
+                                    <h3 className="font-bold text-base text-slate-900">Checklist Persiapan &amp; Operasional Tim</h3>
+                                    <p className="text-[11px] text-slate-400">Checklist SOP standar sebelum dan saat pelaksanaan event</p>
+                                </div>
 
-                            {/* Selected Addon Items List */}
-                            {(selectedAddons.length > 0 || customFees.length > 0) && (
-                                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                                    {/* Catalog Addons */}
-                                    {selectedAddons.map((item) => (
-                                        <div
-                                            key={item.id}
-                                            className="flex items-center justify-between text-[11px] py-1 border-b border-slate-100 last:border-0"
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                                    {[
+                                        { key: 'briefing', label: 'Briefing & meeting sebelum hari H' },
+                                        { key: 'survey', label: 'Survey lokasi (jika diperlukan)' },
+                                        { key: 'rundown', label: 'List foto utama sesuai rundown' },
+                                        { key: 'props', label: 'Properti & detail pendukung disiapkan' },
+                                        { key: 'wo_coordination', label: 'Koordinasi dengan wedding organizer' },
+                                        { key: 'backup_data', label: 'Backup data setiap selesai sesi' },
+                                    ].map((req) => (
+                                        <label
+                                            key={req.key}
+                                            className="flex items-center gap-2 p-2.5 rounded-xl hover:bg-slate-50 cursor-pointer text-slate-700 text-[11px] border border-slate-100 transition-colors"
                                         >
-                                            <span className="text-slate-600 truncate max-w-[150px] flex items-center gap-1">
-                                                <span className="px-1.5 py-0.2 rounded text-[9px] bg-slate-100 text-slate-600 font-semibold">
-                                                    Katalog
-                                                </span>
-                                                <span>{item.qty}x {item.name}</span>
+                                            <div
+                                                onClick={() =>
+                                                    setStep2Requirements({
+                                                        ...step2Requirements,
+                                                        [req.key]: !step2Requirements[req.key],
+                                                    })
+                                                }
+                                                className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 transition-colors ${
+                                                    step2Requirements[req.key]
+                                                        ? 'bg-[#4F46E5] text-white'
+                                                        : 'bg-slate-100 border border-slate-300 text-transparent'
+                                                }`}
+                                            >
+                                                <Check className="w-3 h-3 stroke-[3]" />
+                                            </div>
+                                            <span className={step2Requirements[req.key] ? 'font-semibold text-slate-900' : 'text-slate-500'}>
+                                                {req.label}
                                             </span>
-                                            <span className="font-mono font-semibold text-slate-900">
-                                                {formatRupiah(item.total_price)}
-                                            </span>
-                                        </div>
-                                    ))}
-
-                                    {/* Custom Fees */}
-                                    {customFees.map((fee) => (
-                                        <div
-                                            key={fee.tempId}
-                                            className="flex items-center justify-between text-[11px] py-1 border-b border-slate-100 last:border-0"
-                                        >
-                                            <span className="text-slate-600 truncate max-w-[150px] flex items-center gap-1">
-                                                <span className="px-1.5 py-0.2 rounded text-[9px] bg-amber-100 text-amber-800 font-bold">
-                                                    Kustom
-                                                </span>
-                                                <span>{fee.qty}x {fee.name || '(Biaya Manual)'}</span>
-                                            </span>
-                                            <span className="font-mono font-semibold text-slate-900">
-                                                {formatRupiah(fee.unit_price * fee.qty)}
-                                            </span>
-                                        </div>
+                                        </label>
                                     ))}
                                 </div>
-                            )}
 
-                            {/* Diskon & Pajak */}
-                            <div className="grid grid-cols-2 gap-3 pt-1">
-                                <div>
-                                    <label className="block font-bold text-slate-700 mb-1.5">
-                                        Diskon / Potongan (Rp)
-                                    </label>
-                                    <FormattedNumberInput
-                                        prefix="Rp"
-                                        placeholder="0"
-                                        value={discount}
-                                        onChange={(val) => setDiscount(val)}
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block font-bold text-slate-700 mb-1.5">
-                                        Pajak / PPN (Rp)
-                                    </label>
-                                    <FormattedNumberInput
-                                        prefix="Rp"
-                                        placeholder="0"
-                                        value={tax}
-                                        onChange={(val) => setTax(val)}
-                                    />
+                                <div className="p-3 bg-indigo-50/60 border border-indigo-100 rounded-xl space-y-1 text-xs">
+                                    <div className="flex items-center gap-1.5 text-indigo-900 font-bold">
+                                        <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                                        <span>Workflow &amp; Timeline Otomatis</span>
+                                    </div>
+                                    <p className="text-[11px] text-slate-600">
+                                        Workflow &amp; jadwal target deadline otomatis dikalkulasi berdasarkan kategori &amp; tanggal event, dan dapat Anda review lengkap pada Step 4.
+                                    </p>
                                 </div>
                             </div>
+                        </div>
 
-                            {/* Grand Total Box */}
-                            <div className="p-4 rounded-2xl bg-white border-2 border-[#C89445]/30 space-y-1 shadow-xs mt-4">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
-                                    Grand Total Nilai Project
-                                </span>
-                                <div className="text-2xl font-mono font-extrabold text-slate-900">
-                                    {formatRupiah(grandTotal)}
-                                </div>
-                                <p className="text-[10px] text-slate-400 pt-1 border-t border-slate-100">
-                                    Akan tercatat sebagai nilai total invoice pada project ini.
-                                </p>
-                            </div>
-
-                            {/* Submit Button */}
-                            <div className="pt-2">
+                        {/* Step 2 Bottom Actions */}
+                        <div className="flex items-center justify-between pt-4 border-t border-slate-200/80">
+                            <button
+                                type="button"
+                                onClick={handlePrev}
+                                className="px-5 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-all shadow-xs inline-flex items-center gap-1.5 cursor-pointer"
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                                <span>Kembali ke Step 1</span>
+                            </button>
+                            <div className="flex items-center gap-2.5">
                                 <button
                                     type="button"
-                                    onClick={handleSubmit}
+                                    onClick={() => handleUpdateSubmit(true)}
                                     disabled={submitting}
-                                    className="w-full py-3 bg-primary-accent hover:opacity-95 text-white rounded-xl text-xs font-bold shadow-lg shadow-black/10 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                                    className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700 transition-all shadow-2xs inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                                 >
-                                    <CheckCircle2 className="w-4 h-4" />
-                                    <span>{submitting ? 'Menyimpan Perubahan...' : 'Simpan Perubahan Project'}</span>
+                                    <FileText className="w-3.5 h-3.5 text-slate-500" />
+                                    <span>Simpan Draft</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleNext}
+                                    className="px-6 py-3 rounded-xl bg-[#4F46E5] hover:bg-[#4338CA] text-xs font-bold text-white transition-all shadow-md inline-flex items-center gap-2 cursor-pointer"
+                                >
+                                    <span>Lanjut ke Step 3 (Add-on &amp; Biaya)</span>
+                                    <ArrowRight className="w-4 h-4" />
                                 </button>
                             </div>
                         </div>
                     </div>
+                )}
+
+                {/* ═════════════════════════════════════════════════════════════════ */}
+                {/* ── STEP 3: ADD-ON & BIAYA OPERASIONAL ──────────────────────── */}
+                {/* ═════════════════════════════════════════════════════════════════ */}
+                {currentStep === 3 && (
+                    <div className="space-y-6">
+                        {/* Row 1: Tables (Add-on & Biaya Operasional) */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch text-slate-900">
+                            {/* Left Table: Add-on / Ala Carte */}
+                            <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full space-y-4">
+                                <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+                                    <div>
+                                        <h3 className="font-bold text-base text-slate-900">Add-on / Ala Carte</h3>
+                                        <p className="text-[11px] text-slate-400">Layanan tambahan di luar paket utama</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAddAddonModalOpen(true)}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-[#4F46E5] rounded-xl text-xs font-bold transition-colors cursor-pointer border border-indigo-100"
+                                    >
+                                        <Plus className="w-3.5 h-3.5" />
+                                        <span>Tambah Add-on</span>
+                                    </button>
+                                </div>
+
+                                <div className="flex-1 flex flex-col min-h-[220px]">
+                                    {addonsList.length === 0 ? (
+                                        <div className="flex-1 flex flex-col items-center justify-center py-6 px-4 text-center border-2 border-dashed border-slate-200/80 rounded-xl bg-slate-50/50 space-y-3">
+                                            <div className="w-11 h-11 mx-auto rounded-full bg-indigo-50 text-[#4F46E5] flex items-center justify-center">
+                                                <PackagePlus className="w-5 h-5" />
+                                            </div>
+                                            <div className="space-y-0.5">
+                                                <p className="text-xs font-bold text-slate-800">Belum Ada Add-on Ditambahkan</p>
+                                                <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
+                                                    Pilih add-on dari Master Data database atau buat add-on kustom khusus project ini.
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setAddAddonModalOpen(true)}
+                                                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                                            >
+                                                <Plus className="w-3.5 h-3.5" />
+                                                <span>Pilih / Tambah Add-on</span>
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex-1 max-h-[240px] overflow-y-auto overflow-x-auto pr-1 border border-slate-100 rounded-xl">
+                                            <table className="w-full text-left text-xs whitespace-nowrap">
+                                                <thead className="sticky top-0 bg-slate-50/95 backdrop-blur-xs z-10 border-b border-slate-100 shadow-2xs">
+                                                    <tr className="text-[10px] uppercase font-bold text-slate-400">
+                                                        <th className="py-2.5 px-3">Nama Add-on</th>
+                                                        <th className="py-2.5 px-3">Satuan</th>
+                                                        <th className="py-2.5 px-3">Harga Satuan</th>
+                                                        <th className="py-2.5 px-3 text-center w-28">Qty</th>
+                                                        <th className="py-2.5 px-3 text-right">Subtotal</th>
+                                                        <th className="py-2.5 px-3 text-center w-8"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100 text-[11px]">
+                                                    {addonsList.map((addon) => (
+                                                        <tr key={addon.id} className="hover:bg-slate-50/60">
+                                                            <td className="py-2.5 px-3">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-semibold text-slate-800">{addon.name}</span>
+                                                                    {addon.is_custom ? (
+                                                                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                                                            Kustom
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                                                            Master Data
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                            <td className="py-2.5 px-3 text-slate-500">{addon.unit}</td>
+                                                            <td className="py-2.5 px-3 font-mono font-medium text-slate-700">
+                                                                {formatRupiah(addon.unit_price)}
+                                                            </td>
+                                                            <td className="py-2.5 px-3 text-center">
+                                                                <div className="flex items-center justify-center gap-1">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleAddonQtyChange(addon.id, addon.qty - 1)}
+                                                                        className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-xs cursor-pointer transition-colors"
+                                                                    >
+                                                                        -
+                                                                    </button>
+                                                                    <input
+                                                                        type="number"
+                                                                        min={1}
+                                                                        max={99}
+                                                                        value={addon.qty}
+                                                                        onChange={(e) => handleAddonQtyChange(addon.id, parseInt(e.target.value) || 1)}
+                                                                        className="w-10 px-1 py-1 text-center bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:bg-white focus:border-[#4F46E5] outline-none"
+                                                                    />
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleAddonQtyChange(addon.id, addon.qty + 1)}
+                                                                        className="w-6 h-6 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-xs cursor-pointer transition-colors"
+                                                                    >
+                                                                        +
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                            <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
+                                                                {formatRupiah(addon.subtotal)}
+                                                            </td>
+                                                            <td className="py-2.5 px-3 text-center">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleDeleteAddon(addon.id)}
+                                                                    className="text-slate-300 hover:text-rose-600 transition-colors p-1 cursor-pointer"
+                                                                    title="Hapus Add-on"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="mt-auto pt-3 border-t border-slate-100 flex items-center justify-between">
+                                    <span className="text-xs font-bold text-slate-500">Total Add-on / Ala Carte</span>
+                                    <span className="text-base font-black text-[#4F46E5] font-sans">
+                                        {formatRupiah(totalAddonAmount)}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Right Table: Biaya Operasional */}
+                            <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full space-y-4">
+                                <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+                                    <div>
+                                        <h3 className="font-bold text-base text-slate-900">Biaya Operasional</h3>
+                                        <p className="text-[11px] text-slate-400">Estimasi biaya transportasi, akomodasi, dll.</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAddExpenseModalOpen(true)}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold transition-colors cursor-pointer border border-indigo-100"
+                                    >
+                                        <Plus className="w-3.5 h-3.5" />
+                                        <span>Tambah Biaya</span>
+                                    </button>
+                                </div>
+
+                                <div className="flex-1 flex flex-col min-h-[220px]">
+                                    {operationalExpenses.length === 0 ? (
+                                        <div className="flex-1 flex flex-col items-center justify-center py-6 px-4 text-center border-2 border-dashed border-slate-200/80 rounded-xl bg-slate-50/50 space-y-3">
+                                            <div className="w-11 h-11 mx-auto rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                                                <Receipt className="w-5 h-5" />
+                                            </div>
+                                            <div className="space-y-0.5">
+                                                <p className="text-xs font-bold text-slate-800">Belum Ada Biaya Operasional</p>
+                                                <p className="text-[11px] text-slate-500 max-w-xs mx-auto">
+                                                    Tambahkan estimasi biaya operasional tim seperti bensin, hotel, makan, sewa alat, dll.
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setAddExpenseModalOpen(true)}
+                                                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                                            >
+                                                <Plus className="w-3.5 h-3.5" />
+                                                <span>Tambah Biaya Operasional</span>
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex-1 max-h-[240px] overflow-y-auto overflow-x-auto pr-1 border border-slate-100 rounded-xl">
+                                            <table className="w-full text-left text-xs whitespace-nowrap">
+                                                <thead className="sticky top-0 bg-slate-50/95 backdrop-blur-xs z-10 border-b border-slate-100 shadow-2xs">
+                                                    <tr className="text-[10px] uppercase font-bold text-slate-400">
+                                                        <th className="py-2.5 px-3">Jenis Biaya</th>
+                                                        <th className="py-2.5 px-3">Keterangan</th>
+                                                        <th className="py-2.5 px-3 text-right">Estimasi Biaya</th>
+                                                        <th className="py-2.5 px-3 text-center w-8"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100 text-[11px]">
+                                                    {operationalExpenses.map((exp) => (
+                                                        <tr key={exp.id} className="hover:bg-slate-50/60">
+                                                            <td className="py-2.5 px-3">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-semibold text-slate-800">{exp.type}</span>
+                                                                    {exp.is_custom ? (
+                                                                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                                                            Kustom
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                                                            Master Data
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                            <td className="py-2.5 px-3 text-slate-500">{exp.description}</td>
+                                                            <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
+                                                                {formatRupiah(exp.estimated_cost)}
+                                                            </td>
+                                                            <td className="py-2.5 px-3 text-center">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleDeleteExpense(exp.id)}
+                                                                    className="text-slate-300 hover:text-rose-600 transition-colors p-1 cursor-pointer"
+                                                                    title="Hapus Biaya Operasional"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="mt-auto pt-3 border-t border-slate-100 flex items-center justify-between">
+                                    <span className="text-xs font-bold text-slate-500">Total Biaya Operasional</span>
+                                    <span className="text-base font-black text-[#4F46E5] font-sans">
+                                        {formatRupiah(totalOperationalAmount)}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Row 2: Diskon & Pengaturan DP / Pembayaran */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start text-slate-900">
+                            {/* Left Summary: Ringkasan Tambahan Biaya & Diskon Paket */}
+                            <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs space-y-4">
+                                <h3 className="font-bold text-base text-slate-900 border-b border-slate-100 pb-2">
+                                    Ringkasan Tambahan &amp; Diskon Paket
+                                </h3>
+
+                                <div className="space-y-2.5 text-xs">
+                                    <div className="flex items-center justify-between text-slate-600">
+                                        <span>Harga Paket ({selectedCategory?.name} - {selectedPackage?.name})</span>
+                                        <span className="font-bold font-sans text-slate-800">{formatRupiah(packagePrice)}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-slate-600">
+                                        <span>Diskon Paket</span>
+                                        <div className="w-40">
+                                            <FormattedNumberInput
+                                                value={discountPackage}
+                                                onChange={(val) => setDiscountPackage(val)}
+                                                prefix="- Rp "
+                                                className="text-right text-rose-600 font-bold h-8 text-xs bg-slate-50 border border-slate-200 rounded-lg"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between text-slate-600">
+                                        <span>Subtotal Paket Setelah Diskon</span>
+                                        <span className="font-bold font-sans text-slate-800">{formatRupiah(subtotalPaketSetelahDiskon)}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-slate-600">
+                                        <span>Total Add-on / Ala Carte</span>
+                                        <span className="font-bold font-sans text-slate-800">{formatRupiah(totalAddonAmount)}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-slate-600">
+                                        <span>Total Biaya Operasional</span>
+                                        <span className="font-bold font-sans text-slate-800">{formatRupiah(totalOperationalAmount)}</span>
+                                    </div>
+
+                                    {/* Pajak (PPN / PPh) Opsional */}
+                                    <div className="pt-2 border-t border-slate-100 space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <label className="flex items-center gap-2 cursor-pointer text-slate-700 font-semibold text-xs select-none">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isTaxEnabled}
+                                                    onChange={(e) => setIsTaxEnabled(e.target.checked)}
+                                                    className="w-4 h-4 rounded text-[#4F46E5] focus:ring-indigo-200 cursor-pointer"
+                                                />
+                                                <span>Pajak (PPN / PPh)</span>
+                                            </label>
+                                            {isTaxEnabled ? (
+                                                <span className="font-bold font-sans text-indigo-700">
+                                                    + {formatRupiah(calculatedTaxAmount)}
+                                                </span>
+                                            ) : (
+                                                <span className="text-slate-400 text-[11px] font-medium">Non-aktif (0%)</span>
+                                            )}
+                                        </div>
+
+                                        {isTaxEnabled && (
+                                            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2 text-[11px]">
+                                                <div className="flex items-center justify-between gap-2 flex-wrap">
+                                                    <span className="text-slate-500">Tarif Pajak (%):</span>
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                        {[11, 12, 10, 2].map((rate) => (
+                                                            <button
+                                                                key={rate}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setTaxPercent(rate);
+                                                                    setTaxType('percent');
+                                                                }}
+                                                                className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-colors cursor-pointer ${
+                                                                    taxType === 'percent' && taxPercent === rate
+                                                                        ? 'bg-[#4F46E5] text-white'
+                                                                        : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                                                                }`}
+                                                            >
+                                                                {rate}%
+                                                            </button>
+                                                        ))}
+                                                        <div className="w-16">
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                max="100"
+                                                                step="0.5"
+                                                                value={taxType === 'percent' ? taxPercent : ''}
+                                                                placeholder="Custom %"
+                                                                onChange={(e) => {
+                                                                    setTaxType('percent');
+                                                                    setTaxPercent(parseFloat(e.target.value) || 0);
+                                                                }}
+                                                                className="w-full h-6 px-1.5 text-center bg-white border border-slate-200 rounded-md text-[11px] font-bold text-slate-800 focus:border-[#4F46E5] outline-none"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center justify-between text-slate-500 text-[10px] pt-1 border-t border-slate-200/60">
+                                                    <span>Dasar Pengenaan Pajak (DPP):</span>
+                                                    <span className="font-semibold text-slate-700">{formatRupiah(taxBaseAmount)}</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                                        <span className="text-sm font-bold text-slate-900">Total Kesepakatan Project</span>
+                                        <span className="text-xl font-black text-[#4F46E5] font-sans">
+                                            {formatRupiah(totalProject)}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                                    <label className="text-[11px] font-bold text-slate-600 block">Catatan Tambahan Biaya</label>
+                                    <Textarea
+                                        minRows={2}
+                                        value={additionalCostNotes}
+                                        onChange={(e) => setAdditionalCostNotes(e.target.value)}
+                                        placeholder="Tambahkan catatan jika ada penyesuaian biaya..."
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Right: Pengaturan Pembayaran & Tagihan DP */}
+                            <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs space-y-4">
+                                <h3 className="font-bold text-base text-slate-900 border-b border-slate-100 pb-2">
+                                    Pengaturan Pembayaran &amp; Invoice DP
+                                </h3>
+
+                                <div className="space-y-3 text-xs">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase">Persentase DP</label>
+                                            <SelectSearch
+                                                options={dpPercentOptions}
+                                                value={String(dpPercent)}
+                                                onChange={(val) => setDpPercent(Number(val) || 0)}
+                                                clearable={false}
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase">Jatuh Tempo DP</label>
+                                            <input
+                                                type="date"
+                                                value={dpDueDate}
+                                                onChange={(e) => setDpDueDate(e.target.value)}
+                                                className="w-full h-[42px] px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:border-[#4F46E5]"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="p-3 bg-emerald-50/80 border border-emerald-100 rounded-xl flex items-center justify-between">
+                                        <div>
+                                            <span className="text-emerald-900 font-bold text-xs block">Nominal Tagihan DP</span>
+                                            <span className="text-[10px] text-emerald-700">DP {dpPercent}% dari total project</span>
+                                        </div>
+                                        <span className="text-lg font-black text-emerald-700 font-sans">
+                                            {formatRupiah(nominalDp)}
+                                        </span>
+                                    </div>
+
+                                    <div className="space-y-2.5 pt-2 border-t border-slate-100">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase">Metode Pembayaran</label>
+                                            <SelectSearch
+                                                options={paymentMethodOptions}
+                                                value={paymentMethodName}
+                                                onChange={handlePaymentMethodChange}
+                                                clearable={false}
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-bold text-slate-400 uppercase">Bank / No. Rekening</label>
+                                                <Input
+                                                    value={bankAccount}
+                                                    onChange={(e) => setBankAccount(e.target.value)}
+                                                    className="h-[40px]"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-bold text-slate-400 uppercase">Atas Nama</label>
+                                                <Input
+                                                    value={accountHolder}
+                                                    onChange={(e) => setAccountHolder(e.target.value)}
+                                                    className="h-[40px]"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Step 3 Bottom Actions */}
+                        <div className="flex items-center justify-between pt-4 border-t border-slate-200/80">
+                            <button
+                                type="button"
+                                onClick={handlePrev}
+                                className="px-5 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-all shadow-xs inline-flex items-center gap-1.5 cursor-pointer"
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                                <span>Kembali ke Step 2</span>
+                            </button>
+                            <div className="flex items-center gap-2.5">
+                                <button
+                                    type="button"
+                                    onClick={() => handleUpdateSubmit(true)}
+                                    disabled={submitting}
+                                    className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700 transition-all shadow-2xs inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                >
+                                    <FileText className="w-3.5 h-3.5 text-slate-500" />
+                                    <span>Simpan Draft</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleNext}
+                                    className="px-6 py-3 rounded-xl bg-[#4F46E5] hover:bg-[#4338CA] text-xs font-bold text-white transition-all shadow-md inline-flex items-center gap-2 cursor-pointer"
+                                >
+                                    <span>Lanjut ke Step 4 (Review &amp; Konfirmasi)</span>
+                                    <ArrowRight className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ═════════════════════════════════════════════════════════════════ */}
+                {/* ── STEP 4: REVIEW & KONFIRMASI (FULL INFORMASI) ─────────────── */}
+                {/* ═════════════════════════════════════════════════════════════════ */}
+                {currentStep === 4 && (
+                    <div className="space-y-6">
+                        {/* Top Row: 4 Summary Cards */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-slate-900">
+                            {/* Card 1: Informasi Project */}
+                            <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs space-y-2 text-xs flex flex-col justify-between">
+                                <h4 className="font-bold text-sm text-slate-900 border-b border-slate-100 pb-2 flex items-center justify-between">
+                                    <span>Informasi Project</span>
+                                    {projectThumbnail && (
+                                        <span className="text-[9px] font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md">
+                                            Ada Cover
+                                        </span>
+                                    )}
+                                </h4>
+                                <div className="space-y-2 pt-1 text-[11px]">
+                                    {projectThumbnail && (
+                                        <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100">
+                                            <img
+                                                src={projectThumbnail}
+                                                alt="Cover Project"
+                                                className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0"
+                                            />
+                                            <div className="min-w-0">
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase block">Cover Project</span>
+                                                <span className="text-[11px] font-semibold text-slate-800 truncate block">Foto Terpasang</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    <div className="flex items-start justify-between gap-2.5">
+                                        <span className="text-slate-400 shrink-0">Nama:</span>
+                                        <span className="font-bold text-slate-800 text-right min-w-0 break-words leading-tight">
+                                            {projectName}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-start justify-between gap-2.5">
+                                        <span className="text-slate-400 shrink-0">Client:</span>
+                                        <span className="font-bold text-slate-800 text-right min-w-0 break-words">
+                                            {selectedClient?.name}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-start justify-between gap-2.5">
+                                        <span className="text-slate-400 shrink-0">Kategori:</span>
+                                        <span className="font-bold text-slate-800 text-right">{selectedCategory?.name}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Card 2: Detail Paket */}
+                            <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs space-y-2 text-xs flex flex-col justify-between">
+                                <h4 className="font-bold text-sm text-slate-900 border-b border-slate-100 pb-2">
+                                    Detail Paket
+                                </h4>
+                                <div className="space-y-2 pt-1 text-[11px]">
+                                    <div className="flex items-start justify-between gap-2.5">
+                                        <span className="text-slate-400 shrink-0">Paket:</span>
+                                        <span className="font-bold text-slate-800 text-right min-w-0 break-words leading-tight">
+                                            {selectedPackage?.name}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-2.5">
+                                        <span className="text-slate-400 shrink-0">Harga:</span>
+                                        <span className="font-bold font-sans text-slate-800 text-right">{formatRupiah(packagePrice)}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-2.5">
+                                        <span className="text-slate-400 shrink-0">Durasi:</span>
+                                        <span className="font-bold text-slate-800 text-right">{selectedPackage?.duration_hours || 12} Jam</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Card 3: Personel & Tim */}
+                            <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs space-y-2 text-xs flex flex-col justify-between">
+                                <h4 className="font-bold text-sm text-slate-900 border-b border-slate-100 pb-2">
+                                    Personel &amp; Tim
+                                </h4>
+                                <div className="space-y-2 pt-1 text-[11px]">
+                                    <div className="flex items-start justify-between gap-2.5">
+                                        <span className="text-slate-400 shrink-0">Supervisor:</span>
+                                        <span className="font-bold text-slate-800 text-right">
+                                            {supervisors.find((s) => String(s.id) === String(supervisorId))?.name || 'Supervisor'}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-start justify-between gap-2.5">
+                                        <span className="text-slate-400 shrink-0">Photographer:</span>
+                                        <span className="font-bold text-slate-800 text-right min-w-0 break-words">{photographerName}</span>
+                                    </div>
+                                    <div className="flex items-start justify-between gap-2.5">
+                                        <span className="text-slate-400 shrink-0">Editor:</span>
+                                        <span className="font-bold text-slate-800 text-right min-w-0 break-words">{editorName}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-2.5">
+                                        <span className="text-slate-400 shrink-0">Standby:</span>
+                                        <span className="font-bold text-slate-800 text-right">{shootingDuration}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Card 4: Jadwal & Lokasi */}
+                            <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs space-y-2 text-xs flex flex-col justify-between">
+                                <h4 className="font-bold text-sm text-slate-900 border-b border-slate-100 pb-2">
+                                    Jadwal &amp; Lokasi
+                                </h4>
+                                <div className="space-y-2 pt-1 text-[11px]">
+                                    <div className="flex items-center justify-between gap-2.5">
+                                        <span className="text-slate-400 shrink-0">Tanggal Event:</span>
+                                        <span className="font-bold text-slate-800 text-right">{formattedShootingDate}</span>
+                                    </div>
+                                    <div className="flex items-start justify-between gap-2.5">
+                                        <span className="text-slate-400 shrink-0">Lokasi:</span>
+                                        <span className="font-bold text-slate-800 text-right min-w-0 break-words leading-tight">
+                                            {projectLocation || '-'}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-2.5">
+                                        <span className="text-slate-400 shrink-0">DP Pertama:</span>
+                                        <span className="font-bold text-indigo-700 text-right">{dpPercent}% ({formatRupiah(nominalDp)})</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Row 2: Layanan Deliverables vs Alur Kerja Workflow Tim */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch text-slate-900">
+                            {/* Card Kiri: Layanan Termasuk & Output Deliverables Paket */}
+                            <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs space-y-4 flex flex-col justify-between h-full">
+                                <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
+                                    <div>
+                                        <h4 className="font-bold text-sm text-slate-900">
+                                            Layanan &amp; Deliverables Paket
+                                        </h4>
+                                        <span className="text-[10px] text-slate-400">Hasil &amp; produk akhir yang diserahkan ke klien</span>
+                                    </div>
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700">
+                                        {selectedPackage?.name}
+                                    </span>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs flex-1">
+                                    {/* Layanan Termasuk */}
+                                    <div className="space-y-2">
+                                        <span className="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">
+                                            Layanan Termasuk
+                                        </span>
+                                        {servicesList.length === 0 ? (
+                                            <p className="text-xs text-slate-400 italic">Tidak ada layanan spesifik pada database paket</p>
+                                        ) : (
+                                            <div className="space-y-1.5">
+                                                {servicesList.map((item, i) => (
+                                                    <div key={i} className="flex items-center gap-2 text-slate-700 font-medium text-[11px]">
+                                                        <div className="w-3.5 h-3.5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                                                            <Check className="w-2 h-2 stroke-[3]" />
+                                                        </div>
+                                                        <span>{item}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Output Deliverables */}
+                                    <div className="space-y-2">
+                                        <span className="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">
+                                            Item Deliverables (Hasil Akhir)
+                                        </span>
+                                        {deliverablesList.length === 0 ? (
+                                            <p className="text-xs text-slate-400 italic">Tidak ada item deliverables pada database paket</p>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {deliverablesList.map((item) => {
+                                                    const badgeClass =
+                                                        item.type === 'Video'
+                                                            ? 'bg-cyan-50 text-cyan-700 border-cyan-200'
+                                                            : item.type === 'Album'
+                                                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                                            : item.type === 'Special'
+                                                            ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                                            : 'bg-sky-50 text-sky-700 border-sky-200';
+
+                                                    return (
+                                                        <div key={item.id} className="p-2 rounded-lg bg-slate-50/80 border border-slate-100 space-y-1">
+                                                            <div className="flex items-center justify-between gap-1.5">
+                                                                <span className="font-semibold text-slate-800 text-[11px] leading-tight">
+                                                                    {item.name}
+                                                                </span>
+                                                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-mono shrink-0">
+                                                                    {item.deadline}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-2">
+                                                                <span className="text-[9px] text-slate-400 truncate">
+                                                                    {item.description || 'Item hasil serah terima'}
+                                                                </span>
+                                                                <span className={`text-[8px] font-bold uppercase px-1.5 py-0.2 rounded border ${badgeClass} shrink-0`}>
+                                                                    {item.type}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Card Kanan: Alur Kerja & Tahapan Operasional Tim */}
+                            <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs space-y-4 flex flex-col justify-between h-full">
+                                <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
+                                    <div>
+                                        <h4 className="font-bold text-sm text-slate-900">
+                                            Alur Kerja &amp; Tahapan Operasional Tim
+                                        </h4>
+                                        <span className="text-[10px] text-slate-400">Proses kerja internal tim studio dari awal hingga akhir</span>
+                                    </div>
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 shrink-0">
+                                        {activeWorkflow.name}
+                                    </span>
+                                </div>
+
+                                <div className="overflow-x-auto flex-1">
+                                    <table className="w-full text-left text-xs">
+                                        <thead>
+                                            <tr className="text-[10px] uppercase font-bold text-slate-400 border-b border-slate-100">
+                                                <th className="py-2 px-1 text-center w-6">#</th>
+                                                <th className="py-2 px-2">Tahapan Kerja</th>
+                                                <th className="py-2 px-2">Aktivitas Tim</th>
+                                                <th className="py-2 px-2 text-right">Waktu Kerja</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 text-[11px]">
+                                            {activeWorkflow.steps.map((w) => (
+                                                <tr key={w.num} className="hover:bg-slate-50/60">
+                                                    <td className="py-2 px-1 text-center">
+                                                        <span className="w-4 h-4 mx-auto rounded-full bg-[#4F46E5] text-white text-[9px] font-bold flex items-center justify-center">
+                                                            {w.num}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-2 px-2">
+                                                        <span className="font-semibold text-slate-800 block leading-tight break-words">{w.name}</span>
+                                                        <span className="text-[9px] font-bold text-slate-400 uppercase">{w.phase || 'Operasional'}</span>
+                                                    </td>
+                                                    <td className="py-2 px-2 text-slate-600 text-[10.5px] break-words min-w-[140px] leading-relaxed" title={w.activity || w.description}>
+                                                        {w.activity || w.description || '-'}
+                                                    </td>
+                                                    <td className="py-2 px-2 text-right font-mono font-bold text-indigo-700 text-[10px] whitespace-nowrap">
+                                                        {w.duration || w.dl || w.dur}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Row 3: 3 Bottom Summary Cards */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch text-slate-900">
+                            {/* Card 1: Add-on Table */}
+                            <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full space-y-4">
+                                <div className="space-y-3">
+                                    <h4 className="font-bold text-sm text-slate-900 border-b border-slate-100 pb-2 flex items-center justify-between">
+                                        <span>Add-on / Ala Carte</span>
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700">
+                                            {addonsList.filter((a) => a.qty > 0).length} Item
+                                        </span>
+                                    </h4>
+                                    {addonsList.filter((a) => a.qty > 0).length === 0 ? (
+                                        <div className="py-8 text-center flex flex-col items-center justify-center space-y-1">
+                                            <p className="text-xs text-slate-400 italic">Tidak ada add-on dipilih</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2 text-[11px] max-h-56 overflow-y-auto pr-1">
+                                            {addonsList
+                                                .filter((a) => a.qty > 0)
+                                                .map((addon) => (
+                                                    <div key={addon.id} className="flex items-start justify-between gap-2 text-slate-700 py-1 border-b border-slate-50 last:border-0">
+                                                        <span className="font-medium min-w-0 break-words">
+                                                            {addon.name} <span className="text-slate-400 text-[10px]">(x{addon.qty})</span>
+                                                        </span>
+                                                        <span className="font-mono font-bold shrink-0">{formatRupiah(addon.subtotal)}</span>
+                                                    </div>
+                                                ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="mt-auto pt-3 border-t border-slate-100 flex items-center justify-between font-bold text-xs">
+                                    <span className="text-slate-600">Total Add-on</span>
+                                    <span className="text-[#4F46E5] font-sans font-black text-sm">{formatRupiah(totalAddonAmount)}</span>
+                                </div>
+                            </div>
+
+                            {/* Card 2: Biaya Operasional */}
+                            <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full space-y-4">
+                                <div className="space-y-3">
+                                    <h4 className="font-bold text-sm text-slate-900 border-b border-slate-100 pb-2 flex items-center justify-between">
+                                        <span>Biaya Operasional</span>
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700">
+                                            {operationalExpenses.length} Item
+                                        </span>
+                                    </h4>
+                                    {operationalExpenses.length === 0 ? (
+                                        <div className="py-8 text-center flex flex-col items-center justify-center space-y-1">
+                                            <p className="text-xs text-slate-400 italic">Tidak ada biaya operasional</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2 text-[11px] max-h-56 overflow-y-auto pr-1">
+                                            {operationalExpenses.map((exp) => (
+                                                <div key={exp.id} className="flex items-start justify-between gap-2 text-slate-700 py-1 border-b border-slate-50 last:border-0">
+                                                    <div className="min-w-0">
+                                                        <span className="font-semibold block truncate">{exp.type}</span>
+                                                        <span className="text-[10px] text-slate-400 block truncate">{exp.description}</span>
+                                                    </div>
+                                                    <span className="font-mono font-bold shrink-0">{formatRupiah(exp.estimated_cost)}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="mt-auto pt-3 border-t border-slate-100 flex items-center justify-between font-bold text-xs">
+                                    <span className="text-slate-600">Total Biaya Operasional</span>
+                                    <span className="text-[#4F46E5] font-sans font-black text-sm">{formatRupiah(totalOperationalAmount)}</span>
+                                </div>
+                            </div>
+
+                            {/* Card 3: Ringkasan Finansial & DP */}
+                            <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full space-y-4">
+                                <div className="space-y-3">
+                                    <h4 className="font-bold text-sm text-slate-900 border-b border-slate-100 pb-2 flex items-center justify-between">
+                                        <span>Ringkasan Finansial &amp; Tagihan DP</span>
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-50 text-purple-700">
+                                            Finansial
+                                        </span>
+                                    </h4>
+                                    <div className="space-y-2 text-xs">
+                                        <div className="flex items-start justify-between gap-2 text-slate-600">
+                                            <span className="text-slate-500 shrink-0">Harga Paket</span>
+                                            <span className="font-bold font-sans text-slate-800 text-right">{formatRupiah(packagePrice)}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-slate-600">
+                                            <span className="text-slate-500">Total Add-on</span>
+                                            <span className="font-bold font-sans text-slate-800">{formatRupiah(totalAddonAmount)}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-slate-600">
+                                            <span className="text-slate-500">Total Biaya Operasional</span>
+                                            <span className="font-bold font-sans text-slate-800">{formatRupiah(totalOperationalAmount)}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-slate-600">
+                                            <span className="text-slate-500">Diskon Paket</span>
+                                            <span className="font-bold font-sans text-rose-600">- {formatRupiah(discountPackage)}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-slate-600">
+                                            <span className="text-slate-500">Pajak (PPN/PPh)</span>
+                                            {isTaxEnabled ? (
+                                                <span className="font-bold font-sans text-indigo-700">
+                                                    + {formatRupiah(calculatedTaxAmount)} ({taxPercent}%)
+                                                </span>
+                                            ) : (
+                                                <span className="font-medium text-slate-400">Non-aktif</span>
+                                            )}
+                                        </div>
+                                        <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                                            <span className="font-bold text-slate-900 text-xs">Total Kesepakatan</span>
+                                            <span className="text-base font-black text-[#4F46E5] font-sans">
+                                                {formatRupiah(totalProject)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-xl space-y-1 mt-auto text-xs">
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-bold text-indigo-950">Tagihan DP Pertama</span>
+                                        <span className="font-black text-[#4F46E5] font-sans">
+                                            {formatRupiah(nominalDp)} ({dpPercent}%)
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
+                                        <span>Jatuh Tempo DP:</span>
+                                        <span className="font-semibold text-slate-700">{formattedDpDueDate}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-[11px] text-slate-500">
+                                        <span>Tujuan Transfer:</span>
+                                        <span className="font-semibold text-slate-700 truncate max-w-[170px]">{paymentMethodName} {bankAccount ? `(${bankAccount})` : ''}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Row 4: Card Yang Akan Dibuat Otomatis */}
+                        <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs space-y-3 text-slate-900">
+                            <div className="flex items-center gap-1.5 text-indigo-700">
+                                <Sparkles className="w-4 h-4" />
+                                <h4 className="font-bold text-sm text-slate-900">Perubahan yang akan disimpan &amp; disinkronkan</h4>
+                            </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                                {[
+                                    'Invoice DP Terkini',
+                                    'Timeline & Jadwal Project',
+                                    'Workflow & Deadline',
+                                    'Penugasan Tim Personel',
+                                ].map((text, i) => (
+                                    <div key={i} className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-slate-700 font-medium">
+                                        <div className="w-4 h-4 rounded bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center shrink-0">
+                                            <Check className="w-3 h-3 stroke-[3]" />
+                                        </div>
+                                        <span className="text-[11px] font-semibold">{text}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Step 4 Bottom Actions */}
+                        <div className="flex items-center justify-between pt-4">
+                            <button
+                                type="button"
+                                onClick={handlePrev}
+                                className="px-5 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold transition-all shadow-xs inline-flex items-center gap-1.5 cursor-pointer"
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                                <span>Kembali</span>
+                            </button>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => handleUpdateSubmit(true)}
+                                    disabled={submitting}
+                                    className="px-5 py-3 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-700 transition-all shadow-xs cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5"
+                                >
+                                    <FileText className="w-4 h-4 text-slate-500" />
+                                    <span>Simpan sebagai Draft</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleUpdateSubmit(false)}
+                                    disabled={submitting}
+                                    className="px-7 py-3 rounded-xl bg-[#4F46E5] hover:bg-[#4338CA] text-xs font-bold text-white transition-all shadow-md inline-flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                                >
+                                    <Save className="w-4 h-4" />
+                                    <span>
+                                        {submitting
+                                            ? 'Menyimpan...'
+                                            : project.status === 'draft'
+                                            ? 'Aktifkan & Simpan Project'
+                                            : 'Simpan Perubahan Project'}
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+            {/* ── MODAL: TAMBAH ADD-ON (MASTER DATA & KUSTOM) ─────────────────── */}
+            {addAddonModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+                    <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 text-slate-900">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-[#4F46E5] flex items-center justify-center font-bold">
+                                    <PackagePlus className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-sm text-slate-900">Tambah Add-on Project</h4>
+                                    <p className="text-[10px] text-slate-400">Pilih dari Master Data atau buat kustom</p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setAddAddonModalOpen(false)}
+                                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 cursor-pointer"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        {/* Segmented Tab Switcher */}
+                        <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl text-xs font-bold text-slate-600">
+                            <button
+                                type="button"
+                                onClick={() => setAddonModalTab('database')}
+                                className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                                    addonModalTab === 'database'
+                                        ? 'bg-white text-[#4F46E5] shadow-xs'
+                                        : 'hover:text-slate-900'
+                                }`}
+                            >
+                                <Database className="w-3.5 h-3.5" />
+                                <span>Master Data</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setAddonModalTab('custom')}
+                                className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                                    addonModalTab === 'custom'
+                                        ? 'bg-white text-[#4F46E5] shadow-xs'
+                                        : 'hover:text-slate-900'
+                                }`}
+                            >
+                                <Sparkles className="w-3.5 h-3.5" />
+                                <span>Add-on Kustom</span>
+                            </button>
+                        </div>
+
+                        {/* Tab 1: Database Master Data */}
+                        {addonModalTab === 'database' ? (
+                            <div className="space-y-4 text-xs">
+                                <div className="space-y-1">
+                                    <label className="text-[11px] font-bold text-slate-600 block">
+                                        Pilih Add-on dari Master Data <span className="text-rose-500">*</span>
+                                    </label>
+                                    <SelectSearch
+                                        options={masterAddonOptions}
+                                        value={selectedMasterAddonId}
+                                        onChange={(val) => {
+                                            setSelectedMasterAddonId(val);
+                                        }}
+                                        placeholder="Cari & pilih Add-on..."
+                                        searchPlaceholder="Ketik nama add-on..."
+                                        clearable={false}
+                                    />
+                                </div>
+
+                                {selectedMasterAddon && (
+                                    <div className="p-3.5 rounded-xl bg-indigo-50/70 border border-indigo-100 space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[11px] font-bold text-indigo-950 uppercase tracking-tight">
+                                                {selectedMasterAddon.name}
+                                            </span>
+                                            <span className="text-xs font-black text-indigo-700 font-sans">
+                                                {formatRupiah(Number(selectedMasterAddon.price) || 0)} / {selectedMasterAddon.unit || 'Item'}
+                                            </span>
+                                        </div>
+                                        {selectedMasterAddon.description && (
+                                            <p className="text-[10px] text-slate-500">
+                                                {selectedMasterAddon.description}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-2 gap-3 items-center">
+                                    <div className="space-y-1">
+                                        <label className="text-[11px] font-bold text-slate-600 block">Jumlah (Qty)</label>
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => setMasterAddonQty((prev) => Math.max(1, prev - 1))}
+                                                className="w-9 h-9 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center cursor-pointer text-sm"
+                                            >
+                                                -
+                                            </button>
+                                            <input
+                                                type="number"
+                                                min={1}
+                                                max={99}
+                                                value={masterAddonQty}
+                                                onChange={(e) => setMasterAddonQty(Math.max(1, parseInt(e.target.value) || 1))}
+                                                className="w-full h-9 px-2 text-center bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:border-[#4F46E5] outline-none"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setMasterAddonQty((prev) => prev + 1)}
+                                                className="w-9 h-9 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center cursor-pointer text-sm"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-1 text-right">
+                                        <label className="text-[11px] font-bold text-slate-400 block">Estimasi Subtotal</label>
+                                        <div className="h-9 flex items-center justify-end font-mono font-black text-sm text-[#4F46E5]">
+                                            {formatRupiah((Number(selectedMasterAddon?.price) || 0) * (masterAddonQty || 1))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                                    <button
+                                        type="button"
+                                        onClick={() => setAddAddonModalOpen(false)}
+                                        className="px-3.5 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                                    >
+                                        Batal
+                                    </button>
+                                    <button
+                                        type="button"
+                                        disabled={!selectedMasterAddonId}
+                                        onClick={handleAddMasterAddon}
+                                        className="px-4 py-2 text-xs font-bold text-white bg-[#4F46E5] hover:bg-[#4338CA] disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-xs cursor-pointer inline-flex items-center gap-1.5"
+                                    >
+                                        <Plus className="w-3.5 h-3.5" />
+                                        <span>Tambahkan ke Project</span>
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            /* Tab 2: Add-on Kustom */
+                            <div className="space-y-3 text-xs">
+                                <div className="space-y-1">
+                                    <label className="text-[11px] font-bold text-slate-600 block">
+                                        Nama Add-on <span className="text-rose-500">*</span>
+                                    </label>
+                                    <Input
+                                        value={newAddonForm.name}
+                                        onChange={(e) => setNewAddonForm({ ...newAddonForm, name: e.target.value })}
+                                        placeholder="Contoh: Drone Operator 4K / Photobooth 2 Jam"
+                                        className="h-[40px]"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                        <label className="text-[11px] font-bold text-slate-600 block">Satuan</label>
+                                        <Input
+                                            value={newAddonForm.unit}
+                                            onChange={(e) => setNewAddonForm({ ...newAddonForm, unit: e.target.value })}
+                                            placeholder="Sesi / Jam / Lembar"
+                                            className="h-[40px]"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[11px] font-bold text-slate-600 block">Jumlah (Qty)</label>
+                                        <input
+                                            type="number"
+                                            min={1}
+                                            max={99}
+                                            value={newAddonForm.qty}
+                                            onChange={(e) => setNewAddonForm({ ...newAddonForm, qty: Math.max(1, parseInt(e.target.value) || 1) })}
+                                            className="w-full h-[40px] px-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:border-[#4F46E5] outline-none"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[11px] font-bold text-slate-600 block">Harga Satuan (Rp)</label>
+                                    <FormattedNumberInput
+                                        value={newAddonForm.price}
+                                        onChange={(val) => setNewAddonForm({ ...newAddonForm, price: val })}
+                                        prefix="Rp "
+                                        className="h-[40px] text-xs font-semibold"
+                                    />
+                                </div>
+                                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                                    <span className="text-[11px] font-bold text-slate-500">Estimasi Subtotal:</span>
+                                    <span className="font-mono font-black text-xs text-[#4F46E5]">
+                                        {formatRupiah((Number(newAddonForm.price) || 0) * (newAddonForm.qty || 1))}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                                    <button
+                                        type="button"
+                                        onClick={() => setAddAddonModalOpen(false)}
+                                        className="px-3.5 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                                    >
+                                        Batal
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleCreateCustomAddon}
+                                        className="px-4 py-2 text-xs font-bold text-white bg-[#4F46E5] hover:bg-[#4338CA] rounded-xl shadow-xs cursor-pointer inline-flex items-center gap-1.5"
+                                    >
+                                        <Plus className="w-3.5 h-3.5" />
+                                        <span>Tambahkan Add-on</span>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
-            </form>
+            )}
+
+            {/* ── MODAL: TAMBAH BIAYA OPERASIONAL (PRESET & KUSTOM) ─────────────── */}
+            {addExpenseModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in">
+                    <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 text-slate-900">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                                    <Receipt className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-sm text-slate-900">Tambah Biaya Operasional</h4>
+                                    <p className="text-[10px] text-slate-400">Pilih dari Master Data atau buat biaya kustom</p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setAddExpenseModalOpen(false)}
+                                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 cursor-pointer"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        {/* Segmented Tab Switcher */}
+                        <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl text-xs font-bold text-slate-600">
+                            <button
+                                type="button"
+                                onClick={() => setExpenseModalTab('database')}
+                                className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                                    expenseModalTab === 'database'
+                                        ? 'bg-white text-emerald-600 shadow-xs'
+                                        : 'hover:text-slate-900'
+                                }`}
+                            >
+                                <Database className="w-3.5 h-3.5" />
+                                <span>Master Data</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setExpenseModalTab('custom')}
+                                className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                                    expenseModalTab === 'custom'
+                                        ? 'bg-white text-emerald-600 shadow-xs'
+                                        : 'hover:text-slate-900'
+                                }`}
+                            >
+                                <Sparkles className="w-3.5 h-3.5" />
+                                <span>Biaya Kustom</span>
+                            </button>
+                        </div>
+
+                        {/* Tab 1: Database Master Data */}
+                        {expenseModalTab === 'database' ? (
+                            <div className="space-y-3.5 text-xs">
+                                <div className="space-y-1">
+                                    <label className="text-[11px] font-bold text-slate-600 block">
+                                        Pilih Biaya Operasional dari Master Data <span className="text-rose-500">*</span>
+                                    </label>
+                                    <SelectSearch
+                                        options={masterOpsOptions}
+                                        value={selectedMasterOpsId}
+                                        onChange={(val) => handleSelectMasterOps(val)}
+                                        placeholder="Cari & pilih Biaya Operasional..."
+                                        searchPlaceholder="Ketik jenis biaya operasional..."
+                                        clearable={false}
+                                    />
+                                </div>
+
+                                {/* Quick selection chips from Database */}
+                                {addons.filter((a) => a.type === 'operational').length > 0 && (
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                            Pilihan Cepat Master Data
+                                        </label>
+                                        <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
+                                            {addons
+                                                .filter((a) => a.type === 'operational')
+                                                .map((opsItem) => {
+                                                    const isSelected = selectedMasterOpsId === String(opsItem.id);
+                                                    return (
+                                                        <button
+                                                            key={opsItem.id}
+                                                            type="button"
+                                                            onClick={() => handleSelectMasterOps(String(opsItem.id))}
+                                                            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 border transition-all cursor-pointer ${
+                                                                isSelected
+                                                                    ? 'bg-emerald-50 border-emerald-500 text-emerald-950 font-bold ring-1 ring-emerald-500 shadow-xs'
+                                                                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                                                            }`}
+                                                        >
+                                                            <span>{getExpenseIcon(opsItem.name)}</span>
+                                                            <span className="truncate max-w-[120px]">{opsItem.name}</span>
+                                                        </button>
+                                                    );
+                                                })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {selectedMasterOps && (
+                                    <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-100 space-y-1">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[11px] font-bold text-emerald-950 uppercase tracking-tight flex items-center gap-1.5">
+                                                <span>{getExpenseIcon(selectedMasterOps.name)}</span>
+                                                <span>{selectedMasterOps.name}</span>
+                                            </span>
+                                            <span className="text-xs font-black text-emerald-700 font-sans">
+                                                {formatRupiah(Number(selectedMasterOps.price) || 0)} / {selectedMasterOps.unit || 'Item'}
+                                            </span>
+                                        </div>
+                                        {selectedMasterOps.description && (
+                                            <p className="text-[10px] text-slate-500">{selectedMasterOps.description}</p>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div className="space-y-1">
+                                    <label className="text-[11px] font-bold text-slate-600 block">Keterangan / Rincian Lapangan</label>
+                                    <Input
+                                        value={presetExpenseDescription}
+                                        onChange={(e) => setPresetExpenseDescription(e.target.value)}
+                                        placeholder="Contoh: PP Tim 4 orang Jakarta - Bogor"
+                                        className="h-[40px]"
+                                    />
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[11px] font-bold text-slate-600 block">Estimasi Biaya (Rp)</label>
+                                    <FormattedNumberInput
+                                        value={presetExpenseCost}
+                                        onChange={(val) => setPresetExpenseCost(val)}
+                                        prefix="Rp "
+                                        className="h-[40px] text-xs font-semibold"
+                                    />
+                                </div>
+
+                                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                                    <button
+                                        type="button"
+                                        onClick={() => setAddExpenseModalOpen(false)}
+                                        className="px-3.5 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                                    >
+                                        Batal
+                                    </button>
+                                    <button
+                                        type="button"
+                                        disabled={!selectedMasterOpsId}
+                                        onClick={handleAddMasterOps}
+                                        className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-xs cursor-pointer inline-flex items-center gap-1.5"
+                                    >
+                                        <Plus className="w-3.5 h-3.5" />
+                                        <span>Tambahkan Biaya</span>
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            /* Tab 2: Biaya Kustom */
+                            <div className="space-y-3 text-xs">
+                                <div className="space-y-1">
+                                    <label className="text-[11px] font-bold text-slate-600 block">
+                                        Jenis Biaya <span className="text-rose-500">*</span>
+                                    </label>
+                                    <Input
+                                        value={newExpenseForm.type}
+                                        onChange={(e) => setNewExpenseForm({ ...newExpenseForm, type: e.target.value })}
+                                        placeholder="Contoh: Dry Ice / Flare Effect Resepsi"
+                                        className="h-[40px]"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[11px] font-bold text-slate-600 block">Keterangan</label>
+                                    <Input
+                                        value={newExpenseForm.description}
+                                        onChange={(e) => setNewExpenseForm({ ...newExpenseForm, description: e.target.value })}
+                                        placeholder="Contoh: Efek panggung saat grand entrance"
+                                        className="h-[40px]"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[11px] font-bold text-slate-600 block">Estimasi Biaya (Rp)</label>
+                                    <FormattedNumberInput
+                                        value={newExpenseForm.cost}
+                                        onChange={(val) => setNewExpenseForm({ ...newExpenseForm, cost: val })}
+                                        prefix="Rp "
+                                        className="h-[40px] text-xs font-semibold"
+                                    />
+                                </div>
+                                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                                    <button
+                                        type="button"
+                                        onClick={() => setAddExpenseModalOpen(false)}
+                                        className="px-3.5 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                                    >
+                                        Batal
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleCreateCustomExpense}
+                                        className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs cursor-pointer inline-flex items-center gap-1.5"
+                                    >
+                                        <Plus className="w-3.5 h-3.5" />
+                                        <span>Tambahkan Biaya</span>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

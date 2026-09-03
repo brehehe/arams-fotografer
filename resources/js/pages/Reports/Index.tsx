@@ -361,7 +361,7 @@ export default function ReportIndex({
         (summary.projects > 0 ? Math.round((summary.completed / summary.projects) * 100) : 100);
 
     return (
-        <div className="space-y-6 pb-12">
+        <div className="w-full max-w-full space-y-6 pb-12">
             <Head title="Laporan & Analitik Studio - Lensaria Photography" />
 
             {/* ── HEADER TITLE & CONTROLS ── */}

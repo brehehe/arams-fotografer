@@ -23,21 +23,32 @@ class ServiceController extends Controller
                 ->orWhere('description', 'like', "%{$search}%");
         }
 
-        $services = $query->latest('id')->paginate(10)->withQueryString();
-        $categories = Category::where('status', 'active')->select('id', 'name', 'color')->get();
+        if ($categoryId = $request->input('category_id')) {
+            $query->where('category_id', $categoryId);
+        }
+
+        if ($status = $request->input('status')) {
+            if ($status !== 'all') {
+                $query->where('status', $status);
+            }
+        }
+
+        $perPage = (int) $request->input('per_page', 10);
+        $services = $query->latest('id')->paginate($perPage)->withQueryString();
+        $categories = Category::where('status', 'active')->select('id', 'name', 'color')->orderBy('name')->get();
 
         $stats = [
-            'total'            => Service::count() ?: 5,
-            'active'           => Service::where('status', 'active')->count() ?: 5,
-            'inactive'         => Service::where('status', '!=', 'active')->count() ?: 0,
-            'used_in_projects' => 128,
+            'total'            => Service::count(),
+            'active'           => Service::where('status', 'active')->count(),
+            'inactive'         => Service::where('status', '!=', 'active')->count(),
+            'total_categories' => Category::whereHas('services')->count(),
         ];
 
         return Inertia::render('MasterData/Services/Index', [
             'services'   => $services,
             'categories' => $categories,
             'stats'      => $stats,
-            'filters'    => $request->only(['search']),
+            'filters'    => $request->only(['search', 'category_id', 'status', 'per_page']),
         ]);
     }
 

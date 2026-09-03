@@ -18,6 +18,7 @@ class StorePaymentRequest extends FormRequest
             'amount' => 'required|numeric|min:1',
             'payment_date' => 'required|date',
             'payment_method_id' => 'required|exists:payment_methods,id',
+            'invoice_id' => 'nullable|exists:invoices,id',
             'reference_number' => 'nullable|string|max:100',
             'notes' => 'nullable|string',
         ];

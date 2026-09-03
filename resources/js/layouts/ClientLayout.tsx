@@ -36,8 +36,31 @@ export function ClientLayout({ children }: ClientLayoutProps) {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
 
+    // Dynamic Theme Tokens from Settings
+    const portalBg = appSettings.portal_bg_color || '#FAF8F5';
+    const portalBgGradient = appSettings.portal_bg_gradient || '';
+    const portalNavBg = appSettings.portal_nav_bg || '#240B10';
+    const portalNavGradient = appSettings.portal_nav_gradient || '';
+    const portalNavText = appSettings.portal_nav_text_color || '#FFFFFF';
+    const portalNavBorder = appSettings.portal_nav_border_color || '#3D141C';
+    const portalPrimaryAccent = appSettings.portal_primary_accent || '#4A151B';
+    const portalAccentGradient = appSettings.portal_accent_gradient || '';
+    const portalCardBg = appSettings.portal_card_bg || '#FFFFFF';
+    const portalCardBorder = appSettings.portal_card_border || 'rgba(226, 232, 240, 0.8)';
+    const portalHeadingColor = appSettings.portal_heading_color || '#240B10';
+    const portalTextColor = appSettings.portal_text_color || '#334155';
+    const portalMutedColor = appSettings.portal_muted_color || '#64748B';
+    const portalFontHeading = appSettings.portal_font_heading || 'Plus Jakarta Sans';
+    const portalFontBody = appSettings.portal_font_body || 'Plus Jakarta Sans';
+    const portalHeroBg = appSettings.portal_hero_bg || '#240B10';
+    const portalHeroGradient = appSettings.portal_hero_gradient || '';
+    const portalHeroText = appSettings.portal_hero_text_color || '#FFFFFF';
+    const portalFooterBg = appSettings.portal_footer_bg || '#1A070B';
+    const portalFooterText = appSettings.portal_footer_text || '#FDA4AF';
+
     const isCurrent = (path: string) => {
-        const currentUrl = url || (typeof window !== 'undefined' ? window.location.pathname : '') || '';
+        const rawUrl = url || (typeof window !== 'undefined' ? window.location.pathname : '') || '';
+        const currentUrl = rawUrl.split('?')[0].split('#')[0];
         if (path === '/client/dashboard' && (currentUrl === '/client/dashboard' || currentUrl === '/client' || currentUrl === '/portal')) return true;
         if (path === '/client/projects' && currentUrl.startsWith('/client/projects')) return true;
         return false;
@@ -48,20 +71,78 @@ export function ClientLayout({ children }: ClientLayoutProps) {
     };
 
     return (
-        <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-slate-800 font-sans antialiased selection:bg-rose-900 selection:text-white">
+        <div
+            style={{
+                background: portalBgGradient || portalBg,
+                color: portalTextColor,
+                fontFamily: `'${portalFontBody}', system-ui, -apple-system, sans-serif`,
+            }}
+            className="min-h-screen flex flex-col font-sans antialiased transition-colors duration-200"
+        >
+            {/* Dynamic CSS Variables Injector for Portal Theme */}
+            <style>{`
+                :root {
+                    --portal-bg: ${portalBg};
+                    --portal-bg-gradient: ${portalBgGradient || 'none'};
+                    --portal-nav-bg: ${portalNavBg};
+                    --portal-nav-gradient: ${portalNavGradient || 'none'};
+                    --portal-nav-text: ${portalNavText};
+                    --portal-nav-border: ${portalNavBorder};
+                    --portal-primary-accent: ${portalPrimaryAccent};
+                    --portal-accent-gradient: ${portalAccentGradient || 'none'};
+                    --portal-card-bg: ${portalCardBg};
+                    --portal-card-border: ${portalCardBorder};
+                    --portal-heading-color: ${portalHeadingColor};
+                    --portal-text-color: ${portalTextColor};
+                    --portal-muted-color: ${portalMutedColor};
+                    --portal-hero-bg: ${portalHeroBg};
+                    --portal-hero-gradient: ${portalHeroGradient || 'none'};
+                    --portal-hero-text: ${portalHeroText};
+                    --portal-footer-bg: ${portalFooterBg};
+                    --portal-footer-text: ${portalFooterText};
+                    --portal-font-heading: '${portalFontHeading}', serif;
+                    --portal-font-body: '${portalFontBody}', sans-serif;
+                }
+            `}</style>
+
             {/* ── TOP HEADER NAVBAR (Screenshot 1, 2, 3) ──────────────────────── */}
-            <header className="sticky top-0 z-40 bg-[#240B10] text-white border-b border-[#3D141C] shadow-md">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+            <header
+                style={{
+                    background: portalNavGradient || portalNavBg,
+                    borderColor: portalNavBorder,
+                    color: portalNavText,
+                }}
+                className="sticky top-0 z-40 border-b shadow-md transition-colors"
+            >
+                <div className="w-full max-w-full px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
                     {/* Brand Logo Monogram */}
                     <Link href="/client/dashboard" className="flex items-center gap-3.5 group">
-                        <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center text-white shadow-xs group-hover:scale-105 transition-transform">
+                        <div
+                            style={{
+                                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                borderColor: 'rgba(255, 255, 255, 0.2)',
+                                color: portalNavText,
+                            }}
+                            className="w-10 h-10 rounded-xl border flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform"
+                        >
                             <span className="font-serif italic font-bold text-sm tracking-tighter">ap</span>
                         </div>
                         <div className="flex flex-col">
-                            <span className="font-serif font-black text-sm sm:text-base tracking-[0.2em] uppercase text-white">
+                            <span
+                                style={{
+                                    color: portalNavText,
+                                    fontFamily: `'${portalFontHeading}', serif`,
+                                }}
+                                className="font-black text-sm sm:text-base tracking-[0.2em] uppercase"
+                            >
                                 Arams Pictures
                             </span>
-                            <span className="text-[9px] tracking-[0.3em] uppercase text-rose-300 font-bold -mt-0.5">
+                            <span
+                                style={{
+                                    color: portalFooterText || '#FDA4AF',
+                                }}
+                                className="text-[9px] tracking-[0.3em] uppercase font-bold -mt-0.5"
+                            >
                                 Client Portal
                             </span>
                         </div>
@@ -71,10 +152,18 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                     <nav className="flex items-center gap-2">
                         <Link
                             href="/client/dashboard"
-                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                            style={
                                 isCurrent('/client/dashboard')
-                                    ? 'bg-white text-[#240B10] shadow-sm'
-                                    : 'text-white/80 hover:text-white hover:bg-white/10'
+                                    ? {
+                                          backgroundColor: portalNavText,
+                                          color: portalNavBg,
+                                      }
+                                    : {
+                                          color: `${portalNavText}cc`,
+                                      }
+                            }
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                                !isCurrent('/client/dashboard') ? 'hover:bg-white/10 hover:text-white' : 'shadow-sm'
                             }`}
                         >
                             <Home className="w-4 h-4" />
@@ -83,10 +172,18 @@ export function ClientLayout({ children }: ClientLayoutProps) {
 
                         <Link
                             href="/client/projects"
-                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                            style={
                                 isCurrent('/client/projects')
-                                    ? 'bg-white text-[#240B10] shadow-sm'
-                                    : 'text-white/80 hover:text-white hover:bg-white/10'
+                                    ? {
+                                          backgroundColor: portalNavText,
+                                          color: portalNavBg,
+                                      }
+                                    : {
+                                          color: `${portalNavText}cc`,
+                                      }
+                            }
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                                !isCurrent('/client/projects') ? 'hover:bg-white/10 hover:text-white' : 'shadow-sm'
                             }`}
                         >
                             <FolderKanban className="w-4 h-4" />
@@ -101,10 +198,17 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                             <button
                                 type="button"
                                 onClick={() => setNotificationsOpen(!notificationsOpen)}
-                                className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white/90 relative transition-colors cursor-pointer"
+                                className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center relative transition-colors cursor-pointer"
+                                style={{ color: portalNavText }}
                             >
                                 <Bell className="w-4 h-4" />
-                                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-rose-600 text-white rounded-full text-[9px] font-bold flex items-center justify-center border-2 border-[#240B10]">
+                                <span
+                                    style={{
+                                        backgroundColor: portalPrimaryAccent,
+                                        borderColor: portalNavBg,
+                                    }}
+                                    className="absolute -top-0.5 -right-0.5 w-4 h-4 text-white rounded-full text-[9px] font-bold flex items-center justify-center border-2"
+                                >
                                     2
                                 </span>
                             </button>
@@ -216,58 +320,95 @@ export function ClientLayout({ children }: ClientLayoutProps) {
             </header>
 
             {/* Main Content Area */}
-            <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-12">
+            <main className="flex-1 w-full max-w-full px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-12">
                 {children}
             </main>
 
-            {/* ── FOOTER SECTION (Screenshot 1, 2, 3) ────────────────────────── */}
-            <footer className="bg-white border-t border-slate-200/80 pt-10 text-slate-700">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+            {/* ── FOOTER (Screenshot 1, 2, 3) ─────────────────────────────────── */}
+            <footer
+                style={{
+                    backgroundColor: portalFooterBg,
+                    color: portalFooterText,
+                    borderColor: portalNavBorder,
+                }}
+                className="mt-auto border-t pt-12 pb-8 transition-colors"
+            >
+                <div className="w-full max-w-full px-4 sm:px-6 lg:px-8 space-y-8">
                     
                     {/* Top 4 Value Badges & Contact Admin Row */}
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-8 border-b border-slate-200">
+                    <div
+                        style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}
+                        className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-8 border-b"
+                    >
                         {/* 4 Feature Pillars (Span 8) */}
                         <div className="lg:col-span-8 space-y-4">
-                            <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                            <h4
+                                style={{ color: '#FFFFFF' }}
+                                className="text-xs font-black uppercase tracking-wider"
+                            >
                                 Kenapa Memilih Arams Pictures?
                             </h4>
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                                 <div className="space-y-1.5">
-                                    <div className="w-8 h-8 rounded-xl bg-rose-50 text-[#4A151B] flex items-center justify-center">
+                                    <div
+                                        style={{
+                                            backgroundColor: `${portalPrimaryAccent}25`,
+                                            color: portalFooterText || '#FDA4AF',
+                                        }}
+                                        className="w-8 h-8 rounded-xl flex items-center justify-center"
+                                    >
                                         <Award className="w-4 h-4" />
                                     </div>
-                                    <h5 className="font-bold text-xs text-slate-900">Berpengalaman</h5>
-                                    <p className="text-[11px] text-slate-500 leading-snug">
+                                    <h5 style={{ color: '#FFFFFF' }} className="font-bold text-xs">Berpengalaman</h5>
+                                    <p className="text-[11px] opacity-80 leading-snug">
                                         Lebih dari 7 tahun mengabadikan momen berharga.
                                     </p>
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <div className="w-8 h-8 rounded-xl bg-rose-50 text-[#4A151B] flex items-center justify-center">
+                                    <div
+                                        style={{
+                                            backgroundColor: `${portalPrimaryAccent}25`,
+                                            color: portalFooterText || '#FDA4AF',
+                                        }}
+                                        className="w-8 h-8 rounded-xl flex items-center justify-center"
+                                    >
                                         <Camera className="w-4 h-4" />
                                     </div>
-                                    <h5 className="font-bold text-xs text-slate-900">Kualitas Terbaik</h5>
-                                    <p className="text-[11px] text-slate-500 leading-snug">
+                                    <h5 style={{ color: '#FFFFFF' }} className="font-bold text-xs">Kualitas Terbaik</h5>
+                                    <p className="text-[11px] opacity-80 leading-snug">
                                         Peralatan profesional &amp; editing berkualitas tinggi.
                                     </p>
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <div className="w-8 h-8 rounded-xl bg-rose-50 text-[#4A151B] flex items-center justify-center">
+                                    <div
+                                        style={{
+                                            backgroundColor: `${portalPrimaryAccent}25`,
+                                            color: portalFooterText || '#FDA4AF',
+                                        }}
+                                        className="w-8 h-8 rounded-xl flex items-center justify-center"
+                                    >
                                         <HeartHandshake className="w-4 h-4" />
                                     </div>
-                                    <h5 className="font-bold text-xs text-slate-900">Pelayanan Personal</h5>
-                                    <p className="text-[11px] text-slate-500 leading-snug">
+                                    <h5 style={{ color: '#FFFFFF' }} className="font-bold text-xs">Pelayanan Personal</h5>
+                                    <p className="text-[11px] opacity-80 leading-snug">
                                         Kami mendengar &amp; mewujudkan visi Anda.
                                     </p>
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <div className="w-8 h-8 rounded-xl bg-rose-50 text-[#4A151B] flex items-center justify-center">
+                                    <div
+                                        style={{
+                                            backgroundColor: `${portalPrimaryAccent}25`,
+                                            color: portalFooterText || '#FDA4AF',
+                                        }}
+                                        className="w-8 h-8 rounded-xl flex items-center justify-center"
+                                    >
                                         <Workflow className="w-4 h-4" />
                                     </div>
-                                    <h5 className="font-bold text-xs text-slate-900">Proses Terorganisir</h5>
-                                    <p className="text-[11px] text-slate-500 leading-snug">
+                                    <h5 style={{ color: '#FFFFFF' }} className="font-bold text-xs">Proses Terorganisir</h5>
+                                    <p className="text-[11px] opacity-80 leading-snug">
                                         Alur kerja jelas, update rutin, dan tepat waktu.
                                     </p>
                                 </div>
@@ -275,11 +416,17 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                         </div>
 
                         {/* Hubungi Admin Kami (Span 4) */}
-                        <div className="lg:col-span-4 space-y-3 bg-[#FAF8F5] p-5 rounded-2xl border border-slate-200/80">
-                            <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                        <div
+                            style={{
+                                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                borderColor: 'rgba(255, 255, 255, 0.1)',
+                            }}
+                            className="lg:col-span-4 space-y-3 p-5 rounded-2xl border"
+                        >
+                            <h4 style={{ color: '#FFFFFF' }} className="text-xs font-black uppercase tracking-wider">
                                 Hubungi Admin Kami
                             </h4>
-                            <p className="text-[11px] text-slate-500 -mt-1">
+                            <p className="text-[11px] opacity-80 -mt-1">
                                 Kami siap membantu Anda kapan saja.
                             </p>
 
@@ -289,8 +436,8 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                                         <Phone className="w-3.5 h-3.5" />
                                     </div>
                                     <div>
-                                        <span className="font-bold text-slate-800 block text-[11px]">WhatsApp</span>
-                                        <a href="https://wa.me/6281234567890" target="_blank" rel="noreferrer" className="text-slate-600 hover:text-emerald-700 font-medium text-[11px]">
+                                        <span style={{ color: '#FFFFFF' }} className="font-bold block text-[11px]">WhatsApp</span>
+                                        <a href="https://wa.me/6281234567890" target="_blank" rel="noreferrer" className="opacity-85 hover:opacity-100 font-medium text-[11px] hover:underline">
                                             +62 812-3456-7890
                                         </a>
                                     </div>
@@ -301,8 +448,8 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                                         <Mail className="w-3.5 h-3.5" />
                                     </div>
                                     <div>
-                                        <span className="font-bold text-slate-800 block text-[11px]">Email</span>
-                                        <a href="mailto:hello@aramspictures.com" className="text-slate-600 hover:text-blue-700 font-medium text-[11px]">
+                                        <span style={{ color: '#FFFFFF' }} className="font-bold block text-[11px]">Email</span>
+                                        <a href="mailto:hello@aramspictures.com" className="opacity-85 hover:opacity-100 font-medium text-[11px] hover:underline">
                                             hello@aramspictures.com
                                         </a>
                                     </div>
@@ -313,8 +460,8 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                                         <Clock className="w-3.5 h-3.5" />
                                     </div>
                                     <div>
-                                        <span className="font-bold text-slate-800 block text-[11px]">Jam Operasional</span>
-                                        <span className="text-slate-600 font-medium text-[11px]">
+                                        <span style={{ color: '#FFFFFF' }} className="font-bold block text-[11px]">Jam Operasional</span>
+                                        <span className="opacity-85 font-medium text-[11px]">
                                             Senin - Minggu, 08.00 - 18.00 WIB
                                         </span>
                                     </div>
@@ -325,18 +472,31 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                 </div>
 
                 {/* Bottom Dark Copyright Bar */}
-                <div className="bg-[#1C080C] text-white py-6 mt-8">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
+                <div
+                    style={{
+                        backgroundColor: 'rgba(0, 0, 0, 0.25)',
+                    }}
+                    className="py-6 mt-8"
+                >
+                    <div className="w-full max-w-full px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
                         {/* Brand & Tagline */}
                         <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center text-white font-serif italic font-bold text-xs">
                                 ap
                             </div>
                             <div>
-                                <h4 className="font-serif font-black tracking-widest text-white text-xs uppercase">
+                                <h4
+                                    style={{
+                                        fontFamily: `'${portalFontHeading}', serif`,
+                                    }}
+                                    className="font-black tracking-widest text-white text-xs uppercase"
+                                >
                                     Arams Pictures
                                 </h4>
-                                <p className="text-[10px] text-rose-300 font-medium">
+                                <p
+                                    style={{ color: portalFooterText || '#FDA4AF' }}
+                                    className="text-[10px] font-medium"
+                                >
                                     Capture Your Moments, Tell Your Story
                                 </p>
                             </div>
@@ -344,10 +504,10 @@ export function ClientLayout({ children }: ClientLayoutProps) {
 
                         {/* Social Icons */}
                         <div className="flex flex-col items-center gap-1.5">
-                            <span className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">
+                            <span className="text-[10px] text-white/60 uppercase tracking-widest font-bold">
                                 Ikuti Kami
                             </span>
-                            <div className="flex items-center gap-3 text-slate-300">
+                            <div className="flex items-center gap-3 text-white/80">
                                 <a href="https://instagram.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
                                     <Instagram className="w-4 h-4" />
                                 </a>
@@ -361,7 +521,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                         </div>
 
                         {/* Copyright & Links */}
-                        <div className="flex flex-col md:items-end gap-1 text-[11px] text-slate-400">
+                        <div className="flex flex-col md:items-end gap-1 text-[11px] text-white/70">
                             <span>© 2026 Arams Pictures. All rights reserved.</span>
                             <div className="flex items-center gap-3 text-[10px]">
                                 <Link href="#" className="hover:text-white">Kebijakan Privasi</Link>

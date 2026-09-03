@@ -16,6 +16,7 @@ class StoreAddonRequest extends FormRequest
         return [
             'category_id' => 'nullable|exists:categories,id',
             'name' => 'required|string|max:255',
+            'type' => 'nullable|string|in:addon,operational',
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
             'unit' => 'nullable|string|max:50',

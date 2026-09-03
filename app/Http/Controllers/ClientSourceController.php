@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Client;
 use App\Models\ClientSource;
 use App\Models\ClientSourceAppreciation;
+use App\Models\PaymentMethod;
+use App\Models\Project;
+use App\Models\WeddingOrganizer;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -65,118 +69,111 @@ class ClientSourceController extends Controller
 
     public function show(string $id): Response
     {
-        $source = ClientSource::with('appreciations')->findOrFail($id);
+        $source = ClientSource::with(['appreciations' => function ($q) {
+            $q->with('paymentMethod')->latest('date');
+        }])->findOrFail($id);
 
-        // Mock/Seed realistic referral history matching Gambar 3
-        $referralHistory = [
-            [
-                'id' => 1,
-                'client' => 'Kevin & Jessica',
-                'project' => 'Wedding',
-                'project_category' => 'wedding',
-                'event_date' => '27 Agu 2026',
-                'amount' => 8500000,
-                'status' => 'Selesai',
-            ],
-            [
-                'id' => 2,
-                'client' => 'Budi & Sarah',
-                'project' => 'Wedding',
-                'project_category' => 'wedding',
-                'event_date' => '18 Agu 2026',
-                'amount' => 6500000,
-                'status' => 'Selesai',
-            ],
-            [
-                'id' => 3,
-                'client' => 'Andi & Lestari',
-                'project' => 'Prewedding',
-                'project_category' => 'prewedding',
-                'event_date' => '10 Agu 2026',
-                'amount' => 3750000,
-                'status' => 'Selesai',
-            ],
-            [
-                'id' => 4,
-                'client' => 'Doni & Kartika',
-                'project' => 'Wedding',
-                'project_category' => 'wedding',
-                'event_date' => '02 Agu 2026',
-                'amount' => 4250000,
-                'status' => 'Selesai',
-            ],
-            [
-                'id' => 5,
-                'client' => 'Rizky & Ayu',
-                'project' => 'Engagement',
-                'project_category' => 'engagement',
-                'event_date' => '28 Jul 2026',
-                'amount' => 2750000,
-                'status' => 'Selesai',
-            ],
-            [
-                'id' => 6,
-                'client' => 'Fajar & Nabila',
-                'project' => 'Wedding',
-                'project_category' => 'wedding',
-                'event_date' => '19 Jul 2026',
-                'amount' => 5500000,
-                'status' => 'Selesai',
-            ],
-            [
-                'id' => 7,
-                'client' => 'Hendra & Sinta',
-                'project' => 'Prewedding',
-                'project_category' => 'prewedding',
-                'event_date' => '12 Jul 2026',
-                'amount' => 2250000,
-                'status' => 'Selesai',
-            ],
-            [
-                'id' => 8,
-                'client' => 'Tono & Diah',
-                'project' => 'Wedding',
-                'project_category' => 'wedding',
-                'event_date' => '05 Jul 2026',
-                'amount' => 4000000,
-                'status' => 'Selesai',
-            ],
-            [
-                'id' => 9,
-                'client' => 'Agus & Mega',
-                'project' => 'Event',
-                'project_category' => 'event',
-                'event_date' => '26 Jun 2026',
-                'amount' => 1500000,
-                'status' => 'Selesai',
-            ],
-            [
-                'id' => 10,
-                'client' => 'Yoga & Rani',
-                'project' => 'Wedding',
-                'project_category' => 'wedding',
-                'event_date' => '15 Jun 2026',
-                'amount' => 2000000,
-                'status' => 'Selesai',
-            ],
-        ];
+        // Cari klien riil yang berkaitan dengan sumber ini dari database
+        $clientsQuery = Client::query()->where(function ($q) use ($source) {
+            $q->where('source', $source->name)
+                ->orWhere('source', $source->type)
+                ->orWhere('referral_name', $source->name);
 
-        $totalAmount = array_sum(array_column($referralHistory, 'amount'));
+            if ($source->type === 'wedding_organizer') {
+                $wo = WeddingOrganizer::where('name', $source->name)->first();
+                if ($wo) {
+                    $q->orWhere('wedding_organizer_id', $wo->id);
+                }
+            }
+        });
+
+        $clients = $clientsQuery->with([
+            'projects' => function ($pq) {
+                $pq->with('category')->latest('event_date');
+            },
+        ])->get();
+
+        // Kumpulkan semua project dari klien-klien tersebut
+        $allProjects = $clients->flatMap(function ($client) {
+            return $client->projects->map(function ($project) use ($client) {
+                $project->setRelation('client', $client);
+                return $project;
+            });
+        })->sortByDesc(function ($p) {
+            return $p->event_date ?? $p->created_at;
+        })->values();
+
+        // Bentuk riwayat referral dari data project riil
+        $referralHistory = $allProjects->map(function ($project) {
+            $clientName = $project->client?->bride_name && $project->client?->groom_name
+                ? "{$project->client->bride_name} & {$project->client->groom_name}"
+                : ($project->client?->name ?? 'Klien');
+
+            $statusLabel = match ($project->status) {
+                'completed' => 'Selesai',
+                'confirmed' => 'Dikonfirmasi',
+                'in_progress' => 'Sedang Berjalan',
+                'draft' => 'Draft',
+                'cancelled' => 'Dibatalkan',
+                default => ucfirst((string) $project->status),
+            };
+
+            return [
+                'id' => $project->id,
+                'client' => $clientName,
+                'project' => $project->name,
+                'project_category' => strtolower($project->category?->name ?? 'wedding'),
+                'event_date' => $project->event_date ? Carbon::parse($project->event_date)->isoFormat('D MMM YYYY') : '-',
+                'amount' => (float) $project->total_amount,
+                'status' => $statusLabel,
+            ];
+        })->all();
+
+        $totalProjectValue = (float) $allProjects->sum('total_amount');
+        $latestProject = $allProjects->first();
+        $latestClient = $clients->sortByDesc('created_at')->first();
+
+        $lastReferralDate = $latestProject?->event_date
+            ? Carbon::parse($latestProject->event_date)->isoFormat('D MMMM YYYY')
+            : ($latestClient ? Carbon::parse($latestClient->created_at)->isoFormat('D MMMM YYYY') : '-');
+
+        $lastReferralProject = $latestProject
+            ? (($latestProject->client?->name ?? 'Project') . ' (' . ($latestProject->category?->name ?? 'Project') . ')')
+            : '-';
 
         $metrics = [
-            'total_referral_clients' => 12,
-            'total_projects' => 12,
-            'total_project_value' => $totalAmount,
-            'last_referral_date' => '27 Agustus 2026',
-            'last_referral_project' => 'Kevin & Jessica (Wedding)',
+            'total_referral_clients' => $clients->count(),
+            'total_projects' => $allProjects->count(),
+            'total_project_value' => $totalProjectValue,
+            'last_referral_date' => $lastReferralDate,
+            'last_referral_project' => $lastReferralProject,
         ];
+
+        // Total pengeluaran komisi/apresiasi yang sudah diberikan / tercatat di finance
+        $referralExpensesTotal = (float) $source->appreciations
+            ->where('status', 'given')
+            ->sum('amount');
+
+        $pendingAppreciationTotal = (float) $source->appreciations
+            ->where('status', 'pending')
+            ->sum('amount');
+
+        $paymentMethods = PaymentMethod::where('status', 'active')
+            ->select('id', 'name', 'code', 'account_number', 'account_holder')
+            ->get();
 
         return Inertia::render('ClientSources/Show', [
             'source' => $source,
             'metrics' => $metrics,
             'referral_history' => $referralHistory,
-            'total_amount' => $totalAmount,
+            'total_amount' => $totalProjectValue,
             'appreciations' => $source->appreciations,
+            'payment_methods' => $paymentMethods,
+            'finance_summary' => [
+                'total_expenses' => $referralExpensesTotal,
+                'pending_expenses' => $pendingAppreciationTotal,
+                'connected_to_finance' => true,
+            ],
         ]);
     }
 
@@ -252,18 +249,85 @@ class ClientSourceController extends Controller
             'date' => 'required|date',
             'type' => 'required|string|max:255',
             'amount' => 'nullable|numeric|min:0',
+            'payment_method_id' => 'nullable|uuid|exists:payment_methods,id',
+            'is_recorded_in_finance' => 'nullable|boolean',
             'notes' => 'nullable|string',
         ]);
 
-        $appreciation = $source->appreciations()->create($validated);
+        $isRecorded = $request->boolean('is_recorded_in_finance', true);
+        $amount = (float) ($validated['amount'] ?? 0);
+
+        // Buat nomor referensi pengeluaran kas otomatis jika dicatat di finance
+        $financeReference = null;
+        if ($isRecorded && $amount > 0) {
+            $count = ClientSourceAppreciation::whereNotNull('finance_reference')->count() + 1;
+            $financeReference = 'EXP-REF-' . date('ym') . '-' . str_pad((string) $count, 4, '0', STR_PAD_LEFT);
+        }
+
+        $appreciation = $source->appreciations()->create([
+            'status' => $validated['status'],
+            'date' => $validated['date'],
+            'type' => $validated['type'],
+            'amount' => $amount,
+            'payment_method_id' => $validated['payment_method_id'] ?? null,
+            'finance_reference' => $financeReference,
+            'is_recorded_in_finance' => $isRecorded,
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        $financeMsg = $financeReference ? " dan tercatat di Finance ({$financeReference})" : "";
 
         activity()
             ->causedBy($request->user())
             ->performedOn($appreciation)
             ->event('created')
-            ->log("Apresiasi referral untuk {$source->name} berhasil dicatat");
+            ->log("Apresiasi referral untuk {$source->name} sebesar Rp " . number_format($amount, 0, ',', '.') . " berhasil disimpan{$financeMsg}");
 
-        return redirect()->back()->with('success', 'Apresiasi referral berhasil disimpan.');
+        return redirect()->back()->with('success', "Apresiasi referral berhasil disimpan{$financeMsg}.");
+    }
+
+    public function updateAppreciation(Request $request, string $sourceId, string $appreciationId): RedirectResponse
+    {
+        $source = ClientSource::findOrFail($sourceId);
+        $appreciation = ClientSourceAppreciation::where('client_source_id', $sourceId)->findOrFail($appreciationId);
+
+        $validated = $request->validate([
+            'status' => 'required|string|in:given,pending',
+            'date' => 'required|date',
+            'type' => 'required|string|max:255',
+            'amount' => 'nullable|numeric|min:0',
+            'payment_method_id' => 'nullable|uuid|exists:payment_methods,id',
+            'is_recorded_in_finance' => 'nullable|boolean',
+            'notes' => 'nullable|string',
+        ]);
+
+        $isRecorded = $request->boolean('is_recorded_in_finance', true);
+        $amount = (float) ($validated['amount'] ?? 0);
+
+        $financeReference = $appreciation->finance_reference;
+        if ($isRecorded && $amount > 0 && !$financeReference) {
+            $count = ClientSourceAppreciation::whereNotNull('finance_reference')->count() + 1;
+            $financeReference = 'EXP-REF-' . date('ym') . '-' . str_pad((string) $count, 4, '0', STR_PAD_LEFT);
+        }
+
+        $appreciation->update([
+            'status' => $validated['status'],
+            'date' => $validated['date'],
+            'type' => $validated['type'],
+            'amount' => $amount,
+            'payment_method_id' => $validated['payment_method_id'] ?? null,
+            'finance_reference' => $financeReference,
+            'is_recorded_in_finance' => $isRecorded,
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        activity()
+            ->causedBy($request->user())
+            ->performedOn($appreciation)
+            ->event('updated')
+            ->log("Apresiasi referral untuk {$source->name} berhasil diperbarui");
+
+        return redirect()->back()->with('success', 'Data apresiasi referral berhasil diperbarui.');
     }
 
     public function destroyAppreciation(string $sourceId, string $appreciationId): RedirectResponse

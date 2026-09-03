@@ -31,6 +31,7 @@ import {
     Modal,
     AlertConfirmation,
     Badge,
+    Pagination,
 } from '@/components/ui';
 
 interface NoteTemplateItem {
@@ -59,6 +60,7 @@ interface NoteTemplatesIndexProps {
         search?: string;
         type?: string;
         status?: string;
+        per_page?: number;
     };
     stats?: {
         total: number;
@@ -107,6 +109,7 @@ export default function NoteTemplatesIndex({
     const [search, setSearch] = useState(filters?.search || '');
     const [selectedType, setSelectedType] = useState(filters?.type || 'all');
     const [selectedStatus, setSelectedStatus] = useState(filters?.status || 'all');
+    const [perPage, setPerPage] = useState(filters?.per_page || listData.per_page || 10);
     const [modalOpen, setModalOpen] = useState(false);
     const [previewNote, setPreviewNote] = useState<NoteTemplateItem | null>(null);
     const [editNote, setEditNote] = useState<NoteTemplateItem | null>(null);
@@ -122,10 +125,12 @@ export default function NoteTemplatesIndex({
         status: 'active',
     });
 
-    const handleFilter = (overrides?: { type?: string; status?: string; search?: string }) => {
+    const handleFilter = (overrides?: { type?: string; status?: string; search?: string; per_page?: number; page?: number }) => {
         const typeToUse = overrides?.type !== undefined ? overrides.type : selectedType;
         const statusToUse = overrides?.status !== undefined ? overrides.status : selectedStatus;
         const searchToUse = overrides?.search !== undefined ? overrides.search : search;
+        const perPageToUse = overrides?.per_page !== undefined ? overrides.per_page : perPage;
+        const pageToUse = overrides?.page !== undefined ? overrides.page : 1;
 
         router.get(
             '/master-data/notes',
@@ -133,9 +138,20 @@ export default function NoteTemplatesIndex({
                 search: searchToUse || undefined,
                 type: typeToUse !== 'all' ? typeToUse : undefined,
                 status: statusToUse !== 'all' ? statusToUse : undefined,
+                per_page: perPageToUse,
+                page: pageToUse,
             },
             { preserveState: true }
         );
+    };
+
+    const handlePageChange = (newPage: number) => {
+        handleFilter({ page: newPage });
+    };
+
+    const handlePerPageChange = (newPerPage: number) => {
+        setPerPage(newPerPage);
+        handleFilter({ per_page: newPerPage, page: 1 });
     };
 
     const openCreate = () => {
@@ -321,7 +337,7 @@ export default function NoteTemplatesIndex({
     };
 
     return (
-        <div className="space-y-6 pb-12">
+        <div className="w-full max-w-full space-y-6 pb-12">
             <Head title="Template Catatan - Arams Pictures" />
             {/* ── HEADER TITLE & CTA ─────────────────────────────────────────── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -634,66 +650,20 @@ export default function NoteTemplatesIndex({
                 </TableBody>
             </Table>
 
-            {/* Pagination Footer matching Gambar 1 */}
-            <div className="p-4 bg-white rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 shadow-2xs">
-                <div>
-                    Menampilkan {listData.from || 1} - {listData.to || listData.data.length} dari {listData.total || listData.data.length} template catatan
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                    {/* Prev Button */}
-                    <button
-                        type="button"
-                        disabled={listData.current_page <= 1}
-                        onClick={() =>
-                            router.get(
-                                '/master-data/notes',
-                                { ...filters, page: listData.current_page - 1 },
-                                { preserveState: true }
-                            )
-                        }
-                        className="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed font-bold cursor-pointer"
-                    >
-                        &lt;
-                    </button>
-
-                    {/* Page Numbers */}
-                    {Array.from({ length: listData.last_page || 1 }, (_, i) => i + 1).map((pg) => (
-                        <button
-                            key={pg}
-                            type="button"
-                            onClick={() =>
-                                router.get(
-                                    '/master-data/notes',
-                                    { ...filters, page: pg },
-                                    { preserveState: true }
-                                )
-                            }
-                            className={`w-7 h-7 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center ${pg === listData.current_page
-                                    ? 'bg-[#4F46E5] text-white shadow-sm'
-                                    : 'border border-slate-200 text-slate-700 hover:bg-slate-50'
-                                }`}
-                        >
-                            {pg}
-                        </button>
-                    ))}
-
-                    {/* Next Button */}
-                    <button
-                        type="button"
-                        disabled={listData.current_page >= listData.last_page}
-                        onClick={() =>
-                            router.get(
-                                '/master-data/notes',
-                                { ...filters, page: listData.current_page + 1 },
-                                { preserveState: true }
-                            )
-                        }
-                        className="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed font-bold cursor-pointer"
-                    >
-                        &gt;
-                    </button>
-                </div>
+            {/* Pagination Footer */}
+            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+                <Pagination
+                    className="border-t-0"
+                    currentPage={listData.current_page || 1}
+                    lastPage={listData.last_page || 1}
+                    total={listData.total || listData.data.length}
+                    from={listData.from}
+                    to={listData.to}
+                    perPage={perPage}
+                    itemLabel="template catatan"
+                    onPageChange={handlePageChange}
+                    onPerPageChange={handlePerPageChange}
+                />
             </div>
 
             {/* ── MODAL TAMBAH / EDIT TEMPLATE MENGGUNAKAN MODAL COMPONENT ────── */}

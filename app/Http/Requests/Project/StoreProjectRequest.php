@@ -38,6 +38,7 @@ class StoreProjectRequest extends FormRequest
             'discount' => 'nullable|numeric|min:0',
             'tax' => 'nullable|numeric|min:0',
             'total_amount' => 'required|numeric|min:0',
+            'thumbnail' => 'nullable|string',
             'dp_amount' => 'nullable|numeric|min:0',
             'payment_method' => 'nullable|string',
             'payment_status' => 'nullable|string',

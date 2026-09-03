@@ -18,16 +18,25 @@ class ClientSourceAppreciation extends Model
         'date',
         'type',
         'amount',
+        'payment_method_id',
+        'finance_reference',
+        'is_recorded_in_finance',
         'notes',
     ];
 
     protected $casts = [
         'date' => 'date',
         'amount' => 'decimal:2',
+        'is_recorded_in_finance' => 'boolean',
     ];
 
     public function clientSource(): BelongsTo
     {
         return $this->belongsTo(ClientSource::class, 'client_source_id');
+    }
+
+    public function paymentMethod(): BelongsTo
+    {
+        return $this->belongsTo(PaymentMethod::class, 'payment_method_id');
     }
 }

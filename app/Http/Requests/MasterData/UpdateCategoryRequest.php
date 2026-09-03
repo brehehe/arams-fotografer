@@ -23,7 +23,7 @@ class UpdateCategoryRequest extends FormRequest
             'icon' => 'nullable|string|max:50',
             'color' => 'nullable|string|max:50',
             'sort_order' => 'nullable|integer|min:0',
-            'workflow_type' => 'nullable|string|in:wedding,photoshoot',
+            'workflow_type' => 'nullable|string|in:wedding,non_wedding,custom,photoshoot',
             'status' => 'required|string|in:active,inactive',
         ];
     }

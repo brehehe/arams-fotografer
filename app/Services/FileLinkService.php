@@ -20,6 +20,7 @@ class FileLinkService
         $projectId = $request->query('project_id', 'all');
         $sender = $request->query('sender', 'all');
         $type = $request->query('type', 'all');
+        $perPage = (int) $request->input('per_page', 10);
 
         $query = FileLink::with(['project.client', 'creator'])->latest();
 
@@ -48,7 +49,7 @@ class FileLinkService
             $query->expiringSoon(7);
         }
 
-        $fileLinks = $query->paginate(10)->withQueryString();
+        $fileLinks = $query->paginate($perPage)->withQueryString();
         $projects = Project::select('id', 'name', 'project_number')->get();
         $defaultExpiryDays = (int) Setting::get('link_expiry_days', '0');
 
@@ -75,6 +76,7 @@ class FileLinkService
                 'project_id' => $projectId,
                 'sender' => $sender,
                 'type' => $type,
+                'per_page' => $perPage,
             ],
             'default_expiry_days' => $defaultExpiryDays,
         ];

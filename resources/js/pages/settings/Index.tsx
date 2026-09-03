@@ -41,6 +41,8 @@ import {
     Menu,
     Search,
     Bell,
+    PanelLeft,
+    Layout,
 } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 
@@ -206,10 +208,90 @@ function GradientBuilder({ value, onChange, presets = [], label = 'Gradient (Ops
         </div>
     );
 }
+// ── Compact Color Setting Row Component ────────────────────────────────────────
+interface ColorSettingRowProps {
+    label: string;
+    description?: string;
+    value: string;
+    onChange: (color: string) => void;
+    presets?: Array<{ hex: string; label?: string }>;
+}
+
+function ColorSettingRow({
+    label,
+    description,
+    value,
+    onChange,
+    presets = [],
+}: ColorSettingRowProps) {
+    return (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 py-3 border-b border-slate-100 last:border-0">
+            <div className="space-y-0.5 max-w-sm">
+                <span className="text-xs font-bold text-slate-800 block leading-tight">
+                    {label}
+                </span>
+                {description && (
+                    <span className="text-[11px] text-slate-400 block leading-tight">
+                        {description}
+                    </span>
+                )}
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap shrink-0">
+                {/* Quick Swatch Pills */}
+                {presets.length > 0 && (
+                    <div className="flex items-center gap-1">
+                        {presets.map((p) => {
+                            const isSelected = (value || '').toUpperCase() === p.hex.toUpperCase();
+                            const isLight = ['#FFFFFF', '#F8FAFC', '#F8F6F5', '#FDFBF7', '#CBD5E1', '#E2E8F0', '#F1F5F9', '#EDEAE8'].includes(p.hex.toUpperCase());
+                            return (
+                                <button
+                                    key={p.hex}
+                                    type="button"
+                                    onClick={() => onChange(p.hex)}
+                                    title={p.label ? `${p.label} (${p.hex})` : p.hex}
+                                    className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all cursor-pointer shadow-2xs ${
+                                        isSelected
+                                            ? 'ring-2 ring-indigo-500 ring-offset-1 scale-110 border-white z-10'
+                                            : 'border-slate-200/80 hover:scale-105'
+                                    }`}
+                                    style={{ backgroundColor: p.hex }}
+                                >
+                                    {isSelected && (
+                                        <Check className={`w-3 h-3 ${isLight ? 'text-slate-900' : 'text-white'}`} />
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {/* Native Picker + Hex Input */}
+                <div className="flex items-center gap-1.5 bg-slate-50 hover:bg-slate-100/80 transition-colors p-1 rounded-xl border border-slate-200">
+                    <div className="relative w-6 h-6 rounded-lg overflow-hidden border border-slate-300/80 shadow-2xs shrink-0 cursor-pointer">
+                        <input
+                            type="color"
+                            value={value && value.startsWith('#') && value.length === 7 ? value : '#000000'}
+                            onChange={(e) => onChange(e.target.value)}
+                            className="absolute -top-2 -left-2 w-10 h-10 cursor-pointer border-0 p-0"
+                        />
+                    </div>
+                    <input
+                        type="text"
+                        value={value || ''}
+                        onChange={(e) => onChange(e.target.value)}
+                        placeholder="#HEX"
+                        className="w-20 px-1 py-0.5 text-[11px] font-mono font-bold text-slate-800 bg-transparent border-0 focus:outline-hidden"
+                    />
+                </div>
+            </div>
+        </div>
+    );
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function SettingsIndex({ settings = {}, settingsMap = {} }: SettingsIndexProps) {
-    const [activeTab, setActiveTab] = useState<'company' | 'general' | 'appearance' | 'portal_theme' | 'backup'>('company');
+    const [activeTab, setActiveTab] = useState<'company' | 'general' | 'appearance' | 'login_theme' | 'portal_theme' | 'backup'>('company');
     const [activeModal, setActiveModal] = useState<string | null>(null);
 
     // Helper to get setting value
@@ -243,23 +325,24 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
 
     // Theme & Appearance Customization Form State
     const [themeForm, setThemeForm] = useState({
-        theme_preset: getVal('theme_preset', 'arams_master_purple'),
+        theme_preset: getVal('theme_preset', 'arams_maroon_luxury'),
         company_subtitle: getVal('company_subtitle', 'STUDIO & CINEMA'),
-        sidebar_bg_color: getVal('sidebar_bg_color', '#1C132E'),
-        sidebar_bg_gradient: getVal('sidebar_bg_gradient', ''),
-        sidebar_active_bg: getVal('sidebar_active_bg', '#C98922'),
+        sidebar_bg_color: getVal('sidebar_bg_color', '#2E0F15'),
+        sidebar_bg_gradient: getVal('sidebar_bg_gradient', 'linear-gradient(180deg, #2E0F15 0%, #200A0E 100%)'),
+        sidebar_active_bg: getVal('sidebar_active_bg', '#4A151B'),
         sidebar_active_bg_gradient: getVal('sidebar_active_bg_gradient', ''),
         sidebar_active_text: getVal('sidebar_active_text', '#FFFFFF'),
-        sidebar_text_color: getVal('sidebar_text_color', '#94A3B8'),
-        primary_accent_color: getVal('primary_accent_color', '#C98922'),
+        sidebar_text_color: getVal('sidebar_text_color', '#FDA4AF'),
+        primary_accent_color: getVal('primary_accent_color', '#4A151B'),
         primary_accent_gradient: getVal('primary_accent_gradient', ''),
-        app_bg_color: getVal('app_bg_color', '#F8F6F5'),
+        app_bg_color: getVal('app_bg_color', '#FAF7F5'),
         app_bg_gradient: getVal('app_bg_gradient', ''),
-        login_bg_color: getVal('login_bg_color', '#0E091E'),
-        login_bg_gradient: getVal('login_bg_gradient', ''),
-        login_card_bg: getVal('login_card_bg', '#1C132E'),
+        login_preset: getVal('login_preset', 'arams_maroon_luxury'),
+        login_bg_color: getVal('login_bg_color', '#2E0F15'),
+        login_bg_gradient: getVal('login_bg_gradient', 'linear-gradient(180deg, #2E0F15 0%, #200A0E 100%)'),
+        login_card_bg: getVal('login_card_bg', '#380E13'),
         login_card_bg_gradient: getVal('login_card_bg_gradient', ''),
-        login_accent_color: getVal('login_accent_color', '#C98922'),
+        login_accent_color: getVal('login_accent_color', '#4A151B'),
         login_tagline: getVal('login_tagline', 'STUDIO & CINEMA PHOTOGRAPHY SYSTEM'),
         font_family_heading: getVal('font_family_heading', 'Plus Jakarta Sans'),
         font_family_body: getVal('font_family_body', 'Plus Jakarta Sans'),
@@ -272,39 +355,67 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
         header_border_color: getVal('header_border_color', '#E2E8F0'),
         breadcrumb_color: getVal('breadcrumb_color', '#64748B'),
         breadcrumb_active_color: getVal('breadcrumb_active_color', '#0F172A'),
+        header_search_bg: getVal('header_search_bg', ''),
+        header_search_text: getVal('header_search_text', ''),
         card_heading_color: getVal('card_heading_color', '#1E293B'),
     });
 
     // Portal Theme Customization Form State
     const [portalForm, setPortalForm] = useState({
-        portal_preset: getVal('portal_preset', 'luxury_champagne'),
-        portal_bg_color: getVal('portal_bg_color', '#FDFBF7'),
+        portal_preset: getVal('portal_preset', 'arams_maroon_luxury'),
+        portal_bg_color: getVal('portal_bg_color', '#FAF8F5'),
         portal_bg_gradient: getVal('portal_bg_gradient', ''),
-        portal_nav_bg: getVal('portal_nav_bg', '#FFFFFF'),
-        portal_nav_gradient: getVal('portal_nav_gradient', ''),
-        portal_nav_text_color: getVal('portal_nav_text_color', '#0F172A'),
-        portal_nav_border_color: getVal('portal_nav_border_color', 'rgba(226, 232, 240, 0.8)'),
+        portal_nav_bg: getVal('portal_nav_bg', '#240B10'),
+        portal_nav_gradient: getVal('portal_nav_gradient', 'linear-gradient(180deg, #2E0F15 0%, #200A0E 100%)'),
+        portal_nav_text_color: getVal('portal_nav_text_color', '#FFFFFF'),
+        portal_nav_border_color: getVal('portal_nav_border_color', '#3D141C'),
         portal_card_bg: getVal('portal_card_bg', '#FFFFFF'),
         portal_card_bg_gradient: getVal('portal_card_bg_gradient', ''),
         portal_card_border: getVal('portal_card_border', 'rgba(226, 232, 240, 0.8)'),
-        portal_primary_accent: getVal('portal_primary_accent', '#C98922'),
-        portal_accent_gradient: getVal('portal_accent_gradient', ''),
-        portal_heading_color: getVal('portal_heading_color', '#0F172A'),
+        portal_primary_accent: getVal('portal_primary_accent', '#4A151B'),
+        portal_accent_gradient: getVal('portal_accent_gradient', 'linear-gradient(135deg, #4A151B 0%, #2E0F15 100%)'),
+        portal_heading_color: getVal('portal_heading_color', '#240B10'),
         portal_text_color: getVal('portal_text_color', '#334155'),
         portal_muted_color: getVal('portal_muted_color', '#64748B'),
         portal_font_heading: getVal('portal_font_heading', 'Plus Jakarta Sans'),
         portal_font_body: getVal('portal_font_body', 'Plus Jakarta Sans'),
-        portal_hero_bg: getVal('portal_hero_bg', '#1C132E'),
-        portal_hero_gradient: getVal('portal_hero_gradient', 'linear-gradient(135deg, #1C132E 0%, #0E091E 100%)'),
+        portal_hero_bg: getVal('portal_hero_bg', '#240B10'),
+        portal_hero_gradient: getVal('portal_hero_gradient', 'linear-gradient(135deg, #2E0F15 0%, #1A070B 100%)'),
         portal_hero_text_color: getVal('portal_hero_text_color', '#FFFFFF'),
-        portal_footer_bg: getVal('portal_footer_bg', '#FFFFFF'),
-        portal_footer_text: getVal('portal_footer_text', '#475569'),
+        portal_footer_bg: getVal('portal_footer_bg', '#1A070B'),
+        portal_footer_text: getVal('portal_footer_text', '#FDA4AF'),
     });
 
     const [portalPreviewTab, setPortalPreviewTab] = useState<'dashboard' | 'project_detail'>('dashboard');
 
     // Curated Portal Presets
     const portalPresets = [
+        {
+            id: 'arams_maroon_luxury',
+            name: 'Arams Maroon Luxury (Default)',
+            description: 'Deep Wine #240B10, Royal Maroon #4A151B & Warm Ivory #FAF8F5',
+            portal_bg_color: '#FAF8F5',
+            portal_bg_gradient: '',
+            portal_nav_bg: '#240B10',
+            portal_nav_gradient: 'linear-gradient(180deg, #2E0F15 0%, #200A0E 100%)',
+            portal_nav_text_color: '#FFFFFF',
+            portal_nav_border_color: '#3D141C',
+            portal_card_bg: '#FFFFFF',
+            portal_card_border: 'rgba(226, 232, 240, 0.8)',
+            portal_primary_accent: '#4A151B',
+            portal_accent_gradient: 'linear-gradient(135deg, #4A151B 0%, #2E0F15 100%)',
+            portal_heading_color: '#240B10',
+            portal_text_color: '#334155',
+            portal_muted_color: '#64748B',
+            portal_font_heading: 'Plus Jakarta Sans',
+            portal_font_body: 'Plus Jakarta Sans',
+            portal_hero_bg: '#240B10',
+            portal_hero_gradient: 'linear-gradient(135deg, #2E0F15 0%, #1A070B 100%)',
+            portal_hero_text_color: '#FFFFFF',
+            portal_footer_bg: '#1A070B',
+            portal_footer_text: '#FDA4AF',
+            badge: 'Official Default',
+        },
         {
             id: 'luxury_champagne',
             name: 'Arams Luxury Gold & Ivory',
@@ -329,7 +440,7 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
             portal_hero_text_color: '#FFFFFF',
             portal_footer_bg: '#FFFFFF',
             portal_footer_text: '#475569',
-            badge: 'Official Master',
+            badge: 'Master Gold',
         },
         {
             id: 'midnight_cinema_dark',
@@ -437,10 +548,163 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
         },
     ];
 
+    // Curated Login Presets
+    const loginPresets = [
+        {
+            id: 'arams_maroon_luxury',
+            name: 'Arams Maroon Luxury (Default)',
+            description: 'Deep Wine #2E0F15, Velvet Glow, Card #380E13 & Royal Maroon #4A151B',
+            login_bg_color: '#2E0F15',
+            login_bg_gradient: 'linear-gradient(180deg, #2E0F15 0%, #200A0E 100%)',
+            login_card_bg: '#380E13',
+            login_card_bg_gradient: '',
+            login_accent_color: '#4A151B',
+            login_tagline: 'STUDIO & CINEMA PHOTOGRAPHY SYSTEM',
+            badge: 'Official Default',
+        },
+        {
+            id: 'gradient_dark_purple_gold',
+            name: 'Gradient Dark Purple & Champagne Gold',
+            description: 'Dark Purple #220B38 -> #0A0212, Champagne Gold #C98922 & Pure White #FFFFFF (Solid Tanpa Gradient)',
+            login_bg_color: '#150624',
+            login_bg_gradient: 'linear-gradient(180deg, #220B38 0%, #150624  50%, #0A0212 100%)',
+            login_card_bg: '#220B38',
+            login_card_bg_gradient: '',
+            login_accent_color: '#C98922',
+            login_tagline: 'LUXURY CINEMA & PHOTOGRAPHY SYSTEM',
+            badge: 'Dark Purple × Gold',
+        },
+        {
+            id: 'luxury_champagne',
+            name: 'Arams Luxury Gold & Ivory',
+            description: 'Dark Indigo #1C132E, Champagne Gold #C98922 & Warm Ivory Card #FAF7F5',
+            login_bg_color: '#1C132E',
+            login_bg_gradient: 'linear-gradient(135deg, #1C132E 0%, #0E091E 100%)',
+            login_card_bg: '#FAF7F5',
+            login_card_bg_gradient: '',
+            login_accent_color: '#C98922',
+            login_tagline: 'LUXURY WEDDING & PORTRAIT STUDIO',
+            badge: 'Master Gold',
+        },
+        {
+            id: 'midnight_cinema_dark',
+            name: 'Midnight Cinema Dark Studio',
+            description: 'Dark Obsidian #0B0616, Deep Card #1C132E & Radiant Gold #E5A93C',
+            login_bg_color: '#0B0616',
+            login_bg_gradient: 'linear-gradient(180deg, #0B0616 0%, #150E28 100%)',
+            login_card_bg: '#1C132E',
+            login_card_bg_gradient: '',
+            login_accent_color: '#E5A93C',
+            login_tagline: 'CINEMATIC VISUAL STORYTELLERS',
+            badge: 'Dark Cinema',
+        },
+        {
+            id: 'clean_minimalist_white',
+            name: 'Clean Modern Slate & Ivory',
+            description: 'Slate Charcoal #0F172A, Clean White Card #FFFFFF & Elegant Slate',
+            login_bg_color: '#0F172A',
+            login_bg_gradient: 'linear-gradient(135deg, #334155 0%, #0F172A 100%)',
+            login_card_bg: '#FFFFFF',
+            login_card_bg_gradient: '',
+            login_accent_color: '#0F172A',
+            login_tagline: 'CONTEMPORARY PHOTOGRAPHY STUDIO',
+            badge: 'Minimalist',
+        },
+        {
+            id: 'royal_sapphire_blue',
+            name: 'Royal Sapphire & Diamond Blue',
+            description: 'Deep Navy #070D18, Sapphire Blue #2563EB & Pure White Card',
+            login_bg_color: '#070D18',
+            login_bg_gradient: 'linear-gradient(135deg, #070D18 0%, #0D1E3A 100%)',
+            login_card_bg: '#FFFFFF',
+            login_card_bg_gradient: '',
+            login_accent_color: '#2563EB',
+            login_tagline: 'TIMELESS ELEGANCE IN EVERY FRAME',
+            badge: 'Royal Blue',
+        },
+        {
+            id: 'emerald_botanical_luxury',
+            name: 'Emerald Prestige Botanical',
+            description: 'Deep Forest #06120E, Sage Emerald #059669 & Warm Ivory Card',
+            login_bg_color: '#06120E',
+            login_bg_gradient: 'linear-gradient(135deg, #06120E 0%, #0B241C 100%)',
+            login_card_bg: '#FFFFFF',
+            login_card_bg_gradient: '',
+            login_accent_color: '#059669',
+            login_tagline: 'ORGANIC & TIMELESS LOVE STORIES',
+            badge: 'Emerald',
+        },
+    ];
+
     const [previewMode, setPreviewMode] = useState<'dashboard' | 'projects' | 'master_data' | 'finance' | 'login'>('dashboard');
+    const [stylingScope, setStylingScope] = useState<'admin' | 'login'>('admin');
+    const [adminSectionTab, setAdminSectionTab] = useState<'sidebar' | 'navbar' | 'main'>('sidebar');
 
     // Curated Theme Presets (12 Distinctive Variations & Aesthetics)
     const themePresets = [
+        {
+            id: 'arams_maroon_luxury',
+            name: 'Arams Maroon Luxury (Default)',
+            description: 'Deep Maroon #2E0F15, Rich Wine #4A151B & Warm Canvas Ivory #FAF7F5',
+            sidebar_bg: '#2E0F15',
+            sidebar_bg_gradient: 'linear-gradient(180deg, #2E0F15 0%, #200A0E 100%)',
+            sidebar_active_bg: '#4A151B',
+            sidebar_active_text: '#FFFFFF',
+            sidebar_text_color: '#FDA4AF',
+            primary_accent: '#4A151B',
+            primary_accent_gradient: '',
+            app_bg: '#FAF7F5',
+            app_bg_gradient: '',
+            app_heading_color: '#1C0A0E',
+            app_text_color: '#380E13',
+            app_muted_text_color: '#881337',
+            header_bg_color: '#FFFFFF',
+            header_bg_gradient: '',
+            header_text_color: '#1C0A0E',
+            header_border_color: '#F1E9E7',
+            breadcrumb_color: '#9F1239',
+            breadcrumb_active_color: '#2E0F15',
+            card_heading_color: '#2E0F15',
+            login_bg: '#2E0F15',
+            login_bg_gradient: 'linear-gradient(180deg, #2E0F15 0%, #200A0E 100%)',
+            login_card_bg: '#380E13',
+            login_accent: '#4A151B',
+            font_heading: 'Plus Jakarta Sans',
+            font_body: 'Plus Jakarta Sans',
+            badge: 'Official Default',
+        },
+        {
+            id: 'gradient_dark_purple_gold',
+            name: 'Gradient Dark Purple & Champagne Gold',
+            description: 'Sidebar Gradient Dark Purple #220B38 -> #0A0212, Font Champagne Gold #C98922 & Pure White #FFFFFF (Solid Tanpa Gradient)',
+            sidebar_bg: '#160724',
+            sidebar_bg_gradient: 'linear-gradient(180deg, #220B38 0%, #150624 50%, #0A0212 100%)',
+            sidebar_active_bg: '#C98922',
+            sidebar_active_bg_gradient: '',
+            sidebar_active_text: '#FFFFFF',
+            sidebar_text_color: '#FFFFFF',
+            primary_accent: '#C98922',
+            primary_accent_gradient: '',
+            app_bg: '#FAF7F5',
+            app_bg_gradient: '',
+            app_heading_color: '#C98922',
+            app_text_color: '#1E0C33',
+            app_muted_text_color: '#6B5E7B',
+            header_bg_color: '#FFFFFF',
+            header_bg_gradient: '',
+            header_text_color: '#C98922',
+            header_border_color: '#E2E8F0',
+            breadcrumb_color: '#C98922',
+            breadcrumb_active_color: '#1E0C33',
+            card_heading_color: '#C98922',
+            login_bg: '#150624',
+            login_bg_gradient: 'linear-gradient(180deg, #220B38 0%, #150624 50%, #0A0212 100%)',
+            login_card_bg: '#220B38',
+            login_accent: '#C98922',
+            font_heading: 'Plus Jakarta Sans',
+            font_body: 'Plus Jakarta Sans',
+            badge: 'Dark Purple × Gold',
+        },
         {
             id: 'arams_master_purple',
             name: 'Arams Luxury Master',
@@ -457,7 +721,7 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
             login_accent: '#C98922',
             font_heading: 'Plus Jakarta Sans',
             font_body: 'Plus Jakarta Sans',
-            badge: 'Official Master',
+            badge: 'Purple Luxury',
         },
         {
             id: 'midnight_sapphire',
@@ -720,6 +984,8 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
                 header_border_color: 'rgba(226, 232, 240, 0.8)',
                 breadcrumb_color: '#64748B',
                 breadcrumb_active_color: '#0F172A',
+                header_search_bg: '',
+                header_search_text: '',
                 card_heading_color: '#1E293B',
                 login_bg_color: defaultPreset.login_bg,
                 login_card_bg: defaultPreset.login_card_bg,
@@ -764,17 +1030,38 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
         toast.info(`Preset Portal "${preset.name}" Dipilih. Klik Simpan untuk menerapkan.`);
     };
 
+    const handleApplyLoginPreset = (preset: (typeof loginPresets)[0]) => {
+        setThemeForm({
+            ...themeForm,
+            login_preset: preset.id,
+            login_bg_color: preset.login_bg_color,
+            login_bg_gradient: preset.login_bg_gradient,
+            login_card_bg: preset.login_card_bg,
+            login_card_bg_gradient: preset.login_card_bg_gradient,
+            login_accent_color: preset.login_accent_color,
+            login_tagline: preset.login_tagline,
+        });
+        toast.info(`Preset Login "${preset.name}" Dipilih. Klik Simpan untuk menerapkan.`);
+    };
+
     const handleSyncPortalWithStudioBrand = () => {
         setPortalForm({
             ...portalForm,
-            portal_primary_accent: themeForm.primary_accent_color,
-            portal_accent_gradient: themeForm.primary_accent_gradient,
+            portal_preset: 'arams_maroon_luxury',
+            portal_primary_accent: themeForm.primary_accent_color || '#4A151B',
+            portal_accent_gradient: themeForm.primary_accent_gradient || 'linear-gradient(135deg, #4A151B 0%, #2E0F15 100%)',
             portal_font_heading: themeForm.font_family_heading,
             portal_font_body: themeForm.font_family_body,
-            portal_nav_bg: themeForm.header_bg_color,
-            portal_nav_text_color: themeForm.header_text_color,
-            portal_nav_border_color: themeForm.header_border_color,
-            portal_heading_color: themeForm.app_heading_color,
+            portal_nav_bg: '#240B10',
+            portal_nav_gradient: 'linear-gradient(180deg, #2E0F15 0%, #200A0E 100%)',
+            portal_nav_text_color: '#FFFFFF',
+            portal_nav_border_color: '#3D141C',
+            portal_hero_bg: '#240B10',
+            portal_hero_gradient: 'linear-gradient(135deg, #2E0F15 0%, #1A070B 100%)',
+            portal_hero_text_color: '#FFFFFF',
+            portal_footer_bg: '#1A070B',
+            portal_footer_text: '#FDA4AF',
+            portal_heading_color: '#240B10',
             portal_text_color: themeForm.app_text_color,
             portal_muted_color: themeForm.app_muted_text_color,
         });
@@ -995,7 +1282,10 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
 
                 <button
                     type="button"
-                    onClick={() => setActiveTab('appearance')}
+                    onClick={() => {
+                        setActiveTab('appearance');
+                        if (previewMode === 'login') setPreviewMode('dashboard');
+                    }}
                     style={activeTab === 'appearance' ? {
                         borderColor: themeForm.primary_accent_color,
                         color: themeForm.primary_accent_color,
@@ -1009,7 +1299,29 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
                     }`}
                 >
                     <Palette className="w-4 h-4" />
-                    <span>Tampilan & Styling Warna</span>
+                    <span>Tampilan Admin</span>
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => {
+                        setActiveTab('login_theme');
+                        setPreviewMode('login');
+                    }}
+                    style={activeTab === 'login_theme' ? {
+                        borderColor: themeForm.primary_accent_color,
+                        color: themeForm.primary_accent_color,
+                    } : {
+                        color: themeForm.app_muted_text_color || undefined,
+                    }}
+                    className={`flex items-center gap-2 pb-3.5 transition-all cursor-pointer whitespace-nowrap ${
+                        activeTab === 'login_theme'
+                            ? 'border-b-2 font-bold'
+                            : 'text-slate-500 hover:opacity-80'
+                    }`}
+                >
+                    <Lock className="w-4 h-4" />
+                    <span>Tampilan Login</span>
                 </button>
 
                 <button
@@ -1028,7 +1340,7 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
                     }`}
                 >
                     <Globe className="w-4 h-4" />
-                    <span>Kustomisasi Portal Klien</span>
+                    <span>Portal Klien</span>
                 </button>
 
                 <button
@@ -1722,1442 +2034,474 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
 
                     {/* Detailed Customizer & Real-time Live Preview */}
                     <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-                        {/* Left Column: Form Customizer (7 cols) */}
+                        {/* Left Column: Form Customizer Admin (7 cols) */}
                         <div className="xl:col-span-7 space-y-6">
-                            <form onSubmit={handleSaveTheme} className="space-y-6">
-                                {/* 1. Sidebar Styling */}
-                                <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
-                                    <div className="border-b border-slate-100 pb-3">
-                                        <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                                            <LayoutDashboard className="w-4 h-4 text-[#C89445]" />
-                                            <span>Kustomisasi Warna Sidebar Navigasi</span>
-                                        </h3>
-                                        <p className="text-xs text-slate-500 mt-0.5">
-                                            Sesuaikan latar belakang sidebar dan warna penanda menu yang sedang aktif.
-                                        </p>
-                                    </div>
+                            <form onSubmit={handleSaveTheme} className="space-y-5">
+                                {/* Three Focused Tabs for Admin (Sidebar, Navbar, Main) */}
+                                <div className="bg-white p-2 rounded-2xl border border-slate-200/80 shadow-xs">
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setAdminSectionTab('sidebar')}
+                                            className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                                                adminSectionTab === 'sidebar'
+                                                    ? 'bg-slate-900 text-white shadow-xs'
+                                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                            }`}
+                                        >
+                                            <PanelLeft className="w-3.5 h-3.5" />
+                                            <span>1. Sidebar Navigasi</span>
+                                        </button>
 
-                                    {/* Sidebar Background Color */}
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <label className="block text-xs font-semibold text-slate-700">
-                                                Warna Latar Sidebar (Sidebar Background)
-                                            </label>
-                                            <span className="text-[10px] text-slate-400 font-mono">
-                                                Hex: {themeForm.sidebar_bg_color}
-                                            </span>
-                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setAdminSectionTab('navbar')}
+                                            className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                                                adminSectionTab === 'navbar'
+                                                    ? 'bg-slate-900 text-white shadow-xs'
+                                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                            }`}
+                                        >
+                                            <Layout className="w-3.5 h-3.5" />
+                                            <span>2. Navbar &amp; Header</span>
+                                        </button>
 
-                                        {/* Labeled Master Palette Role Options */}
-                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                            {[
-                                                { label: 'Deep Purple', hex: '#1C132E', desc: 'Sidebar Utama' },
-                                                { label: 'Primary Dark', hex: '#0E091E', desc: 'Dark Utama' },
-                                                { label: 'Dark Purple', hex: '#100A22', desc: 'Variasi Gelap' },
-                                                { label: 'Purple Surface', hex: '#181129', desc: 'Section Gelap' },
-                                                { label: 'Midnight Navy', hex: '#0A192F', desc: 'Navy Modern' },
-                                                { label: 'Classic Dark', hex: '#0B1527', desc: 'Dark Navy' },
-                                                { label: 'Emerald Dark', hex: '#091B16', desc: 'Pine Deep' },
-                                                { label: 'Slate Gray', hex: '#1E293B', desc: 'Graphite' },
-                                            ].map((item) => (
-                                                <button
-                                                    key={item.hex}
-                                                    type="button"
-                                                    onClick={() =>
-                                                        setThemeForm({ ...themeForm, sidebar_bg_color: item.hex })
-                                                    }
-                                                    className={`p-2 rounded-xl border text-left flex items-center gap-2 transition-all cursor-pointer ${
-                                                        themeForm.sidebar_bg_color.toUpperCase() === item.hex.toUpperCase()
-                                                            ? 'border-[#C98922] bg-[#C98922]/10 shadow-xs ring-1 ring-[#C98922]'
-                                                            : 'border-slate-200 hover:border-slate-300 bg-slate-50/60'
-                                                    }`}
-                                                >
-                                                    <span
-                                                        className="w-4 h-4 rounded-md border border-white/20 shrink-0 shadow-2xs"
-                                                        style={{ backgroundColor: item.hex }}
-                                                    />
-                                                    <div className="min-w-0 flex-1">
-                                                        <span className="block text-[11px] font-bold text-slate-800 truncate">
-                                                            {item.label}
-                                                        </span>
-                                                        <span className="block text-[9px] text-slate-400 font-mono">
-                                                            {item.hex}
-                                                        </span>
-                                                    </div>
-                                                </button>
-                                            ))}
-                                        </div>
-
-                                        {/* Custom Picker */}
-                                        <div className="flex items-center gap-3 pt-1">
-                                            <span className="text-[11px] text-slate-500 font-medium">Custom Color:</span>
-                                            <input
-                                                type="color"
-                                                value={themeForm.sidebar_bg_color}
-                                                onChange={(e) =>
-                                                    setThemeForm({ ...themeForm, sidebar_bg_color: e.target.value })
-                                                }
-                                                className="w-8 h-8 rounded-lg border border-slate-300 p-0.5 cursor-pointer bg-white"
-                                            />
-                                            <input
-                                                type="text"
-                                                value={themeForm.sidebar_bg_color}
-                                                onChange={(e) =>
-                                                    setThemeForm({ ...themeForm, sidebar_bg_color: e.target.value })
-                                                }
-                                                className="w-28 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-semibold text-slate-800"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <GradientBuilder
-                                        label="Gradient Sidebar (Opsional)"
-                                        value={themeForm.sidebar_bg_gradient}
-                                        onChange={(css) => setThemeForm({ ...themeForm, sidebar_bg_gradient: css })}
-                                        presets={[
-                                            { label: 'Purple → Violet', value: 'linear-gradient(160deg, #3D2080 0%, #1A0F3F 100%)' },
-                                            { label: 'Purple → Navy', value: 'linear-gradient(145deg, #2D1B69 0%, #0A0E2A 100%)' },
-                                            { label: 'Dark → Purple', value: 'linear-gradient(180deg, #1C132E 0%, #1A0F3F 100%)' },
-                                            { label: 'Navy → Dark', value: 'linear-gradient(160deg, #0A192F 0%, #0E091E 100%)' },
-                                            { label: 'Midnight → Indigo', value: 'linear-gradient(160deg, #0E091E 0%, #1a1f4e 100%)' },
-                                            { label: 'Forest → Dark', value: 'linear-gradient(160deg, #091B16 0%, #071510 100%)' },
-                                        ]}
-                                    />
-
-                                    {/* Sidebar Active Nav Item Background */}
-                                    <div className="space-y-3 pt-3 border-t border-slate-100">
-                                        <div className="flex items-center justify-between">
-                                            <label className="block text-xs font-semibold text-slate-700">
-                                                Warna Sorotan Menu Aktif (Active Nav Item)
-                                            </label>
-                                            <span className="text-[10px] text-slate-400 font-mono">
-                                                Hex: {themeForm.sidebar_active_bg}
-                                            </span>
-                                        </div>
-
-                                        {/* Labeled Master Palette Role Options */}
-                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                            {[
-                                                { label: 'Champagne Gold', hex: '#C98922', desc: 'Brand CTA' },
-                                                { label: 'Warm Gold', hex: '#CA8A22', desc: 'Hover & Light' },
-                                                { label: 'Classic Gold', hex: '#C89445', desc: 'Champagne' },
-                                                { label: 'Royal Blue', hex: '#2563EB', desc: 'Electric' },
-                                                { label: 'Emerald Pine', hex: '#059669', desc: 'Lush' },
-                                                { label: 'Rose Velvet', hex: '#BE185D', desc: 'Plum' },
-                                                { label: 'Amber Studio', hex: '#D97706', desc: 'Warm' },
-                                                { label: 'Deep Purple', hex: '#1C132E', desc: 'Contrast' },
-                                            ].map((item) => (
-                                                <button
-                                                    key={item.hex}
-                                                    type="button"
-                                                    onClick={() =>
-                                                        setThemeForm({ ...themeForm, sidebar_active_bg: item.hex })
-                                                    }
-                                                    className={`p-2 rounded-xl border text-left flex items-center gap-2 transition-all cursor-pointer ${
-                                                        themeForm.sidebar_active_bg.toUpperCase() === item.hex.toUpperCase()
-                                                            ? 'border-[#C98922] bg-[#C98922]/10 shadow-xs ring-1 ring-[#C98922]'
-                                                            : 'border-slate-200 hover:border-slate-300 bg-slate-50/60'
-                                                    }`}
-                                                >
-                                                    <span
-                                                        className="w-4 h-4 rounded-md border border-white/20 shrink-0 shadow-2xs"
-                                                        style={{ backgroundColor: item.hex }}
-                                                    />
-                                                    <div className="min-w-0 flex-1">
-                                                        <span className="block text-[11px] font-bold text-slate-800 truncate">
-                                                            {item.label}
-                                                        </span>
-                                                        <span className="block text-[9px] text-slate-400 font-mono">
-                                                            {item.hex}
-                                                        </span>
-                                                    </div>
-                                                </button>
-                                            ))}
-                                        </div>
-
-                                        {/* Custom Picker */}
-                                        <div className="flex items-center gap-3 pt-1">
-                                            <span className="text-[11px] text-slate-500 font-medium">Custom Color:</span>
-                                            <input
-                                                type="color"
-                                                value={themeForm.sidebar_active_bg}
-                                                onChange={(e) =>
-                                                    setThemeForm({ ...themeForm, sidebar_active_bg: e.target.value })
-                                                }
-                                                className="w-8 h-8 rounded-lg border border-slate-300 p-0.5 cursor-pointer bg-white"
-                                            />
-                                            <input
-                                                type="text"
-                                                value={themeForm.sidebar_active_bg}
-                                                onChange={(e) =>
-                                                    setThemeForm({ ...themeForm, sidebar_active_bg: e.target.value })
-                                                }
-                                                className="w-28 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-semibold text-slate-800"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <GradientBuilder
-                                        label="Gradient Menu Aktif (Opsional)"
-                                        value={themeForm.sidebar_active_bg_gradient}
-                                        onChange={(css) => setThemeForm({ ...themeForm, sidebar_active_bg_gradient: css })}
-                                        presets={[
-                                            { label: 'Gold → Amber', value: 'linear-gradient(135deg, #C98922 0%, #F59E0B 100%)' },
-                                            { label: 'Gold → Copper', value: 'linear-gradient(135deg, #C98922 0%, #9E6D24 100%)' },
-                                            { label: 'Purple → Violet', value: 'linear-gradient(135deg, #7C3AED 0%, #4C1D95 100%)' },
-                                            { label: 'Blue → Indigo', value: 'linear-gradient(135deg, #2563EB 0%, #4F46E5 100%)' },
-                                            { label: 'Rose → Pink', value: 'linear-gradient(135deg, #E11D48 0%, #BE185D 100%)' },
-                                            { label: 'Emerald → Teal', value: 'linear-gradient(135deg, #059669 0%, #0D9488 100%)' },
-                                        ]}
-                                    />
-
-                                    <div className="space-y-2 pt-3 border-t border-slate-100">
-                                        <label className="block text-xs font-semibold text-slate-700">
-                                            Warna Teks Menu Aktif
-                                        </label>
-                                        <div className="flex items-center gap-2.5 flex-wrap">
-                                            {[
-                                                { label: 'Putih Bersih', value: '#FFFFFF', preview: '#FFFFFF' },
-                                                { label: 'Champagne Gold', value: '#C98922', preview: '#C98922' },
-                                                { label: 'Warm Gold', value: '#CA8A22', preview: '#CA8A22' },
-                                                { label: 'Soft Ivory', value: '#F8F6F5', preview: '#F8F6F5' },
-                                                { label: 'Dark Navy', value: '#1C132E', preview: '#1C132E' },
-                                            ].map((opt) => (
-                                                <button
-                                                    key={opt.value}
-                                                    type="button"
-                                                    onClick={() =>
-                                                        setThemeForm({ ...themeForm, sidebar_active_text: opt.value })
-                                                    }
-                                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all cursor-pointer ${
-                                                        themeForm.sidebar_active_text.toUpperCase() === opt.value.toUpperCase()
-                                                            ? 'border-[#C98922] bg-[#C98922]/10 text-slate-900 shadow-xs'
-                                                            : 'border-slate-200 text-slate-600 hover:border-slate-300 bg-white'
-                                                    }`}
-                                                >
-                                                    <span
-                                                        className="w-3 h-3 rounded-full border border-slate-300"
-                                                        style={{ backgroundColor: opt.preview }}
-                                                    />
-                                                    <span>{opt.label}</span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Sidebar Subtitle Text */}
-                                    <div className="space-y-2 pt-3 border-t border-slate-100">
-                                        <label className="block text-xs font-semibold text-slate-700">
-                                            Teks Sub-Judul Sidebar (Subtitle / Monogram Tagline)
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={themeForm.company_subtitle}
-                                            onChange={(e) =>
-                                                setThemeForm({ ...themeForm, company_subtitle: e.target.value })
-                                            }
-                                            className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 bg-white focus:border-[#C98922] focus:ring-2 focus:ring-[#C98922]/20 outline-hidden transition-all"
-                                            placeholder="Contoh: STUDIO & CINEMA / PHOTOGRAPHY SYSTEM / PICTURES"
-                                        />
-                                        <span className="text-[10px] text-slate-400 block">
-                                            Teks kecil berwarna emas yang tampil tepat di bawah nama brand pada sidebar.
-                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setAdminSectionTab('main')}
+                                            className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                                                adminSectionTab === 'main'
+                                                    ? 'bg-slate-900 text-white shadow-xs'
+                                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                            }`}
+                                        >
+                                            <Layers className="w-3.5 h-3.5" />
+                                            <span>3. Main Content</span>
+                                        </button>
                                     </div>
                                 </div>
 
-                                {/* 2. Brand Accent & Page Background */}
-                                <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
-                                    <div className="border-b border-slate-100 pb-3">
-                                        <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                                            <Paintbrush className="w-4 h-4 text-[#C98922]" />
-                                            <span>Warna Aksen Brand & Latar Belakang Halaman</span>
-                                        </h3>
-                                        <p className="text-xs text-slate-500 mt-0.5">
-                                            Tentukan warna tombol utama, badge status, dan nuansa latar dashboard.
-                                        </p>
-                                    </div>
+                                {/* 1. SIDEBAR TAB */}
+                                {adminSectionTab === 'sidebar' && (
+                                    <div className="space-y-4 animate-in fade-in duration-150">
+                                        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+                                            <div className="border-b border-slate-100 pb-2.5">
+                                                <span className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                                                    <PanelLeft className="w-4 h-4 text-[#C89445]" />
+                                                    <span>Latar Belakang Sidebar</span>
+                                                </span>
+                                                <span className="text-[11px] text-slate-400">
+                                                    Atur warna latar belakang menu navigasi kiri studio
+                                                </span>
+                                            </div>
 
-                                    {/* Primary Accent Color */}
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <label className="block text-xs font-semibold text-slate-700">
-                                                Warna Aksen Utama (Tombol & Badge)
-                                            </label>
-                                            <span className="text-[10px] text-slate-400 font-mono">
-                                                Hex: {themeForm.primary_accent_color}
-                                            </span>
-                                        </div>
-
-                                        {/* Labeled Master Palette Role Options */}
-                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                            {[
-                                                { label: 'Champagne Gold', hex: '#C98922', desc: 'Brand CTA' },
-                                                { label: 'Warm Gold', hex: '#CA8A22', desc: 'Highlight' },
-                                                { label: 'Classic Gold', hex: '#C89445', desc: 'Champagne' },
-                                                { label: 'Royal Blue', hex: '#2563EB', desc: 'Electric' },
-                                                { label: 'Emerald Pine', hex: '#10B981', desc: 'Nature' },
-                                                { label: 'Rose Crimson', hex: '#E11D48', desc: 'Plum' },
-                                                { label: 'Amber Studio', hex: '#F59E0B', desc: 'Warm' },
-                                                { label: 'Indigo Violet', hex: '#6366F1', desc: 'Tech' },
-                                            ].map((item) => (
-                                                <button
-                                                    key={item.hex}
-                                                    type="button"
-                                                    onClick={() =>
-                                                        setThemeForm({ ...themeForm, primary_accent_color: item.hex })
-                                                    }
-                                                    className={`p-2 rounded-xl border text-left flex items-center gap-2 transition-all cursor-pointer ${
-                                                        themeForm.primary_accent_color.toUpperCase() === item.hex.toUpperCase()
-                                                            ? 'border-[#C98922] bg-[#C98922]/10 shadow-xs ring-1 ring-[#C98922]'
-                                                            : 'border-slate-200 hover:border-slate-300 bg-slate-50/60'
-                                                    }`}
-                                                >
-                                                    <span
-                                                        className="w-4 h-4 rounded-md border border-white/20 shrink-0 shadow-2xs"
-                                                        style={{ backgroundColor: item.hex }}
-                                                    />
-                                                    <div className="min-w-0 flex-1">
-                                                        <span className="block text-[11px] font-bold text-slate-800 truncate">
-                                                            {item.label}
-                                                        </span>
-                                                        <span className="block text-[9px] text-slate-400 font-mono">
-                                                            {item.hex}
-                                                        </span>
-                                                    </div>
-                                                </button>
-                                            ))}
-                                        </div>
-
-                                        {/* Custom Picker */}
-                                        <div className="flex items-center gap-3 pt-1">
-                                            <span className="text-[11px] text-slate-500 font-medium">Custom Color:</span>
-                                            <input
-                                                type="color"
-                                                value={themeForm.primary_accent_color}
-                                                onChange={(e) =>
-                                                    setThemeForm({ ...themeForm, primary_accent_color: e.target.value })
-                                                }
-                                                className="w-8 h-8 rounded-lg border border-slate-300 p-0.5 cursor-pointer bg-white"
+                                            <ColorSettingRow
+                                                label="Warna Latar Sidebar (Solid)"
+                                                description="Warna dasar latar belakang sidebar menu kiri"
+                                                value={themeForm.sidebar_bg_color}
+                                                onChange={(val) => setThemeForm({ ...themeForm, sidebar_bg_color: val })}
+                                                presets={[
+                                                    { label: 'Deep Purple', hex: '#1C132E' },
+                                                    { label: 'Primary Dark', hex: '#0E091E' },
+                                                    { label: 'Dark Navy', hex: '#0A192F' },
+                                                    { label: 'Charcoal', hex: '#0B1527' },
+                                                    { label: 'Pure White', hex: '#FFFFFF' },
+                                                ]}
                                             />
-                                            <input
-                                                type="text"
-                                                value={themeForm.primary_accent_color}
-                                                onChange={(e) =>
-                                                    setThemeForm({ ...themeForm, primary_accent_color: e.target.value })
-                                                }
-                                                className="w-28 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-semibold text-slate-800"
+
+                                            <GradientBuilder
+                                                label="Gradient Sidebar (Opsional)"
+                                                value={themeForm.sidebar_bg_gradient}
+                                                onChange={(css) => setThemeForm({ ...themeForm, sidebar_bg_gradient: css })}
+                                                presets={[
+                                                    { label: 'Deep Purple Velvet', value: 'linear-gradient(135deg, #1C132E 0%, #2D1B69 100%)' },
+                                                    { label: 'Midnight Obsidian', value: 'linear-gradient(180deg, #0E091E 0%, #1A0F3F 100%)' },
+                                                    { label: 'Dark Emerald', value: 'linear-gradient(135deg, #091B16 0%, #112F27 100%)' },
+                                                ]}
                                             />
-                                        </div>
-                                    </div>
 
-                                    <GradientBuilder
-                                        label="Gradient Aksen Tombol (Opsional)"
-                                        value={themeForm.primary_accent_gradient}
-                                        onChange={(css) => setThemeForm({ ...themeForm, primary_accent_gradient: css })}
-                                        presets={[
-                                            { label: 'Gold → Amber', value: 'linear-gradient(135deg, #C98922 0%, #F59E0B 100%)' },
-                                            { label: 'Gold → Orange', value: 'linear-gradient(135deg, #C98922 0%, #EA580C 100%)' },
-                                            { label: 'Purple → Violet', value: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)' },
-                                            { label: 'Blue → Purple', value: 'linear-gradient(135deg, #2563EB 0%, #7C3AED 100%)' },
-                                            { label: 'Emerald → Teal', value: 'linear-gradient(135deg, #059669 0%, #0D9488 100%)' },
-                                            { label: 'Rose → Pink', value: 'linear-gradient(135deg, #E11D48 0%, #DB2777 100%)' },
-                                        ]}
-                                    />
-
-                                    {/* Page Background */}
-                                    <div className="space-y-3 pt-3 border-t border-slate-100">
-                                        <div className="flex items-center justify-between">
-                                            <label className="block text-xs font-semibold text-slate-700">
-                                                Nuansa Latar Belakang Halaman (App Surface Background)
-                                            </label>
-                                            <span className="text-[10px] text-slate-400 font-mono">
-                                                Hex: {themeForm.app_bg_color}
-                                            </span>
-                                        </div>
-
-                                        {/* Grid Cards for Quick Selection */}
-                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                                            {[
-                                                { label: 'Soft Ivory', value: '#F8F6F5', desc: 'Surface Latar' },
-                                                { label: 'Warm White', value: '#F7F5F5', desc: 'Card Utama' },
-                                                { label: 'Soft Gray', value: '#EDEAE8', desc: 'Border Netral' },
-                                                { label: 'Crisp Slate', value: '#F8FAFC', desc: 'Clean Modern' },
-                                                { label: 'Primary Dark', value: '#0E091E', desc: 'Gelap Midnight' },
-                                                { label: 'Deep Purple', value: '#1C132E', desc: 'Gelap Purple' },
-                                                { label: 'Warm Cream', value: '#FAF8F5', desc: 'Klasik Hangat' },
-                                                { label: 'Pure White', value: '#FFFFFF', desc: 'Putih Polos' },
-                                            ].map((opt) => (
-                                                <div
-                                                    key={opt.value}
-                                                    onClick={() =>
-                                                        setThemeForm({ ...themeForm, app_bg_color: opt.value })
-                                                    }
-                                                    className={`p-2.5 rounded-xl border-2 transition-all cursor-pointer ${
-                                                        themeForm.app_bg_color.toUpperCase() === opt.value.toUpperCase()
-                                                            ? 'border-[#C98922] bg-white shadow-sm ring-1 ring-[#C98922]/20'
-                                                            : 'border-slate-200 hover:border-slate-300 bg-slate-50/50'
-                                                    }`}
-                                                >
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <div
-                                                            className="w-3.5 h-3.5 rounded-full border border-slate-300 shadow-2xs shrink-0"
-                                                            style={{ backgroundColor: opt.value }}
-                                                        />
-                                                        <span className="font-bold text-[11px] text-slate-900 truncate">
-                                                            {opt.label}
-                                                        </span>
-                                                    </div>
-                                                    <span className="text-[9px] text-slate-400 block truncate">
-                                                        {opt.desc} ({opt.value})
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        {/* Custom Color Palette Picker & Hex Input */}
-                                        <div className="flex items-center gap-3 pt-1">
-                                            <span className="text-[11px] text-slate-500 font-medium">Custom Palette Picker:</span>
-                                            <input
-                                                type="color"
-                                                value={themeForm.app_bg_color}
-                                                onChange={(e) =>
-                                                    setThemeForm({ ...themeForm, app_bg_color: e.target.value })
-                                                }
-                                                className="w-8 h-8 rounded-lg border border-slate-300 p-0.5 cursor-pointer bg-white"
-                                            />
-                                            <input
-                                                type="text"
-                                                value={themeForm.app_bg_color}
-                                                onChange={(e) =>
-                                                    setThemeForm({ ...themeForm, app_bg_color: e.target.value })
-                                                }
-                                                className="w-28 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-semibold text-slate-800"
-                                                placeholder="#F8F6F5"
-                                            />
-                                            {/* Quick Dot Swatches */}
-                                            <div className="flex items-center gap-1.5 ml-auto flex-wrap">
-                                                {['#F8F6F5', '#F7F5F5', '#EDEAE8', '#0E091E', '#1C132E', '#F8FAFC', '#FAF8F5', '#FFFFFF'].map((c) => (
-                                                    <button
-                                                        key={c}
-                                                        type="button"
-                                                        onClick={() => setThemeForm({ ...themeForm, app_bg_color: c })}
-                                                        style={{ backgroundColor: c }}
-                                                        title={c}
-                                                        className={`w-5 h-5 rounded-md border transition-transform hover:scale-110 ${
-                                                            themeForm.app_bg_color.toUpperCase() === c.toUpperCase()
-                                                                ? 'border-[#C98922] ring-2 ring-[#C98922]/40'
-                                                                : 'border-slate-300'
-                                                        }`}
-                                                    />
-                                                ))}
+                                            <div className="pt-2">
+                                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                    Subtitle Brand di Bawah Logo
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={themeForm.company_subtitle}
+                                                    onChange={(e) => setThemeForm({ ...themeForm, company_subtitle: e.target.value })}
+                                                    placeholder="STUDIO & CINEMA"
+                                                    className="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 bg-white focus:outline-hidden focus:border-indigo-500"
+                                                />
                                             </div>
                                         </div>
+
+                                        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+                                            <div className="border-b border-slate-100 pb-2.5">
+                                                <span className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                                                    <CheckCircle2 className="w-4 h-4 text-[#C89445]" />
+                                                    <span>Menu Aktif &amp; Teks Navigasi</span>
+                                                </span>
+                                                <span className="text-[11px] text-slate-400">
+                                                    Warna sorotan menu yang sedang dibuka dan teks menu biasa
+                                                </span>
+                                            </div>
+
+                                            <ColorSettingRow
+                                                label="Highlight Menu Aktif (Background)"
+                                                description="Warna blok sorotan tombol menu yang sedang aktif"
+                                                value={themeForm.sidebar_active_bg}
+                                                onChange={(val) => setThemeForm({ ...themeForm, sidebar_active_bg: val })}
+                                                presets={[
+                                                    { label: 'Champagne Gold', hex: '#C98922' },
+                                                    { label: 'Warm Gold', hex: '#CA8A22' },
+                                                    { label: 'Sapphire Blue', hex: '#3B82F6' },
+                                                    { label: 'Emerald Green', hex: '#10B981' },
+                                                    { label: 'Royal Violet', hex: '#8B5CF6' },
+                                                ]}
+                                            />
+
+                                            <ColorSettingRow
+                                                label="Teks Menu Aktif"
+                                                description="Warna tulisan dan ikon menu yang sedang aktif"
+                                                value={themeForm.sidebar_active_text}
+                                                onChange={(val) => setThemeForm({ ...themeForm, sidebar_active_text: val })}
+                                                presets={[
+                                                    { label: 'Pure White', hex: '#FFFFFF' },
+                                                    { label: 'Ivory Soft', hex: '#FDF8EE' },
+                                                    { label: 'Dark Charcoal', hex: '#0F172A' },
+                                                ]}
+                                            />
+
+                                            <ColorSettingRow
+                                                label="Teks Menu Biasa (Inaktif)"
+                                                description="Warna tulisan dan ikon menu saat tidak diklik"
+                                                value={themeForm.sidebar_text_color}
+                                                onChange={(val) => setThemeForm({ ...themeForm, sidebar_text_color: val })}
+                                                presets={[
+                                                    { label: 'Light Slate', hex: '#94A3B8' },
+                                                    { label: 'Silver Gray', hex: '#CBD5E1' },
+                                                    { label: 'Muted Slate', hex: '#64748B' },
+                                                    { label: 'Dark Slate', hex: '#475569' },
+                                                ]}
+                                            />
+                                        </div>
                                     </div>
+                                )}
 
-                                    <GradientBuilder
-                                        label="Gradient Latar Utama App (Opsional)"
-                                        value={themeForm.app_bg_gradient}
-                                        onChange={(css) => setThemeForm({ ...themeForm, app_bg_gradient: css })}
-                                        presets={[
-                                            { label: 'Ivory → Lavender', value: 'linear-gradient(135deg, #F8F6F5 0%, #EDE8FF 100%)' },
-                                            { label: 'White → Slate', value: 'linear-gradient(135deg, #FFFFFF 0%, #F1F5F9 100%)' },
-                                            { label: 'Cream → Peach', value: 'linear-gradient(135deg, #FEF9F0 0%, #FFF7ED 100%)' },
-                                            { label: 'Mint → White', value: 'linear-gradient(135deg, #F0FDF4 0%, #FAFAFA 100%)' },
-                                            { label: 'Rose → Ivory', value: 'linear-gradient(135deg, #FFF1F2 0%, #F8F6F5 100%)' },
-                                            { label: 'Sky → White', value: 'linear-gradient(135deg, #F0F9FF 0%, #FAFAFA 100%)' },
-                                        ]}
-                                    />
-                                </div>
+                                {/* 2. NAVBAR TAB */}
+                                {adminSectionTab === 'navbar' && (
+                                    <div className="space-y-4 animate-in fade-in duration-150">
+                                        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+                                            <div className="border-b border-slate-100 pb-2.5">
+                                                <span className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                                                    <Layout className="w-4 h-4 text-[#C89445]" />
+                                                    <span>Latar Belakang &amp; Border Navbar</span>
+                                                </span>
+                                                <span className="text-[11px] text-slate-400">
+                                                    Kustomisasi header atas dashboard studio
+                                                </span>
+                                            </div>
 
-                                {/* 3. Kustomisasi Tampilan & Warna Halaman Login / Auth */}
-                                <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
-                                    <div className="border-b border-slate-100 pb-3">
-                                        <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                                            <Lock className="w-4 h-4 text-[#C98922]" />
-                                            <span>Kustomisasi Tampilan & Warna Halaman Login / Autentikasi</span>
-                                        </h3>
-                                        <p className="text-xs text-slate-500 mt-0.5">
-                                            Atur warna latar belakang, kotak formulir login, warna tombol masuk, dan teks monogram khusus halaman login.
-                                        </p>
-                                    </div>
+                                            <ColorSettingRow
+                                                label="Background Navbar Atas"
+                                                description="Warna latar belakang bar navigasi bagian atas"
+                                                value={themeForm.header_bg_color}
+                                                onChange={(val) => setThemeForm({ ...themeForm, header_bg_color: val, header_bg_gradient: '' })}
+                                                presets={[
+                                                    { label: 'Clean White', hex: '#FFFFFF' },
+                                                    { label: 'Soft Ivory', hex: '#F8F6F5' },
+                                                    { label: 'Deep Purple', hex: '#1C132E' },
+                                                    { label: 'Sapphire Navy', hex: '#0A192F' },
+                                                    { label: 'Charcoal Dark', hex: '#0E091E' },
+                                                ]}
+                                            />
 
-                                    {/* 1. Login Background Color */}
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <label className="block text-xs font-semibold text-slate-700">
-                                                Warna Latar Belakang Login (Login Page Background)
-                                            </label>
-                                            <span className="text-[10px] text-slate-400 font-mono">
-                                                Hex: {themeForm.login_bg_color}
-                                            </span>
+                                            <GradientBuilder
+                                                label="Gradient Khusus Navbar (Opsional)"
+                                                value={themeForm.header_bg_gradient}
+                                                onChange={(css) => setThemeForm({ ...themeForm, header_bg_gradient: css })}
+                                                presets={[
+                                                    { label: 'Deep Purple Navbar', value: 'linear-gradient(135deg, #1C132E 0%, #2D1B69 100%)' },
+                                                    { label: 'Sapphire Navy Navbar', value: 'linear-gradient(135deg, #0A192F 0%, #1E3A8A 100%)' },
+                                                    { label: 'Clean White Soft', value: 'linear-gradient(135deg, #FFFFFF 0%, #F1F5F9 100%)' },
+                                                ]}
+                                            />
+
+                                            <ColorSettingRow
+                                                label="Warna Teks &amp; Ikon Header"
+                                                description="Warna teks notifikasi, pencarian, dan ikon pada navbar"
+                                                value={themeForm.header_text_color}
+                                                onChange={(val) => setThemeForm({ ...themeForm, header_text_color: val })}
+                                                presets={[
+                                                    { label: 'Dark Slate', hex: '#0F172A' },
+                                                    { label: 'Charcoal', hex: '#1E293B' },
+                                                    { label: 'Pure White', hex: '#FFFFFF' },
+                                                    { label: 'Champagne Gold', hex: '#E6CA85' },
+                                                ]}
+                                            />
+
+                                            <ColorSettingRow
+                                                label="Garis Pembatas Bawah (Border)"
+                                                description="Warna garis separator pembatas navbar dengan konten"
+                                                value={themeForm.header_border_color}
+                                                onChange={(val) => setThemeForm({ ...themeForm, header_border_color: val })}
+                                                presets={[
+                                                    { label: 'Light Border', hex: '#E2E8F0' },
+                                                    { label: 'Soft Silver', hex: '#CBD5E1' },
+                                                    { label: 'Gold Shimmer', hex: '#C98922' },
+                                                ]}
+                                            />
                                         </div>
 
-                                        {/* Grid Cards for Quick Selection */}
-                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                                            {[
-                                                { label: 'Master Purple', value: '#0E091E', desc: 'Deep Purple' },
-                                                { label: 'Midnight Navy', value: '#070D18', desc: 'Luxury Dark' },
-                                                { label: 'Sapphire Navy', value: '#0A192F', desc: 'Royal Navy' },
-                                                { label: 'Emerald Forest', value: '#06120E', desc: 'Deep Pine' },
-                                                { label: 'Royal Velvet', value: '#140912', desc: 'Imperial Plum' },
-                                                { label: 'Slate Charcoal', value: '#0F172A', desc: 'Modern Slate' },
-                                                { label: 'Soft Ivory', value: '#F8F6F5', desc: 'Clean Ivory' },
-                                                { label: 'Pure White', value: '#FFFFFF', desc: 'Terang Minimal' },
-                                            ].map((opt) => (
-                                                <div
-                                                    key={opt.value}
-                                                    onClick={() =>
-                                                        setThemeForm({ ...themeForm, login_bg_color: opt.value })
-                                                    }
-                                                    className={`p-2.5 rounded-xl border-2 transition-all cursor-pointer ${
-                                                        themeForm.login_bg_color.toUpperCase() === opt.value.toUpperCase()
-                                                            ? 'border-[#C98922] bg-white shadow-sm ring-1 ring-[#C98922]/20'
-                                                            : 'border-slate-200 hover:border-slate-300 bg-slate-50/50'
-                                                    }`}
-                                                >
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <div
-                                                            className="w-3.5 h-3.5 rounded-full border border-slate-300 shadow-2xs shrink-0"
-                                                            style={{ backgroundColor: opt.value }}
-                                                        />
-                                                        <span className="font-bold text-[11px] text-slate-900 truncate">
-                                                            {opt.label}
-                                                        </span>
-                                                    </div>
-                                                    <span className="text-[9px] text-slate-400 block truncate">
-                                                        {opt.desc} ({opt.value})
-                                                    </span>
+                                        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+                                            <div className="border-b border-slate-100 pb-2.5">
+                                                <span className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                                                    <SlidersHorizontal className="w-4 h-4 text-[#C89445]" />
+                                                    <span>Breadcrumb Navigasi &amp; Subtitle Header</span>
+                                                </span>
+                                                <span className="text-[11px] text-slate-400">
+                                                    Jejak lokasi halaman di bawah judul serta teks keterangan role akun di header
+                                                </span>
+                                            </div>
+
+                                            <ColorSettingRow
+                                                label="Warna Breadcrumb Normal &amp; Role Akun"
+                                                description="Warna link navigasi induk (Dashboard) dan teks role (Owner)"
+                                                value={themeForm.breadcrumb_color}
+                                                onChange={(val) => setThemeForm({ ...themeForm, breadcrumb_color: val })}
+                                                presets={[
+                                                    { label: 'Champagne Gold', hex: '#C98922' },
+                                                    { label: 'Muted Gold', hex: '#D4AF37' },
+                                                    { label: 'Silver Light', hex: '#CBD5E1' },
+                                                    { label: 'Slate Muted', hex: '#94A3B8' },
+                                                    { label: 'Pure White', hex: '#FFFFFF' },
+                                                ]}
+                                            />
+
+                                            <ColorSettingRow
+                                                label="Warna Breadcrumb Halaman Aktif"
+                                                description="Warna teks penanda halaman yang sedang dibuka (Settings)"
+                                                value={themeForm.breadcrumb_active_color}
+                                                onChange={(val) => setThemeForm({ ...themeForm, breadcrumb_active_color: val })}
+                                                presets={[
+                                                    { label: 'Pure White', hex: '#FFFFFF' },
+                                                    { label: 'Champagne Gold', hex: '#E6CA85' },
+                                                    { label: 'Amber Gold', hex: '#F59E0B' },
+                                                    { label: 'Dark Slate', hex: '#0F172A' },
+                                                    { label: 'Charcoal', hex: '#1E293B' },
+                                                ]}
+                                            />
+                                        </div>
+
+                                        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+                                            <div className="border-b border-slate-100 pb-2.5">
+                                                <span className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                                                    <Search className="w-4 h-4 text-[#C89445]" />
+                                                    <span>Bilah Pencarian Header (Search Bar)</span>
+                                                </span>
+                                                <span className="text-[11px] text-slate-400">
+                                                    Kustomisasi warna background dan teks kotak input pencarian global di navbar
+                                                </span>
+                                            </div>
+
+                                            <ColorSettingRow
+                                                label="Warna Background Kotak Search"
+                                                description="Warna latar belakang pil search bar (kosongkan untuk auto-adaptif)"
+                                                value={themeForm.header_search_bg}
+                                                onChange={(val) => setThemeForm({ ...themeForm, header_search_bg: val })}
+                                                presets={[
+                                                    { label: 'Transparan Mewah', hex: 'rgba(255, 255, 255, 0.12)' },
+                                                    { label: 'Putih Bersih', hex: '#FFFFFF' },
+                                                    { label: 'Abu Lembut', hex: '#F1F5F9' },
+                                                    { label: 'Dark Surface', hex: '#181129' },
+                                                    { label: 'Dark Obsidian', hex: '#0E091E' },
+                                                ]}
+                                            />
+
+                                            <ColorSettingRow
+                                                label="Warna Teks &amp; Placeholder Search"
+                                                description="Warna teks saat mengetik dan ikon pencarian di navbar"
+                                                value={themeForm.header_search_text}
+                                                onChange={(val) => setThemeForm({ ...themeForm, header_search_text: val })}
+                                                presets={[
+                                                    { label: 'Pure White', hex: '#FFFFFF' },
+                                                    { label: 'Champagne Gold', hex: '#E6CA85' },
+                                                    { label: 'Silver Muted', hex: '#CBD5E1' },
+                                                    { label: 'Dark Slate', hex: '#0F172A' },
+                                                ]}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 3. MAIN CONTENT TAB */}
+                                {adminSectionTab === 'main' && (
+                                    <div className="space-y-4 animate-in fade-in duration-150">
+                                        {/* Background Canvas & Brand Accent */}
+                                        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+                                            <div className="border-b border-slate-100 pb-2.5">
+                                                <span className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                                                    <Layers className="w-4 h-4 text-[#C89445]" />
+                                                    <span>Latar Aplikasi &amp; Aksen Brand Utama</span>
+                                                </span>
+                                                <span className="text-[11px] text-slate-400">
+                                                    Latar belakang kanvas aplikasi dan warna tombol utama (CTA)
+                                                </span>
+                                            </div>
+
+                                            <ColorSettingRow
+                                                label="Latar Belakang Aplikasi (Canvas)"
+                                                description="Warna dasar seluruh halaman admin di balik kartu-kartu"
+                                                value={themeForm.app_bg_color}
+                                                onChange={(val) => setThemeForm({ ...themeForm, app_bg_color: val, app_bg_gradient: '' })}
+                                                presets={[
+                                                    { label: 'Soft Ivory', hex: '#F8F6F5' },
+                                                    { label: 'Clean Slate', hex: '#F8FAFC' },
+                                                    { label: 'Cool Gray', hex: '#F1F5F9' },
+                                                    { label: 'Pure White', hex: '#FFFFFF' },
+                                                    { label: 'Obsidian Dark', hex: '#0E091E' },
+                                                ]}
+                                            />
+
+                                            <GradientBuilder
+                                                label="Gradient Kanvas Utama (Opsional)"
+                                                value={themeForm.app_bg_gradient}
+                                                onChange={(css) => setThemeForm({ ...themeForm, app_bg_gradient: css })}
+                                                presets={[
+                                                    { label: 'Warm Studio Ivory', value: 'linear-gradient(135deg, #F8F6F5 0%, #EDEAE8 100%)' },
+                                                    { label: 'Subtle Slate Glow', value: 'linear-gradient(135deg, #F8FAFC 0%, #EEF2F6 100%)' },
+                                                    { label: 'Deep Dark Canvas', value: 'linear-gradient(135deg, #0E091E 0%, #181129 100%)' },
+                                                ]}
+                                            />
+
+                                            <ColorSettingRow
+                                                label="Warna Aksen Brand / Tombol Utama (CTA)"
+                                                description="Warna tombol simpan, badge status aktif, tab aktif, dan ring fokus"
+                                                value={themeForm.primary_accent_color}
+                                                onChange={(val) => setThemeForm({ ...themeForm, primary_accent_color: val })}
+                                                presets={[
+                                                    { label: 'Champagne Gold', hex: '#C98922' },
+                                                    { label: 'Warm Gold', hex: '#CA8A22' },
+                                                    { label: 'Sapphire Blue', hex: '#3B82F6' },
+                                                    { label: 'Emerald Green', hex: '#10B981' },
+                                                    { label: 'Royal Violet', hex: '#8B5CF6' },
+                                                    { label: 'Rose Crimson', hex: '#E11D48' },
+                                                ]}
+                                            />
+
+                                            <GradientBuilder
+                                                label="Gradient Tombol Utama (Opsional)"
+                                                value={themeForm.primary_accent_gradient}
+                                                onChange={(css) => setThemeForm({ ...themeForm, primary_accent_gradient: css })}
+                                                presets={[
+                                                    { label: 'Arams Royal Gold', value: 'linear-gradient(135deg, #E6CA85 0%, #C98922 50%, #9E6D24 100%)' },
+                                                    { label: 'Vibrant Indigo', value: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)' },
+                                                    { label: 'Emerald Sunset', value: 'linear-gradient(135deg, #10B981 0%, #059669 100%)' },
+                                                ]}
+                                            />
+                                        </div>
+
+                                        {/* Tipografi & Hirarki Teks Terpadu */}
+                                        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+                                            <div className="border-b border-slate-100 pb-2.5">
+                                                <span className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                                                    <Type className="w-4 h-4 text-[#C89445]" />
+                                                    <span>Tipografi &amp; Warna Teks Terpadu</span>
+                                                </span>
+                                                <span className="text-[11px] text-slate-400">
+                                                    Mengatur warna judul (title), isi tabel (tbody), header kolom (thead), dan subtitle dalam satu kesatuan
+                                                </span>
+                                            </div>
+
+                                            {/* Font selection */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2 border-b border-slate-100">
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                        Font Judul &amp; Heading
+                                                    </label>
+                                                    <select
+                                                        value={themeForm.font_family_heading}
+                                                        onChange={(e) => setThemeForm({ ...themeForm, font_family_heading: e.target.value })}
+                                                        className="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 bg-white"
+                                                    >
+                                                        {['Plus Jakarta Sans', 'Inter', 'Outfit', 'Playfair Display', 'Cinzel', 'Poppins'].map((f) => (
+                                                            <option key={f} value={f}>{f}</option>
+                                                        ))}
+                                                    </select>
                                                 </div>
-                                            ))}
-                                        </div>
-
-                                        {/* Custom Picker & Hex Input */}
-                                        <div className="flex items-center gap-3 pt-1">
-                                            <span className="text-[11px] text-slate-500 font-medium">Custom Color:</span>
-                                            <input
-                                                type="color"
-                                                value={themeForm.login_bg_color}
-                                                onChange={(e) =>
-                                                    setThemeForm({ ...themeForm, login_bg_color: e.target.value })
-                                                }
-                                                className="w-8 h-8 rounded-lg border border-slate-300 p-0.5 cursor-pointer bg-white"
-                                            />
-                                            <input
-                                                type="text"
-                                                value={themeForm.login_bg_color}
-                                                onChange={(e) =>
-                                                    setThemeForm({ ...themeForm, login_bg_color: e.target.value })
-                                                }
-                                                className="w-28 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-semibold text-slate-800"
-                                                placeholder="#0E091E"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <GradientBuilder
-                                        label="Gradient Latar Login (Opsional)"
-                                        value={themeForm.login_bg_gradient}
-                                        onChange={(css) => setThemeForm({ ...themeForm, login_bg_gradient: css })}
-                                        presets={[
-                                            { label: 'Deep Purple → Black', value: 'linear-gradient(145deg, #2D1B69 0%, #0E091E 100%)' },
-                                            { label: 'Navy → Dark', value: 'linear-gradient(145deg, #0A192F 0%, #0E091E 100%)' },
-                                            { label: 'Midnight → Indigo', value: 'linear-gradient(145deg, #0E091E 0%, #1a1f4e 100%)' },
-                                            { label: 'Forest → Black', value: 'linear-gradient(145deg, #091B16 0%, #050A07 100%)' },
-                                            { label: 'Slate → Dark', value: 'linear-gradient(145deg, #1E293B 0%, #0F172A 100%)' },
-                                            { label: 'Charcoal → Dark', value: 'linear-gradient(145deg, #27272A 0%, #09090B 100%)' },
-                                        ]}
-                                    />
-
-                                    {/* 2. Login Card / Form Box Background */}
-                                    <div className="space-y-3 pt-3 border-t border-slate-100">
-                                        <div className="flex items-center justify-between">
-                                            <label className="block text-xs font-semibold text-slate-700">
-                                                Warna Kotak Form Login (Login Card Surface)
-                                            </label>
-                                            <span className="text-[10px] text-slate-400 font-mono">
-                                                Hex: {themeForm.login_card_bg}
-                                            </span>
-                                        </div>
-
-                                        {/* Grid Cards for Quick Selection */}
-                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                                            {[
-                                                { label: 'Surface Purple', value: '#1C132E', desc: 'Dark Purple' },
-                                                { label: 'Navy Card', value: '#0D1627', desc: 'Dark Navy' },
-                                                { label: 'Slate Card', value: '#1E293B', desc: 'Tech Slate' },
-                                                { label: 'Emerald Card', value: '#091B16', desc: 'Pine Card' },
-                                                { label: 'Velvet Card', value: '#1B0F23', desc: 'Plum Card' },
-                                                { label: 'Zinc Dark', value: '#18181B', desc: 'Dark Zinc' },
-                                                { label: 'Soft Ivory Card', value: '#F7F5F5', desc: 'Light Card' },
-                                                { label: 'Pure White Card', value: '#FFFFFF', desc: 'Clean White' },
-                                            ].map((opt) => (
-                                                <div
-                                                    key={opt.value}
-                                                    onClick={() =>
-                                                        setThemeForm({ ...themeForm, login_card_bg: opt.value })
-                                                    }
-                                                    className={`p-2.5 rounded-xl border-2 transition-all cursor-pointer ${
-                                                        themeForm.login_card_bg.toUpperCase() === opt.value.toUpperCase()
-                                                            ? 'border-[#C98922] bg-white shadow-sm ring-1 ring-[#C98922]/20'
-                                                            : 'border-slate-200 hover:border-slate-300 bg-slate-50/50'
-                                                    }`}
-                                                >
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <div
-                                                            className="w-3.5 h-3.5 rounded-full border border-slate-300 shadow-2xs shrink-0"
-                                                            style={{ backgroundColor: opt.value }}
-                                                        />
-                                                        <span className="font-bold text-[11px] text-slate-900 truncate">
-                                                            {opt.label}
-                                                        </span>
-                                                    </div>
-                                                    <span className="text-[9px] text-slate-400 block truncate">
-                                                        {opt.desc} ({opt.value})
-                                                    </span>
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                        Font Body &amp; Konten
+                                                    </label>
+                                                    <select
+                                                        value={themeForm.font_family_body}
+                                                        onChange={(e) => setThemeForm({ ...themeForm, font_family_body: e.target.value })}
+                                                        className="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 bg-white"
+                                                    >
+                                                        {['Plus Jakarta Sans', 'Inter', 'Outfit', 'Roboto', 'Poppins'].map((f) => (
+                                                            <option key={f} value={f}>{f}</option>
+                                                        ))}
+                                                    </select>
                                                 </div>
-                                            ))}
-                                        </div>
+                                            </div>
 
-                                        {/* Custom Picker & Hex Input */}
-                                        <div className="flex items-center gap-3 pt-1">
-                                            <span className="text-[11px] text-slate-500 font-medium">Custom Color:</span>
-                                            <input
-                                                type="color"
-                                                value={themeForm.login_card_bg}
-                                                onChange={(e) =>
-                                                    setThemeForm({ ...themeForm, login_card_bg: e.target.value })
-                                                }
-                                                className="w-8 h-8 rounded-lg border border-slate-300 p-0.5 cursor-pointer bg-white"
+                                            <ColorSettingRow
+                                                label="Judul &amp; Heading (Title)"
+                                                description="Mengatur Title H1, H2, H3, dan judul section utama"
+                                                value={themeForm.app_heading_color}
+                                                onChange={(val) => setThemeForm({ ...themeForm, app_heading_color: val })}
+                                                presets={[
+                                                    { label: 'Dark Slate', hex: '#0F172A' },
+                                                    { label: 'Charcoal', hex: '#1E293B' },
+                                                    { label: 'Deep Gray', hex: '#334155' },
+                                                    { label: 'Champagne Gold', hex: '#C98922' },
+                                                    { label: 'Pure White', hex: '#FFFFFF' },
+                                                ]}
                                             />
-                                            <input
-                                                type="text"
-                                                value={themeForm.login_card_bg}
-                                                onChange={(e) =>
-                                                    setThemeForm({ ...themeForm, login_card_bg: e.target.value })
-                                                }
-                                                className="w-28 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-semibold text-slate-800"
-                                                placeholder="#1C132E"
+
+                                            <ColorSettingRow
+                                                label="Isi Teks &amp; Data Konten (Body / tbody)"
+                                                description="Mengatur paragraf, label form, dan isi data baris tabel (tbody)"
+                                                value={themeForm.app_text_color}
+                                                onChange={(val) => setThemeForm({ ...themeForm, app_text_color: val })}
+                                                presets={[
+                                                    { label: 'Medium Slate', hex: '#334155' },
+                                                    { label: 'Dark Charcoal', hex: '#1E293B' },
+                                                    { label: 'Soft Slate', hex: '#475569' },
+                                                    { label: 'Pure White', hex: '#FFFFFF' },
+                                                ]}
                                             />
-                                        </div>
-                                    </div>
 
-                                    <GradientBuilder
-                                        label="Gradient Kotak Form Login (Opsional)"
-                                        value={themeForm.login_card_bg_gradient}
-                                        onChange={(css) => setThemeForm({ ...themeForm, login_card_bg_gradient: css })}
-                                        presets={[
-                                            { label: 'Purple → Navy', value: 'linear-gradient(145deg, #2D1B69 0%, #0D1627 100%)' },
-                                            { label: 'Slate → Dark', value: 'linear-gradient(145deg, #1E293B 0%, #0F172A 100%)' },
-                                            { label: 'Dark → Purple', value: 'linear-gradient(145deg, #1C132E 0%, #2D1B69 100%)' },
-                                            { label: 'Velvet → Black', value: 'linear-gradient(145deg, #1B0F23 0%, #09090B 100%)' },
-                                            { label: 'White → Ivory', value: 'linear-gradient(145deg, #FFFFFF 0%, #F8F6F5 100%)' },
-                                            { label: 'Ivory → Lavender', value: 'linear-gradient(145deg, #F8F6F5 0%, #EDE8FF 100%)' },
-                                        ]}
-                                    />
-
-                                    {/* 3. Login Accent Color */}
-                                    <div className="space-y-3 pt-3 border-t border-slate-100">
-                                        <div className="flex items-center justify-between">
-                                            <label className="block text-xs font-semibold text-slate-700">
-                                                Warna Aksen Tombol & Sorotan Login (Button & Glow Accent)
-                                            </label>
-                                            <span className="text-[10px] text-slate-400 font-mono">
-                                                Hex: {themeForm.login_accent_color}
-                                            </span>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                            {[
-                                                { label: 'Champagne Gold', hex: '#C98922', desc: 'Brand Master' },
-                                                { label: 'Warm Gold', hex: '#CA8A22', desc: 'Highlight' },
-                                                { label: 'Classic Gold', hex: '#C89445', desc: 'Champagne' },
-                                                { label: 'Royal Blue', hex: '#2563EB', desc: 'Electric' },
-                                                { label: 'Emerald Pine', hex: '#059669', desc: 'Lush' },
-                                                { label: 'Rose Crimson', hex: '#E11D48', desc: 'Velvet' },
-                                                { label: 'Amber Studio', hex: '#D97706', desc: 'Warm' },
-                                                { label: 'Imperial Violet', hex: '#7C3AED', desc: 'Royal Violet' },
-                                            ].map((item) => (
-                                                <button
-                                                    key={item.hex}
-                                                    type="button"
-                                                    onClick={() =>
-                                                        setThemeForm({ ...themeForm, login_accent_color: item.hex })
-                                                    }
-                                                    className={`p-2 rounded-xl border text-left flex items-center gap-2 transition-all cursor-pointer ${
-                                                        themeForm.login_accent_color.toUpperCase() === item.hex.toUpperCase()
-                                                            ? 'border-[#C98922] bg-[#C98922]/10 shadow-xs ring-1 ring-[#C98922]'
-                                                            : 'border-slate-200 hover:border-slate-300 bg-slate-50/60'
-                                                    }`}
-                                                >
-                                                    <span
-                                                        className="w-4 h-4 rounded-md border border-white/20 shrink-0 shadow-2xs"
-                                                        style={{ backgroundColor: item.hex }}
-                                                    />
-                                                    <div className="min-w-0 flex-1">
-                                                        <span className="block text-[11px] font-bold text-slate-800 truncate">
-                                                            {item.label}
-                                                        </span>
-                                                        <span className="block text-[9px] text-slate-400 font-mono">
-                                                            {item.hex}
-                                                        </span>
-                                                    </div>
-                                                </button>
-                                            ))}
-                                        </div>
-
-                                        {/* Custom Picker & Hex Input */}
-                                        <div className="flex items-center gap-3 pt-1">
-                                            <span className="text-[11px] text-slate-500 font-medium">Custom Color:</span>
-                                            <input
-                                                type="color"
-                                                value={themeForm.login_accent_color}
-                                                onChange={(e) =>
-                                                    setThemeForm({ ...themeForm, login_accent_color: e.target.value })
-                                                }
-                                                className="w-8 h-8 rounded-lg border border-slate-300 p-0.5 cursor-pointer bg-white"
+                                            <ColorSettingRow
+                                                label="Subtitle, Keterangan &amp; Header Kolom (Muted / thead / tfoot)"
+                                                description="Mengatur subtitle kartu, keterangan redup, header kolom tabel (thead), dan ringkasan (tfoot)"
+                                                value={themeForm.app_muted_text_color}
+                                                onChange={(val) => setThemeForm({ ...themeForm, app_muted_text_color: val })}
+                                                presets={[
+                                                    { label: 'Slate Muted', hex: '#64748B' },
+                                                    { label: 'Silver Gray', hex: '#94A3B8' },
+                                                    { label: 'Cool Silver', hex: '#CBD5E1' },
+                                                    { label: 'Muted Gold', hex: '#D4AF37' },
+                                                ]}
                                             />
-                                            <input
-                                                type="text"
-                                                value={themeForm.login_accent_color}
-                                                onChange={(e) =>
-                                                    setThemeForm({ ...themeForm, login_accent_color: e.target.value })
-                                                }
-                                                className="w-28 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-semibold text-slate-800"
-                                                placeholder="#C98922"
+
+                                            <ColorSettingRow
+                                                label="Judul Kartu &amp; Panel Box (Title Card)"
+                                                description="Warna judul kartu panel data dan form box"
+                                                value={themeForm.card_heading_color}
+                                                onChange={(val) => setThemeForm({ ...themeForm, card_heading_color: val })}
+                                                presets={[
+                                                    { label: 'Charcoal', hex: '#1E293B' },
+                                                    { label: 'Dark Slate', hex: '#0F172A' },
+                                                    { label: 'Deep Gray', hex: '#334155' },
+                                                    { label: 'Champagne Gold', hex: '#C98922' },
+                                                    { label: 'Pure White', hex: '#FFFFFF' },
+                                                ]}
                                             />
                                         </div>
                                     </div>
+                                )}
 
-                                    {/* 4. Login Tagline */}
-                                    <div className="space-y-2 pt-3 border-t border-slate-100">
-                                        <label className="block text-xs font-semibold text-slate-700">
-                                            Tagline Khusus Halaman Login
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={themeForm.login_tagline}
-                                            onChange={(e) =>
-                                                setThemeForm({ ...themeForm, login_tagline: e.target.value })
-                                            }
-                                            className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 bg-white focus:border-[#C98922] focus:ring-2 focus:ring-[#C98922]/20 outline-hidden transition-all"
-                                            placeholder="Contoh: STUDIO & CINEMA PHOTOGRAPHY SYSTEM"
-                                        />
-                                        <span className="text-[10px] text-slate-400 block">
-                                            Teks keterangan kecil yang muncul di bawah logo dan judul brand pada halaman login.
-                                        </span>
-                                    </div>
-                                </div>
-
-                                 {/* 4. Tipografi, Font Family & Warna Teks Antarmuka */}
-                                 <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-5">
-                                     <div className="border-b border-slate-100 pb-3">
-                                         <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                                             <Type className="w-4 h-4 text-[#C98922]" />
-                                             <span>Tipografi, Font Family & Penyesuaian Warna Teks</span>
-                                         </h3>
-                                         <p className="text-xs text-slate-500 mt-0.5">
-                                             Sesuaikan jenis font dan warna teks judul, isi, serta teks redup agar selalu kontras dan jelas terbaca pada background terang maupun gelap/gradient.
-                                         </p>
-                                     </div>
-
-                                     {/* Quick 1-Click Text Contrast Presets */}
-                                     <div className="space-y-2 bg-gradient-to-r from-slate-50 to-amber-50/40 p-3.5 rounded-xl border border-slate-200">
-                                         <div className="flex items-center justify-between">
-                                             <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
-                                                 <Sparkles className="w-3.5 h-3.5 text-[#C98922]" />
-                                                 <span>Optimasi Cepat Kontras Teks (1-Click Presets):</span>
-                                             </label>
-                                             <span className="text-[10px] text-slate-400">Pilih mode kontras sesuai background</span>
-                                         </div>
-                                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                             <button
-                                                 type="button"
-                                                 onClick={() =>
-                                                     setThemeForm({
-                                                         ...themeForm,
-                                                         app_heading_color: '#FFFFFF',
-                                                         app_text_color: '#E2E8F0',
-                                                         app_muted_text_color: '#94A3B8',
-                                                         sidebar_text_color: '#CBD5E1',
-                                                     })
-                                                 }
-                                                 className="p-2.5 rounded-xl border border-slate-200 bg-slate-900 text-left hover:border-slate-400 transition-all cursor-pointer shadow-xs"
-                                             >
-                                                 <div className="flex items-center gap-2">
-                                                     <span className="w-3 h-3 rounded-full bg-white border border-slate-600 shrink-0" />
-                                                     <span className="text-[11px] font-bold text-white">Mode Teks Terang</span>
-                                                 </div>
-                                                 <p className="text-[9px] text-slate-400 mt-1">
-                                                     Untuk background gelap/purple agar teks tidak mati
-                                                 </p>
-                                             </button>
-
-                                             <button
-                                                 type="button"
-                                                 onClick={() =>
-                                                     setThemeForm({
-                                                         ...themeForm,
-                                                         app_heading_color: '#0F172A',
-                                                         app_text_color: '#334155',
-                                                         app_muted_text_color: '#64748B',
-                                                         sidebar_text_color: '#94A3B8',
-                                                     })
-                                                 }
-                                                 className="p-2.5 rounded-xl border border-slate-200 bg-white text-left hover:border-slate-400 transition-all cursor-pointer shadow-xs"
-                                             >
-                                                 <div className="flex items-center gap-2">
-                                                     <span className="w-3 h-3 rounded-full bg-slate-900 border border-slate-300 shrink-0" />
-                                                     <span className="text-[11px] font-bold text-slate-900">Mode Teks Gelap</span>
-                                                 </div>
-                                                 <p className="text-[9px] text-slate-500 mt-1">
-                                                     Untuk background putih/ivory standar
-                                                 </p>
-                                             </button>
-
-                                             <button
-                                                 type="button"
-                                                 onClick={() =>
-                                                     setThemeForm({
-                                                         ...themeForm,
-                                                         app_heading_color: '#C98922',
-                                                         app_text_color: '#F8F6F5',
-                                                         app_muted_text_color: '#D4AF37',
-                                                         sidebar_text_color: '#E6CA85',
-                                                     })
-                                                 }
-                                                 className="p-2.5 rounded-xl border border-[#C98922]/40 bg-gradient-to-br from-[#1C132E] to-[#2D1B69] text-left hover:border-[#C98922] transition-all cursor-pointer shadow-xs"
-                                             >
-                                                 <div className="flex items-center gap-2">
-                                                     <span className="w-3 h-3 rounded-full bg-[#C98922] border border-[#E6CA85] shrink-0" />
-                                                     <span className="text-[11px] font-bold text-[#E6CA85]">Luxury Gold & Light</span>
-                                                 </div>
-                                                 <p className="text-[9px] text-slate-300 mt-1">
-                                                     Kombinasi mewah khas Purple × Gold
-                                                 </p>
-                                             </button>
-                                         </div>
-                                     </div>
-
-                                     {/* Font Family Pickers */}
-                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                                         <div>
-                                             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                                                 Font Judul & Heading
-                                             </label>
-                                             <select
-                                                 value={themeForm.font_family_heading}
-                                                 onChange={(e) =>
-                                                     setThemeForm({
-                                                         ...themeForm,
-                                                         font_family_heading: e.target.value,
-                                                     })
-                                                 }
-                                                 className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 bg-white focus:border-[#C98922] focus:ring-2 focus:ring-[#C98922]/20"
-                                             >
-                                                 <option value="Plus Jakarta Sans">Plus Jakarta Sans (Modern Sans)</option>
-                                                 <option value="Inter">Inter (Clean UI)</option>
-                                                 <option value="Manrope">Manrope (Geometric Modern)</option>
-                                                 <option value="Outfit">Outfit (Brand Tech)</option>
-                                                 <option value="Playfair Display">Playfair Display (Luxury Serif)</option>
-                                                 <option value="Cormorant Garamond">Cormorant Garamond (Editorial Serif)</option>
-                                             </select>
-                                         </div>
-
-                                         <div>
-                                             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                                                 Font Isi & Body Teks
-                                             </label>
-                                             <select
-                                                 value={themeForm.font_family_body}
-                                                 onChange={(e) =>
-                                                     setThemeForm({
-                                                         ...themeForm,
-                                                         font_family_body: e.target.value,
-                                                     })
-                                                 }
-                                                 className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 bg-white focus:border-[#C98922] focus:ring-2 focus:ring-[#C98922]/20"
-                                             >
-                                                 <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
-                                                 <option value="Inter">Inter</option>
-                                                 <option value="Manrope">Manrope</option>
-                                                 <option value="Roboto">Roboto</option>
-                                             </select>
-                                         </div>
-                                     </div>
-
-                                     {/* ── Detail Font Colors ── */}
-                                     <div className="space-y-4 pt-2 border-t border-slate-100">
-                                         {/* 1. Warna Judul & Heading */}
-                                         <div className="space-y-2.5">
-                                             <div className="flex items-center justify-between">
-                                                 <label className="block text-xs font-semibold text-slate-700">
-                                                     Warna Judul & Heading Halaman
-                                                 </label>
-                                                 <span className="text-[10px] text-slate-400 font-mono">
-                                                     Hex: {themeForm.app_heading_color}
-                                                 </span>
-                                             </div>
-                                             <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
-                                                 {[
-                                                     { label: 'Putih Bersih', hex: '#FFFFFF' },
-                                                     { label: 'Soft Ivory', hex: '#F8F6F5' },
-                                                     { label: 'Champagne Gold', hex: '#C98922' },
-                                                     { label: 'Warm Amber', hex: '#F59E0B' },
-                                                     { label: 'Dark Slate', hex: '#0F172A' },
-                                                     { label: 'Deep Purple', hex: '#1C132E' },
-                                                 ].map((item) => (
-                                                     <button
-                                                         key={item.hex}
-                                                         type="button"
-                                                         onClick={() => setThemeForm({ ...themeForm, app_heading_color: item.hex })}
-                                                         className={`p-2 rounded-xl border text-left flex items-center gap-2 transition-all cursor-pointer ${
-                                                             themeForm.app_heading_color.toUpperCase() === item.hex.toUpperCase()
-                                                                 ? 'border-[#C98922] bg-[#C98922]/10 ring-1 ring-[#C98922]'
-                                                                 : 'border-slate-200 hover:border-slate-300 bg-slate-50/60'
-                                                         }`}
-                                                     >
-                                                         <span className="w-3.5 h-3.5 rounded-full border border-slate-300 shrink-0" style={{ backgroundColor: item.hex }} />
-                                                         <span className="text-[10px] font-bold text-slate-800 truncate">{item.label}</span>
-                                                     </button>
-                                                 ))}
-                                             </div>
-                                             <div className="flex items-center gap-3 pt-1">
-                                                 <span className="text-[11px] text-slate-500 font-medium">Custom Color:</span>
-                                                 <input
-                                                     type="color"
-                                                     value={themeForm.app_heading_color}
-                                                     onChange={(e) => setThemeForm({ ...themeForm, app_heading_color: e.target.value })}
-                                                     className="w-8 h-8 rounded-lg border border-slate-300 p-0.5 cursor-pointer bg-white"
-                                                 />
-                                                 <input
-                                                     type="text"
-                                                     value={themeForm.app_heading_color}
-                                                     onChange={(e) => setThemeForm({ ...themeForm, app_heading_color: e.target.value })}
-                                                     className="w-28 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-semibold text-slate-800"
-                                                 />
-                                             </div>
-                                         </div>
-
-                                         {/* 2. Warna Isi & Body Teks */}
-                                         <div className="space-y-2.5 pt-3 border-t border-slate-100">
-                                             <div className="flex items-center justify-between">
-                                                 <label className="block text-xs font-semibold text-slate-700">
-                                                     Warna Isi & Body Teks (Paragraf & Konten)
-                                                 </label>
-                                                 <span className="text-[10px] text-slate-400 font-mono">
-                                                     Hex: {themeForm.app_text_color}
-                                                 </span>
-                                             </div>
-                                             <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
-                                                 {[
-                                                     { label: 'Pure White', hex: '#FFFFFF' },
-                                                     { label: 'Slate Terang', hex: '#E2E8F0' },
-                                                     { label: 'Silver Lembut', hex: '#CBD5E1' },
-                                                     { label: 'Dark Slate', hex: '#334155' },
-                                                     { label: 'Charcoal', hex: '#1E293B' },
-                                                     { label: 'Hitam Pekat', hex: '#0F172A' },
-                                                 ].map((item) => (
-                                                     <button
-                                                         key={item.hex}
-                                                         type="button"
-                                                         onClick={() => setThemeForm({ ...themeForm, app_text_color: item.hex })}
-                                                         className={`p-2 rounded-xl border text-left flex items-center gap-2 transition-all cursor-pointer ${
-                                                             themeForm.app_text_color.toUpperCase() === item.hex.toUpperCase()
-                                                                 ? 'border-[#C98922] bg-[#C98922]/10 ring-1 ring-[#C98922]'
-                                                                 : 'border-slate-200 hover:border-slate-300 bg-slate-50/60'
-                                                         }`}
-                                                     >
-                                                         <span className="w-3.5 h-3.5 rounded-full border border-slate-300 shrink-0" style={{ backgroundColor: item.hex }} />
-                                                         <span className="text-[10px] font-bold text-slate-800 truncate">{item.label}</span>
-                                                     </button>
-                                                 ))}
-                                             </div>
-                                             <div className="flex items-center gap-3 pt-1">
-                                                 <span className="text-[11px] text-slate-500 font-medium">Custom Color:</span>
-                                                 <input
-                                                     type="color"
-                                                     value={themeForm.app_text_color}
-                                                     onChange={(e) => setThemeForm({ ...themeForm, app_text_color: e.target.value })}
-                                                     className="w-8 h-8 rounded-lg border border-slate-300 p-0.5 cursor-pointer bg-white"
-                                                 />
-                                                 <input
-                                                     type="text"
-                                                     value={themeForm.app_text_color}
-                                                     onChange={(e) => setThemeForm({ ...themeForm, app_text_color: e.target.value })}
-                                                     className="w-28 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-semibold text-slate-800"
-                                                 />
-                                             </div>
-                                         </div>
-
-                                         {/* 3. Warna Subtitle & Teks Redup */}
-                                         <div className="space-y-2.5 pt-3 border-t border-slate-100">
-                                             <div className="flex items-center justify-between">
-                                                 <label className="block text-xs font-semibold text-slate-700">
-                                                     Warna Subtitle, Keterangan & Teks Redup (Muted Text)
-                                                 </label>
-                                                 <span className="text-[10px] text-slate-400 font-mono">
-                                                     Hex: {themeForm.app_muted_text_color}
-                                                 </span>
-                                             </div>
-                                             <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
-                                                 {[
-                                                     { label: 'Muted Light', hex: '#94A3B8' },
-                                                     { label: 'Silver Gray', hex: '#CBD5E1' },
-                                                     { label: 'Muted Gold', hex: '#D4AF37' },
-                                                     { label: 'Cool Slate', hex: '#64748B' },
-                                                     { label: 'Dark Muted', hex: '#475569' },
-                                                     { label: 'Neutral Gray', hex: '#71717A' },
-                                                 ].map((item) => (
-                                                     <button
-                                                         key={item.hex}
-                                                         type="button"
-                                                         onClick={() => setThemeForm({ ...themeForm, app_muted_text_color: item.hex })}
-                                                         className={`p-2 rounded-xl border text-left flex items-center gap-2 transition-all cursor-pointer ${
-                                                             themeForm.app_muted_text_color.toUpperCase() === item.hex.toUpperCase()
-                                                                 ? 'border-[#C98922] bg-[#C98922]/10 ring-1 ring-[#C98922]'
-                                                                 : 'border-slate-200 hover:border-slate-300 bg-slate-50/60'
-                                                         }`}
-                                                     >
-                                                         <span className="w-3.5 h-3.5 rounded-full border border-slate-300 shrink-0" style={{ backgroundColor: item.hex }} />
-                                                         <span className="text-[10px] font-bold text-slate-800 truncate">{item.label}</span>
-                                                     </button>
-                                                 ))}
-                                             </div>
-                                             <div className="flex items-center gap-3 pt-1">
-                                                 <span className="text-[11px] text-slate-500 font-medium">Custom Color:</span>
-                                                 <input
-                                                     type="color"
-                                                     value={themeForm.app_muted_text_color}
-                                                     onChange={(e) => setThemeForm({ ...themeForm, app_muted_text_color: e.target.value })}
-                                                     className="w-8 h-8 rounded-lg border border-slate-300 p-0.5 cursor-pointer bg-white"
-                                                 />
-                                                 <input
-                                                     type="text"
-                                                     value={themeForm.app_muted_text_color}
-                                                     onChange={(e) => setThemeForm({ ...themeForm, app_muted_text_color: e.target.value })}
-                                                     className="w-28 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-semibold text-slate-800"
-                                                 />
-                                             </div>
-                                         </div>
-
-                                         {/* 4. Warna Teks Menu Sidebar Inaktif */}
-                                         <div className="space-y-2.5 pt-3 border-t border-slate-100">
-                                             <div className="flex items-center justify-between">
-                                                 <label className="block text-xs font-semibold text-slate-700">
-                                                     Warna Teks Menu Sidebar (Menu Tidak Aktif)
-                                                 </label>
-                                                 <span className="text-[10px] text-slate-400 font-mono">
-                                                     Hex: {themeForm.sidebar_text_color}
-                                                 </span>
-                                             </div>
-                                             <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
-                                                 {[
-                                                     { label: 'Muted Slate', hex: '#94A3B8' },
-                                                     { label: 'Soft White', hex: '#E2E8F0' },
-                                                     { label: 'Pure White', hex: '#FFFFFF' },
-                                                     { label: 'Gold Mist', hex: '#E6CA85' },
-                                                     { label: 'Light Mint', hex: '#99F6E4' },
-                                                     { label: 'Zinc Gray', hex: '#A1A1AA' },
-                                                 ].map((item) => (
-                                                     <button
-                                                         key={item.hex}
-                                                         type="button"
-                                                         onClick={() => setThemeForm({ ...themeForm, sidebar_text_color: item.hex })}
-                                                         className={`p-2 rounded-xl border text-left flex items-center gap-2 transition-all cursor-pointer ${
-                                                             themeForm.sidebar_text_color.toUpperCase() === item.hex.toUpperCase()
-                                                                 ? 'border-[#C98922] bg-[#C98922]/10 ring-1 ring-[#C98922]'
-                                                                 : 'border-slate-200 hover:border-slate-300 bg-slate-50/60'
-                                                         }`}
-                                                     >
-                                                         <span className="w-3.5 h-3.5 rounded-full border border-slate-300 shrink-0" style={{ backgroundColor: item.hex }} />
-                                                         <span className="text-[10px] font-bold text-slate-800 truncate">{item.label}</span>
-                                                     </button>
-                                                 ))}
-                                             </div>
-                                             <div className="flex items-center gap-3 pt-1">
-                                                 <span className="text-[11px] text-slate-500 font-medium">Custom Color:</span>
-                                                 <input
-                                                     type="color"
-                                                     value={themeForm.sidebar_text_color}
-                                                     onChange={(e) => setThemeForm({ ...themeForm, sidebar_text_color: e.target.value })}
-                                                     className="w-8 h-8 rounded-lg border border-slate-300 p-0.5 cursor-pointer bg-white"
-                                                 />
-                                                 <input
-                                                     type="text"
-                                                     value={themeForm.sidebar_text_color}
-                                                     onChange={(e) => setThemeForm({ ...themeForm, sidebar_text_color: e.target.value })}
-                                                     className="w-28 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-semibold text-slate-800"
-                                                 />
-                                             </div>
-                                          </div>
-
-                                          {/* 5. Warna Judul Card & Stat Title */}
-                                          <div className="space-y-2.5 pt-3 border-t border-slate-100">
-                                              <div className="flex items-center justify-between">
-                                                  <label className="block text-xs font-semibold text-slate-700">
-                                                      Warna Judul Card &amp; Stat Title (TOTAL PROJECT, RINGKASAN KEUANGAN, dll.)
-                                                  </label>
-                                                  <span className="text-[10px] text-slate-400 font-mono">
-                                                      Hex: {themeForm.card_heading_color}
-                                                  </span>
-                                              </div>
-                                              <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
-                                                  {[
-                                                      { label: 'Dark Slate', hex: '#1E293B' },
-                                                      { label: 'Charcoal Dark', hex: '#0F172A' },
-                                                      { label: 'Deep Purple', hex: '#2D1B69' },
-                                                      { label: 'Champagne Gold', hex: '#C98922' },
-                                                      { label: 'Sapphire Navy', hex: '#0A192F' },
-                                                      { label: 'Warm Amber', hex: '#B45309' },
-                                                  ].map((item) => (
-                                                      <button
-                                                          key={item.hex}
-                                                          type="button"
-                                                          onClick={() => setThemeForm({ ...themeForm, card_heading_color: item.hex })}
-                                                          className={`p-2 rounded-xl border text-left flex items-center gap-2 transition-all cursor-pointer ${
-                                                              themeForm.card_heading_color.toUpperCase() === item.hex.toUpperCase()
-                                                                  ? 'border-[#C98922] bg-[#C98922]/10 ring-1 ring-[#C98922]'
-                                                                  : 'border-slate-200 hover:border-slate-300 bg-slate-50/60'
-                                                          }`}
-                                                      >
-                                                          <span className="w-3.5 h-3.5 rounded-full border border-slate-300 shrink-0" style={{ backgroundColor: item.hex }} />
-                                                          <span className="text-[10px] font-bold text-slate-800 truncate">{item.label}</span>
-                                                      </button>
-                                                  ))}
-                                              </div>
-                                              <div className="flex items-center gap-3 pt-1">
-                                                  <span className="text-[11px] text-slate-500 font-medium">Custom Color:</span>
-                                                  <input
-                                                      type="color"
-                                                      value={themeForm.card_heading_color}
-                                                      onChange={(e) => setThemeForm({ ...themeForm, card_heading_color: e.target.value })}
-                                                      className="w-8 h-8 rounded-lg border border-slate-300 p-0.5 cursor-pointer bg-white"
-                                                  />
-                                                  <input
-                                                      type="text"
-                                                      value={themeForm.card_heading_color}
-                                                      onChange={(e) => setThemeForm({ ...themeForm, card_heading_color: e.target.value })}
-                                                      className="w-28 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-semibold text-slate-800"
-                                                  />
-                                              </div>
-                                          </div>
-                                     </div>
-                                 </div>
-
-                                 {/* 5. Kustomisasi Navbar Atas (Header) & Breadcrumb */}
-                                 <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-5">
-                                     <div className="border-b border-slate-100 pb-3">
-                                         <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                                             <SlidersHorizontal className="w-4 h-4 text-[#C98922]" />
-                                             <span>Kustomisasi Navbar Atas (Header) & Breadcrumb</span>
-                                         </h3>
-                                         <p className="text-xs text-slate-500 mt-0.5">
-                                             Sesuaikan warna background navbar atas, teks judul navbar, warna link breadcrumb, dan garis border pemisah.
-                                         </p>
-                                     </div>
-
-                                     {/* Quick 1-Click Matching Presets for Navbar */}
-                                     <div className="space-y-2 bg-gradient-to-r from-slate-50 to-amber-50/40 p-3.5 rounded-xl border border-slate-200">
-                                         <div className="flex items-center justify-between">
-                                             <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
-                                                 <Sparkles className="w-3.5 h-3.5 text-[#C98922]" />
-                                                 <span>Preset Cepat Navbar & Breadcrumb:</span>
-                                             </label>
-                                             <span className="text-[10px] text-slate-400">Pilih gaya header instan</span>
-                                         </div>
-                                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                             <button
-                                                 type="button"
-                                                 onClick={() =>
-                                                     setThemeForm({
-                                                         ...themeForm,
-                                                         header_bg_color: '#1C132E',
-                                                         header_bg_gradient: '',
-                                                         header_text_color: '#FFFFFF',
-                                                         header_border_color: 'rgba(255, 255, 255, 0.1)',
-                                                         breadcrumb_color: '#94A3B8',
-                                                         breadcrumb_active_color: '#FFFFFF',
-                                                     })
-                                                 }
-                                                 className="p-2.5 rounded-xl border border-slate-200 bg-[#1C132E] text-left hover:border-slate-400 transition-all cursor-pointer shadow-xs"
-                                             >
-                                                 <div className="flex items-center gap-2">
-                                                     <span className="w-3 h-3 rounded-full bg-white border border-slate-400 shrink-0" />
-                                                     <span className="text-[11px] font-bold text-white">Dark Purple Navbar</span>
-                                                 </div>
-                                                 <p className="text-[9px] text-slate-300 mt-1">
-                                                     Navbar ungu gelap senada dengan background utama
-                                                 </p>
-                                             </button>
-
-                                             <button
-                                                 type="button"
-                                                 onClick={() =>
-                                                     setThemeForm({
-                                                         ...themeForm,
-                                                         header_bg_color: '#FFFFFF',
-                                                         header_bg_gradient: '',
-                                                         header_text_color: '#0F172A',
-                                                         header_border_color: 'rgba(226, 232, 240, 0.8)',
-                                                         breadcrumb_color: '#64748B',
-                                                         breadcrumb_active_color: '#0F172A',
-                                                     })
-                                                 }
-                                                 className="p-2.5 rounded-xl border border-slate-200 bg-white text-left hover:border-slate-400 transition-all cursor-pointer shadow-xs"
-                                             >
-                                                 <div className="flex items-center gap-2">
-                                                     <span className="w-3 h-3 rounded-full bg-slate-900 border border-slate-300 shrink-0" />
-                                                     <span className="text-[11px] font-bold text-slate-900">Clean White Navbar</span>
-                                                 </div>
-                                                 <p className="text-[9px] text-slate-500 mt-1">
-                                                     Navbar putih bersih klasik dengan teks gelap
-                                                 </p>
-                                             </button>
-
-                                             <button
-                                                 type="button"
-                                                 onClick={() =>
-                                                     setThemeForm({
-                                                         ...themeForm,
-                                                         header_bg_color: '#1C132E',
-                                                         header_bg_gradient: 'linear-gradient(135deg, #1C132E 0%, #2D1B69 100%)',
-                                                         header_text_color: '#E6CA85',
-                                                         header_border_color: 'rgba(201, 137, 34, 0.3)',
-                                                         breadcrumb_color: '#D4AF37',
-                                                         breadcrumb_active_color: '#FFFFFF',
-                                                     })
-                                                 }
-                                                 className="p-2.5 rounded-xl border border-[#C98922]/40 bg-gradient-to-r from-[#1C132E] to-[#2D1B69] text-left hover:border-[#C98922] transition-all cursor-pointer shadow-xs"
-                                             >
-                                                 <div className="flex items-center gap-2">
-                                                     <span className="w-3 h-3 rounded-full bg-[#C98922] border border-[#E6CA85] shrink-0" />
-                                                     <span className="text-[11px] font-bold text-[#E6CA85]">Luxury Gradient & Gold</span>
-                                                 </div>
-                                                 <p className="text-[9px] text-slate-300 mt-1">
-                                                     Gradient ungu mewah & teks emas kontras
-                                                 </p>
-                                             </button>
-                                         </div>
-                                     </div>
-
-                                     {/* 1. Background Navbar (Solid & Gradient) */}
-                                     <div className="space-y-3">
-                                         <div className="flex items-center justify-between">
-                                             <label className="block text-xs font-semibold text-slate-700">
-                                                 Background Navbar Atas (Solid atau Gradient Multi-Warna)
-                                             </label>
-                                             <span className="text-[10px] text-slate-400 font-mono">
-                                                 {themeForm.header_bg_gradient ? 'Gradient Active' : `Hex: ${themeForm.header_bg_color}`}
-                                             </span>
-                                         </div>
-
-                                         <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
-                                             {[
-                                                 { label: 'Clean White', hex: '#FFFFFF' },
-                                                 { label: 'Deep Purple', hex: '#1C132E' },
-                                                 { label: 'Navy Sapphire', hex: '#0A192F' },
-                                                 { label: 'Graphite Slate', hex: '#1E293B' },
-                                                 { label: 'Soft Ivory', hex: '#F8F6F5' },
-                                                 { label: 'Charcoal Dark', hex: '#0E091E' },
-                                             ].map((item) => (
-                                                 <button
-                                                     key={item.hex}
-                                                     type="button"
-                                                     onClick={() =>
-                                                         setThemeForm({
-                                                             ...themeForm,
-                                                             header_bg_color: item.hex,
-                                                             header_bg_gradient: '',
-                                                         })
-                                                     }
-                                                     className={`p-2 rounded-xl border text-left flex items-center gap-2 transition-all cursor-pointer ${
-                                                         !themeForm.header_bg_gradient &&
-                                                         themeForm.header_bg_color.toUpperCase() === item.hex.toUpperCase()
-                                                             ? 'border-[#C98922] bg-[#C98922]/10 ring-1 ring-[#C98922]'
-                                                             : 'border-slate-200 hover:border-slate-300 bg-slate-50/60'
-                                                     }`}
-                                                 >
-                                                     <span className="w-3.5 h-3.5 rounded-full border border-slate-300 shrink-0" style={{ backgroundColor: item.hex }} />
-                                                     <span className="text-[10px] font-bold text-slate-800 truncate">{item.label}</span>
-                                                 </button>
-                                             ))}
-                                         </div>
-
-                                         {/* Gradient Builder for Navbar */}
-                                         <div className="pt-2">
-                                             <GradientBuilder
-                                                 label="Gradient Khusus Navbar Atas"
-                                                 value={themeForm.header_bg_gradient}
-                                                 onChange={(val) => setThemeForm({ ...themeForm, header_bg_gradient: val })}
-                                                 presets={[
-                                                     { label: 'Deep Purple Navbar', value: 'linear-gradient(135deg, #1C132E 0%, #2D1B69 100%)' },
-                                                     { label: 'Sapphire Navy Navbar', value: 'linear-gradient(135deg, #0A192F 0%, #1E3A8A 100%)' },
-                                                     { label: 'Clean White Soft', value: 'linear-gradient(135deg, #FFFFFF 0%, #F1F5F9 100%)' },
-                                                     { label: 'Luxury Velvet & Gold', value: 'linear-gradient(135deg, #1C132E 0%, #3B1D5A 50%, #C98922 100%)' },
-                                                     { label: 'Charcoal Minimalist', value: 'linear-gradient(90deg, #0F172A 0%, #1E293B 100%)' },
-                                                 ]}
-                                             />
-                                         </div>
-                                     </div>
-
-                                     {/* 2. Detail Color Controls */}
-                                     <div className="space-y-4 pt-3 border-t border-slate-100">
-                                         {/* Warna Teks & Judul Navbar */}
-                                         <div className="space-y-2.5">
-                                             <div className="flex items-center justify-between">
-                                                 <label className="block text-xs font-semibold text-slate-700">
-                                                     Warna Teks, Judul & Ikon Navbar Atas
-                                                 </label>
-                                                 <span className="text-[10px] text-slate-400 font-mono">
-                                                     Hex: {themeForm.header_text_color}
-                                                 </span>
-                                             </div>
-                                             <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
-                                                 {[
-                                                     { label: 'Putih Bersih', hex: '#FFFFFF' },
-                                                     { label: 'Gold Mist', hex: '#E6CA85' },
-                                                     { label: 'Champagne Gold', hex: '#C98922' },
-                                                     { label: 'Dark Slate', hex: '#0F172A' },
-                                                     { label: 'Charcoal', hex: '#1E293B' },
-                                                     { label: 'Soft Ivory', hex: '#F8F6F5' },
-                                                 ].map((item) => (
-                                                     <button
-                                                         key={item.hex}
-                                                         type="button"
-                                                         onClick={() => setThemeForm({ ...themeForm, header_text_color: item.hex })}
-                                                         className={`p-2 rounded-xl border text-left flex items-center gap-2 transition-all cursor-pointer ${
-                                                             themeForm.header_text_color.toUpperCase() === item.hex.toUpperCase()
-                                                                 ? 'border-[#C98922] bg-[#C98922]/10 ring-1 ring-[#C98922]'
-                                                                 : 'border-slate-200 hover:border-slate-300 bg-slate-50/60'
-                                                         }`}
-                                                     >
-                                                         <span className="w-3.5 h-3.5 rounded-full border border-slate-300 shrink-0" style={{ backgroundColor: item.hex }} />
-                                                         <span className="text-[10px] font-bold text-slate-800 truncate">{item.label}</span>
-                                                     </button>
-                                                 ))}
-                                             </div>
-                                             <div className="flex items-center gap-3 pt-1">
-                                                 <span className="text-[11px] text-slate-500 font-medium">Custom Color:</span>
-                                                 <input
-                                                     type="color"
-                                                     value={themeForm.header_text_color}
-                                                     onChange={(e) => setThemeForm({ ...themeForm, header_text_color: e.target.value })}
-                                                     className="w-8 h-8 rounded-lg border border-slate-300 p-0.5 cursor-pointer bg-white"
-                                                 />
-                                                 <input
-                                                     type="text"
-                                                     value={themeForm.header_text_color}
-                                                     onChange={(e) => setThemeForm({ ...themeForm, header_text_color: e.target.value })}
-                                                     className="w-28 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-semibold text-slate-800"
-                                                 />
-                                             </div>
-                                         </div>
-
-                                         {/* Warna Link & Separator Breadcrumb */}
-                                         <div className="space-y-2.5 pt-3 border-t border-slate-100">
-                                             <div className="flex items-center justify-between">
-                                                 <label className="block text-xs font-semibold text-slate-700">
-                                                     Warna Link Induk & Separator Breadcrumb (›)
-                                                 </label>
-                                                 <span className="text-[10px] text-slate-400 font-mono">
-                                                     Hex: {themeForm.breadcrumb_color}
-                                                 </span>
-                                             </div>
-                                             <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
-                                                 {[
-                                                     { label: 'Muted Light', hex: '#94A3B8' },
-                                                     { label: 'Silver Gray', hex: '#CBD5E1' },
-                                                     { label: 'Muted Gold', hex: '#D4AF37' },
-                                                     { label: 'Slate Gray', hex: '#64748B' },
-                                                     { label: 'Dark Slate', hex: '#475569' },
-                                                     { label: 'Ivory Muted', hex: '#E2E8F0' },
-                                                 ].map((item) => (
-                                                     <button
-                                                         key={item.hex}
-                                                         type="button"
-                                                         onClick={() => setThemeForm({ ...themeForm, breadcrumb_color: item.hex })}
-                                                         className={`p-2 rounded-xl border text-left flex items-center gap-2 transition-all cursor-pointer ${
-                                                             themeForm.breadcrumb_color.toUpperCase() === item.hex.toUpperCase()
-                                                                 ? 'border-[#C98922] bg-[#C98922]/10 ring-1 ring-[#C98922]'
-                                                                 : 'border-slate-200 hover:border-slate-300 bg-slate-50/60'
-                                                         }`}
-                                                     >
-                                                         <span className="w-3.5 h-3.5 rounded-full border border-slate-300 shrink-0" style={{ backgroundColor: item.hex }} />
-                                                         <span className="text-[10px] font-bold text-slate-800 truncate">{item.label}</span>
-                                                     </button>
-                                                 ))}
-                                             </div>
-                                             <div className="flex items-center gap-3 pt-1">
-                                                 <span className="text-[11px] text-slate-500 font-medium">Custom Color:</span>
-                                                 <input
-                                                     type="color"
-                                                     value={themeForm.breadcrumb_color}
-                                                     onChange={(e) => setThemeForm({ ...themeForm, breadcrumb_color: e.target.value })}
-                                                     className="w-8 h-8 rounded-lg border border-slate-300 p-0.5 cursor-pointer bg-white"
-                                                 />
-                                                 <input
-                                                     type="text"
-                                                     value={themeForm.breadcrumb_color}
-                                                     onChange={(e) => setThemeForm({ ...themeForm, breadcrumb_color: e.target.value })}
-                                                     className="w-28 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-semibold text-slate-800"
-                                                 />
-                                             </div>
-                                         </div>
-
-                                         {/* Warna Teks Breadcrumb Halaman Aktif */}
-                                         <div className="space-y-2.5 pt-3 border-t border-slate-100">
-                                             <div className="flex items-center justify-between">
-                                                 <label className="block text-xs font-semibold text-slate-700">
-                                                     Warna Teks Halaman Aktif pada Breadcrumb
-                                                 </label>
-                                                 <span className="text-[10px] text-slate-400 font-mono">
-                                                     Hex: {themeForm.breadcrumb_active_color}
-                                                 </span>
-                                             </div>
-                                             <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
-                                                 {[
-                                                     { label: 'Putih Bersih', hex: '#FFFFFF' },
-                                                     { label: 'Champagne Gold', hex: '#C98922' },
-                                                     { label: 'Soft Ivory', hex: '#F8F6F5' },
-                                                     { label: 'Dark Slate', hex: '#0F172A' },
-                                                     { label: 'Amber Gold', hex: '#F59E0B' },
-                                                     { label: 'Slate Light', hex: '#E2E8F0' },
-                                                 ].map((item) => (
-                                                     <button
-                                                         key={item.hex}
-                                                         type="button"
-                                                         onClick={() => setThemeForm({ ...themeForm, breadcrumb_active_color: item.hex })}
-                                                         className={`p-2 rounded-xl border text-left flex items-center gap-2 transition-all cursor-pointer ${
-                                                             themeForm.breadcrumb_active_color.toUpperCase() === item.hex.toUpperCase()
-                                                                 ? 'border-[#C98922] bg-[#C98922]/10 ring-1 ring-[#C98922]'
-                                                                 : 'border-slate-200 hover:border-slate-300 bg-slate-50/60'
-                                                         }`}
-                                                     >
-                                                         <span className="w-3.5 h-3.5 rounded-full border border-slate-300 shrink-0" style={{ backgroundColor: item.hex }} />
-                                                         <span className="text-[10px] font-bold text-slate-800 truncate">{item.label}</span>
-                                                     </button>
-                                                 ))}
-                                             </div>
-                                             <div className="flex items-center gap-3 pt-1">
-                                                 <span className="text-[11px] text-slate-500 font-medium">Custom Color:</span>
-                                                 <input
-                                                     type="color"
-                                                     value={themeForm.breadcrumb_active_color}
-                                                     onChange={(e) => setThemeForm({ ...themeForm, breadcrumb_active_color: e.target.value })}
-                                                     className="w-8 h-8 rounded-lg border border-slate-300 p-0.5 cursor-pointer bg-white"
-                                                 />
-                                                 <input
-                                                     type="text"
-                                                     value={themeForm.breadcrumb_active_color}
-                                                     onChange={(e) => setThemeForm({ ...themeForm, breadcrumb_active_color: e.target.value })}
-                                                     className="w-28 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-semibold text-slate-800"
-                                                 />
-                                             </div>
-                                         </div>
-                                     </div>
-                                 </div>
-
-                                {/* Save Button */}
+                                {/* Action Buttons */}
                                 <div className="flex items-center justify-between pt-2">
                                     <button
                                         type="button"
@@ -3187,7 +2531,7 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
                                         <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
                                         <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                                         <span className="text-[11px] font-bold text-slate-700 ml-1">
-                                            Live Real-time Preview
+                                            Live Real-time Preview Admin
                                         </span>
                                     </div>
                                     {/* Preview Toggle Buttons for multiple menus */}
@@ -3197,7 +2541,6 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
                                             { id: 'projects', label: 'Projects' },
                                             { id: 'master_data', label: 'Master Data' },
                                             { id: 'finance', label: 'Keuangan' },
-                                            { id: 'login', label: 'Login' },
                                         ].map((m) => (
                                             <button
                                                 key={m.id}
@@ -3215,279 +2558,119 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
                                     </div>
                                 </div>
 
-                                {previewMode === 'login' ? (
-                                    /* Simulated Login Window */
+                                {/* Simulated Application Window */}
+                                <div
+                                    style={{
+                                        background: themeForm.app_bg_gradient || themeForm.app_bg_color,
+                                        fontFamily: `${themeForm.font_family_body}, sans-serif`,
+                                    }}
+                                    className="rounded-xl border border-slate-200 overflow-hidden shadow-inner flex min-h-[380px] text-xs transition-colors"
+                                >
+                                    {/* Simulated Sidebar */}
                                     <div
-                                        style={{
-                                            background: themeForm.login_bg_gradient || themeForm.login_bg_color,
-                                            fontFamily: `${themeForm.font_family_body}, sans-serif`,
-                                        }}
-                                        className="rounded-xl border border-slate-200 overflow-hidden shadow-inner flex flex-col items-center justify-center p-4 min-h-[380px] text-xs transition-colors relative"
+                                        style={{ background: themeForm.sidebar_bg_gradient || themeForm.sidebar_bg_color }}
+                                        className="w-36 p-3 text-slate-300 flex flex-col justify-between shrink-0 transition-colors"
                                     >
-                                        {/* Ambient Glow */}
-                                        <div
-                                            className="absolute w-40 h-40 rounded-full blur-2xl opacity-25 pointer-events-none"
-                                            style={{ backgroundColor: themeForm.login_accent_color }}
-                                        />
-
-                                        {/* Mini Login Card */}
-                                        <div
-                                            style={{
-                                                background: themeForm.login_card_bg_gradient || themeForm.login_card_bg,
-                                                borderColor: `${themeForm.login_accent_color}44`,
-                                            }}
-                                            className="w-full max-w-[250px] border rounded-2xl p-4 shadow-xl relative z-10 space-y-3"
-                                        >
-                                            {/* Top Accent Line */}
-                                            <div
-                                                className="absolute top-0 inset-x-0 h-0.5 rounded-t-2xl"
-                                                style={{ backgroundColor: themeForm.login_accent_color }}
-                                            />
-
-                                            <div className="text-center space-y-1">
+                                        <div className="space-y-3">
+                                            <div className="flex items-center gap-2 px-1">
                                                 <div
-                                                    className="w-8 h-8 rounded-lg mx-auto flex items-center justify-center font-bold text-xs border shadow-xs"
+                                                    className="w-5 h-5 rounded flex items-center justify-center font-bold text-[9px] shadow-xs shrink-0"
                                                     style={{
-                                                        background: themeForm.login_bg_color,
-                                                        borderColor: `${themeForm.login_accent_color}66`,
-                                                        color: themeForm.login_accent_color,
+                                                        background: themeForm.primary_accent_gradient || themeForm.primary_accent_color,
+                                                        color: '#FFFFFF',
                                                     }}
                                                 >
-                                                    AP
+                                                    A
                                                 </div>
-                                                <span className="font-extrabold text-[11px] text-white tracking-widest block uppercase">
-                                                    ARAMS PICTURES
-                                                </span>
-                                                <span
-                                                    className="text-[7px] font-bold uppercase tracking-wider block"
-                                                    style={{ color: themeForm.login_accent_color }}
-                                                >
-                                                    {themeForm.login_tagline || 'STUDIO & CINEMA PHOTOGRAPHY SYSTEM'}
-                                                </span>
-                                            </div>
-
-                                            {/* Dummy inputs */}
-                                            <div className="space-y-1.5 pt-1">
-                                                <div className="bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-[9px] text-slate-400">
-                                                    nama@arams.com
-                                                </div>
-                                                <div className="bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-[9px] text-slate-400">
-                                                    ••••••••
-                                                </div>
-                                            </div>
-
-                                            {/* Button */}
-                                            <div
-                                                style={{
-                                                    background: themeForm.primary_accent_gradient || themeForm.login_accent_color,
-                                                    boxShadow: `0 4px 14px -2px ${themeForm.login_accent_color}66`,
-                                                }}
-                                                className="w-full py-1.5 rounded-lg text-white font-bold text-[9px] tracking-wider uppercase text-center cursor-pointer shadow-xs"
-                                            >
-                                                Masuk ke Dashboard
-                                            </div>
-                                        </div>
-
-                                        <span className="text-[8px] text-slate-400 text-center mt-3 z-10">
-                                            *Preview live halaman login ([http://localhost:8002/login](http://localhost:8002/login))
-                                        </span>
-                                    </div>
-                                ) : (
-                                    /* Simulated Application Window (Multi-Menu Support) */
-                                    <div
-                                        style={{
-                                            background: themeForm.app_bg_gradient || themeForm.app_bg_color,
-                                            fontFamily: `${themeForm.font_family_body}, sans-serif`,
-                                        }}
-                                        className="rounded-xl border border-slate-200 overflow-hidden shadow-inner flex min-h-[380px] text-xs transition-colors"
-                                    >
-                                        {/* Simulated Sidebar */}
-                                        <div
-                                            style={{ background: themeForm.sidebar_bg_gradient || themeForm.sidebar_bg_color }}
-                                            className="w-36 p-3 text-slate-300 flex flex-col justify-between shrink-0 transition-colors"
-                                        >
-                                            <div className="space-y-3">
-                                                {/* Mini Logo */}
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-6 h-6 rounded-md bg-gradient-to-br from-[#E2B774] to-[#C89445] text-white flex items-center justify-center font-bold text-[10px]">
-                                                        AP
-                                                    </div>
-                                                    <div className="flex flex-col min-w-0">
-                                                        <span className="font-bold text-[9px] text-white tracking-wider truncate">
-                                                            ARAMS
-                                                        </span>
-                                                        <span className="text-[7px] text-[#C89445] font-semibold -mt-0.5 uppercase tracking-wider truncate">
-                                                            {themeForm.company_subtitle || 'STUDIO & CINEMA'}
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                {/* Mini Nav Items */}
-                                                <div className="space-y-1 pt-1">
-                                                    {[
-                                                        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-                                                        { id: 'projects', label: 'Projects', icon: Briefcase },
-                                                        { id: 'master_data', label: 'Master Data', icon: Database },
-                                                        { id: 'finance', label: 'Keuangan', icon: FileSpreadsheet },
-                                                    ].map((item) => {
-                                                        const active = previewMode === item.id;
-                                                        return (
-                                                            <div
-                                                                key={item.id}
-                                                                style={active ? {
-                                                                    background: themeForm.sidebar_active_bg_gradient || themeForm.sidebar_active_bg,
-                                                                    color: themeForm.sidebar_active_text,
-                                                                } : {
-                                                                    color: themeForm.sidebar_text_color,
-                                                                }}
-                                                                className={`px-2 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-                                                                    active ? 'shadow-xs' : 'hover:bg-white/5'
-                                                                }`}
-                                                                onClick={() => setPreviewMode(item.id as any)}
-                                                            >
-                                                                <item.icon className="w-3 h-3 shrink-0" />
-                                                                <span className="truncate">{item.label}</span>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-
-                                            <div className="text-[8px] text-slate-500 pt-2 border-t border-white/5">
-                                                v2.4.0 • Studio
-                                            </div>
-                                        </div>
-
-                                        {/* Simulated Dynamic Content Area with Top Navbar */}
-                                        <div className="flex-1 flex flex-col justify-between min-w-0">
-                                            {/* Simulated Top Navbar */}
-                                            <div
-                                                style={{
-                                                    background: themeForm.header_bg_gradient || themeForm.header_bg_color,
-                                                    borderColor: themeForm.header_border_color,
-                                                    color: themeForm.header_text_color,
-                                                }}
-                                                className="h-9 px-3 border-b flex items-center justify-between transition-colors shrink-0"
-                                            >
-                                                <div className="flex items-center gap-2 min-w-0">
-                                                    <Menu className="w-3 h-3 opacity-70 shrink-0" />
-                                                    <span
-                                                        style={{
-                                                            color: themeForm.header_text_color,
-                                                            fontFamily: `${themeForm.font_family_heading}, sans-serif`,
-                                                        }}
-                                                        className="font-extrabold text-[10px] tracking-tight truncate"
-                                                    >
-                                                        {previewMode === 'dashboard' && 'Dashboard'}
-                                                        {previewMode === 'projects' && 'Projects'}
-                                                        {previewMode === 'master_data' && 'Master Data'}
-                                                        {previewMode === 'finance' && 'Keuangan'}
+                                                <div className="min-w-0">
+                                                    <span className="font-extrabold text-[10px] text-white tracking-wider block truncate">
+                                                        ARAMS
+                                                    </span>
+                                                    <span className="text-[7.5px] text-slate-400 block truncate">
+                                                        {themeForm.company_subtitle || 'STUDIO & CINEMA'}
                                                     </span>
                                                 </div>
-                                                <div className="flex items-center gap-1.5 shrink-0">
-                                                    <div
-                                                        style={{ borderColor: themeForm.header_border_color }}
-                                                        className="hidden sm:flex items-center gap-1 bg-white/10 px-1.5 py-0.5 rounded border text-[8px] opacity-70"
-                                                    >
-                                                        <Search className="w-2.5 h-2.5" />
-                                                        <span>Search...</span>
-                                                    </div>
-                                                    <div className="relative">
-                                                        <Bell className="w-3 h-3 opacity-80" />
-                                                        <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-red-500" />
-                                                    </div>
-                                                    <div className="w-4 h-4 rounded-full bg-slate-400 overflow-hidden ring-1 ring-white/20">
-                                                        <img
-                                                            src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80"
-                                                            alt="Admin"
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                    </div>
-                                                </div>
                                             </div>
 
-                                            {/* Page Body Content */}
-                                            <div className="p-3 space-y-2.5 flex-1 flex flex-col justify-between">
-                                                {/* In-page Breadcrumb & Title Live Display */}
-                                                <div className="space-y-1 border-b border-slate-200/40 pb-2">
-                                                    {/* In-Page Breadcrumb */}
-                                                    <div className="flex items-center gap-1 text-[8px]">
-                                                        <span style={{ color: themeForm.breadcrumb_color }}>Dashboard</span>
-                                                        <span style={{ color: themeForm.breadcrumb_color }}>›</span>
-                                                        <span
-                                                            style={{ color: themeForm.breadcrumb_active_color }}
-                                                            className="font-bold"
-                                                        >
-                                                            {previewMode === 'dashboard' && 'Overview'}
-                                                            {previewMode === 'projects' && 'Projects'}
-                                                            {previewMode === 'master_data' && 'Master Data Layanan'}
-                                                            {previewMode === 'finance' && 'Invoice & Transaksi'}
-                                                        </span>
-                                                    </div>
-
-                                                    <div className="flex items-center justify-between gap-2">
-                                                        <h4
-                                                            style={{
-                                                                color: themeForm.app_heading_color,
-                                                                fontFamily: `${themeForm.font_family_heading}, sans-serif`,
-                                                            }}
-                                                            className="font-extrabold text-[12px] tracking-tight truncate"
-                                                        >
-                                                            {previewMode === 'dashboard' && 'Dashboard Overview'}
-                                                            {previewMode === 'projects' && 'Manajemen Projects'}
-                                                            {previewMode === 'master_data' && 'Master Data & Paket'}
-                                                            {previewMode === 'finance' && 'Keuangan & Invoice'}
-                                                        </h4>
-                                                        <div
-                                                            style={{
-                                                                background: themeForm.primary_accent_gradient || themeForm.primary_accent_color,
-                                                            }}
-                                                            className="px-2 py-0.5 rounded-md text-white text-[8px] font-bold shrink-0 shadow-xs"
-                                                        >
-                                                            + Tambah
-                                                        </div>
-                                                    </div>
-                                                    <p
-                                                        style={{
-                                                            color: themeForm.app_muted_text_color,
-                                                        }}
-                                                        className="text-[8.5px] line-clamp-1"
-                                                    >
-                                                        {previewMode === 'dashboard' && 'Ringkasan performa studio, jadwal sesi foto, dan invoice.'}
-                                                        {previewMode === 'projects' && 'Kelola jadwal sesi wedding, prewedding, dan status klien.'}
-                                                        {previewMode === 'master_data' && 'Daftar layanan fotografi, paket pricing, dan kategori.'}
-                                                        {previewMode === 'finance' && 'Pencatatan pemasukan, uang muka DP, dan pelunasan transaksi.'}
-                                                    </p>
+                                            <div className="space-y-1">
+                                                <div
+                                                    style={{
+                                                        background: themeForm.sidebar_active_bg_gradient || themeForm.sidebar_active_bg,
+                                                        color: themeForm.sidebar_active_text,
+                                                    }}
+                                                    className="px-2 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1.5 shadow-xs"
+                                                >
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                                                    <span className="truncate">{previewMode === 'dashboard' ? 'Dashboard' : previewMode === 'projects' ? 'Projects' : previewMode === 'master_data' ? 'Master Data' : 'Keuangan'}</span>
                                                 </div>
+                                                {['Clients', 'Production', 'Settings'].map((item) => (
+                                                    <div
+                                                        key={item}
+                                                        style={{ color: themeForm.sidebar_text_color }}
+                                                        className="px-2 py-1 text-[10px] font-medium flex items-center gap-1.5 opacity-80"
+                                                    >
+                                                        <div className="w-1 h-1 rounded-full bg-slate-500" />
+                                                        <span className="truncate">{item}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
 
-                                            {/* Dynamic Content Snippet Based on Menu */}
+                                        <div className="text-[8px] text-slate-400 border-t border-white/10 pt-2 flex items-center gap-1.5">
+                                            <div className="w-4 h-4 rounded-full bg-white/20 shrink-0" />
+                                            <span className="truncate">Admin User</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Simulated Main Content Area */}
+                                    <div className="flex-1 flex flex-col min-w-0">
+                                        {/* Simulated Navbar Header */}
+                                        <div
+                                            style={{
+                                                background: themeForm.header_bg_gradient || themeForm.header_bg_color,
+                                                borderColor: themeForm.header_border_color,
+                                                color: themeForm.header_text_color,
+                                            }}
+                                            className="h-10 border-b flex items-center justify-between px-3 shrink-0 transition-colors"
+                                        >
+                                            <div className="flex items-center gap-1.5 text-[9px] min-w-0">
+                                                <span style={{ color: themeForm.breadcrumb_color }} className="truncate">Home</span>
+                                                <span style={{ color: themeForm.breadcrumb_color, opacity: 0.5 }}>›</span>
+                                                <span style={{ color: themeForm.breadcrumb_active_color }} className="font-bold truncate">
+                                                    {previewMode === 'dashboard' ? 'Dashboard' : previewMode === 'projects' ? 'Project List' : previewMode === 'master_data' ? 'Master Data' : 'Keuangan Studio'}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 shrink-0">
+                                                <div
+                                                    style={{
+                                                        background: themeForm.header_search_bg || 'rgba(255,255,255,0.12)',
+                                                        color: themeForm.header_search_text || themeForm.header_text_color,
+                                                        borderColor: themeForm.header_border_color,
+                                                    }}
+                                                    className="px-1.5 py-0.5 rounded-md text-[7.5px] border flex items-center gap-1 opacity-90"
+                                                >
+                                                    <Search className="w-2 h-2 opacity-60" />
+                                                    <span className="opacity-70 hidden sm:inline">Search...</span>
+                                                </div>
+                                                <div className="w-3.5 h-3.5 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center text-[7px] font-bold text-slate-700">
+                                                    AU
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Dynamic Preview Content */}
+                                        <div className="p-3 space-y-2.5 flex-1 overflow-y-auto">
                                             {previewMode === 'dashboard' && (
                                                 <div className="space-y-2">
-                                                    <div className="bg-white p-2 rounded-lg border border-slate-200/80 shadow-2xs space-y-0.5">
-                                                        <span style={{ color: themeForm.app_muted_text_color }} className="text-[8px] font-semibold block">
-                                                            Total Pendapatan Bulan Ini
-                                                        </span>
-                                                        <div className="flex items-baseline justify-between">
-                                                            <span style={{ color: themeForm.app_heading_color }} className="font-extrabold text-xs font-mono">
-                                                                Rp 128.500.000
-                                                            </span>
-                                                            <span style={{ color: themeForm.primary_accent_color }} className="text-[8px] font-bold">
-                                                                +18.4%
-                                                            </span>
+                                                    <div className="grid grid-cols-2 gap-1.5">
+                                                        <div className="bg-white p-2 rounded-lg border border-slate-200/80 shadow-2xs">
+                                                            <span style={{ color: themeForm.app_muted_text_color }} className="text-[8px] block">Revenue Bulan Ini</span>
+                                                            <span style={{ color: themeForm.app_heading_color }} className="font-extrabold text-[11px] block">Rp 48.500.000</span>
+                                                            <span className="text-[7.5px] font-bold text-emerald-600">+12% vs lalu</span>
                                                         </div>
-                                                    </div>
-
-                                                    <div className="bg-white p-2 rounded-lg border border-slate-200/80 shadow-2xs space-y-1">
-                                                        <div className="flex items-center justify-between text-[8px] font-bold border-b border-slate-100 pb-0.5" style={{ color: themeForm.app_muted_text_color }}>
-                                                            <span>Project</span>
-                                                            <span>Status</span>
-                                                        </div>
-                                                        <div className="flex items-center justify-between text-[8px]" style={{ color: themeForm.app_text_color }}>
-                                                            <span className="font-medium truncate">Wedding Raisa & Hamish</span>
-                                                            <span className="px-1 py-0.2 rounded text-[7px] font-bold bg-emerald-50 text-emerald-700">Done</span>
-                                                        </div>
-                                                        <div className="flex items-center justify-between text-[8px]" style={{ color: themeForm.app_text_color }}>
-                                                            <span className="font-medium truncate">Prewedding Bali Beach</span>
+                                                        <div className="bg-white p-2 rounded-lg border border-slate-200/80 shadow-2xs">
+                                                            <span style={{ color: themeForm.app_muted_text_color }} className="text-[8px] block">Sesi Selesai</span>
+                                                            <span style={{ color: themeForm.app_heading_color }} className="font-extrabold text-[11px] block">24 Proyek</span>
                                                             <span className="px-1 py-0.2 rounded text-[7px] font-bold bg-amber-50 text-amber-700">Active</span>
                                                         </div>
                                                     </div>
@@ -3529,32 +2712,30 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
                                                         <div key={i} className="bg-white p-2 rounded-lg border border-slate-200/80 shadow-2xs space-y-0.5">
                                                             <div className="flex items-center justify-between">
                                                                 <span style={{ color: themeForm.app_heading_color }} className="font-bold text-[9px]">{item.name}</span>
-                                                                <span style={{ color: themeForm.primary_accent_color }} className="font-extrabold text-[9px] font-mono">{item.price}</span>
+                                                                <span style={{ color: themeForm.primary_accent_color }} className="font-bold text-[8.5px]">{item.price}</span>
                                                             </div>
-                                                            <span style={{ color: themeForm.app_muted_text_color }} className="text-[8px] block">{item.desc}</span>
+                                                            <p style={{ color: themeForm.app_muted_text_color }} className="text-[7.5px]">{item.desc}</p>
                                                         </div>
                                                     ))}
                                                 </div>
                                             )}
 
                                             {previewMode === 'finance' && (
-                                                <div className="bg-white p-2 rounded-lg border border-slate-200/80 shadow-2xs space-y-1.5">
-                                                    <div className="flex items-center justify-between text-[8px] font-bold border-b border-slate-100 pb-1" style={{ color: themeForm.app_muted_text_color }}>
-                                                        <span>Invoice #</span>
-                                                        <span>Nominal</span>
-                                                        <span>Status</span>
+                                                <div className="bg-white p-2 rounded-lg border border-slate-200/80 shadow-2xs space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <span style={{ color: themeForm.app_heading_color }} className="font-bold text-[9px]">Laporan Kas &amp; Saldo</span>
+                                                        <span style={{ color: themeForm.primary_accent_color }} className="text-[8px] font-bold">BCA Studio</span>
                                                     </div>
-                                                    {[
-                                                        { no: 'INV-2026-001', amount: 'Rp 12.000.000', status: 'Lunas' },
-                                                        { no: 'INV-2026-002', amount: 'Rp 5.500.000', status: 'DP 50%' },
-                                                        { no: 'INV-2026-003', amount: 'Rp 18.000.000', status: 'Pending' },
-                                                    ].map((inv, i) => (
-                                                        <div key={i} className="flex items-center justify-between text-[8px]" style={{ color: themeForm.app_text_color }}>
-                                                            <span className="font-mono">{inv.no}</span>
-                                                            <span style={{ color: themeForm.app_heading_color }} className="font-bold font-mono">{inv.amount}</span>
-                                                            <span style={{ color: themeForm.primary_accent_color }} className="font-semibold text-[7px]">{inv.status}</span>
+                                                    <div className="grid grid-cols-2 gap-1 text-[8px]">
+                                                        <div className="p-1 rounded bg-emerald-50 text-emerald-800">
+                                                            <span className="block text-[6.5px] text-emerald-600 font-bold uppercase">Pemasukan</span>
+                                                            <span className="font-bold text-[8.5px]">Rp 32.500.000</span>
                                                         </div>
-                                                    ))}
+                                                        <div className="p-1 rounded bg-rose-50 text-rose-800">
+                                                            <span className="block text-[6.5px] text-rose-600 font-bold uppercase">Pengeluaran</span>
+                                                            <span className="font-bold text-[8.5px]">Rp 8.120.000</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             )}
 
@@ -3564,7 +2745,6 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
                                         </div>
                                     </div>
                                 </div>
-                            )}
 
                                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[11px] text-slate-600 space-y-1">
                                     <span className="font-bold text-slate-800 block">💡 Tips Kustomisasi:</span>
@@ -3577,6 +2757,349 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
                     </div>
                 </div>
             )}
+
+            {/* TAB: TAMPILAN LOGIN */}
+            {activeTab === 'login_theme' && (
+                <div className="space-y-6 animate-in fade-in duration-200">
+                    {/* Header Bar with Quick Save Button */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1">
+                        <div>
+                            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                <Lock className="w-4 h-4 text-[#4A151B]" />
+                                <span>Kustomisasi Tampilan Halaman Login</span>
+                            </h2>
+                            <p className="text-xs text-slate-500 mt-0.5">
+                                Atur palet warna latar, gradien visual, kartu formulir masuk, dan tagline autentikasi studio.
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={handleSaveTheme}
+                                style={{ backgroundColor: themeForm.login_accent_color || '#4A151B' }}
+                                className="px-4 py-2 rounded-xl text-xs font-bold text-white shadow-xs hover:opacity-95 transition-all flex items-center gap-1.5 cursor-pointer"
+                            >
+                                <Save className="w-3.5 h-3.5" />
+                                <span>Simpan Pengaturan Login</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Presets Cepat Pilihan Tema Login */}
+                    <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2">
+                                    <Sparkles className="w-3.5 h-3.5 text-[#C98922]" />
+                                    <span>Pilihan Preset Tema Login</span>
+                                </h3>
+                                <p className="text-[11px] text-slate-500 mt-0.5">
+                                    Klik salah satu preset di bawah untuk menerapkan palet warna &amp; tipografi yang telah dikurasi.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 pt-1">
+                            {loginPresets.map((preset) => {
+                                const isSelected = themeForm.login_preset === preset.id;
+                                return (
+                                    <button
+                                        key={preset.id}
+                                        type="button"
+                                        onClick={() => handleApplyLoginPreset(preset)}
+                                        className={`text-left p-3.5 rounded-2xl border transition-all cursor-pointer relative flex flex-col justify-between space-y-2.5 ${
+                                            isSelected
+                                                ? 'border-[#C98922] bg-amber-50/40 ring-2 ring-[#C98922]/20 shadow-xs'
+                                                : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
+                                        }`}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                                                {preset.badge}
+                                            </span>
+                                            {isSelected && (
+                                                <span className="w-4 h-4 rounded-full bg-[#C98922] text-white flex items-center justify-center text-[10px] font-bold">
+                                                    ✓
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <div>
+                                            <h4 className="text-xs font-bold text-slate-900 line-clamp-1">{preset.name}</h4>
+                                            <p className="text-[10px] text-slate-500 line-clamp-2 mt-0.5">{preset.description}</p>
+                                        </div>
+
+                                        {/* Color preview circles */}
+                                        <div className="flex items-center gap-1.5 pt-1">
+                                            <span
+                                                style={{ backgroundColor: preset.login_bg_color }}
+                                                className="w-4 h-4 rounded-full border border-slate-300 shadow-2xs"
+                                                title="Latar Belakang"
+                                            />
+                                            <span
+                                                style={{ backgroundColor: preset.login_card_bg }}
+                                                className="w-4 h-4 rounded-full border border-slate-300 shadow-2xs"
+                                                title="Kartu Form"
+                                            />
+                                            <span
+                                                style={{ backgroundColor: preset.login_accent_color }}
+                                                className="w-4 h-4 rounded-full border border-slate-300 shadow-2xs"
+                                                title="Aksen Tombol"
+                                            />
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+                        {/* Left Column: Form Customizer Login (7 cols) */}
+                        <div className="xl:col-span-7 space-y-6">
+                            <form onSubmit={handleSaveTheme} className="space-y-5">
+                                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+                                    <div className="border-b border-slate-100 pb-2.5">
+                                        <span className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                                            <Lock className="w-4 h-4 text-indigo-600" />
+                                            <span>Latar Belakang Halaman Login</span>
+                                        </span>
+                                        <span className="text-[11px] text-slate-400">
+                                            Kustomisasi tampilan halaman autentikasi masuk sistem
+                                        </span>
+                                    </div>
+
+                                    <ColorSettingRow
+                                        label="Latar Belakang Login (Solid)"
+                                        description="Warna kanvas utama halaman masuk"
+                                        value={themeForm.login_bg_color}
+                                        onChange={(val) => setThemeForm({ ...themeForm, login_bg_color: val, login_bg_gradient: '' })}
+                                        presets={[
+                                            { label: 'Arams Maroon (Default)', hex: '#2E0F15' },
+                                            { label: 'Deep Wine', hex: '#200A0E' },
+                                            { label: 'Obsidian Dark', hex: '#0E091E' },
+                                            { label: 'Deep Navy', hex: '#070D18' },
+                                            { label: 'Forest Dark', hex: '#06120E' },
+                                            { label: 'Slate Dark', hex: '#0F172A' },
+                                        ]}
+                                    />
+
+                                    <GradientBuilder
+                                        label="Gradient Latar Login (Opsional)"
+                                        value={themeForm.login_bg_gradient}
+                                        onChange={(css) => setThemeForm({ ...themeForm, login_bg_gradient: css })}
+                                        presets={[
+                                            { label: 'Arams Maroon Glow (Default)', value: 'linear-gradient(180deg, #2E0F15 0%, #200A0E 100%)' },
+                                            { label: 'Wine & Rose Silk', value: 'linear-gradient(135deg, #2E0F15 0%, #4A151B 50%, #200A0E 100%)' },
+                                            { label: 'Obsidian Velvet Glow', value: 'linear-gradient(135deg, #0E091E 0%, #1A0F3F 50%, #0E091E 100%)' },
+                                            { label: 'Midnight Sapphire', value: 'linear-gradient(135deg, #070D18 0%, #0D1E3A 100%)' },
+                                        ]}
+                                    />
+                                </div>
+
+                                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+                                    <div className="border-b border-slate-100 pb-2.5">
+                                        <span className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                                            <Paintbrush className="w-4 h-4 text-[#4A151B]" />
+                                            <span>Kartu Login &amp; Aksen Tombol</span>
+                                        </span>
+                                        <span className="text-[11px] text-slate-400">
+                                            Warna kotak form login, aksen tombol masuk, dan tagline brand
+                                        </span>
+                                    </div>
+
+                                    <ColorSettingRow
+                                        label="Latar Belakang Kartu Form Login"
+                                        description="Warna permukaan kartu tempat input email dan password"
+                                        value={themeForm.login_card_bg}
+                                        onChange={(val) => setThemeForm({ ...themeForm, login_card_bg: val, login_card_bg_gradient: '' })}
+                                        presets={[
+                                            { label: 'Deep Maroon Card', hex: '#380E13' },
+                                            { label: 'Pure White Card', hex: '#FFFFFF' },
+                                            { label: 'Warm Ivory Card', hex: '#FAF7F5' },
+                                            { label: 'Deep Purple Card', hex: '#1C132E' },
+                                            { label: 'Navy Card', hex: '#132238' },
+                                            { label: 'Slate Card', hex: '#1E293B' },
+                                        ]}
+                                    />
+
+                                    <ColorSettingRow
+                                        label="Warna Aksen Login (Tombol &amp; Border)"
+                                        description="Warna tombol masuk dan garis aksen kartu"
+                                        value={themeForm.login_accent_color}
+                                        onChange={(val) => setThemeForm({ ...themeForm, login_accent_color: val })}
+                                        presets={[
+                                            { label: 'Royal Maroon (Default)', hex: '#4A151B' },
+                                            { label: 'Crimson Wine', hex: '#380E13' },
+                                            { label: 'Rose Gold', hex: '#BE185D' },
+                                            { label: 'Champagne Gold', hex: '#C98922' },
+                                            { label: 'Warm Gold', hex: '#CA8A22' },
+                                            { label: 'Sapphire Blue', hex: '#2563EB' },
+                                        ]}
+                                    />
+
+                                    <div className="pt-2">
+                                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                            Tagline Login Brand
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={themeForm.login_tagline}
+                                            onChange={(e) => setThemeForm({ ...themeForm, login_tagline: e.target.value })}
+                                            placeholder="STUDIO & CINEMA PHOTOGRAPHY SYSTEM"
+                                            className="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 bg-white focus:outline-hidden focus:border-indigo-500"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex items-center justify-between pt-2">
+                                    <button
+                                        type="button"
+                                        onClick={handleResetTheme}
+                                        className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                                    >
+                                        Kembalikan ke Default
+                                    </button>
+
+                                    <button
+                                        type="submit"
+                                        className="px-6 py-2.5 bg-[#C89445] hover:bg-[#b78437] text-white font-bold text-xs rounded-xl shadow-lg shadow-[#C89445]/25 transition-all flex items-center gap-2 cursor-pointer"
+                                    >
+                                        <Save className="w-4 h-4" />
+                                        <span>Simpan Perubahan Tampilan</span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        {/* Right Column: Live Interactive Mockup Preview for Login (5 cols) */}
+                        <div className="xl:col-span-5 sticky top-20">
+                            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-lg space-y-4">
+                                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                                        <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                                        <span className="text-[11px] font-bold text-slate-700 ml-1">
+                                            Live Real-time Preview Login
+                                        </span>
+                                    </div>
+                                    <span className="text-[10px] font-bold text-[#4A151B] bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-md">
+                                        /login
+                                    </span>
+                                </div>
+
+                                {/* Simulated Login Window matching 2-Column Split Design */}
+                                <div
+                                    style={{
+                                        fontFamily: `${themeForm.font_family_body}, sans-serif`,
+                                    }}
+                                    className="rounded-xl border border-slate-200/80 overflow-hidden shadow-inner flex items-center justify-center p-3 sm:p-5 min-h-[380px] text-xs transition-colors relative bg-[#EFECE8]"
+                                >
+                                    {/* 2-Column Split Card Simulation */}
+                                    <div className="w-full max-w-sm rounded-2xl overflow-hidden shadow-xl border border-black/10 grid grid-cols-5 bg-white">
+                                        {/* Left Side: Photo + Maroon Branding (2 cols) */}
+                                        <div
+                                            style={{
+                                                background: themeForm.login_bg_gradient || themeForm.login_bg_color,
+                                            }}
+                                            className="col-span-2 p-3 text-white flex flex-col justify-between relative overflow-hidden min-h-[250px]"
+                                        >
+                                            {/* Couple Photo Background Overlay */}
+                                            <img
+                                                src="/images/wedding-couple.jpg"
+                                                alt="Wedding couple"
+                                                className="absolute inset-0 w-full h-full object-cover opacity-35 filter brightness-75 contrast-125"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none" />
+
+                                            <div className="relative z-10 space-y-1.5">
+                                                <div className="flex items-center gap-1.5">
+                                                    <div className="w-5 h-5 rounded-md bg-white/20 backdrop-blur-md border border-white/30 text-white flex items-center justify-center font-black text-[9px]">
+                                                        ap
+                                                    </div>
+                                                    <div>
+                                                        <span className="font-extrabold text-[8px] tracking-wider text-white uppercase block leading-none">
+                                                            ARAMS
+                                                        </span>
+                                                        <span className="text-[6.5px] text-rose-300 font-bold uppercase tracking-widest block mt-0.5">
+                                                            Photografer
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="relative z-10 space-y-1">
+                                                <span className="text-[8px] font-extrabold text-white leading-tight block drop-shadow-xs">
+                                                    Abadikan Setiap Momen Berharga
+                                                </span>
+                                                <span
+                                                    className="text-[6.5px] font-bold uppercase tracking-wider block opacity-90"
+                                                    style={{ color: themeForm.login_accent_color }}
+                                                >
+                                                    {themeForm.login_tagline || 'STUDIO & CINEMA'}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Right Side: Form Container (3 cols) */}
+                                        <div
+                                            style={{
+                                                background: themeForm.login_card_bg === '#380E13' || themeForm.login_card_bg === '#1C132E' ? '#FFFFFF' : themeForm.login_card_bg,
+                                            }}
+                                            className="col-span-3 p-3 flex flex-col justify-between space-y-2"
+                                        >
+                                            <div>
+                                                <span className="font-extrabold text-[10px] text-slate-900 block">
+                                                    Welcome Back!
+                                                </span>
+                                                <span className="text-[7.5px] text-slate-400 block mt-0.5">
+                                                    Masuk ke sistem Arams
+                                                </span>
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <div>
+                                                    <span className="text-[7px] font-bold text-slate-500 block mb-0.5">Email</span>
+                                                    <div className="bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-[7.5px] text-slate-600 font-medium">
+                                                        admin@arams.com
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <span className="text-[7px] font-bold text-slate-500 block mb-0.5">Password</span>
+                                                    <div className="bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-[7.5px] text-slate-400">
+                                                        ••••••••
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <div
+                                                    style={{
+                                                        background: themeForm.login_accent_color,
+                                                        boxShadow: `0 3px 10px -2px ${themeForm.login_accent_color}66`,
+                                                    }}
+                                                    className="w-full py-1.5 rounded-lg text-white font-bold text-[8px] tracking-wide text-center cursor-pointer shadow-xs transition-transform hover:scale-[1.02]"
+                                                >
+                                                    Masuk
+                                                </div>
+                                                <div className="text-center mt-1">
+                                                    <span className="text-[6.5px] text-slate-400">Lupa password?</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <span className="text-[8px] text-slate-400 text-center mt-3 z-10">
+                                        *Preview live halaman login (/login)
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
 
             {/* TAB: KUSTOMISASI PORTAL KLIEN */}
             {activeTab === 'portal_theme' && (
@@ -3864,8 +3387,8 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
                                                 type="text"
                                                 value={portalForm.portal_hero_gradient}
                                                 onChange={(e) => setPortalForm({ ...portalForm, portal_hero_gradient: e.target.value })}
-                                                placeholder="linear-gradient(135deg, #1C132E 0%, #0E091E 100%)"
-                                                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-mono text-slate-800 focus:border-[#C98922]"
+                                                placeholder="linear-gradient(135deg, #2E0F15 0%, #1A070B 100%)"
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-mono text-slate-800 focus:border-[#4A151B]"
                                             />
                                         </div>
 
@@ -3887,6 +3410,33 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
                                                     className="flex-1 px-3 py-2 border border-slate-300 rounded-xl text-xs font-mono text-slate-800 uppercase"
                                                 />
                                             </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Quick Pick Hero Gradients */}
+                                    <div className="pt-1">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
+                                            Pilihan Cepat Gradien Hero:
+                                        </span>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            {[
+                                                { label: 'Deep Maroon Luxury', val: 'linear-gradient(135deg, #2E0F15 0%, #1A070B 100%)' },
+                                                { label: 'Royal Wine Glow', val: 'linear-gradient(135deg, #4A151B 0%, #240B10 100%)' },
+                                                { label: 'Midnight Studio', val: 'linear-gradient(135deg, #1C132E 0%, #0E091E 100%)' },
+                                            ].map((g, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    type="button"
+                                                    onClick={() => setPortalForm({ ...portalForm, portal_hero_gradient: g.val })}
+                                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer ${
+                                                        portalForm.portal_hero_gradient === g.val
+                                                            ? 'border-[#4A151B] bg-rose-50 text-[#4A151B] font-bold'
+                                                            : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                                                    }`}
+                                                >
+                                                    {g.label}
+                                                </button>
+                                            ))}
                                         </div>
                                     </div>
                                 </div>
@@ -3955,7 +3505,7 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
                                             <div className="flex items-center gap-2.5">
                                                 <input
                                                     type="color"
-                                                    value={portalForm.portal_primary_accent || '#C98922'}
+                                                    value={portalForm.portal_primary_accent || '#4A151B'}
                                                     onChange={(e) => setPortalForm({ ...portalForm, portal_primary_accent: e.target.value })}
                                                     className="w-10 h-10 rounded-xl border border-slate-200 cursor-pointer p-0.5 bg-white"
                                                 />
@@ -3976,9 +3526,39 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
                                                 type="text"
                                                 value={portalForm.portal_accent_gradient}
                                                 onChange={(e) => setPortalForm({ ...portalForm, portal_accent_gradient: e.target.value })}
-                                                placeholder="linear-gradient(135deg, #C98922 0%, #A6702E 100%)"
+                                                placeholder="linear-gradient(135deg, #4A151B 0%, #2E0F15 100%)"
                                                 className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-mono text-slate-800"
                                             />
+                                        </div>
+                                    </div>
+
+                                    {/* Quick Pick Accent Colors */}
+                                    <div className="pt-1">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
+                                            Pilihan Cepat Warna Aksen:
+                                        </span>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            {[
+                                                { label: 'Royal Maroon', val: '#4A151B' },
+                                                { label: 'Arams Maroon', val: '#2E0F15' },
+                                                { label: 'Deep Wine', val: '#380E13' },
+                                                { label: 'Rose Accent', val: '#E11D48' },
+                                                { label: 'Champagne Gold', val: '#C98922' },
+                                            ].map((col, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    type="button"
+                                                    onClick={() => setPortalForm({ ...portalForm, portal_primary_accent: col.val })}
+                                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                                                        portalForm.portal_primary_accent.toLowerCase() === col.val.toLowerCase()
+                                                            ? 'border-[#4A151B] bg-rose-50 text-[#4A151B] font-bold'
+                                                            : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                                                    }`}
+                                                >
+                                                    <span style={{ backgroundColor: col.val }} className="w-2.5 h-2.5 rounded-full border border-black/10 inline-block" />
+                                                    <span>{col.label}</span>
+                                                </button>
+                                            ))}
                                         </div>
                                     </div>
                                 </div>
@@ -4274,8 +3854,8 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
                                         <div className="flex items-center justify-between">
                                             <span
                                                 style={{
-                                                    backgroundColor: portalForm.portal_primary_accent || '#C98922',
-                                                    color: '#000000',
+                                                    backgroundColor: portalForm.portal_primary_accent || '#4A151B',
+                                                    color: '#FFFFFF',
                                                 }}
                                                 className="px-2 py-0.5 rounded-full text-[8px] font-extrabold uppercase tracking-wider"
                                             >
@@ -4302,8 +3882,8 @@ export default function SettingsIndex({ settings = {}, settingsMap = {} }: Setti
                                             <button
                                                 type="button"
                                                 style={{
-                                                    backgroundColor: portalForm.portal_primary_accent || '#C98922',
-                                                    color: '#000000',
+                                                    backgroundColor: portalForm.portal_primary_accent || '#4A151B',
+                                                    color: '#FFFFFF',
                                                 }}
                                                 className="px-3 py-1 rounded-lg text-[9px] font-bold shadow-xs cursor-pointer"
                                             >

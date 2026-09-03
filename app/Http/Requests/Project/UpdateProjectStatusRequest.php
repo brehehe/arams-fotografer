@@ -16,9 +16,10 @@ class UpdateProjectStatusRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'status' => ['required', 'string', Rule::in(ProjectStatus::values())],
+            'status' => ['nullable', 'string', Rule::in(ProjectStatus::values())],
             'progress' => 'nullable|integer|min:0|max:100',
-            'workflow_step' => 'nullable|string',
+            'workflow_step' => 'nullable|string|max:255',
+            'custom_timeline' => 'nullable|array',
         ];
     }
 }

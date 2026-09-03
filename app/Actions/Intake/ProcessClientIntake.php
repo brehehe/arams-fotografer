@@ -7,6 +7,7 @@ use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Package;
 use App\Models\Project;
+use App\Services\FinanceService;
 use App\Services\ProjectService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -14,7 +15,8 @@ use Illuminate\Support\Facades\DB;
 class ProcessClientIntake
 {
     public function __construct(
-        protected ProjectService $projectService
+        protected ProjectService $projectService,
+        protected FinanceService $financeService
     ) {}
 
     /**
@@ -38,7 +40,7 @@ class ProcessClientIntake
                 'groom_birth_date' => $validated['groom_birth_date'] ?? null,
                 'phone' => $validated['phone'],
                 'secondary_phone' => $validated['secondary_phone'] ?? null,
-                'email' => $validated['email'] ?? null,
+                'email' => $validated['email'],
                 'instagram' => $validated['instagram'] ?? null,
                 'city' => $validated['city'] ?? null,
                 'province' => $validated['province'] ?? null,
@@ -58,15 +60,15 @@ class ProcessClientIntake
                 $client = Client::create($clientData);
             }
 
-            // 2. Package calculation
+            // 2. Fetch Package & Category Details
             $package = null;
             $price = 0;
             if (!empty($validated['package_id'])) {
                 $package = Package::find($validated['package_id']);
-                $price = $package ? (float) $package->base_price : 0;
+                $price = $package ? (float) $package->price : 0;
             }
 
-            // 3. Project Name & Number
+            // 3. Prepare Project Info
             $projectName = 'Wedding ' . $clientName;
             $projectNumber = $this->projectService->generateProjectNumber();
 
@@ -93,7 +95,7 @@ class ProcessClientIntake
 
             // 5. Generate First Invoice if package has price
             if ($price > 0) {
-                $invoiceNumber = $this->projectService->generateInvoiceNumber();
+                $invoiceNumber = $this->financeService->generateInvoiceNumber();
                 $issueDate = Carbon::now();
                 $dueDate = Carbon::parse($validated['event_date'])->subDays(7);
                 if ($dueDate->isPast()) {
