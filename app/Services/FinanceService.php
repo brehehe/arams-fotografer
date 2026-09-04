@@ -20,6 +20,16 @@ class FinanceService
     public function getFinanceOverview(Request $request): array
     {
         $tab = $request->input('tab', 'payments');
+        $now = Carbon::now();
+
+        // ── Chart Year Filter ──
+        $chartYear   = (int) $request->input('year', $now->year);
+        $availableYears = [$now->year - 2, $now->year - 1, $now->year, $now->year + 1];
+        if (!in_array($chartYear, $availableYears)) {
+            $chartYear = $now->year;
+        }
+
+        $currentYear = $chartYear;
 
         // ── Core Stats ──
         $totalProjectValue  = (float) Project::sum('total_amount');
@@ -46,8 +56,7 @@ class FinanceService
             ? round((($thisMonthTotal - $lastMonthTotal) / $lastMonthTotal) * 100, 1)
             : ($thisMonthTotal > 0 ? 100 : 0);
 
-        // ── Monthly Revenue (12 months of current year from DB) ──
-        $currentYear = Carbon::now()->year;
+        // ── Monthly Revenue (12 months of selected year from DB) ──
         $monthlyRevenue = collect(range(1, 12))->map(function ($m) use ($currentYear) {
             $start = Carbon::create($currentYear, $m, 1)->startOfMonth();
             $end   = $start->copy()->endOfMonth();
@@ -479,6 +488,10 @@ class FinanceService
 
         return [
             'tab'                      => $tab,
+            'filters'                  => [
+                'year'            => $currentYear,
+                'available_years' => $availableYears,
+            ],
             'stats'                    => [
                 'total_value'             => $totalProjectValue,
                 'total_received'          => $totalProjectPaid + $totalMiscIncome,

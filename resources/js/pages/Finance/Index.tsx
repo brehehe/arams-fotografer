@@ -81,6 +81,11 @@ const EXPENSE_PRESETS = [
 ];
 
 interface FinanceIndexProps {
+    tab?: string;
+    filters?: {
+        year: number;
+        available_years: number[];
+    };
     stats?: any;
     monthly_revenue?: any[];
     pm_breakdown?: any[];
@@ -126,6 +131,8 @@ interface FinanceIndexProps {
 }
 
 export default function FinanceIndex({
+    tab: serverTab = 'payments',
+    filters,
     stats = {},
     monthly_revenue = [],
     pm_breakdown = [],
@@ -146,7 +153,8 @@ export default function FinanceIndex({
     financial_statement,
     unified_cashflow = [],
 }: FinanceIndexProps) {
-    const [selectedYear, setSelectedYear] = useState('Tahun Ini');
+    const activeYear = filters?.year ?? new Date().getFullYear();
+    const availableYears = filters?.available_years ?? [new Date().getFullYear()];
     const [yearDropdownOpen, setYearDropdownOpen] = useState(false);
     const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
     const [expenseModalOpen, setExpenseModalOpen] = useState(false);
@@ -718,7 +726,7 @@ export default function FinanceIndex({
                                 Analitik Keuangan Bulanan
                             </span>
                             <span className="text-xs text-slate-400">•</span>
-                            <span className="text-xs text-slate-500 font-medium">Tahun {selectedYear === 'Tahun Ini' ? '2026' : selectedYear}</span>
+                            <span className="text-xs text-slate-500 font-medium">Tahun {activeYear}</span>
                         </div>
                         <h3 className="font-bold text-base sm:text-lg text-slate-900 mt-1">
                             Tren Keuangan &amp; Tagihan per Bulan
@@ -752,20 +760,26 @@ export default function FinanceIndex({
                                 onClick={() => setYearDropdownOpen(!yearDropdownOpen)}
                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 cursor-pointer transition-colors"
                             >
-                                <span>{selectedYear}</span>
+                                <span>{activeYear}</span>
                                 <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                             </button>
                             {yearDropdownOpen && (
                                 <div className="absolute right-0 mt-1 w-32 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-30 text-xs">
-                                    {['Tahun Ini', '2026', '2025'].map((y) => (
+                                    {availableYears.map((y) => (
                                         <button
                                             key={y}
                                             type="button"
                                             onClick={() => {
-                                                setSelectedYear(y);
                                                 setYearDropdownOpen(false);
+                                                router.get(
+                                                    '/finance',
+                                                    { year: y },
+                                                    { preserveState: false, preserveScroll: false }
+                                                );
                                             }}
-                                            className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-slate-700 font-medium"
+                                            className={`w-full text-left px-3 py-1.5 hover:bg-slate-50 font-medium ${
+                                                y === activeYear ? 'text-indigo-600 font-bold' : 'text-slate-700'
+                                            }`}
                                         >
                                             {y}
                                         </button>

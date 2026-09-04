@@ -35,6 +35,11 @@ import {
     AlertConfirmation,
     Badge,
     Pagination,
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
 } from '@/components/ui';
 
 interface ProjectOption {
@@ -59,10 +64,18 @@ interface FileItem {
     project_category?: string;
     sender_name?: string;
     sender_role?: 'admin' | 'supervisor' | string;
+    creator?: {
+        id?: string;
+        name?: string;
+        roles?: Array<{ id: string; name: string }>;
+    };
     sent_at?: string;
-    status: 'terkirim' | 'dibuka' | 'belum_dibuka' | 'kedaluwarsa' | string;
+    created_at?: string;
+    status?: 'terkirim' | 'dibuka' | 'belum_dibuka' | 'kedaluwarsa' | 'disembunyikan' | string;
     expires_at?: string;
     is_hidden?: boolean;
+    is_expired?: boolean;
+    days_remaining?: number | null;
 }
 
 interface FilesIndexProps {
@@ -113,7 +126,6 @@ export default function FilesIndex({
     const [perPage, setPerPage] = useState(filters.per_page || file_links.per_page || 10);
 
     const [modalOpen, setModalOpen] = useState(false);
-    const [activeActionId, setActiveActionId] = useState<string | null>(null);
     const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id?: string; name?: string }>({
         isOpen: false,
     });
@@ -351,8 +363,15 @@ export default function FilesIndex({
         }
     };
 
-    const getStatusBadge = (status: string) => {
-        switch (status?.toLowerCase()) {
+    const getStatusBadge = (status?: string, isExpired?: boolean, isHidden?: boolean) => {
+        if (isHidden) {
+            return { label: 'Disembunyikan', style: 'bg-slate-100 text-slate-700 border-slate-300' };
+        }
+        if (isExpired) {
+            return { label: 'Kedaluwarsa', style: 'bg-rose-50 text-rose-700 border-rose-200' };
+        }
+        const effectiveStatus = (status || 'terkirim').toLowerCase();
+        switch (effectiveStatus) {
             case 'terkirim':
             case 'active':
                 return { label: 'Terkirim', style: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
@@ -364,8 +383,11 @@ export default function FilesIndex({
             case 'kedaluwarsa':
             case 'expired':
                 return { label: 'Kedaluwarsa', style: 'bg-rose-50 text-rose-700 border-rose-200' };
+            case 'disembunyikan':
+            case 'hidden':
+                return { label: 'Disembunyikan', style: 'bg-slate-100 text-slate-700 border-slate-300' };
             default:
-                return { label: status, style: 'bg-slate-50 text-slate-700 border-slate-200' };
+                return { label: status || 'Terkirim', style: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
         }
     };
 
@@ -623,12 +645,15 @@ export default function FilesIndex({
                     {displayFiles && displayFiles.length > 0 ? (
                         displayFiles.map((file, idx) => {
                             const rowNumber = (file_links.current_page - 1) * (file_links.per_page || 10) + idx + 1;
+                            const isExpired = file.is_expired ?? (file.expires_at ? new Date(file.expires_at) < new Date() : false);
                             const typeMeta = getTypeBadge(file.file_type);
-                            const statusMeta = getStatusBadge(file.status);
+                            const statusMeta = getStatusBadge(file.status, isExpired, file.is_hidden);
                             const clientName = file.project?.client?.name || file.client_name || 'Kevin & Jessica';
                             const projectName = file.project?.name || file.project_category || 'Wedding';
-                            const senderName = file.sender_name || 'Admin Arams';
-                            const isSupervisor = file.sender_role === 'supervisor' || senderName.toLowerCase().includes('supervisor');
+                            const senderName = file.sender_name || file.creator?.name || 'Admin Arams';
+                            const isSupervisor = file.sender_role === 'supervisor' ||
+                                file.creator?.roles?.some(r => r.name === 'supervisor') ||
+                                senderName.toLowerCase().includes('supervisor');
 
                             return (
                                 <TableRow key={file.id} className="hover:bg-slate-50/80 transition-colors group">
@@ -706,7 +731,7 @@ export default function FilesIndex({
                                     </TableCell>
 
                                     {/* AKSI */}
-                                    <TableCell className="text-center relative">
+                                    <TableCell className="text-center">
                                         <div className="inline-flex items-center justify-center gap-1">
                                             {/* Copy link button */}
                                             <button
@@ -718,59 +743,47 @@ export default function FilesIndex({
                                                 <Copy className="w-3.5 h-3.5" />
                                             </button>
 
-                                            {/* More options button */}
-                                            <div className="relative">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setActiveActionId(activeActionId === file.id ? null : file.id)}
-                                                    className="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                                                    title="Menu Lainnya"
-                                                >
-                                                    <MoreVertical className="w-3.5 h-3.5" />
-                                                </button>
-
-                                                {activeActionId === file.id && (
-                                                    <>
-                                                        <div
-                                                            className="fixed inset-0 z-10"
-                                                            onClick={() => setActiveActionId(null)}
-                                                        />
-                                                        <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-20 text-xs text-left">
-                                                            <a
-                                                                href={file.drive_url}
-                                                                target="_blank"
-                                                                rel="noreferrer"
-                                                                className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 font-medium"
-                                                            >
-                                                                <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-                                                                <span>Buka Link GDrive</span>
-                                                            </a>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    setActiveActionId(null);
-                                                                    handleCopy(file.drive_url);
-                                                                }}
-                                                                className="w-full flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 font-medium text-left cursor-pointer"
-                                                            >
-                                                                <Copy className="w-3.5 h-3.5 text-slate-400" />
-                                                                <span>Salin Tautan</span>
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    setActiveActionId(null);
-                                                                    setConfirmDelete({ isOpen: true, id: file.id, name: file.name });
-                                                                }}
-                                                                className="w-full flex items-center gap-2 px-3 py-2 text-rose-600 hover:bg-rose-50 font-medium text-left cursor-pointer"
-                                                            >
-                                                                <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                                                                <span>Hapus Link</span>
-                                                            </button>
-                                                        </div>
-                                                    </>
-                                                )}
-                                            </div>
+                                            {/* More options button with Portal DropdownMenu */}
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <button
+                                                        type="button"
+                                                        className="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer outline-hidden"
+                                                        title="Menu Lainnya"
+                                                    >
+                                                        <MoreVertical className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-48">
+                                                    <DropdownMenuItem asChild>
+                                                        <a
+                                                            href={file.drive_url}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="flex items-center gap-2 cursor-pointer"
+                                                        >
+                                                            <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                                                            <span>Buka Link GDrive</span>
+                                                        </a>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() => handleCopy(file.drive_url)}
+                                                        className="flex items-center gap-2 cursor-pointer"
+                                                    >
+                                                        <Copy className="w-3.5 h-3.5 text-slate-400" />
+                                                        <span>Salin Tautan</span>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem
+                                                        variant="destructive"
+                                                        onClick={() => setConfirmDelete({ isOpen: true, id: file.id, name: file.name })}
+                                                        className="flex items-center gap-2 cursor-pointer"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                                                        <span>Hapus Link</span>
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </div>
                                     </TableCell>
                                 </TableRow>

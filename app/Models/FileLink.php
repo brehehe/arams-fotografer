@@ -31,6 +31,15 @@ class FileLink extends Model
         'is_hidden' => 'boolean',
     ];
 
+    protected $appends = [
+        'status',
+        'days_remaining',
+        'is_expired',
+        'sent_at',
+        'sender_name',
+        'sender_role',
+    ];
+
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
@@ -39,6 +48,62 @@ class FileLink extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Get computed status for the file link.
+     */
+    public function getStatusAttribute(): string
+    {
+        if ($this->is_hidden) {
+            return 'disembunyikan';
+        }
+
+        if ($this->isExpired()) {
+            return 'kedaluwarsa';
+        }
+
+        return 'terkirim';
+    }
+
+    /**
+     * Get days remaining until expiration.
+     */
+    public function getDaysRemainingAttribute(): ?int
+    {
+        return $this->daysRemaining();
+    }
+
+    /**
+     * Get is_expired boolean.
+     */
+    public function getIsExpiredAttribute(): bool
+    {
+        return $this->isExpired();
+    }
+
+    /**
+     * Get formatted sent at datetime.
+     */
+    public function getSentAtAttribute(): ?string
+    {
+        return $this->created_at ? $this->created_at->translatedFormat('d M Y, H:i') : null;
+    }
+
+    /**
+     * Get sender user name.
+     */
+    public function getSenderNameAttribute(): string
+    {
+        return $this->creator?->name ?? 'Admin Arams';
+    }
+
+    /**
+     * Get sender role.
+     */
+    public function getSenderRoleAttribute(): string
+    {
+        return $this->creator?->roles?->first()?->name ?? ($this->creator ? 'admin' : 'admin');
     }
 
     /**

@@ -22,7 +22,7 @@ class FileLinkService
         $type = $request->query('type', 'all');
         $perPage = (int) $request->input('per_page', 10);
 
-        $query = FileLink::with(['project.client', 'creator'])->latest();
+        $query = FileLink::with(['project.client', 'creator.roles'])->latest();
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -41,12 +41,18 @@ class FileLinkService
             $query->where('file_type', $type);
         }
 
+        if ($sender !== 'all' && !empty($sender)) {
+            $query->whereHas('creator.roles', fn ($rq) => $rq->where('name', $sender));
+        }
+
         if ($status === 'active' || $status === 'terkirim') {
             $query->active();
         } elseif ($status === 'expired' || $status === 'kedaluwarsa') {
             $query->expired();
         } elseif ($status === 'expiring_soon') {
             $query->expiringSoon(7);
+        } elseif ($status === 'disembunyikan') {
+            $query->where('is_hidden', true);
         }
 
         $fileLinks = $query->paginate($perPage)->withQueryString();
@@ -55,11 +61,14 @@ class FileLinkService
 
         $totalCount = FileLink::count();
 
+        $adminSent = FileLink::whereHas('creator.roles', fn ($q) => $q->where('name', 'admin'))->count();
+        $supervisorSent = FileLink::whereHas('creator.roles', fn ($q) => $q->where('name', 'supervisor'))->count();
+
         $stats = [
-            'total_links' => $totalCount > 0 ? $totalCount : 68,
-            'total_projects' => Project::has('fileLinks')->count() ?: 42,
-            'sent_by_admin' => 38,
-            'sent_by_supervisor' => 30,
+            'total_links' => $totalCount,
+            'total_projects' => Project::has('fileLinks')->count(),
+            'sent_by_admin' => $adminSent ?: ($totalCount > 0 ? $totalCount : 0),
+            'sent_by_supervisor' => $supervisorSent,
             'total' => $totalCount,
             'active' => FileLink::active()->count(),
             'expiring_soon' => FileLink::expiringSoon(7)->count(),

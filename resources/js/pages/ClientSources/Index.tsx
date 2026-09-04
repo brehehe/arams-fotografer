@@ -40,6 +40,11 @@ import {
     Modal,
     AlertConfirmation,
     Badge,
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
 } from '@/components/ui';
 
 interface ClientSourceItem {
@@ -108,7 +113,6 @@ export default function ClientSourcesIndex({
     const [selectedType, setSelectedType] = useState(filters?.type || 'all');
     const [modalOpen, setModalOpen] = useState(false);
     const [editItem, setEditItem] = useState<ClientSourceItem | null>(null);
-    const [activeActionId, setActiveActionId] = useState<string | null>(null);
     const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id?: string; name?: string }>({
         isOpen: false,
     });
@@ -162,7 +166,6 @@ export default function ClientSourcesIndex({
             is_primary: Boolean(item.is_primary),
         });
         setModalOpen(true);
-        setActiveActionId(null);
     };
 
     const handleSave = (e: React.FormEvent) => {
@@ -539,7 +542,7 @@ export default function ClientSourcesIndex({
                                     </TableCell>
 
                                     {/* AKSI */}
-                                    <TableCell className="text-center relative">
+                                    <TableCell className="text-center">
                                         <div className="inline-flex items-center gap-1">
                                             <button
                                                 type="button"
@@ -550,53 +553,44 @@ export default function ClientSourcesIndex({
                                                 <Edit2 className="w-4 h-4" />
                                             </button>
 
-                                            <div className="relative">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setActiveActionId(activeActionId === item.id ? null : item.id)}
-                                                    className="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                                                    title="Menu Lainnya"
-                                                >
-                                                    <MoreVertical className="w-4 h-4" />
-                                                </button>
-
-                                                {activeActionId === item.id && (
-                                                    <>
-                                                        <div
-                                                            className="fixed inset-0 z-10"
-                                                            onClick={() => setActiveActionId(null)}
-                                                        />
-                                                        <div className="absolute right-0 mt-1 w-36 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-20 text-xs">
-                                                            <Link
-                                                                href={`/client-sources/${item.id}`}
-                                                                className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 font-medium"
-                                                            >
-                                                                <Eye className="w-3.5 h-3.5 text-slate-400" />
-                                                                <span>Lihat Detail</span>
-                                                            </Link>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => openEdit(item)}
-                                                                className="w-full flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 font-medium text-left"
-                                                            >
-                                                                <Edit2 className="w-3.5 h-3.5 text-slate-400" />
-                                                                <span>Edit Data</span>
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    setActiveActionId(null);
-                                                                    setConfirmDelete({ isOpen: true, id: item.id, name: item.name });
-                                                                }}
-                                                                className="w-full flex items-center gap-2 px-3 py-2 text-rose-600 hover:bg-rose-50 font-medium text-left"
-                                                            >
-                                                                <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                                                                <span>Hapus Sumber</span>
-                                                            </button>
-                                                        </div>
-                                                    </>
-                                                )}
-                                            </div>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <button
+                                                        type="button"
+                                                        className="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer outline-hidden"
+                                                        title="Menu Lainnya"
+                                                    >
+                                                        <MoreVertical className="w-4 h-4" />
+                                                    </button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-40">
+                                                    <DropdownMenuItem asChild>
+                                                        <Link
+                                                            href={`/client-sources/${item.id}`}
+                                                            className="flex items-center gap-2 cursor-pointer"
+                                                        >
+                                                            <Eye className="w-3.5 h-3.5 text-slate-400" />
+                                                            <span>Lihat Detail</span>
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() => openEdit(item)}
+                                                        className="flex items-center gap-2 cursor-pointer"
+                                                    >
+                                                        <Edit2 className="w-3.5 h-3.5 text-slate-400" />
+                                                        <span>Edit Data</span>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem
+                                                        variant="destructive"
+                                                        onClick={() => setConfirmDelete({ isOpen: true, id: item.id, name: item.name })}
+                                                        className="flex items-center gap-2 cursor-pointer"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                                                        <span>Hapus Sumber</span>
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </div>
                                     </TableCell>
                                 </TableRow>

@@ -23,6 +23,11 @@ import {
     Modal,
     AlertConfirmation,
     Badge,
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
 } from '@/components/ui';
 
 interface UserItem {
@@ -64,7 +69,6 @@ export default function UsersIndex({
 }: UsersIndexProps) {
     const [createModalOpen, setCreateModalOpen] = useState(false);
     const [editUser, setEditUser] = useState<UserItem | null>(null);
-    const [activeActionId, setActiveActionId] = useState<number | null>(null);
     const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id?: number; name?: string }>({
         isOpen: false,
     });
@@ -133,7 +137,6 @@ export default function UsersIndex({
             status: user.status || 'active',
             password: '',
         });
-        setActiveActionId(null);
         setCreateModalOpen(true);
     };
 
@@ -309,7 +312,7 @@ export default function UsersIndex({
                                     </TableCell>
 
                                     {/* AKSI */}
-                                    <TableCell className="text-center px-6 relative">
+                                    <TableCell className="text-center px-6">
                                         <div className="inline-flex items-center justify-center gap-1.5">
                                             <button
                                                 type="button"
@@ -320,59 +323,46 @@ export default function UsersIndex({
                                                 <Edit2 className="w-3.5 h-3.5" />
                                             </button>
 
-                                            <div className="relative">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setActiveActionId(activeActionId === user.id ? null : user.id)}
-                                                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
-                                                    title="Menu Lainnya"
-                                                >
-                                                    <MoreVertical className="w-3.5 h-3.5" />
-                                                </button>
-
-                                                {activeActionId === user.id && (
-                                                    <>
-                                                        <div
-                                                            className="fixed inset-0 z-10"
-                                                            onClick={() => setActiveActionId(null)}
-                                                        />
-                                                        <div className="absolute right-0 mt-1 w-36 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-20 text-xs text-left">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => openEdit(user)}
-                                                                className="w-full flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 font-medium text-left cursor-pointer"
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <button
+                                                        type="button"
+                                                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer outline-hidden"
+                                                        title="Menu Lainnya"
+                                                    >
+                                                        <MoreVertical className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-40">
+                                                    <DropdownMenuItem
+                                                        onClick={() => openEdit(user)}
+                                                        className="flex items-center gap-2 cursor-pointer"
+                                                    >
+                                                        <Edit2 className="w-3.5 h-3.5 text-slate-400" />
+                                                        <span>Edit Data</span>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() => toast.info(`Tautan reset kata sandi telah dikirim ke ${user.email}`)}
+                                                        className="flex items-center gap-2 cursor-pointer"
+                                                    >
+                                                        <KeyRound className="w-3.5 h-3.5 text-slate-400" />
+                                                        <span>Reset Sandi</span>
+                                                    </DropdownMenuItem>
+                                                    {!isSelf && (
+                                                        <>
+                                                            <DropdownMenuSeparator />
+                                                            <DropdownMenuItem
+                                                                variant="destructive"
+                                                                onClick={() => setConfirmDelete({ isOpen: true, id: user.id, name: user.name })}
+                                                                className="flex items-center gap-2 cursor-pointer"
                                                             >
-                                                                <Edit2 className="w-3.5 h-3.5 text-slate-400" />
-                                                                <span>Edit Data</span>
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    setActiveActionId(null);
-                                                                    toast.info(`Tautan reset kata sandi telah dikirim ke ${user.email}`);
-                                                                }}
-                                                                className="w-full flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 font-medium text-left cursor-pointer"
-                                                            >
-                                                                <KeyRound className="w-3.5 h-3.5 text-slate-400" />
-                                                                <span>Reset Sandi</span>
-                                                            </button>
-                                                            {!isSelf && (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        setActiveActionId(null);
-                                                                        setConfirmDelete({ isOpen: true, id: user.id, name: user.name });
-                                                                    }}
-                                                                    className="w-full flex items-center gap-2 px-3 py-2 text-rose-600 hover:bg-rose-50 font-medium text-left cursor-pointer"
-                                                                >
-                                                                    <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                                                                    <span>Hapus User</span>
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    </>
-                                                )}
-                                            </div>
+                                                                <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                                                                <span>Hapus User</span>
+                                                            </DropdownMenuItem>
+                                                        </>
+                                                    )}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </div>
                                     </TableCell>
                                 </TableRow>
