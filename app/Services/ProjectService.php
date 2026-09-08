@@ -20,8 +20,8 @@ class ProjectService
     public function getProjectsPaginated(Request $request): array
     {
         $query = Project::with([
-            'client:id,name,email,phone',
-            'category:id,name,color',
+            'client:id,name,email,phone,bride_name,groom_name,child_name,father_name,mother_name,children,client_type',
+            'category:id,name,color,workflow_type,form_type',
             'package:id,name',
             'supervisor:id,name,email,avatar',
             'photographer:id,name,email,avatar',
@@ -169,8 +169,8 @@ class ProjectService
             });
         }
 
-        $categories = Category::where('status', 'active')->select('id', 'name', 'color')->orderBy('sort_order')->get();
-        $clients = Client::select('id', 'name', 'email', 'phone')->get();
+        $categories = Category::where('status', 'active')->select('id', 'name', 'color', 'form_type')->orderBy('sort_order')->get();
+        $clients = Client::select('id', 'name', 'email', 'phone', 'child_name', 'bride_name', 'groom_name', 'father_name', 'mother_name', 'children')->get();
         $packages = Package::where('status', 'active')->select('id', 'name', 'category_id', 'base_price', 'duration_hours')->get();
         $teamMembers = User::where('status', 'active')->select('id', 'name', 'email', 'avatar')->get();
         $supervisors = User::where('status', 'active')
@@ -227,10 +227,11 @@ class ProjectService
             'payments.paymentMethod',
             'fileLinks.creator:id,name',
             'highlights',
+            'promoSlides',
         ]);
 
         $teamMembers = User::where('status', 'active')->select('id', 'name', 'email', 'avatar')->get();
-        $categories = Category::where('status', 'active')->select('id', 'name', 'color')->get();
+        $categories = Category::where('status', 'active')->select('id', 'name', 'color', 'workflow_type', 'form_type')->get();
         $packages = Package::where('status', 'active')->select('id', 'name', 'category_id', 'base_price', 'duration_hours')->get();
         $paymentMethods = \App\Models\PaymentMethod::where('status', 'active')
             ->select('id', 'name', 'code', 'account_number', 'account_holder', 'icon')
@@ -325,7 +326,8 @@ class ProjectService
     public function createProject(array $data, ?User $causer = null): Project
     {
         $addons = $data['selected_addons'] ?? [];
-        unset($data['selected_addons']);
+        $clientOverrides = $data['client_overrides'] ?? null;
+        unset($data['selected_addons'], $data['client_overrides']);
 
         $dpAmount = (float) ($data['dp_amount'] ?? ($data['invoice_amount'] ?? 0));
         $invoiceType = $data['invoice_type'] ?? 'dp';
@@ -347,6 +349,14 @@ class ProjectService
             $data['send_email_2'],
             $data['client_message']
         );
+
+        // Apply client overrides (wedding/newborn info) to Client record
+        if (!empty($clientOverrides) && !empty($data['client_id'])) {
+            \App\Models\Client::where('id', $data['client_id'])->update(
+                array_filter($clientOverrides, fn($v) => $v !== null)
+            );
+        }
+
 
         if (empty($data['project_number'])) {
             $data['project_number'] = $this->generateProjectNumber();
@@ -546,8 +556,8 @@ class ProjectService
      */
     public function getProjectFormData(): array
     {
-        $clients = Client::select('id', 'name', 'email', 'phone', 'city', 'instagram')->orderBy('name')->get();
-        $categories = Category::where('status', 'active')->select('id', 'name', 'slug', 'color', 'workflow_type')->orderBy('sort_order')->get();
+        $clients = Client::select('id', 'name', 'email', 'phone', 'city', 'instagram', 'bride_name', 'bride_nickname', 'groom_name', 'groom_nickname', 'child_name', 'child_birth_date', 'child_gender', 'father_name', 'mother_name', 'children', 'client_type')->orderBy('name')->get();
+        $categories = Category::where('status', 'active')->select('id', 'name', 'slug', 'color', 'workflow_type', 'form_type')->orderBy('sort_order')->get();
         $packages = Package::where('status', 'active')->select('id', 'name', 'category_id', 'base_price', 'duration_hours', 'description', 'included_services', 'included_deliverables')->get();
         $weddingOrganizers = \App\Models\WeddingOrganizer::whereIn('status', ['partner', 'active'])->select('id', 'name', 'pic_name', 'phone', 'city', 'tier')->orderBy('name')->get();
         $addons = \App\Models\Addon::where('status', 'active')->with('category:id,name')->select('id', 'name', 'type', 'category_id', 'price', 'unit', 'description')->orderBy('name')->get();

@@ -99,7 +99,7 @@ export default function UsersIndex({
             status: 'active',
             last_login_at: '2026-05-19 16:40:00',
             avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80',
-            roles: [{ id: 2, name: 'Photographer' }],
+            roles: [{ id: 2, name: 'Supervisor' }],
         },
         {
             id: 3,
@@ -466,7 +466,7 @@ export default function UsersIndex({
                         </div>
                     </div>
 
-                    {/* Card 2: Photographer (Supervisor) */}
+                    {/* Card 2: Supervisor */}
                     <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 space-y-4 flex flex-col justify-between">
                         <div className="space-y-4">
                             <div className="flex items-center gap-4">
@@ -475,7 +475,7 @@ export default function UsersIndex({
                                 </div>
                                 <div>
                                     <h3 className="font-bold text-sm text-slate-900">
-                                        Photographer (Supervisor)
+                                        Supervisor
                                     </h3>
                                     <p className="text-xs text-slate-400 mt-0.5">
                                         Fokus pada pengelolaan project &amp; klien.
@@ -620,8 +620,11 @@ export default function UsersIndex({
                                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-semibold focus:bg-white focus:border-indigo-600 outline-hidden cursor-pointer"
                             >
                                 <option value="Owner">Owner (Super Admin)</option>
-                                <option value="Photographer">Photographer (Supervisor)</option>
+                                <option value="Supervisor">Supervisor</option>
                                 <option value="Admin">Admin</option>
+                                {formData.role && !['Owner', 'Supervisor', 'Admin'].includes(formData.role) && (
+                                    <option value={formData.role}>{formData.role}</option>
+                                )}
                             </select>
                         </div>
 

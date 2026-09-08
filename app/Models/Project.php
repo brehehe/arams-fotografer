@@ -134,4 +134,10 @@ class Project extends Model
     {
         return $this->hasMany(Testimonial::class);
     }
+
+    public function promoSlides(): HasMany
+    {
+        return $this->hasMany(PromoSlide::class)->orderBy('sort_order');
+    }
 }
+

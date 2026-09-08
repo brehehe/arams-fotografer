@@ -39,15 +39,92 @@ class ProcessClientIntake
                 ? $validated['referred_by_client_id']
                 : null;
 
-            // 1. Create or Find Client
-            $clientName = trim(($validated['bride_name'] ?? '') . ' & ' . ($validated['groom_name'] ?? ''));
-            if (empty($clientName) || $clientName === '&') {
-                $clientName = $validated['name'] ?? 'Klien Baru';
+            // 1. Fetch & Resolve Category first to know form_type
+            $category = null;
+            $rawCategoryId = $validated['category_id'] ?? null;
+            if (!empty($rawCategoryId)) {
+                if (Str::isUuid($rawCategoryId)) {
+                    $category = Category::find($rawCategoryId);
+                } else {
+                    $category = Category::where('slug', $rawCategoryId)
+                        ->orWhereRaw('LOWER(name) LIKE ?', ['%' . strtolower($rawCategoryId) . '%'])
+                        ->first();
+                }
             }
+
+            if (!$category) {
+                $category = Category::where('slug', 'wedding')->first()
+                    ?? Category::first();
+            }
+
+            $formType = $category?->form_type ?? 'wedding';
+
+            // 2. Determine Client Name & Type based on Category Form Type
+            $children = !empty($validated['children']) && is_array($validated['children']) ? $validated['children'] : [];
+            $fatherName = trim($validated['father_name'] ?? '');
+            $motherName = trim($validated['mother_name'] ?? '');
+            $parentNames = trim($validated['parent_names'] ?? '');
+            if (empty($parentNames)) {
+                $parentNames = implode(' & ', array_filter([$fatherName, $motherName]));
+            }
+
+            if ($formType === 'newborn') {
+                if (!empty($children)) {
+                    $childNames = array_filter(array_map(fn($c) => trim($c['name'] ?? ''), $children));
+                    $childName = implode(' & ', $childNames);
+                    if (count($children) > 1) {
+                        $childName .= ' (Kembar)';
+                    }
+                    $childBirthDate = $children[0]['birth_date'] ?? ($validated['child_birth_date'] ?? null);
+                    $childGender = count($children) > 1 ? 'Kembar' : ($children[0]['gender'] ?? ($validated['child_gender'] ?? null));
+                } else {
+                    $childName = trim($validated['child_name'] ?? '');
+                    $childBirthDate = $validated['child_birth_date'] ?? null;
+                    $childGender = $validated['child_gender'] ?? null;
+                }
+
+                $clientName = $childName ?: ($parentNames ?: ($validated['name'] ?? 'Baby Client'));
+                $clientType = 'newborn';
+            } elseif ($formType === 'wedding') {
+                $childName = null;
+                $childBirthDate = null;
+                $childGender = null;
+                $clientName = trim(($validated['bride_name'] ?? '') . ' & ' . ($validated['groom_name'] ?? ''));
+                if (empty($clientName) || $clientName === '&') {
+                    $clientName = $validated['name'] ?? 'Klien Pengantin';
+                }
+                $clientType = 'wedding';
+            } else {
+                $childName = null;
+                $childBirthDate = null;
+                $childGender = null;
+                $clientName = trim($validated['name'] ?? 'Klien Baru');
+                $clientType = Str::slug($category?->name ?? 'standard');
+            }
+
             $client = Client::where('phone', $validated['phone'])->first();
 
             // Format rich notes from form
             $notesParts = [];
+            if (!empty($children)) {
+                foreach ($children as $idx => $ch) {
+                    $num = $idx + 1;
+                    $parts = array_filter([
+                        !empty($ch['name']) ? "Nama: {$ch['name']}" : null,
+                        !empty($ch['nickname']) ? "Panggilan: {$ch['nickname']}" : null,
+                        !empty($ch['gender']) ? "Kelamin: {$ch['gender']}" : null,
+                        !empty($ch['birth_date']) ? "Tgl Lahir: {$ch['birth_date']}" : null,
+                    ]);
+                    $notesParts[] = "Anak #{$num}: " . implode(', ', $parts);
+                }
+            } elseif (!empty($validated['child_name'])) {
+                $notesParts[] = "Nama Anak: {$validated['child_name']}";
+                if (!empty($validated['child_nickname'])) $notesParts[] = "Panggilan Anak: {$validated['child_nickname']}";
+                if (!empty($validated['child_gender'])) $notesParts[] = "Jenis Kelamin: {$validated['child_gender']}";
+            }
+            if (!empty($fatherName)) $notesParts[] = "Nama Ayah: {$fatherName}";
+            if (!empty($motherName)) $notesParts[] = "Nama Ibu: {$motherName}";
+            if (!empty($parentNames) && empty($fatherName) && empty($motherName)) $notesParts[] = "Orang Tua: {$parentNames}";
             if (!empty($validated['event_type'])) $notesParts[] = "Jenis Acara: {$validated['event_type']}";
             if (!empty($validated['primary_contact'])) $notesParts[] = "Kontak Utama: " . strtoupper($validated['primary_contact']);
             if (!empty($validated['groom_occupation'])) $notesParts[] = "Pekerjaan CPP: {$validated['groom_occupation']}";
@@ -70,7 +147,13 @@ class ProcessClientIntake
 
             $clientData = [
                 'name' => $clientName,
-                'partner_name' => $validated['groom_name'] ?? null,
+                'partner_name' => $validated['groom_name'] ?? ($parentNames ?: null),
+                'child_name' => $childName,
+                'child_birth_date' => $childBirthDate,
+                'child_gender' => $childGender,
+                'father_name' => $fatherName ?: null,
+                'mother_name' => $motherName ?: null,
+                'children' => !empty($children) ? $children : null,
                 'bride_name' => $validated['bride_name'] ?? null,
                 'bride_nickname' => $validated['bride_nickname'] ?? null,
                 'groom_name' => $validated['groom_name'] ?? null,
@@ -92,13 +175,13 @@ class ProcessClientIntake
                 'postal_code' => $validated['postal_code'] ?? null,
                 'address' => $validated['address'] ?? null,
                 'preferred_contact' => 'whatsapp',
-                'client_type' => 'wedding',
+                'client_type' => $clientType,
                 'source' => $validated['source_info'] ?? 'Formulir Online (Client Intake)',
                 'referred_by_client_id' => $referredByClientId,
                 'wedding_organizer_id' => $weddingOrganizerId,
                 'referral_name' => $validated['referral_name'] ?? null,
                 'status' => 'lead',
-                'tags' => ['Online Intake', 'New Lead'],
+                'tags' => ['Online Intake', 'New Lead', ucfirst($formType)],
                 'notes' => $formattedNotes,
             ];
 
@@ -143,36 +226,6 @@ class ProcessClientIntake
                 }
             }
 
-            // 2. Fetch & Resolve Category
-            $category = null;
-            $rawCategoryId = $validated['category_id'] ?? null;
-            if (!empty($rawCategoryId)) {
-                if (Str::isUuid($rawCategoryId)) {
-                    $category = Category::find($rawCategoryId);
-                } else {
-                    $category = Category::where('slug', $rawCategoryId)
-                        ->orWhereRaw('LOWER(name) LIKE ?', ['%' . strtolower($rawCategoryId) . '%'])
-                        ->first();
-                }
-            }
-
-            if (!$category) {
-                $fallbackSlug = (!empty($rawCategoryId) && !Str::isUuid($rawCategoryId)) ? Str::slug($rawCategoryId) : 'wedding';
-                $fallbackName = (!empty($rawCategoryId) && !Str::isUuid($rawCategoryId)) ? ucfirst($rawCategoryId) : 'Wedding';
-
-                $category = Category::where('slug', $fallbackSlug)->first()
-                    ?? Category::first()
-                    ?? Category::create([
-                        'name' => $fallbackName,
-                        'slug' => $fallbackSlug,
-                        'description' => 'Kategori dokumentasi otomatis dari formulir klien.',
-                        'icon' => 'Heart',
-                        'color' => '#3B82F6',
-                        'status' => 'active',
-                        'sort_order' => 1,
-                    ]);
-            }
-
             // 3. Fetch & Resolve Package
             $package = null;
             $packageId = null;
@@ -190,9 +243,15 @@ class ProcessClientIntake
                 }
             }
 
-            // 4. Prepare Project Info
-            $categoryPrefix = $category->name ?? 'Wedding';
-            $projectName = $categoryPrefix . ' ' . $clientName;
+            // 4. Prepare Project Info based on form_type
+            $categoryPrefix = $category->name ?? 'Project';
+            if ($formType === 'wedding') {
+                $projectName = "The Wedding of " . $clientName;
+            } elseif ($formType === 'newborn') {
+                $projectName = "Newborn Photoshoot of " . ($validated['child_name'] ?? $clientName);
+            } else {
+                $projectName = $categoryPrefix . ' - ' . $clientName;
+            }
             $projectNumber = $this->projectService->generateProjectNumber();
 
             // 5. Create Project

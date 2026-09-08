@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { toast } from 'sonner';
 import { Pagination } from '@/components/ui/pagination';
 import {
@@ -18,6 +18,7 @@ import {
     Image as ImageIcon,
     X,
 } from 'lucide-react';
+import SettingsTabNav from '@/components/SettingsTabNav';
 
 interface InstagramPostItem {
     id: string;
@@ -59,6 +60,11 @@ export default function InstagramPostsIndex({
     stats = { total: 0, active: 0, inactive: 0 },
     filters = {},
 }: InstagramPostsIndexProps) {
+    const { props: pageProps } = usePage<any>();
+    const accentColor = pageProps?.appSettings?.primary_accent_color || '#C98922';
+    const headingColor = pageProps?.appSettings?.app_heading_color || '#0F172A';
+    const mutedColor = pageProps?.appSettings?.app_muted_text_color || '#64748B';
+
     const [search, setSearch] = useState(filters.search || '');
     const [modalOpen, setModalOpen] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -193,50 +199,65 @@ export default function InstagramPostsIndex({
 
     return (
         <div className="w-full max-w-full space-y-6 pb-20">
-            <Head title="Instagram Kami - Master Data" />
+            <Head title="Feed Instagram - Setting Admin" />
 
-            {/* ── 1. BREADCRUMB & HEADER SECTION ────────────────────────────────── */}
-            <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs">
-                    <Link
-                        href="/master-data/categories"
-                        className="text-slate-500 hover:text-slate-800 transition-colors font-medium"
+            {/* ── 1. HEADER UTAMA PENGATURAN ADMIN (Sama persis dengan Admin.tsx) ── */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h1
+                        className="text-2xl lg:text-3xl font-extrabold tracking-tight transition-colors"
+                        style={{ color: headingColor }}
                     >
-                        Master Data
-                    </Link>
-                    <span className="text-slate-400">›</span>
-                    <span className="text-[#F59E0B] font-bold">Instagram Kami</span>
+                        Pengaturan Admin
+                    </h1>
+                    <p
+                        className="text-sm mt-0.5 transition-colors"
+                        style={{ color: mutedColor }}
+                    >
+                        Kelola identitas perusahaan, preferensi sistem, penomoran dokumen, dan backup data studio.
+                    </p>
+                </div>
+            </div>
+
+            {/* ── 2. TAB NAVIGASI HORIZONTAL (Posisi & warna identik dengan Admin.tsx) ── */}
+            <SettingsTabNav activeMainTab="admin" activeAdminSubTab="instagram_posts" accentColor={accentColor} />
+
+            {/* ── 3. SUB-SECTION TITLE & ACTIONS: FEED INSTAGRAM STUDIO ──────────── */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900/60 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+                <div>
+                    <div className="flex items-center gap-2.5">
+                        <div
+                            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-[#FDF2F8] text-rose-600"
+                        >
+                            <Instagram className="w-5 h-5" />
+                        </div>
+                        <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                            Feed Instagram Studio
+                        </h2>
+                    </div>
+                    <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1 sm:ml-11">
+                        Kelola foto-foto feed dan tautan Instagram studio yang tampil pada galeri dashboard klien.
+                    </p>
                 </div>
 
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
-                            {/* <Instagram className="w-6 h-6 text-rose-600" /> */}
-                            <span>Feed Instagram Studio</span>
-                        </h1>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                            Kelola foto-foto feed dan tautan Instagram studio yang tampil pada galeri dashboard klien.
-                        </p>
-                    </div>
-
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <Link
-                            href="/client/dashboard"
-                            target="_blank"
-                            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer"
-                        >
-                            <ExternalLink className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>Preview di Portal</span>
-                        </Link>
-                        <button
-                            type="button"
-                            onClick={handleOpenCreate}
-                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#3B46F1] hover:bg-[#323BD8] text-white rounded-xl text-xs font-bold shadow-xs transition-all hover:scale-[1.02] cursor-pointer shrink-0"
-                        >
-                            <Plus className="w-4 h-4" />
-                            <span>Tambah Postingan Instagram</span>
-                        </button>
-                    </div>
+                <div className="flex items-center gap-2 flex-wrap sm:ml-auto">
+                    <Link
+                        href="/client/dashboard"
+                        target="_blank"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer"
+                    >
+                        <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Preview di Portal</span>
+                    </Link>
+                    <button
+                        type="button"
+                        onClick={handleOpenCreate}
+                        style={{ backgroundColor: accentColor }}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 hover:brightness-110 text-white rounded-xl text-xs font-bold shadow-xs transition-all hover:scale-[1.02] cursor-pointer shrink-0"
+                    >
+                        <Plus className="w-4 h-4" />
+                        <span>Tambah Postingan Instagram</span>
+                    </button>
                 </div>
             </div>
 
@@ -393,7 +414,8 @@ export default function InstagramPostsIndex({
                         <button
                             type="button"
                             onClick={handleOpenCreate}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#240B10] text-white text-xs font-bold hover:bg-[#380E13] transition-colors cursor-pointer"
+                            style={{ backgroundColor: accentColor }}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white text-xs font-bold hover:brightness-110 transition-all cursor-pointer"
                         >
                             <Plus className="w-4 h-4" />
                             <span>Tambah Foto Pertama</span>
@@ -544,7 +566,8 @@ export default function InstagramPostsIndex({
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-5 py-2 rounded-xl bg-[#240B10] hover:bg-[#380E13] text-white font-bold text-xs transition-colors cursor-pointer"
+                                    style={{ backgroundColor: accentColor }}
+                                    className="px-5 py-2 rounded-xl text-white font-bold text-xs hover:brightness-110 transition-all cursor-pointer"
                                 >
                                     {selectedItem ? 'Simpan Perubahan' : 'Tambah Foto'}
                                 </button>

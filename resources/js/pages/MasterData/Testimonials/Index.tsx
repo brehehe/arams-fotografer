@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { toast } from 'sonner';
 import { Pagination } from '@/components/ui/pagination';
 import {
@@ -18,6 +18,7 @@ import {
     X,
     ExternalLink,
 } from 'lucide-react';
+import SettingsTabNav from '@/components/SettingsTabNav';
 
 interface TestimonialItem {
     id: string;
@@ -67,6 +68,11 @@ export default function TestimonialsIndex({
     clients = [],
     filters = {},
 }: TestimonialsIndexProps) {
+    const { props: pageProps } = usePage<any>();
+    const accentColor = pageProps?.appSettings?.primary_accent_color || '#C98922';
+    const headingColor = pageProps?.appSettings?.app_heading_color || '#0F172A';
+    const mutedColor = pageProps?.appSettings?.app_muted_text_color || '#64748B';
+
     const [search, setSearch] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || 'all');
     const [modalOpen, setModalOpen] = useState(false);
@@ -215,58 +221,77 @@ export default function TestimonialsIndex({
 
     return (
         <div className="w-full max-w-full space-y-6 pb-20">
-            <Head title="Ulasan Klien - Master Data" />
+            <Head title="Ulasan Klien - Setting Admin" />
 
-            {/* ── 1. BREADCRUMB & HEADER SECTION ────────────────────────────────── */}
-            <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs">
-                    <Link
-                        href="/master-data/categories"
-                        className="text-slate-500 hover:text-slate-800 transition-colors font-medium"
+            {/* ── 1. HEADER UTAMA PENGATURAN ADMIN (Sama persis dengan Admin.tsx) ── */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h1
+                        className="text-2xl lg:text-3xl font-extrabold tracking-tight transition-colors"
+                        style={{ color: headingColor }}
                     >
-                        Master Data
-                    </Link>
-                    <span className="text-slate-400">›</span>
-                    <span className="text-[#F59E0B] font-bold">Ulasan Klien</span>
-                </div>
-
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
-                            <MessageSquareQuote className="w-6 h-6 text-amber-500" />
-                            <span>Ulasan &amp; Testimoni Klien</span>
-                        </h1>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                            Kelola ulasan, kepuasan bintang, dan apresiasi klien yang tampil di dashboard portal klien.
-                        </p>
-                    </div>
-
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <Link
-                            href="/client/dashboard"
-                            target="_blank"
-                            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer"
-                        >
-                            <ExternalLink className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>Preview di Portal</span>
-                        </Link>
-                        <button
-                            type="button"
-                            onClick={handleOpenCreate}
-                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#3B46F1] hover:bg-[#323BD8] text-white rounded-xl text-xs font-bold shadow-xs transition-all hover:scale-[1.02] cursor-pointer shrink-0"
-                        >
-                            <Plus className="w-4 h-4" />
-                            <span>Tambah Ulasan</span>
-                        </button>
-                    </div>
+                        Pengaturan Admin
+                    </h1>
+                    <p
+                        className="text-sm mt-0.5 transition-colors"
+                        style={{ color: mutedColor }}
+                    >
+                        Kelola identitas perusahaan, preferensi sistem, penomoran dokumen, dan backup data studio.
+                    </p>
                 </div>
             </div>
 
-            {/* ── 2. TOP STAT CARDS ─────────────────────────────────────────────── */}
+            {/* ── 2. TAB NAVIGASI HORIZONTAL (Posisi & warna identik dengan Admin.tsx) ── */}
+            <SettingsTabNav activeMainTab="admin" activeAdminSubTab="testimonials" accentColor={accentColor} />
+
+            {/* ── 3. SUB-SECTION TITLE & ACTIONS: ULASAN & TESTIMONI KLIEN ──────────── */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900/60 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+                <div>
+                    <div className="flex items-center gap-2.5">
+                        <div
+                            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                            style={{ backgroundColor: `${accentColor}18`, color: accentColor }}
+                        >
+                            <MessageSquareQuote className="w-5 h-5" />
+                        </div>
+                        <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                            Ulasan &amp; Testimoni Klien
+                        </h2>
+                    </div>
+                    <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1 sm:ml-11">
+                        Kelola ulasan, kepuasan bintang, dan apresiasi klien yang tampil di dashboard portal klien.
+                    </p>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap sm:ml-auto">
+                    <Link
+                        href="/client/dashboard"
+                        target="_blank"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer"
+                    >
+                        <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Preview di Portal</span>
+                    </Link>
+                    <button
+                        type="button"
+                        onClick={handleOpenCreate}
+                        style={{ backgroundColor: accentColor }}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 hover:brightness-110 text-white rounded-xl text-xs font-bold shadow-xs transition-all hover:scale-[1.02] cursor-pointer shrink-0"
+                    >
+                        <Plus className="w-4 h-4" />
+                        <span>Tambah Ulasan</span>
+                    </button>
+                </div>
+            </div>
+
+            {/* ── 4. TOP STAT CARDS ─────────────────────────────────────────────── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[#EEF2FF] flex items-center justify-center shrink-0">
-                        <MessageSquareQuote className="w-6 h-6 text-[#3B46F1]" />
+                    <div
+                        className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: `${accentColor}18`, color: accentColor }}
+                    >
+                        <MessageSquareQuote className="w-6 h-6" />
                     </div>
                     <div>
                         <span className="text-xs font-bold text-slate-500 block uppercase tracking-wider">Total Ulasan</span>
@@ -337,11 +362,10 @@ export default function TestimonialsIndex({
                             key={st.id}
                             type="button"
                             onClick={() => handleFilterStatus(st.id)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer capitalize ${
-                                statusFilter === st.id
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer capitalize ${statusFilter === st.id
                                     ? 'bg-[#3B46F1] text-white shadow-xs'
                                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                            }`}
+                                }`}
                         >
                             {st.label}
                         </button>
@@ -349,148 +373,147 @@ export default function TestimonialsIndex({
                 </div>
             </div>
 
-                {/* ── TESTIMONIALS GRID CARDS ──────────────────────────────── */}
-                {testimonials.data.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                        {testimonials.data.map((item) => (
-                            <div
-                                key={item.id}
-                                className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-4"
-                            >
-                                <div className="space-y-3">
-                                    {/* Author & Rating Row */}
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden border border-slate-200 shrink-0">
-                                                {item.avatar ? (
-                                                    <img src={item.avatar} alt={item.client_name} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-slate-400 font-bold text-sm bg-slate-200">
-                                                        {item.client_name.charAt(0)}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div>
-                                                <h4 className="font-bold text-xs text-slate-900 leading-tight">{item.client_name}</h4>
-                                                <p className="text-[10px] text-slate-400 truncate max-w-[150px]">{item.package_name || 'Dokumentasi'}</p>
-                                            </div>
+            {/* ── TESTIMONIALS GRID CARDS ──────────────────────────────── */}
+            {testimonials.data.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {testimonials.data.map((item) => (
+                        <div
+                            key={item.id}
+                            className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-4"
+                        >
+                            <div className="space-y-3">
+                                {/* Author & Rating Row */}
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden border border-slate-200 shrink-0">
+                                            {item.avatar ? (
+                                                <img src={item.avatar} alt={item.client_name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-slate-400 font-bold text-sm bg-slate-200">
+                                                    {item.client_name.charAt(0)}
+                                                </div>
+                                            )}
                                         </div>
+                                        <div>
+                                            <h4 className="font-bold text-xs text-slate-900 leading-tight">{item.client_name}</h4>
+                                            <p className="text-[10px] text-slate-400 truncate max-w-[150px]">{item.package_name || 'Dokumentasi'}</p>
+                                        </div>
+                                    </div>
 
-                                        <span
-                                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold capitalize ${
-                                                item.status === 'approved'
-                                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                                    : item.status === 'pending'
+                                    <span
+                                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold capitalize ${item.status === 'approved'
+                                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                : item.status === 'pending'
                                                     ? 'bg-amber-50 text-amber-700 border border-amber-200'
                                                     : 'bg-rose-50 text-rose-700 border border-rose-200'
                                             }`}
-                                        >
-                                            {item.status}
-                                        </span>
-                                    </div>
-
-                                    {/* Star Ratings */}
-                                    <div className="flex items-center gap-1 text-amber-500">
-                                        {Array.from({ length: 5 }).map((_, i) => (
-                                            <Star
-                                                key={i}
-                                                className={`w-3.5 h-3.5 ${
-                                                    i < item.rating ? 'fill-amber-500 text-amber-500' : 'text-slate-200'
-                                                }`}
-                                            />
-                                        ))}
-                                        <span className="text-xs font-bold text-slate-700 ml-1.5">{item.rating}.0</span>
-                                    </div>
-
-                                    {/* Comment Quote */}
-                                    <p className="text-xs text-slate-600 leading-relaxed italic line-clamp-3">
-                                        "{item.comment}"
-                                    </p>
+                                    >
+                                        {item.status}
+                                    </span>
                                 </div>
 
-                                {/* Actions Bar */}
-                                <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                                    <div className="flex items-center gap-1">
-                                        {item.status !== 'approved' && (
-                                            <button
-                                                type="button"
-                                                onClick={() => handleToggleStatus(item, 'approved')}
-                                                className="text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded-lg transition-colors cursor-pointer"
-                                            >
-                                                Setujui
-                                            </button>
-                                        )}
-                                        {item.status !== 'rejected' && (
-                                            <button
-                                                type="button"
-                                                onClick={() => handleToggleStatus(item, 'rejected')}
-                                                className="text-[11px] font-bold text-slate-500 hover:bg-slate-100 px-2 py-1 rounded-lg transition-colors cursor-pointer"
-                                            >
-                                                Tolak
-                                            </button>
-                                        )}
-                                    </div>
+                                {/* Star Ratings */}
+                                <div className="flex items-center gap-1 text-amber-500">
+                                    {Array.from({ length: 5 }).map((_, i) => (
+                                        <Star
+                                            key={i}
+                                            className={`w-3.5 h-3.5 ${i < item.rating ? 'fill-amber-500 text-amber-500' : 'text-slate-200'
+                                                }`}
+                                        />
+                                    ))}
+                                    <span className="text-xs font-bold text-slate-700 ml-1.5">{item.rating}.0</span>
+                                </div>
 
-                                    <div className="flex items-center gap-1">
+                                {/* Comment Quote */}
+                                <p className="text-xs text-slate-600 leading-relaxed italic line-clamp-3">
+                                    "{item.comment}"
+                                </p>
+                            </div>
+
+                            {/* Actions Bar */}
+                            <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                                <div className="flex items-center gap-1">
+                                    {item.status !== 'approved' && (
                                         <button
                                             type="button"
-                                            onClick={() => handleOpenEdit(item)}
-                                            className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
-                                            title="Edit Ulasan"
+                                            onClick={() => handleToggleStatus(item, 'approved')}
+                                            className="text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded-lg transition-colors cursor-pointer"
                                         >
-                                            <Edit2 className="w-4 h-4" />
+                                            Setujui
                                         </button>
+                                    )}
+                                    {item.status !== 'rejected' && (
                                         <button
                                             type="button"
-                                            onClick={() => {
-                                                setSelectedItem(item);
-                                                setDeleteModalOpen(true);
-                                            }}
-                                            className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                                            title="Hapus Ulasan"
+                                            onClick={() => handleToggleStatus(item, 'rejected')}
+                                            className="text-[11px] font-bold text-slate-500 hover:bg-slate-100 px-2 py-1 rounded-lg transition-colors cursor-pointer"
                                         >
-                                            <Trash2 className="w-4 h-4" />
+                                            Tolak
                                         </button>
-                                    </div>
+                                    )}
+                                </div>
+
+                                <div className="flex items-center gap-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleOpenEdit(item)}
+                                        className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+                                        title="Edit Ulasan"
+                                    >
+                                        <Edit2 className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedItem(item);
+                                            setDeleteModalOpen(true);
+                                        }}
+                                        className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                        title="Hapus Ulasan"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
                                 </div>
                             </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center space-y-3">
-                        <MessageSquareQuote className="w-10 h-10 text-slate-300 mx-auto" />
-                        <h3 className="font-bold text-sm text-slate-800">Belum Ada Ulasan Klien</h3>
-                        <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                            Tambahkan testimoni kepuasan klien untuk meningkatkan kepercayaan calon pelanggan.
-                        </p>
-                        <button
-                            type="button"
-                            onClick={handleOpenCreate}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#240B10] text-white text-xs font-bold hover:bg-[#380E13] transition-colors cursor-pointer"
-                        >
-                            <Plus className="w-4 h-4" />
-                            <span>Tambah Ulasan Pertama</span>
-                        </button>
-                    </div>
-                )}
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center space-y-3">
+                    <MessageSquareQuote className="w-10 h-10 text-slate-300 mx-auto" />
+                    <h3 className="font-bold text-sm text-slate-800">Belum Ada Ulasan Klien</h3>
+                    <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                        Tambahkan testimoni kepuasan klien untuk meningkatkan kepercayaan calon pelanggan.
+                    </p>
+                    <button
+                        type="button"
+                        onClick={handleOpenCreate}
+                        style={{ backgroundColor: accentColor }}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white text-xs font-bold hover:brightness-110 transition-all cursor-pointer"
+                    >
+                        <Plus className="w-4 h-4" />
+                        <span>Tambah Ulasan Pertama</span>
+                    </button>
+                </div>
+            )}
 
-                {/* Pagination */}
-                {testimonials.total > (testimonials.per_page || 10) && (
-                    <div className="pt-4">
-                        <Pagination
-                            currentPage={testimonials.current_page || 1}
-                            lastPage={testimonials.last_page || 1}
-                            total={testimonials.total}
-                            from={testimonials.from}
-                            to={testimonials.to}
-                            perPage={testimonials.per_page || 10}
-                            itemLabel="ulasan client"
-                            onPageChange={(page) => {
-                                router.get(window.location.pathname, { page, search, status: statusFilter }, { preserveState: true });
-                            }}
-                        />
-                    </div>
-                )}
+            {/* Pagination */}
+            {testimonials.total > (testimonials.per_page || 10) && (
+                <div className="pt-4">
+                    <Pagination
+                        currentPage={testimonials.current_page || 1}
+                        lastPage={testimonials.last_page || 1}
+                        total={testimonials.total}
+                        from={testimonials.from}
+                        to={testimonials.to}
+                        perPage={testimonials.per_page || 10}
+                        itemLabel="ulasan client"
+                        onPageChange={(page) => {
+                            router.get(window.location.pathname, { page, search, status: statusFilter }, { preserveState: true });
+                        }}
+                    />
+                </div>
+            )}
 
             {/* ── MODAL FORM CREATE / EDIT ──────────────────────────────────── */}
             {modalOpen && (
@@ -548,9 +571,8 @@ export default function TestimonialsIndex({
                                             className="p-1 text-amber-500 hover:scale-110 transition-transform cursor-pointer"
                                         >
                                             <Star
-                                                className={`w-6 h-6 ${
-                                                    star <= formData.rating ? 'fill-amber-500 text-amber-500' : 'text-slate-200'
-                                                }`}
+                                                className={`w-6 h-6 ${star <= formData.rating ? 'fill-amber-500 text-amber-500' : 'text-slate-200'
+                                                    }`}
                                             />
                                         </button>
                                     ))}
@@ -637,7 +659,8 @@ export default function TestimonialsIndex({
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-5 py-2 rounded-xl bg-[#240B10] hover:bg-[#380E13] text-white font-bold text-xs transition-colors cursor-pointer"
+                                    style={{ backgroundColor: accentColor }}
+                                    className="px-5 py-2 rounded-xl text-white font-bold text-xs hover:brightness-110 transition-all cursor-pointer"
                                 >
                                     {selectedItem ? 'Simpan Perubahan' : 'Tambah Ulasan'}
                                 </button>

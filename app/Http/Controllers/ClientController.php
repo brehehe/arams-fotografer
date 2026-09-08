@@ -10,10 +10,13 @@ use App\Models\Package;
 use App\Models\PaymentMethod;
 use App\Models\User;
 use App\Models\WeddingOrganizer;
+use App\Mail\ClientAccountCreatedMail;
 use App\Services\ClientService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\Permission\Models\Role;
@@ -38,15 +41,16 @@ class ClientController extends Controller
         $this->authorize('view', $client);
 
         $clientDetail = $this->clientService->getClientDetail($client);
-        $categories = Category::where('status', 'active')->select('id', 'name', 'slug', 'description', 'color')->orderBy('sort_order')->get();
-        $packages = Package::where('status', 'active')->select('id', 'name', 'category_id', 'base_price', 'duration_hours', 'description')->get();
+        $categories = Category::where('status', 'active')->select('id', 'name', 'slug', 'description', 'color', 'workflow_type', 'form_type')->orderBy('sort_order')->get();
+        $packages = Package::where('status', 'active')->select('id', 'name', 'category_id', 'base_price', 'duration_hours', 'description', 'included_deliverables', 'included_services')->get();
         $teamMembers = User::where('status', 'active')->select('id', 'name', 'email', 'avatar')->get();
         $paymentMethods = PaymentMethod::where('status', 'active')->select('id', 'name', 'account_number', 'account_holder')->get();
         $weddingOrganizers = WeddingOrganizer::whereIn('status', ['partner', 'active'])->select('id', 'name', 'pic_name', 'phone', 'city', 'tier')->orderBy('name')->get();
         $allClients = Client::where('id', '!=', $client->id)
-            ->select('id', 'name', 'phone', 'city', 'email', 'bride_name', 'groom_name')
+            ->select('id', 'name', 'phone', 'city', 'email', 'bride_name', 'groom_name', 'child_name', 'father_name', 'mother_name', 'children')
             ->orderBy('name')
             ->get();
+        $workflows = \App\Http\Controllers\MasterData\WorkflowController::getWorkflowDefinitions();
 
         return Inertia::render('Clients/Detail', [
             'client' => $clientDetail,
@@ -56,6 +60,7 @@ class ClientController extends Controller
             'payment_methods' => $paymentMethods,
             'wedding_organizers' => $weddingOrganizers,
             'all_clients' => $allClients,
+            'workflows' => $workflows,
         ]);
     }
 
@@ -104,6 +109,36 @@ class ClientController extends Controller
         $this->clientService->deleteClient($client, auth()->user());
 
         return redirect()->back()->with('success', 'Klien berhasil dihapus.');
+    }
+
+    public function toggleBlock(Client $client): RedirectResponse
+    {
+        $this->authorize('update', $client);
+
+        $newStatus = $client->status === 'blocked' ? 'active' : 'blocked';
+        $client->update(['status' => $newStatus]);
+
+        // If client has an associated portal user account, also update user status
+        $portalUser = User::where('client_id', $client->id)->first();
+        if ($portalUser) {
+            $portalUser->update([
+                'status' => $newStatus === 'blocked' ? 'suspended' : 'active',
+            ]);
+        }
+
+        $logMsg = $newStatus === 'blocked'
+            ? "Klien {$client->name} telah diblokir."
+            : "Blokir klien {$client->name} telah dibuka.";
+
+        activity()
+            ->causedBy(auth()->user())
+            ->performedOn($client)
+            ->event($newStatus === 'blocked' ? 'client_blocked' : 'client_unblocked')
+            ->log($logMsg);
+
+        return redirect()->back()->with('success', $newStatus === 'blocked'
+            ? "Klien {$client->name} berhasil diblokir."
+            : "Blokir klien {$client->name} berhasil dibuka.");
     }
 
     public function storeAccount(Request $request, Client $client): RedirectResponse
@@ -158,25 +193,40 @@ class ClientController extends Controller
             ->event('account_created')
             ->log("Akun portal klien dibuat/diperbarui untuk {$client->name} ({$user->email})");
 
-        // Format WhatsApp URL if needed
+        // Format WhatsApp URL with structured account credentials
         $cleanPhone = preg_replace('/[^0-9]/', '', $client->phone ?? '');
         if (str_starts_with($cleanPhone, '0')) {
             $cleanPhone = '62' . substr($cleanPhone, 1);
         }
 
         $portalUrl = url('/login');
-        $defaultMsg = "Halo Kak {$client->name},\n\nBerikut informasi akun login portal klien Arams Photography Anda:\n"
-            . "🌐 Link Portal: {$portalUrl}\n"
-            . "📧 Email: {$validated['email']}\n"
-            . "🔑 Password: {$validated['password']}\n\n"
-            . "Silakan login untuk melihat progress project, review foto, dan download file Anda. Terima kasih!";
+        $notes = !empty($validated['message']) ? trim($validated['message']) : 'Silakan login untuk memantau progress project, review foto, dan download file dokumentasi Anda.';
 
-        $finalMsg = !empty($validated['message']) ? $validated['message'] : $defaultMsg;
-        if (!str_contains($finalMsg, $validated['password'])) {
-            $finalMsg .= "\n\n📧 Email: {$validated['email']}\n🔑 Password: {$validated['password']}\n🌐 Login: {$portalUrl}";
-        }
+        $finalMsg = "Halo Kak {$client->name},\n\n"
+            . "Berikut informasi akun akses Portal Klien Arams Photography Anda:\n\n"
+            . "🌐 Link Login : {$portalUrl}\n"
+            . "👤 Nama Klien : {$client->name}\n"
+            . "📧 Email      : {$validated['email']}\n"
+            . "🔑 Password   : {$validated['password']}\n\n"
+            . "📝 Keterangan:\n{$notes}\n\n"
+            . "Terima kasih!";
 
         $waUrl = !empty($cleanPhone) ? "https://wa.me/{$cleanPhone}?text=" . urlencode($finalMsg) : null;
+
+        // Dispatch email notification via Laravel Queue
+        if (in_array($validated['send_method'] ?? 'email', ['email', 'both'])) {
+            try {
+                Mail::to($validated['email'])->queue(new ClientAccountCreatedMail(
+                    clientName: $client->name,
+                    email: $validated['email'],
+                    password: $validated['password'],
+                    portalUrl: $portalUrl,
+                    notes: $validated['message'] ?? null,
+                ));
+            } catch (\Throwable $e) {
+                Log::error("Gagal antrekan email akun klien: " . $e->getMessage());
+            }
+        }
 
         return redirect()->back()->with([
             'success' => 'Akun klien berhasil disimpan dan diaktifkan!',

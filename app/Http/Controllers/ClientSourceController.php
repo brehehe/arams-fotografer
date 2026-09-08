@@ -8,6 +8,7 @@ use App\Models\ClientSourceAppreciation;
 use App\Models\PaymentMethod;
 use App\Models\Project;
 use App\Models\WeddingOrganizer;
+use App\Traits\HasWebpUpload;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,6 +17,7 @@ use Inertia\Response;
 
 class ClientSourceController extends Controller
 {
+    use HasWebpUpload;
     public function index(Request $request): Response
     {
         $query = ClientSource::query()->with('appreciations');
@@ -162,12 +164,18 @@ class ClientSourceController extends Controller
             ->select('id', 'name', 'code', 'account_number', 'account_holder')
             ->get();
 
+        $appreciations = $source->appreciations()
+            ->with('paymentMethod')
+            ->latest('date')
+            ->latest('created_at')
+            ->get();
+
         return Inertia::render('ClientSources/Show', [
             'source' => $source,
             'metrics' => $metrics,
             'referral_history' => $referralHistory,
             'total_amount' => $totalProjectValue,
-            'appreciations' => $source->appreciations,
+            'appreciations' => $appreciations,
             'payment_methods' => $paymentMethods,
             'finance_summary' => [
                 'total_expenses' => $referralExpensesTotal,
@@ -252,6 +260,7 @@ class ClientSourceController extends Controller
             'payment_method_id' => 'nullable|uuid|exists:payment_methods,id',
             'is_recorded_in_finance' => 'nullable|boolean',
             'notes' => 'nullable|string',
+            'proof_image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:5120',
         ]);
 
         $isRecorded = $request->boolean('is_recorded_in_finance', true);
@@ -264,6 +273,12 @@ class ClientSourceController extends Controller
             $financeReference = 'EXP-REF-' . date('ym') . '-' . str_pad((string) $count, 4, '0', STR_PAD_LEFT);
         }
 
+        // Handle proof image upload
+        $proofImagePath = null;
+        if ($request->hasFile('proof_image')) {
+            $proofImagePath = $this->uploadAsWebp($request->file('proof_image'), 'appreciations/proof');
+        }
+
         $appreciation = $source->appreciations()->create([
             'status' => $validated['status'],
             'date' => $validated['date'],
@@ -273,6 +288,7 @@ class ClientSourceController extends Controller
             'finance_reference' => $financeReference,
             'is_recorded_in_finance' => $isRecorded,
             'notes' => $validated['notes'] ?? null,
+            'proof_image' => $proofImagePath,
         ]);
 
         $financeMsg = $financeReference ? " dan tercatat di Finance ({$financeReference})" : "";
@@ -299,6 +315,7 @@ class ClientSourceController extends Controller
             'payment_method_id' => 'nullable|uuid|exists:payment_methods,id',
             'is_recorded_in_finance' => 'nullable|boolean',
             'notes' => 'nullable|string',
+            'proof_image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:5120',
         ]);
 
         $isRecorded = $request->boolean('is_recorded_in_finance', true);
@@ -310,6 +327,12 @@ class ClientSourceController extends Controller
             $financeReference = 'EXP-REF-' . date('ym') . '-' . str_pad((string) $count, 4, '0', STR_PAD_LEFT);
         }
 
+        // Handle proof image upload
+        $proofImagePath = $appreciation->proof_image;
+        if ($request->hasFile('proof_image')) {
+            $proofImagePath = $this->uploadAsWebp($request->file('proof_image'), 'appreciations/proof');
+        }
+
         $appreciation->update([
             'status' => $validated['status'],
             'date' => $validated['date'],
@@ -319,6 +342,7 @@ class ClientSourceController extends Controller
             'finance_reference' => $financeReference,
             'is_recorded_in_finance' => $isRecorded,
             'notes' => $validated['notes'] ?? null,
+            'proof_image' => $proofImagePath,
         ]);
 
         activity()

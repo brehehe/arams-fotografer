@@ -15,9 +15,21 @@ class UpdateClientRequest extends FormRequest
 
     public function rules(): array
     {
+        $isPatch = $this->isMethod('patch');
+
         return [
-            'name' => 'required|string|max:255',
+            'name' => $isPatch ? 'sometimes|required|string|max:255' : 'required|string|max:255',
             'partner_name' => 'nullable|string|max:255',
+            'child_name' => 'nullable|string|max:255',
+            'child_birth_date' => 'nullable|date',
+            'child_gender' => 'nullable|string|max:50',
+            'father_name' => 'nullable|string|max:255',
+            'mother_name' => 'nullable|string|max:255',
+            'children' => 'nullable|array',
+            'children.*.name' => 'nullable|string|max:255',
+            'children.*.nickname' => 'nullable|string|max:100',
+            'children.*.birth_date' => 'nullable|date',
+            'children.*.gender' => 'nullable|string|max:50',
             'bride_name' => 'nullable|string|max:255',
             'bride_nickname' => 'nullable|string|max:100',
             'groom_name' => 'nullable|string|max:255',
@@ -28,7 +40,7 @@ class UpdateClientRequest extends FormRequest
             'client_type' => 'nullable|string|max:100',
             'email' => 'nullable|email|max:255',
             'instagram' => 'nullable|string|max:100',
-            'phone' => 'required|string|max:50',
+            'phone' => $isPatch ? 'sometimes|required|string|max:50' : 'required|string|max:50',
             'secondary_phone' => 'nullable|string|max:50',
             'preferred_contact' => 'nullable|string|in:whatsapp,email,phone',
             'province' => 'nullable|string|max:100',
@@ -45,7 +57,7 @@ class UpdateClientRequest extends FormRequest
             'referred_by_client_id' => 'nullable|exists:clients,id',
             'wedding_organizer_id' => 'nullable|exists:wedding_organizers,id',
             'referral_name' => 'nullable|string|max:255',
-            'status' => ['required', 'string', Rule::in(ClientStatus::values())],
+            'status' => [$isPatch ? 'sometimes' : 'required', 'string', Rule::in(ClientStatus::values())],
             'notes' => 'nullable|string',
             'tags' => 'nullable|array',
         ];

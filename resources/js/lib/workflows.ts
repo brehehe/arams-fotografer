@@ -24,93 +24,105 @@ export interface WorkflowDefinition {
 export const WORKFLOW_WEDDING: WorkflowDefinition = {
     id: 1,
     type: 'wedding',
-    name: 'Workflow Wedding (7 Tahap)',
-    description: 'Alur kerja komprehensif tim untuk kategori Wedding & International Wedding (Akad & Resepsi) dari pra-acara hingga produksi cetak.',
-    steps_count: 7,
+    name: 'Workflow Wedding (8 Tahap)',
+    description: 'Alur kerja komprehensif tim untuk kategori Wedding & International Wedding (Akad & Resepsi) dari pra-acara hingga penyerahan berkas final.',
+    steps_count: 8,
     steps: [
         {
             id: 1,
             num: 1,
-            name: 'Booking & Briefing Konsep',
+            name: 'Booking & DP',
             phase: 'Pra-Acara',
-            duration: 'H-14 s/d H-1',
-            activity: 'Konsultasi konsep visual, moodboard, cek rundown acara & koordinasi tim WO.',
-            dur: 'H-14 s/d H-1',
-            dl: 'H-1',
-            deliv: 'Konfirmasi Konsep & Rundown',
-            description: 'Konsultasi konsep & koordinasi rundown',
+            duration: 'H-30 s/d H-14',
+            activity: 'Penerimaan uang muka (DP) telah terverifikasi. Jadwal tim, fotografer & videografer telah di-booking pada kalender kerja sistem.',
+            dur: 'H-30 s/d H-14',
+            dl: 'H-14',
+            deliv: 'Verifikasi DP & Booking Jadwal',
+            description: 'Verifikasi pembayaran DP & jadwal tim',
         },
         {
             id: 2,
             num: 2,
-            name: 'Hari H (Liputan & Shooting)',
-            phase: 'Hari H',
-            duration: 'Hari H',
-            activity: 'Dokumentasi penuh akad & resepsi, dilanjutkan proses ingest & backup ganda data.',
-            dur: 'Hari H',
-            dl: 'Hari H',
-            deliv: 'Liputan Hari H & Backup Data',
-            description: 'Liputan dokumentasi & backup data',
+            name: 'TM Wedding',
+            phase: 'Pra-Acara',
+            duration: 'H-7 s/d H-1',
+            activity: 'Technical Meeting bersama perwakilan klien dan Wedding Organizer untuk finalisasi rundown serta checklist shot list foto.',
+            dur: 'H-7 s/d H-1',
+            dl: 'H-1',
+            deliv: 'Final Rundown & Shot List',
+            description: 'Technical Meeting & finalisasi rundown',
         },
         {
             id: 3,
             num: 3,
-            name: 'Culling & Seleksi Preview',
-            phase: 'Pasca-Produksi',
-            duration: 'H+1 s/d H+3',
-            activity: 'Sortir foto terbaik, unggah preview sneak peek, dan share link Google Drive raw files.',
-            dur: '1 - 3 Hari',
-            dl: 'H+3',
-            deliv: 'Sneak Peek & Raw Upload',
-            description: 'Sortir foto & upload preview awal',
+            name: 'Hari H',
+            phase: 'Hari H',
+            duration: 'Hari H',
+            activity: 'Pelaksanaan liputan dan dokumentasi live di lokasi acara oleh seluruh tim yang bertugas serta backup data ganda.',
+            dur: 'Hari H',
+            dl: 'Hari H',
+            deliv: 'Liputan Acara & Backup Raw Data',
+            description: 'Dokumentasi hari H & backup master data',
         },
         {
             id: 4,
             num: 4,
-            name: 'Editing Foto & Video Highlight',
+            name: 'Sneak Peak Photo Editing',
             phase: 'Pasca-Produksi',
-            duration: 'H+7 s/d H+21',
-            activity: 'Retouching foto pilihan, color grading, editing teaser Instagram & cinematic highlight.',
-            dur: '1 - 3 Minggu',
-            dl: 'H+21',
-            deliv: 'Master Edited & Cinematic Video',
-            description: 'Retouch foto pilihan & video editing',
+            duration: 'H+1 s/d H+3',
+            activity: 'Tim sedang melakukan color grading kilat dan pemilihan foto highlight utama untuk preview kilat klien.',
+            dur: '1 - 3 Hari',
+            dl: 'H+3',
+            deliv: 'Sneak Peak Preview (20-50 Foto)',
+            description: 'Color grading kilat & preview teaser foto',
         },
         {
             id: 5,
             num: 5,
-            name: 'Review Klien & Layouting Album',
-            phase: 'Review',
-            duration: 'H+21 s/d H+30',
-            activity: 'Desain layout photobook album dan sesi approval/revisi draft bersama klien.',
+            name: 'Flashdrive + Box Delivery',
+            phase: 'Finishing',
+            duration: 'H+7 s/d H+14',
+            activity: 'Penyimpanan seluruh master raw file & hasil liputan ke dalam Flashdrive eksklusif dan penyiapan box kemasan.',
             dur: '1 Minggu',
-            dl: 'H+30',
-            deliv: 'Approval Layout Album',
-            description: 'Layouting album & approval klien',
+            dl: 'H+14',
+            deliv: 'Exclusive Flashdrive & Box',
+            description: 'Pengisian flashdisk & box kemasan',
         },
         {
             id: 6,
             num: 6,
-            name: 'Produksi Cetak & Packaging',
-            phase: 'Finishing',
-            duration: 'H+30 s/d H+45',
-            activity: 'Pencetakan album premium hardcover, bingkai canvas, dan pengemasan box kayu exclusive.',
-            dur: '2 Minggu',
-            dl: 'H+45',
-            deliv: 'Cetak Album Fisik & Box',
-            description: 'Cetak album fisik & packaging box',
+            name: 'Full Version Photo & Video Editing',
+            phase: 'Pasca-Produksi',
+            duration: 'H+14 s/d H+30',
+            activity: 'Editing menyeluruh seluruh foto terpilih dan perakitan video cinematic highlight & full documentary berdurasi lengkap.',
+            dur: '2 - 3 Minggu',
+            dl: 'H+30',
+            deliv: 'Master All Edited Photos & Cinematic Video',
+            description: 'Master editing foto pilihan & video cinematic',
         },
         {
             id: 7,
             num: 7,
-            name: 'Penyerahan Final (Handover)',
+            name: 'Album Layout Editing',
+            phase: 'Review',
+            duration: 'H+21 s/d H+35',
+            activity: 'Desain penataan layout halaman photobook wedding dan konfirmasi approval kepada klien sebelum dikirim ke percetakan.',
+            dur: '1 - 2 Minggu',
+            dl: 'H+35',
+            deliv: 'Approval Layout Photobook',
+            description: 'Desain layout album & approval klien',
+        },
+        {
+            id: 8,
+            num: 8,
+            name: 'Final Delivery',
             phase: 'Selesai',
             duration: 'H+45 s/d H+60',
-            activity: 'Serah terima paket album fisik & flashdisk via kurir serta konfirmasi kepuasan klien.',
+            activity: 'Pengiriman seluruh paket fisik (album cetak, frame, flashdrive) dan berkas digital resolusi tinggi ke alamat klien.',
             dur: 'Final',
             dl: 'H+60',
-            deliv: 'Serah Terima Lengkap',
-            description: 'Handover paket fisik & master archive',
+            deliv: 'Handover Lengkap Paket Fisik & Digital',
+            description: 'Penyerahan seluruh produk fisik & arsip cloud',
         },
     ],
 };
@@ -274,43 +286,71 @@ export const ALL_WORKFLOWS: WorkflowDefinition[] = [
 ];
 
 /**
- * Resolves the appropriate workflow definition based on Category and Package info.
+ * Resolves the appropriate workflow definition based on Category, Package, and Project info.
  * Can use custom definitions from database if provided.
  */
 export function resolveWorkflow(
     category?: { name?: string; workflow_type?: string | null } | null,
-    customDefinitions?: WorkflowDefinition[]
+    customDefinitions?: WorkflowDefinition[],
+    packageOrProjectInfo?: { name?: string; service_name?: string } | null
 ): WorkflowDefinition {
     const list = customDefinitions && customDefinitions.length > 0 ? customDefinitions : ALL_WORKFLOWS;
-    if (!category) return list.find((w) => w.type === 'wedding') || list[0] || WORKFLOW_WEDDING;
 
-    const wfType = category.workflow_type?.toLowerCase() || '';
-    const name = category.name?.toLowerCase() || '';
+    const wfType = (category?.workflow_type || '').toLowerCase();
+    const catName = (category?.name || '').toLowerCase();
+    const pkgName = (packageOrProjectInfo?.name || '').toLowerCase();
+    const srvName = (packageOrProjectInfo?.service_name || '').toLowerCase();
+    const combined = `${catName} ${pkgName} ${srvName}`.trim();
 
-    if (
-        wfType === 'non_wedding' ||
-        wfType === 'photoshoot' ||
-        name.includes('prewed') ||
-        name.includes('engagement') ||
-        name.includes('photo only') ||
-        name.includes('video only') ||
-        name.includes('portrait') ||
-        name.includes('graduation') ||
-        name.includes('event')
-    ) {
+    // 1. Direct workflow_type match
+    if (wfType === 'non_wedding' || wfType === 'photoshoot') {
         return list.find((w) => w.type === 'non_wedding') || list[1] || WORKFLOW_NON_WEDDING;
     }
+    if (wfType === 'custom' || wfType === 'bundling') {
+        return list.find((w) => w.type === 'custom') || list[2] || WORKFLOW_CUSTOM;
+    }
+    if (wfType === 'wedding') {
+        return list.find((w) => w.type === 'wedding') || list[0] || WORKFLOW_WEDDING;
+    }
 
+    // 2. Custom / Bundling keywords
     if (
-        wfType === 'custom' ||
-        wfType === 'bundling' ||
-        name.includes('bundle') ||
-        name.includes('bundling') ||
-        name.includes('custom') ||
-        name.includes('journey')
+        combined.includes('bundle') ||
+        combined.includes('bundling') ||
+        combined.includes('custom') ||
+        combined.includes('journey') ||
+        combined.includes('all-in') ||
+        combined.includes('all in')
     ) {
         return list.find((w) => w.type === 'custom') || list[2] || WORKFLOW_CUSTOM;
     }
 
+    // 3. Non-Wedding / Event / Community / Photoshoot keywords
+    if (
+        combined.includes('prewed') ||
+        combined.includes('engagement') ||
+        combined.includes('lamaran') ||
+        combined.includes('event') ||
+        combined.includes('komunitas') ||
+        combined.includes('community') ||
+        combined.includes('portrait') ||
+        combined.includes('graduation') ||
+        combined.includes('wisuda') ||
+        combined.includes('photo only') ||
+        combined.includes('video only') ||
+        combined.includes('photoshoot') ||
+        combined.includes('corporate') ||
+        combined.includes('birthday') ||
+        combined.includes('sweet 17') ||
+        combined.includes('family') ||
+        combined.includes('studio') ||
+        combined.includes('maternity') ||
+        combined.includes('aqiqah') ||
+        combined.includes('dokumentasi')
+    ) {
+        return list.find((w) => w.type === 'non_wedding') || list[1] || WORKFLOW_NON_WEDDING;
+    }
+
+    // 4. Default: Wedding Workflow
     return list.find((w) => w.type === 'wedding') || list[0] || WORKFLOW_WEDDING;
 }

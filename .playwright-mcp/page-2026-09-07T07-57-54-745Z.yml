@@ -1,0 +1,45 @@
+- generic [ref=f17e3]:
+  - region "Notifications alt+T"
+  - generic [ref=f17e4]:
+    - generic [ref=f17e5]:
+      - img "Arams Pictures Couple" [ref=f17e7]
+      - generic [ref=f17e9]:
+        - generic [ref=f17e10]:
+          - generic [ref=f17e11]: ap
+          - generic [ref=f17e12]:
+            - heading "Arams Photography" [level=2] [ref=f17e13]
+            - paragraph [ref=f17e14]: Capturing Moments, Creating Timeless Memories
+        - generic [ref=f17e15]:
+          - generic [ref=f17e16]: STUDIO & CINEMA PHOTOGRAPHY SYSTEM
+          - heading "Abadikan Setiap Momen Berharga Anda" [level=1] [ref=f17e17]
+          - paragraph [ref=f17e19]: Terima kasih telah mempercayakan momen spesial Anda kepada Arams Photography.
+      - generic [ref=f17e20]:
+        - generic [ref=f17e21]:
+          - heading "Kualitas Terbaik" [level=4] [ref=f17e26]
+          - paragraph [ref=f17e27]: Peralatan profesional & editing berkualitas tinggi.
+        - generic [ref=f17e28]:
+          - heading "100% Aman" [level=4] [ref=f17e32]
+          - paragraph [ref=f17e33]: Data & file Anda aman bersama kami.
+        - generic [ref=f17e34]:
+          - heading "Layanan Personal" [level=4] [ref=f17e38]
+          - paragraph [ref=f17e39]: Kami mendengar & mewujudkan visi Anda.
+    - generic [ref=f17e41]:
+      - generic [ref=f17e42]:
+        - heading "Welcome Back!" [level=2] [ref=f17e43]
+        - paragraph [ref=f17e44]: Masuk untuk mengakses project dan momen spesial Anda bersama Arams Photography.
+      - generic [ref=f17e45]:
+        - generic [ref=f17e46]:
+          - generic [ref=f17e47]: Email
+          - textbox "Masukkan email Anda" [ref=f17e49]
+        - generic [ref=f17e50]:
+          - generic [ref=f17e51]: Password
+          - generic [ref=f17e52]:
+            - textbox "Masukkan password Anda" [ref=f17e53]
+            - button [ref=f17e54] [cursor=pointer]
+        - link "Lupa password?" [ref=f17e59] [cursor=pointer]:
+          - /url: /forgot-password
+        - button "Masuk" [ref=f17e60] [cursor=pointer]
+      - generic [ref=f17e62]: atau
+      - generic [ref=f17e72]:
+        - heading "Belum memiliki akun?" [level=4] [ref=f17e73]
+        - paragraph [ref=f17e74]: Hubungi admin Arams Photography untuk mendapatkan akses ke portal ini.

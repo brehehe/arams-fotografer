@@ -60,6 +60,22 @@ class StoreProjectRequest extends FormRequest
             'selected_addons.*.unit' => 'nullable|string|max:50',
             'selected_addons.*.unit_price' => 'required_with:selected_addons|numeric|min:0',
             'selected_addons.*.total_price' => 'required_with:selected_addons|numeric|min:0',
+            // Client info overrides (wedding/newborn)
+            'client_overrides' => 'nullable|array',
+            'client_overrides.bride_name' => 'nullable|string|max:255',
+            'client_overrides.bride_nickname' => 'nullable|string|max:255',
+            'client_overrides.groom_name' => 'nullable|string|max:255',
+            'client_overrides.groom_nickname' => 'nullable|string|max:255',
+            'client_overrides.father_name' => 'nullable|string|max:255',
+            'client_overrides.mother_name' => 'nullable|string|max:255',
+            'client_overrides.child_name' => 'nullable|string|max:255',
+            'client_overrides.child_birth_date' => 'nullable|date',
+            'client_overrides.child_gender' => 'nullable|string|max:10',
+            'client_overrides.children' => 'nullable|array',
+            'client_overrides.children.*.name' => 'nullable|string|max:255',
+            'client_overrides.children.*.nickname' => 'nullable|string|max:255',
+            'client_overrides.children.*.birth_date' => 'nullable|date',
+            'client_overrides.children.*.gender' => 'nullable|string|max:10',
         ];
     }
 }

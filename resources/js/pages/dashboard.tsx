@@ -850,73 +850,7 @@ export default function Dashboard({
 
             {/* 5. Bottom Section: 4 Spacious 2x2 Grid Cards */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
-                {/* Aktivitas Terbaru (Card 1) */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full">
-                    <div className="flex-1 flex flex-col">
-                        <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-8 h-8 rounded-xl bg-purple-50 flex items-center justify-center border border-purple-100/60">
-                                    <Activity className="w-4 h-4 text-purple-600" />
-                                </div>
-                                <div>
-                                    <h3 className="text-sm font-bold text-slate-900">Aktivitas Terbaru</h3>
-                                    <p className="text-[11px] text-slate-400">Log operasional & aktivitas tim studio terkini</p>
-                                </div>
-                            </div>
-                            <Link
-                                href="/activity-log"
-                                className="text-xs font-semibold text-slate-600 hover:text-purple-600 transition-colors flex items-center gap-1 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200"
-                            >
-                                <span>Lihat Semua</span>
-                                <ArrowUpRight className="w-3.5 h-3.5" />
-                            </Link>
-                        </div>
-
-                        <div className="space-y-2 flex-1">
-                            {recent_activities && recent_activities.length > 0 ? (
-                                recent_activities.slice(0, 5).map((act) => (
-                                    <div
-                                        key={act.id}
-                                        className="flex items-start gap-3 p-2 rounded-xl hover:bg-slate-50/80 transition-colors"
-                                    >
-                                        <img
-                                            src={
-                                                act.causer_avatar ||
-                                                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
-                                            }
-                                            alt={act.causer_name}
-                                            className="w-8 h-8 rounded-full object-cover ring-2 ring-slate-100 shrink-0 mt-0.5"
-                                        />
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center justify-between gap-2">
-                                                <span className="text-xs font-bold text-slate-900 truncate">
-                                                    {act.causer_name}
-                                                </span>
-                                                <span className="text-[10px] text-slate-400 font-mono whitespace-nowrap">
-                                                    {act.time_ago || act.created_at}
-                                                </span>
-                                            </div>
-                                            <p className="text-xs text-slate-600 leading-snug line-clamp-2 mt-0.5">
-                                                {act.description}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="text-center py-6 text-slate-400 text-xs">
-                                    Belum ada aktivitas tercatat.
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
-                        <span>Log otomatis sistem</span>
-                        <span className="font-semibold text-slate-700">{recent_activities?.length ?? 0} Aktivitas Terkini</span>
-                    </div>
-                </div>
-
-                {/* Deadline Terdekat (Card 2) */}
+                {/* 1. Deadline Terdekat (Card 1) */}
                 <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full">
                     <div className="flex-1 flex flex-col">
                         <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
@@ -986,7 +920,7 @@ export default function Dashboard({
                     </div>
                 </div>
 
-                {/* Top Sumber Klien / Lead Source (Card 3) */}
+                {/* 2. Top Sumber Klien / Lead Source (Card 2) */}
                 <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full">
                     <div className="flex-1 flex flex-col">
                         <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
@@ -1057,7 +991,7 @@ export default function Dashboard({
                     </div>
                 </div>
 
-                {/* Kinerja Project (Card 4) */}
+                {/* 3. Kinerja Project (Card 3) */}
                 <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full">
                     <div className="flex-1 flex flex-col justify-between">
                         <div>
@@ -1210,6 +1144,72 @@ export default function Dashboard({
                             <span className="truncate">Performa keseluruhan studio</span>
                         </div>
                         <span className="font-semibold text-emerald-600 whitespace-nowrap">Optimal</span>
+                    </div>
+                </div>
+
+                {/* 4. Aktivitas Terbaru (Card 4) */}
+                <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full">
+                    <div className="flex-1 flex flex-col">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-xl bg-purple-50 flex items-center justify-center border border-purple-100/60">
+                                    <Activity className="w-4 h-4 text-purple-600" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-bold text-slate-900">Aktivitas Terbaru</h3>
+                                    <p className="text-[11px] text-slate-400">Log operasional & aktivitas tim studio terkini</p>
+                                </div>
+                            </div>
+                            <Link
+                                href="/activity-log"
+                                className="text-xs font-semibold text-slate-600 hover:text-purple-600 transition-colors flex items-center gap-1 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200"
+                            >
+                                <span>Lihat Semua</span>
+                                <ArrowUpRight className="w-3.5 h-3.5" />
+                            </Link>
+                        </div>
+
+                        <div className="space-y-2 flex-1">
+                            {recent_activities && recent_activities.length > 0 ? (
+                                recent_activities.slice(0, 5).map((act) => (
+                                    <div
+                                        key={act.id}
+                                        className="flex items-start gap-3 p-2 rounded-xl hover:bg-slate-50/80 transition-colors"
+                                    >
+                                        <img
+                                            src={
+                                                act.causer_avatar ||
+                                                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
+                                            }
+                                            alt={act.causer_name}
+                                            className="w-8 h-8 rounded-full object-cover ring-2 ring-slate-100 shrink-0 mt-0.5"
+                                        />
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span className="text-xs font-bold text-slate-900 truncate">
+                                                    {act.causer_name}
+                                                </span>
+                                                <span className="text-[10px] text-slate-400 font-mono whitespace-nowrap">
+                                                    {act.time_ago || act.created_at}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-slate-600 leading-snug line-clamp-2 mt-0.5">
+                                                {act.description}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center py-6 text-slate-400 text-xs">
+                                    Belum ada aktivitas tercatat.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+                        <span>Log otomatis sistem</span>
+                        <span className="font-semibold text-slate-700">{recent_activities?.length ?? 0} Aktivitas Terkini</span>
                     </div>
                 </div>
             </div>

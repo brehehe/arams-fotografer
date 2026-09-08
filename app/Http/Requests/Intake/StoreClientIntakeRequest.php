@@ -14,6 +14,19 @@ class StoreClientIntakeRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'name' => 'nullable|string|max:255',
+            'child_name' => 'nullable|string|max:255',
+            'child_nickname' => 'nullable|string|max:100',
+            'child_birth_date' => 'nullable|date',
+            'child_gender' => 'nullable|string|max:50',
+            'father_name' => 'nullable|string|max:255',
+            'mother_name' => 'nullable|string|max:255',
+            'parent_names' => 'nullable|string|max:255',
+            'children' => 'nullable|array',
+            'children.*.name' => 'nullable|string|max:255',
+            'children.*.nickname' => 'nullable|string|max:100',
+            'children.*.birth_date' => 'nullable|date',
+            'children.*.gender' => 'nullable|string|max:50',
             'bride_name' => 'nullable|string|max:255',
             'bride_nickname' => 'nullable|string|max:100',
             'bride_occupation' => 'nullable|string|max:255',

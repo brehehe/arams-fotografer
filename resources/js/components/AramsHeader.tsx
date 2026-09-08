@@ -28,7 +28,7 @@ import {
 interface AramsHeaderProps {
     onMenuToggle?: () => void;
     title?: string;
-    breadcrumbs?: Array<{ label: string; href?: string }>;
+    breadcrumbs?: Array<{ label?: string; title?: string; href?: string }>;
 }
 
 interface SearchItem {
@@ -72,7 +72,7 @@ export default function AramsHeader({
     const [userDropdownOpen, setUserDropdownOpen] = useState(false);
     const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
     const [notifFilter, setNotifFilter] = useState<'all' | 'files' | 'schedule_finance'>('all');
-    
+
     // Notifications State
     const [notifications, setNotifications] = useState<NotificationItem[]>([]);
     const [unreadCount, setUnreadCount] = useState<number>(0);
@@ -224,138 +224,202 @@ export default function AramsHeader({
         searchResults.files.length +
         searchResults.invoices.length;
 
-    // Route based dynamic breadcrumbs & title detection
+    // Route based dynamic breadcrumbs detection
     const pageUrl = (usePage().url || '').split('?')[0];
-    let effectiveTitle = title;
-    let effectiveBreadcrumbs = breadcrumbs;
+    let effectiveBreadcrumbs: Array<{ label: string; href?: string }> = (breadcrumbs || []).map((b) => ({
+        label: b.label || b.title || '',
+        href: b.href,
+    }));
 
     if (!breadcrumbs || breadcrumbs.length === 0) {
-        if (pageUrl.startsWith('/projects/create')) {
-            effectiveTitle = 'Buat Project Baru';
+        if (pageUrl === '/dashboard' || pageUrl === '/' || pageUrl === '') {
+            effectiveBreadcrumbs = [{ label: 'Dashboard' }];
+        } else if (pageUrl.startsWith('/projects/create')) {
             effectiveBreadcrumbs = [
+                { label: 'Dashboard', href: '/dashboard' },
                 { label: 'Projects & Orders', href: '/projects' },
                 { label: 'Buat Project Baru' },
             ];
         } else if (pageUrl.includes('/invoice') || pageUrl.startsWith('/invoices/')) {
-            effectiveTitle = 'Invoice (DP)';
             effectiveBreadcrumbs = [
+                { label: 'Dashboard', href: '/dashboard' },
                 { label: 'Projects & Orders', href: '/projects' },
                 { label: 'Invoice (DP)' },
             ];
         } else if (pageUrl.startsWith('/projects/') && pageUrl.endsWith('/edit')) {
-            effectiveTitle = 'Edit Project';
             effectiveBreadcrumbs = [
+                { label: 'Dashboard', href: '/dashboard' },
                 { label: 'Projects & Orders', href: '/projects' },
                 { label: 'Edit Project' },
             ];
         } else if (pageUrl.startsWith('/projects/') && pageUrl !== '/projects') {
-            effectiveTitle = 'Detail Project';
             effectiveBreadcrumbs = [
+                { label: 'Dashboard', href: '/dashboard' },
                 { label: 'Projects & Orders', href: '/projects' },
                 { label: 'Detail Project' },
             ];
         } else if (pageUrl.startsWith('/projects')) {
-            effectiveTitle = 'Projects & Orders';
             effectiveBreadcrumbs = [
                 { label: 'Dashboard', href: '/dashboard' },
                 { label: 'Projects & Orders' },
             ];
         } else if (pageUrl.startsWith('/calendar')) {
-            effectiveTitle = 'Calendar / Schedule';
             effectiveBreadcrumbs = [
                 { label: 'Dashboard', href: '/dashboard' },
                 { label: 'Calendar / Schedule' },
             ];
+        } else if (pageUrl.startsWith('/clients/') && pageUrl !== '/clients') {
+            effectiveBreadcrumbs = [
+                { label: 'Dashboard', href: '/dashboard' },
+                { label: 'Clients', href: '/clients' },
+                { label: 'Detail Client' },
+            ];
         } else if (pageUrl.startsWith('/clients')) {
-            effectiveTitle = 'Clients';
             effectiveBreadcrumbs = [
                 { label: 'Dashboard', href: '/dashboard' },
                 { label: 'Clients' },
             ];
         } else if (pageUrl.startsWith('/finance')) {
-            effectiveTitle = 'Finance';
             effectiveBreadcrumbs = [
                 { label: 'Dashboard', href: '/dashboard' },
                 { label: 'Finance' },
             ];
         } else if (pageUrl.startsWith('/reports')) {
-            effectiveTitle = 'Reports';
             effectiveBreadcrumbs = [
                 { label: 'Dashboard', href: '/dashboard' },
                 { label: 'Reports' },
             ];
         } else if (pageUrl.startsWith('/files')) {
-            effectiveTitle = 'Files';
             effectiveBreadcrumbs = [
                 { label: 'Dashboard', href: '/dashboard' },
                 { label: 'Files' },
             ];
         } else if (pageUrl.startsWith('/activity-log')) {
-            effectiveTitle = 'Activity Log';
             effectiveBreadcrumbs = [
                 { label: 'Dashboard', href: '/dashboard' },
                 { label: 'Activity Log' },
             ];
         } else if (pageUrl.startsWith('/master-data/notes')) {
-            effectiveTitle = 'Template Catatan';
             effectiveBreadcrumbs = [
+                { label: 'Dashboard', href: '/dashboard' },
                 { label: 'Master Data', href: '/master-data/categories' },
                 { label: 'Template Catatan' },
             ];
         } else if (pageUrl.startsWith('/master-data/packages')) {
-            effectiveTitle = 'Paket & Harga';
             effectiveBreadcrumbs = [
+                { label: 'Dashboard', href: '/dashboard' },
                 { label: 'Master Data', href: '/master-data/categories' },
                 { label: 'Paket & Harga' },
             ];
         } else if (pageUrl.startsWith('/master-data/categories')) {
-            effectiveTitle = 'Kategori Project';
             effectiveBreadcrumbs = [
+                { label: 'Dashboard', href: '/dashboard' },
                 { label: 'Master Data', href: '/master-data/categories' },
                 { label: 'Kategori Project' },
             ];
         } else if (pageUrl.startsWith('/master-data/services')) {
-            effectiveTitle = 'Jenis Layanan';
             effectiveBreadcrumbs = [
+                { label: 'Dashboard', href: '/dashboard' },
                 { label: 'Master Data', href: '/master-data/categories' },
                 { label: 'Jenis Layanan' },
             ];
         } else if (pageUrl.startsWith('/master-data/addons')) {
-            effectiveTitle = 'Add-on & Biaya';
             effectiveBreadcrumbs = [
+                { label: 'Dashboard', href: '/dashboard' },
                 { label: 'Master Data', href: '/master-data/categories' },
                 { label: 'Add-on & Biaya' },
             ];
         } else if (pageUrl.startsWith('/master-data/payment-methods')) {
-            effectiveTitle = 'Metode Pembayaran';
             effectiveBreadcrumbs = [
+                { label: 'Dashboard', href: '/dashboard' },
                 { label: 'Master Data', href: '/master-data/categories' },
                 { label: 'Metode Pembayaran' },
             ];
-        } else if (pageUrl.startsWith('/client-sources/') && pageUrl !== '/client-sources') {
-            effectiveTitle = 'Detail Sumber Klien';
+        } else if (pageUrl.startsWith('/master-data/promo-slides')) {
             effectiveBreadcrumbs = [
+                { label: 'Dashboard', href: '/dashboard' },
+                { label: 'Setting', href: '/setting/admin' },
+                { label: 'Admin', href: '/setting/admin' },
+                // { label: 'Promo Slide' },
+            ];
+        } else if (pageUrl.startsWith('/master-data/testimonials')) {
+            effectiveBreadcrumbs = [
+                { label: 'Dashboard', href: '/dashboard' },
+                { label: 'Setting', href: '/setting/admin' },
+                { label: 'Admin', href: '/setting/admin' },
+                // { label: 'Ulasan Klien' },
+            ];
+        } else if (pageUrl.startsWith('/master-data/instagram-posts')) {
+            effectiveBreadcrumbs = [
+                { label: 'Dashboard', href: '/dashboard' },
+                { label: 'Setting', href: '/setting/admin' },
+                { label: 'Admin', href: '/setting/admin' },
+                // { label: 'Instagram Kami' },
+            ];
+        } else if (pageUrl.startsWith('/master-data/workflows')) {
+            effectiveBreadcrumbs = [
+                { label: 'Dashboard', href: '/dashboard' },
+                { label: 'Master Data', href: '/master-data/categories' },
+                { label: 'Workflow & Template' },
+            ];
+        } else if (pageUrl.startsWith('/master-data/')) {
+            effectiveBreadcrumbs = [
+                { label: 'Dashboard', href: '/dashboard' },
+                { label: 'Master Data', href: '/master-data/categories' },
+                { label: title || 'Master Data' },
+            ];
+        } else if (pageUrl.startsWith('/client-sources/') && pageUrl !== '/client-sources') {
+            effectiveBreadcrumbs = [
+                { label: 'Dashboard', href: '/dashboard' },
                 { label: 'Sumber Klien', href: '/client-sources' },
                 { label: 'Detail Sumber Klien' },
             ];
         } else if (pageUrl.startsWith('/client-sources') || pageUrl.startsWith('/sumber-klien')) {
-            effectiveTitle = 'Sumber Klien / Referral';
             effectiveBreadcrumbs = [
                 { label: 'Dashboard', href: '/dashboard' },
                 { label: 'Sumber Klien' },
             ];
         } else if (pageUrl.startsWith('/wedding-organizer') || pageUrl.startsWith('/wedding-organizers')) {
-            effectiveTitle = 'Wedding Organizer';
             effectiveBreadcrumbs = [
                 { label: 'Dashboard', href: '/dashboard' },
                 { label: 'Wedding Organizer' },
             ];
-        } else if (pageUrl.startsWith('/settings')) {
-            effectiveTitle = 'Settings';
+        } else if (pageUrl.startsWith('/users')) {
             effectiveBreadcrumbs = [
                 { label: 'Dashboard', href: '/dashboard' },
-                { label: 'Settings' },
+                { label: 'Kelola Pengguna' },
             ];
+        } else if (pageUrl.startsWith('/setting/form-klien') || pageUrl.startsWith('/settings/form-klien')) {
+            effectiveBreadcrumbs = [
+                { label: 'Dashboard', href: '/dashboard' },
+                { label: 'Setting', href: '/setting/admin' },
+                { label: 'Form Klien' },
+            ];
+        } else if (pageUrl.startsWith('/setting/portal-klien') || pageUrl.startsWith('/settings/portal-klien')) {
+            effectiveBreadcrumbs = [
+                { label: 'Dashboard', href: '/dashboard' },
+                { label: 'Setting', href: '/setting/admin' },
+                { label: 'Portal Klien' },
+            ];
+        } else if (pageUrl.startsWith('/setting') || pageUrl.startsWith('/settings')) {
+            const searchParamTab = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') : null;
+            const settingTabLabel = searchParamTab === 'form_klien' ? 'Form Klien' : searchParamTab === 'portal_klien' ? 'Portal Klien' : 'Admin';
+            effectiveBreadcrumbs = [
+                { label: 'Dashboard', href: '/dashboard' },
+                { label: 'Setting', href: '/setting/admin' },
+                { label: settingTabLabel },
+            ];
+        } else {
+            const fallbackLabel = title || 'Overview';
+
+            if (fallbackLabel.toLowerCase() === 'dashboard') {
+                effectiveBreadcrumbs = [{ label: 'Dashboard' }];
+            } else {
+                effectiveBreadcrumbs = [
+                    { label: 'Dashboard', href: '/dashboard' },
+                    { label: fallbackLabel },
+                ];
+            }
         }
     }
 
@@ -369,71 +433,47 @@ export default function AramsHeader({
             className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 sm:px-6 lg:px-7 border-b transition-all shrink-0 backdrop-blur-md"
         >
             {/* Left: Hamburger + Breadcrumb */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0">
                 <button
                     type="button"
                     onClick={onMenuToggle}
                     style={{ color: headerTextColor }}
-                    className="p-1.5 -ml-1.5 rounded-xl hover:bg-white/10 lg:hidden transition-colors cursor-pointer"
+                    aria-label="Buka Menu"
+                    className="p-1.5 -ml-1.5 rounded-xl hover:bg-white/10 lg:hidden transition-colors cursor-pointer shrink-0"
                 >
                     <Menu className="w-5 h-5" />
                 </button>
 
-                <div className="flex flex-col justify-center">
-                    <h1
-                        style={{
-                            color: headerTextColor,
-                            fontFamily: `${fontHeading}, sans-serif`,
-                        }}
-                        className="text-base sm:text-lg font-bold tracking-tight leading-tight"
-                    >
-                        {effectiveTitle}
-                    </h1>
-                    {effectiveBreadcrumbs && effectiveBreadcrumbs.length > 0 ? (
-                        <nav className="flex items-center gap-1.5 text-[11px] mt-0.5">
-                            {effectiveBreadcrumbs.map((crumb, idx) => (
-                                <React.Fragment key={crumb.label}>
-                                    {crumb.href ? (
-                                        <Link
-                                            href={crumb.href}
-                                            style={{ color: breadcrumbColor }}
-                                            className="hover:opacity-80 transition-opacity font-medium"
-                                        >
-                                            {crumb.label}
-                                        </Link>
-                                    ) : (
-                                        <span
-                                            style={{ color: breadcrumbActiveColor }}
-                                            className="font-semibold"
-                                        >
-                                            {crumb.label}
-                                        </span>
-                                    )}
-                                    {idx < effectiveBreadcrumbs.length - 1 && (
-                                        <span style={{ color: breadcrumbColor, opacity: 0.5 }}>›</span>
-                                    )}
-                                </React.Fragment>
-                            ))}
-                        </nav>
-                    ) : (
-                        <nav className="flex items-center gap-1.5 text-[11px] mt-0.5">
-                            <Link
-                                href="/dashboard"
-                                style={{ color: breadcrumbColor }}
-                                className="hover:opacity-80 transition-opacity font-medium"
-                            >
-                                Dashboard
-                            </Link>
-                            <span style={{ color: breadcrumbColor, opacity: 0.5 }}>›</span>
-                            <span
-                                style={{ color: breadcrumbActiveColor }}
-                                className="font-semibold"
-                            >
-                                {effectiveTitle}
-                            </span>
-                        </nav>
-                    )}
-                </div>
+                <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs sm:text-sm font-medium min-w-0">
+                    {effectiveBreadcrumbs.map((crumb, idx) => {
+                        const isLast = idx === effectiveBreadcrumbs.length - 1;
+
+                        return (
+                            <React.Fragment key={`${crumb.label}-${idx}`}>
+                                {crumb.href && !isLast ? (
+                                    <Link
+                                        href={crumb.href}
+                                        style={{ color: breadcrumbColor }}
+                                        className="hover:opacity-80 transition-opacity font-medium truncate max-w-[130px] sm:max-w-[200px]"
+                                    >
+                                        {crumb.label}
+                                    </Link>
+                                ) : (
+                                    <span
+                                        style={{ color: breadcrumbActiveColor }}
+                                        className={`truncate max-w-[150px] sm:max-w-[240px] ${isLast ? 'font-semibold' : 'font-medium'
+                                            }`}
+                                    >
+                                        {crumb.label}
+                                    </span>
+                                )}
+                                {!isLast && (
+                                    <span style={{ color: breadcrumbColor, opacity: 0.4 }} className="select-none px-0.5">›</span>
+                                )}
+                            </React.Fragment>
+                        );
+                    })}
+                </nav>
             </div>
 
             {/* Right: Global Search, Notifications, Profile */}
@@ -604,11 +644,10 @@ export default function AramsHeader({
                                                         </span>
                                                     </div>
                                                     <span
-                                                        className={`px-1.5 py-0.2 rounded text-[9px] font-bold border shrink-0 ${
-                                                            item.badge === 'expired'
-                                                                ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                                                : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                                        }`}
+                                                        className={`px-1.5 py-0.2 rounded text-[9px] font-bold border shrink-0 ${item.badge === 'expired'
+                                                            ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                                            : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                            }`}
                                                     >
                                                         {item.badge === 'expired' ? 'Expired' : 'Aktif'}
                                                     </span>
@@ -709,33 +748,30 @@ export default function AramsHeader({
                                 <button
                                     type="button"
                                     onClick={() => setNotifFilter('all')}
-                                    className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                                        notifFilter === 'all'
-                                            ? 'bg-white text-slate-900 shadow-2xs'
-                                            : 'text-slate-500 hover:text-slate-900'
-                                    }`}
+                                    className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${notifFilter === 'all'
+                                        ? 'bg-white text-slate-900 shadow-2xs'
+                                        : 'text-slate-500 hover:text-slate-900'
+                                        }`}
                                 >
                                     Semua ({notifications.length})
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setNotifFilter('files')}
-                                    className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                                        notifFilter === 'files'
-                                            ? 'bg-white text-rose-800 shadow-2xs'
-                                            : 'text-slate-500 hover:text-slate-900'
-                                    }`}
+                                    className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${notifFilter === 'files'
+                                        ? 'bg-white text-rose-800 shadow-2xs'
+                                        : 'text-slate-500 hover:text-slate-900'
+                                        }`}
                                 >
                                     File Expired ({notifications.filter((n) => n.category === 'files').length})
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setNotifFilter('schedule_finance')}
-                                    className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                                        notifFilter === 'schedule_finance'
-                                            ? 'bg-white text-blue-800 shadow-2xs'
-                                            : 'text-slate-500 hover:text-slate-900'
-                                    }`}
+                                    className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${notifFilter === 'schedule_finance'
+                                        ? 'bg-white text-blue-800 shadow-2xs'
+                                        : 'text-slate-500 hover:text-slate-900'
+                                        }`}
                                 >
                                     Jadwal &amp; Finance ({notifications.filter((n) => n.category === 'schedule' || n.category === 'finance').length})
                                 </button>
@@ -764,15 +800,14 @@ export default function AramsHeader({
                                         >
                                             {/* Icon */}
                                             <div
-                                                className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center border ${
-                                                    notif.color === 'rose'
-                                                        ? 'bg-rose-50 text-rose-600 border-rose-100'
-                                                        : notif.color === 'amber'
+                                                className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center border ${notif.color === 'rose'
+                                                    ? 'bg-rose-50 text-rose-600 border-rose-100'
+                                                    : notif.color === 'amber'
                                                         ? 'bg-amber-50 text-amber-600 border-amber-100'
                                                         : notif.color === 'blue'
-                                                        ? 'bg-blue-50 text-blue-600 border-blue-100'
-                                                        : 'bg-purple-50 text-purple-600 border-purple-100'
-                                                }`}
+                                                            ? 'bg-blue-50 text-blue-600 border-blue-100'
+                                                            : 'bg-purple-50 text-purple-600 border-purple-100'
+                                                    }`}
                                             >
                                                 {notif.icon === 'AlertTriangle' && <AlertTriangle className="w-4 h-4" />}
                                                 {notif.icon === 'Clock' && <Clock className="w-4 h-4" />}
@@ -863,7 +898,7 @@ export default function AramsHeader({
                                 </div>
                                 <div className="py-1">
                                     <Link
-                                        href="/settings/company"
+                                        href="/setting/admin"
                                         className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
                                     >
                                         <SettingsIcon className="w-4 h-4 text-slate-400" />

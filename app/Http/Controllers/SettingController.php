@@ -21,11 +21,51 @@ class SettingController extends Controller
         protected SettingService $settingService
     ) {}
 
-    public function index(): Response
+    public function index(Request $request): Response|RedirectResponse
+    {
+        $tab = $request->input('tab');
+        if ($tab === 'form_klien' || $tab === 'form-klien') {
+            return redirect()->route('setting.form-klien');
+        }
+        if ($tab === 'portal_klien' || $tab === 'portal-klien') {
+            return redirect()->route('setting.portal-klien');
+        }
+
+        $params = [];
+        if (in_array($tab, ['company', 'general', 'appearance', 'login_theme', 'backup'])) {
+            $params['sub'] = $tab;
+        } elseif ($request->has('sub')) {
+            $params['sub'] = $request->input('sub');
+        }
+
+        return redirect()->route('setting.admin', $params);
+    }
+
+    public function admin(): Response
     {
         $data = $this->settingService->getSettingsData();
 
-        return Inertia::render('settings/Index', [
+        return Inertia::render('settings/Admin', [
+            'settings' => $data['settings'],
+            'settingsMap' => $data['settingsMap'],
+        ]);
+    }
+
+    public function formKlien(): Response
+    {
+        $data = $this->settingService->getSettingsData();
+
+        return Inertia::render('settings/FormKlien', [
+            'settings' => $data['settings'],
+            'settingsMap' => $data['settingsMap'],
+        ]);
+    }
+
+    public function portalKlien(): Response
+    {
+        $data = $this->settingService->getSettingsData();
+
+        return Inertia::render('settings/PortalKlien', [
             'settings' => $data['settings'],
             'settingsMap' => $data['settingsMap'],
         ]);

@@ -7,9 +7,6 @@ import {
     FolderKanban,
     LogOut,
     User,
-    Phone,
-    Mail,
-    Clock,
     Instagram,
     Youtube,
     Shield,
@@ -73,11 +70,10 @@ export function ClientLayout({ children }: ClientLayoutProps) {
     return (
         <div
             style={{
-                background: portalBgGradient || portalBg,
+                backgroundColor: portalBg,
                 color: portalTextColor,
-                fontFamily: `'${portalFontBody}', system-ui, -apple-system, sans-serif`,
             }}
-            className="min-h-screen flex flex-col font-sans antialiased transition-colors duration-200"
+            className="min-h-screen flex flex-col font-sans antialiased transition-colors duration-200 overflow-x-clip"
         >
             {/* Dynamic CSS Variables Injector for Portal Theme */}
             <style>{`
@@ -112,28 +108,28 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                     borderColor: portalNavBorder,
                     color: portalNavText,
                 }}
-                className="sticky top-0 z-40 border-b shadow-md transition-colors"
+                className="sticky top-0 z-40 border-b shadow-md transition-colors w-full"
             >
-                <div className="w-full max-w-full px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+                <div className="w-full max-w-full px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-4">
                     {/* Brand Logo Monogram */}
-                    <Link href="/client/dashboard" className="flex items-center gap-3.5 group">
+                    <Link href="/client/dashboard" className="flex items-center gap-2 sm:gap-3.5 group shrink-0">
                         <div
                             style={{
                                 backgroundColor: 'rgba(255, 255, 255, 0.1)',
                                 borderColor: 'rgba(255, 255, 255, 0.2)',
                                 color: portalNavText,
                             }}
-                            className="w-10 h-10 rounded-xl border flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform"
+                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0"
                         >
                             <span className="font-serif italic font-bold text-sm tracking-tighter">ap</span>
                         </div>
-                        <div className="flex flex-col">
+                        <div className="hidden min-[480px]:flex flex-col">
                             <span
                                 style={{
                                     color: portalNavText,
                                     fontFamily: `'${portalFontHeading}', serif`,
                                 }}
-                                className="font-black text-sm sm:text-base tracking-[0.2em] uppercase"
+                                className="font-black text-xs sm:text-base tracking-[0.15em] sm:tracking-[0.2em] uppercase whitespace-nowrap"
                             >
                                 Arams Pictures
                             </span>
@@ -141,7 +137,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                                 style={{
                                     color: portalFooterText || '#FDA4AF',
                                 }}
-                                className="text-[9px] tracking-[0.3em] uppercase font-bold -mt-0.5"
+                                className="text-[8px] sm:text-[9px] tracking-[0.25em] sm:tracking-[0.3em] uppercase font-bold -mt-0.5 whitespace-nowrap"
                             >
                                 Client Portal
                             </span>
@@ -149,7 +145,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                     </Link>
 
                     {/* Navigation Pills */}
-                    <nav className="flex items-center gap-2">
+                    <nav className="flex items-center gap-1 sm:gap-2 shrink-0">
                         <Link
                             href="/client/dashboard"
                             style={
@@ -162,12 +158,12 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                                           color: `${portalNavText}cc`,
                                       }
                             }
-                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                            className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 sm:gap-2 ${
                                 !isCurrent('/client/dashboard') ? 'hover:bg-white/10 hover:text-white' : 'shadow-sm'
                             }`}
                         >
-                            <Home className="w-4 h-4" />
-                            <span>Beranda</span>
+                            <Home className="w-4 h-4 shrink-0" />
+                            <span className="hidden min-[460px]:inline">Beranda</span>
                         </Link>
 
                         <Link
@@ -182,32 +178,32 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                                           color: `${portalNavText}cc`,
                                       }
                             }
-                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                            className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 sm:gap-2 ${
                                 !isCurrent('/client/projects') ? 'hover:bg-white/10 hover:text-white' : 'shadow-sm'
                             }`}
                         >
-                            <FolderKanban className="w-4 h-4" />
-                            <span>Project Saya</span>
+                            <FolderKanban className="w-4 h-4 shrink-0" />
+                            <span className="hidden min-[460px]:inline">Project Saya</span>
                         </Link>
                     </nav>
 
                     {/* Right Notification & User Profile */}
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
                         {/* Notification Bell */}
                         <div className="relative">
                             <button
                                 type="button"
                                 onClick={() => setNotificationsOpen(!notificationsOpen)}
-                                className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center relative transition-colors cursor-pointer"
+                                className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center relative transition-colors cursor-pointer"
                                 style={{ color: portalNavText }}
                             >
-                                <Bell className="w-4 h-4" />
+                                <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 <span
                                     style={{
                                         backgroundColor: portalPrimaryAccent,
                                         borderColor: portalNavBg,
                                     }}
-                                    className="absolute -top-0.5 -right-0.5 w-4 h-4 text-white rounded-full text-[9px] font-bold flex items-center justify-center border-2"
+                                    className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 sm:w-4 sm:h-4 text-white rounded-full text-[8px] sm:text-[9px] font-bold flex items-center justify-center border-2"
                                 >
                                     2
                                 </span>
@@ -217,7 +213,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                             {notificationsOpen && (
                                 <>
                                     <div className="fixed inset-0 z-40" onClick={() => setNotificationsOpen(false)} />
-                                    <div className="absolute right-0 mt-2 w-80 bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-100 p-3 z-50 text-xs animate-in fade-in zoom-in-95">
+                                    <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-100 p-3 z-50 text-xs animate-in fade-in zoom-in-95">
                                         <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2">
                                             <span className="font-bold text-slate-900">Notifikasi</span>
                                             <span className="text-[10px] text-[#4A151B] font-semibold">Tandai sudah dibaca</span>
@@ -244,9 +240,9 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                             <button
                                 type="button"
                                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                                className="flex items-center gap-2.5 p-1 pr-3 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer"
+                                className="flex items-center gap-1.5 sm:gap-2.5 p-1 pr-1.5 sm:pr-3 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer"
                             >
-                                <div className="w-8 h-8 rounded-full bg-amber-600 text-white flex items-center justify-center text-xs font-bold uppercase overflow-hidden shadow-2xs">
+                                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-amber-600 text-white flex items-center justify-center text-xs font-bold uppercase overflow-hidden shadow-2xs shrink-0">
                                     {user?.avatar ? (
                                         <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
                                     ) : (
@@ -256,7 +252,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                                 <span className="text-xs font-bold text-white max-w-[130px] truncate hidden sm:inline">
                                     {user?.name || 'Andi Pratama'}
                                 </span>
-                                <ChevronDown className="w-3.5 h-3.5 text-white/70" />
+                                <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white/70 shrink-0" />
                             </button>
 
                             {/* Dropdown Menu */}
@@ -324,148 +320,90 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                 {children}
             </main>
 
-            {/* ── FOOTER (Screenshot 1, 2, 3) ─────────────────────────────────── */}
+            {/* ── FOOTER ── */}
             <footer
                 style={{
                     backgroundColor: portalFooterBg,
                     color: portalFooterText,
                     borderColor: portalNavBorder,
                 }}
-                className="mt-auto border-t pt-12 pb-8 transition-colors"
+                className="mt-auto border-t pt-10 sm:pt-12 pb-0 transition-colors"
             >
                 <div className="w-full max-w-full px-4 sm:px-6 lg:px-8 space-y-8">
-                    
-                    {/* Top 4 Value Badges & Contact Admin Row */}
+                    {/* Top 4 Value Badges (Kenapa Memilih Arams Pictures?) */}
                     <div
                         style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}
-                        className="grid grid-cols-1 lg:grid-cols-12 gap-8 pb-8 border-b"
+                        className="space-y-4 pb-8 border-b"
                     >
-                        {/* 4 Feature Pillars (Span 8) */}
-                        <div className="lg:col-span-8 space-y-4">
-                            <h4
-                                style={{ color: '#FFFFFF' }}
-                                className="text-xs font-black uppercase tracking-wider"
-                            >
-                                Kenapa Memilih Arams Pictures?
-                            </h4>
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                <div className="space-y-1.5">
-                                    <div
-                                        style={{
-                                            backgroundColor: `${portalPrimaryAccent}25`,
-                                            color: portalFooterText || '#FDA4AF',
-                                        }}
-                                        className="w-8 h-8 rounded-xl flex items-center justify-center"
-                                    >
-                                        <Award className="w-4 h-4" />
-                                    </div>
-                                    <h5 style={{ color: '#FFFFFF' }} className="font-bold text-xs">Berpengalaman</h5>
-                                    <p className="text-[11px] opacity-80 leading-snug">
-                                        Lebih dari 7 tahun mengabadikan momen berharga.
-                                    </p>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <div
-                                        style={{
-                                            backgroundColor: `${portalPrimaryAccent}25`,
-                                            color: portalFooterText || '#FDA4AF',
-                                        }}
-                                        className="w-8 h-8 rounded-xl flex items-center justify-center"
-                                    >
-                                        <Camera className="w-4 h-4" />
-                                    </div>
-                                    <h5 style={{ color: '#FFFFFF' }} className="font-bold text-xs">Kualitas Terbaik</h5>
-                                    <p className="text-[11px] opacity-80 leading-snug">
-                                        Peralatan profesional &amp; editing berkualitas tinggi.
-                                    </p>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <div
-                                        style={{
-                                            backgroundColor: `${portalPrimaryAccent}25`,
-                                            color: portalFooterText || '#FDA4AF',
-                                        }}
-                                        className="w-8 h-8 rounded-xl flex items-center justify-center"
-                                    >
-                                        <HeartHandshake className="w-4 h-4" />
-                                    </div>
-                                    <h5 style={{ color: '#FFFFFF' }} className="font-bold text-xs">Pelayanan Personal</h5>
-                                    <p className="text-[11px] opacity-80 leading-snug">
-                                        Kami mendengar &amp; mewujudkan visi Anda.
-                                    </p>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <div
-                                        style={{
-                                            backgroundColor: `${portalPrimaryAccent}25`,
-                                            color: portalFooterText || '#FDA4AF',
-                                        }}
-                                        className="w-8 h-8 rounded-xl flex items-center justify-center"
-                                    >
-                                        <Workflow className="w-4 h-4" />
-                                    </div>
-                                    <h5 style={{ color: '#FFFFFF' }} className="font-bold text-xs">Proses Terorganisir</h5>
-                                    <p className="text-[11px] opacity-80 leading-snug">
-                                        Alur kerja jelas, update rutin, dan tepat waktu.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Hubungi Admin Kami (Span 4) */}
-                        <div
-                            style={{
-                                backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                                borderColor: 'rgba(255, 255, 255, 0.1)',
-                            }}
-                            className="lg:col-span-4 space-y-3 p-5 rounded-2xl border"
+                        <h4
+                            style={{ color: '#FFFFFF' }}
+                            className="text-xs font-black uppercase tracking-wider"
                         >
-                            <h4 style={{ color: '#FFFFFF' }} className="text-xs font-black uppercase tracking-wider">
-                                Hubungi Admin Kami
-                            </h4>
-                            <p className="text-[11px] opacity-80 -mt-1">
-                                Kami siap membantu Anda kapan saja.
-                            </p>
-
-                            <div className="space-y-2.5 pt-1 text-xs">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                                        <Phone className="w-3.5 h-3.5" />
-                                    </div>
-                                    <div>
-                                        <span style={{ color: '#FFFFFF' }} className="font-bold block text-[11px]">WhatsApp</span>
-                                        <a href="https://wa.me/6281234567890" target="_blank" rel="noreferrer" className="opacity-85 hover:opacity-100 font-medium text-[11px] hover:underline">
-                                            +62 812-3456-7890
-                                        </a>
-                                    </div>
+                            Kenapa Memilih Arams Pictures?
+                        </h4>
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+                            <div className="space-y-2">
+                                <div
+                                    style={{
+                                        backgroundColor: `${portalPrimaryAccent}25`,
+                                        color: portalFooterText || '#FDA4AF',
+                                    }}
+                                    className="w-9 h-9 rounded-xl flex items-center justify-center"
+                                >
+                                    <Award className="w-4 h-4" />
                                 </div>
+                                <h5 style={{ color: '#FFFFFF' }} className="font-bold text-xs">Berpengalaman</h5>
+                                <p className="text-[11px] opacity-80 leading-snug">
+                                    Lebih dari 7 tahun mengabadikan momen berharga.
+                                </p>
+                            </div>
 
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
-                                        <Mail className="w-3.5 h-3.5" />
-                                    </div>
-                                    <div>
-                                        <span style={{ color: '#FFFFFF' }} className="font-bold block text-[11px]">Email</span>
-                                        <a href="mailto:hello@aramspictures.com" className="opacity-85 hover:opacity-100 font-medium text-[11px] hover:underline">
-                                            hello@aramspictures.com
-                                        </a>
-                                    </div>
+                            <div className="space-y-2">
+                                <div
+                                    style={{
+                                        backgroundColor: `${portalPrimaryAccent}25`,
+                                        color: portalFooterText || '#FDA4AF',
+                                    }}
+                                    className="w-9 h-9 rounded-xl flex items-center justify-center"
+                                >
+                                    <Camera className="w-4 h-4" />
                                 </div>
+                                <h5 style={{ color: '#FFFFFF' }} className="font-bold text-xs">Kualitas Terbaik</h5>
+                                <p className="text-[11px] opacity-80 leading-snug">
+                                    Peralatan profesional &amp; editing berkualitas tinggi.
+                                </p>
+                            </div>
 
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-6 h-6 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-                                        <Clock className="w-3.5 h-3.5" />
-                                    </div>
-                                    <div>
-                                        <span style={{ color: '#FFFFFF' }} className="font-bold block text-[11px]">Jam Operasional</span>
-                                        <span className="opacity-85 font-medium text-[11px]">
-                                            Senin - Minggu, 08.00 - 18.00 WIB
-                                        </span>
-                                    </div>
+                            <div className="space-y-2">
+                                <div
+                                    style={{
+                                        backgroundColor: `${portalPrimaryAccent}25`,
+                                        color: portalFooterText || '#FDA4AF',
+                                    }}
+                                    className="w-9 h-9 rounded-xl flex items-center justify-center"
+                                >
+                                    <HeartHandshake className="w-4 h-4" />
                                 </div>
+                                <h5 style={{ color: '#FFFFFF' }} className="font-bold text-xs">Pelayanan Personal</h5>
+                                <p className="text-[11px] opacity-80 leading-snug">
+                                    Pendekatan ramah &amp; perhatian detail untuk setiap klien.
+                                </p>
+                            </div>
+
+                            <div className="space-y-2">
+                                <div
+                                    style={{
+                                        backgroundColor: `${portalPrimaryAccent}25`,
+                                        color: portalFooterText || '#FDA4AF',
+                                    }}
+                                    className="w-9 h-9 rounded-xl flex items-center justify-center"
+                                >
+                                    <Workflow className="w-4 h-4" />
+                                </div>
+                                <h5 style={{ color: '#FFFFFF' }} className="font-bold text-xs">Proses Terorganisir</h5>
+                                <p className="text-[11px] opacity-80 leading-snug">
+                                    Alur kerja jelas, update rutin, dan tepat waktu.
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -476,7 +414,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                     style={{
                         backgroundColor: 'rgba(0, 0, 0, 0.25)',
                     }}
-                    className="py-6 mt-8"
+                    className="py-6 mt-6"
                 >
                     <div className="w-full max-w-full px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
                         {/* Brand & Tagline */}
@@ -508,13 +446,13 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                                 Ikuti Kami
                             </span>
                             <div className="flex items-center gap-3 text-white/80">
-                                <a href="https://instagram.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
+                                <a href="https://instagram.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors" aria-label="Instagram">
                                     <Instagram className="w-4 h-4" />
                                 </a>
-                                <a href="https://youtube.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
+                                <a href="https://youtube.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors" aria-label="YouTube">
                                     <Youtube className="w-4 h-4" />
                                 </a>
-                                <a href="https://facebook.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
+                                <a href="https://facebook.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors" aria-label="Facebook">
                                     <Facebook className="w-4 h-4" />
                                 </a>
                             </div>
@@ -524,9 +462,9 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                         <div className="flex flex-col md:items-end gap-1 text-[11px] text-white/70">
                             <span>© 2026 Arams Pictures. All rights reserved.</span>
                             <div className="flex items-center gap-3 text-[10px]">
-                                <Link href="#" className="hover:text-white">Kebijakan Privasi</Link>
+                                <Link href="#" className="hover:text-white transition-colors">Kebijakan Privasi</Link>
                                 <span>|</span>
-                                <Link href="#" className="hover:text-white">Syarat &amp; Ketentuan</Link>
+                                <Link href="#" className="hover:text-white transition-colors">Syarat &amp; Ketentuan</Link>
                             </div>
                         </div>
                     </div>

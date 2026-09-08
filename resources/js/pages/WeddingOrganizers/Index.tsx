@@ -298,16 +298,9 @@ export default function WeddingOrganizersIndex({
         <div className="w-full max-w-full space-y-6 pb-12">
             <Head title="Wedding Organizer (WO) - Arams Photography" />
 
-            {/* Breadcrumb & Header Title */}
+            {/* Header Title & Actions */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <nav className="flex items-center gap-2 text-xs text-slate-500 mb-1">
-                        <Link href="/dashboard" className="hover:text-slate-900 transition-colors">
-                            Dashboard
-                        </Link>
-                        <span>›</span>
-                        <span className="font-semibold text-slate-900">Wedding Organizer (WO)</span>
-                    </nav>
                     <h1 className="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
                         <span>Data Wedding Organizer (WO)</span>
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#C89445]/10 text-[#C89445] border border-[#C89445]/20">

@@ -171,8 +171,8 @@ export default function WorkflowIndex({
             return initialCategories.map((cat: any) => {
                 const wf = resolveWorkflow(cat);
                 const pkgCount = typeof cat.packages_count === 'number'
-                    ? (cat.packages_count > 0 ? `${cat.packages_count} Paket` : '-')
-                    : (cat.packages_count || '-');
+                    ? `${cat.packages_count} Paket`
+                    : (cat.packages_count && cat.packages_count !== '-' ? cat.packages_count : '0 Paket');
 
                 let colorClass = 'bg-purple-100 text-purple-700';
                 const lowerName = (cat.name || '').toLowerCase();
@@ -821,149 +821,77 @@ export default function WorkflowIndex({
         <div className="w-full max-w-full space-y-6 pb-20">
             <Head title="Workflow & Template Progress - Master Data" />
 
-            {/* ── 1. BREADCRUMB & HEADER SECTION ────────────────────────────────── */}
-            <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs">
-                    <Link
-                        href="/master-data/workflows"
-                        className="text-slate-500 hover:text-slate-800 transition-colors font-medium"
-                    >
-                        Master Data
-                    </Link>
-                    <span className="text-slate-400">›</span>
-                    <span className="text-[#F59E0B] font-bold">Workflow &amp; Template Progress</span>
+            {/* ── 1. HEADER TITLE & ACTIONS SECTION ────────────────────────────────── */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">
+                        Workflow &amp; Template Progress
+                    </h1>
+                    <p className="text-slate-500 text-xs sm:text-sm mt-1">
+                        Kelola workflow utama, paket, dan template deadline deliverables tersimpan langsung di database.
+                    </p>
                 </div>
 
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-                            Workflow &amp; Template Progress
-                        </h1>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                            Kelola workflow utama, paket, dan template deadline deliverables tersimpan langsung di database.
-                        </p>
-                    </div>
-
-                    <div className="flex items-center gap-2 flex-wrap">
+                {/* Actions Group - Satu Baris Sejajar Rapi */}
+                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
+                    {/* Quick Link Pills */}
+                    <div className="inline-flex items-center p-1 bg-slate-100/80 rounded-xl border border-slate-200/60 shadow-2xs">
                         <Link
                             href="/master-data/categories"
-                            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
                         >
-                            <Folder className="w-3.5 h-3.5 text-indigo-600" />
+                            <Folder className="w-3.5 h-3.5 text-slate-500" />
                             <span>Kategori</span>
                         </Link>
+                        <div className="w-px h-4 bg-slate-200 my-auto" />
                         <Link
                             href="/master-data/packages"
-                            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-white transition-all cursor-pointer"
                         >
-                            <Box className="w-3.5 h-3.5 text-indigo-600" />
+                            <Box className="w-3.5 h-3.5 text-slate-500" />
                             <span>Paket &amp; Harga</span>
                         </Link>
-                        <button
-                            type="button"
-                            onClick={handleOpenAddPackage}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer"
-                        >
-                            <PackagePlus className="w-4 h-4 text-indigo-600" />
-                            <span>Tambah Paket Baru</span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleOpenAddWorkflow}
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-[#3B46F1] hover:bg-[#323BD8] text-white rounded-xl text-xs font-bold shadow-xs transition-all hover:scale-[1.02] cursor-pointer shrink-0"
-                        >
-                            <Plus className="w-4 h-4" />
-                            <span>Tambah Workflow</span>
-                            <ChevronDown className="w-3.5 h-3.5 opacity-80" />
-                        </button>
                     </div>
+
+                    {/* Secondary Action: Tambah Paket */}
+                    <button
+                        type="button"
+                        onClick={handleOpenAddPackage}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 text-slate-700 rounded-xl text-xs font-bold shadow-2xs transition-all hover:scale-[1.01] cursor-pointer"
+                    >
+                        <PackagePlus className="w-4 h-4 text-indigo-600" />
+                        <span>Tambah Paket</span>
+                    </button>
+
+                    {/* Primary Action: Tambah Workflow */}
+                    <button
+                        type="button"
+                        onClick={handleOpenAddWorkflow}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#3B46F1] hover:bg-[#323BD8] text-white rounded-xl text-xs font-bold shadow-xs transition-all hover:scale-[1.02] cursor-pointer shrink-0"
+                    >
+                        <Plus className="w-4 h-4" />
+                        <span>Tambah Workflow</span>
+                    </button>
                 </div>
             </div>
 
             {/* ── 2. MAIN 2-COLUMN FULL-WIDTH GRID ──────────────────────────────── */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start w-full">
-                {/* ── LEFT COLUMN: KATEGORI PROJECT & WORKFLOW UTAMA ─────────────── */}
-                <div className="lg:col-span-5 xl:col-span-4 space-y-6">
-                    {/* Card 1: Kategori Project */}
-                    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-5 space-y-3.5">
-                        <div className="flex items-center justify-between gap-2">
-                            <div>
-                                <div className="flex items-center gap-2">
-                                    <h2 className="text-sm font-bold text-slate-900">Kategori Project</h2>
-                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
-                                        {dbCategoryItems.length}
-                                    </span>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch w-full">
+                {/* ── LEFT COLUMN: WORKFLOW UTAMA, KATEGORI & PANDUAN ─────────────── */}
+                <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-5 h-full">
+                    {/* Card 1: Alur Workflow Utama (Controller / Switcher Utama) */}
+                    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 space-y-4 shrink-0">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-lg bg-indigo-50 text-[#3B46F1] flex items-center justify-center shrink-0">
+                                    <Layers className="w-3.5 h-3.5" />
                                 </div>
-                                <p className="text-[10.5px] text-slate-400 font-medium mt-0.5">
-                                    Sinkron otomatis dengan database Master Kategori
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                                <Link
-                                    href="/master-data/categories"
-                                    className="p-1.5 rounded-xl border border-slate-200 text-slate-500 hover:text-[#3B46F1] hover:border-indigo-200 hover:bg-indigo-50/50 transition-colors"
-                                    title="Buka Master Data Kategori"
-                                >
-                                    <ExternalLink className="w-3.5 h-3.5" />
-                                </Link>
-                            </div>
-                        </div>
-
-                        {/* Scrollable category list container */}
-                        <div className="max-h-[380px] overflow-y-auto pr-1">
-                            <table className="w-full text-left text-xs border-collapse">
-                                <thead className="sticky top-0 bg-white z-10">
-                                    <tr className="text-[10px] uppercase font-bold text-slate-400 border-b border-slate-100">
-                                        <th className="py-2.5 px-2 w-[48%]">KATEGORI</th>
-                                        <th className="py-2.5 px-2 w-[34%]">WORKFLOW</th>
-                                        <th className="py-2.5 px-2 w-[18%] text-right">STATUS</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 text-slate-700">
-                                    {dbCategoryItems.map((cat) => (
-                                        <tr
-                                            key={cat.id}
-                                            onClick={() => handleOpenEditCategory(cat)}
-                                            className="hover:bg-indigo-50/40 transition-colors cursor-pointer group"
-                                            title="Klik untuk ubah alur workflow kategori ini"
-                                        >
-                                            <td className="py-2.5 px-2">
-                                                <div className="flex flex-col">
-                                                    <span className="font-bold text-slate-900 group-hover:text-[#3B46F1] transition-colors">
-                                                        {cat.name}
-                                                    </span>
-                                                    <span className="text-[10px] text-slate-400">
-                                                        {cat.packages_count}
-                                                    </span>
-                                                </div>
-                                            </td>
-                                            <td className="py-2.5 px-2">
-                                                <span
-                                                    className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold ${cat.color}`}
-                                                >
-                                                    {cat.workflow_id === 1 ? 'Wedding (8T)' : (cat.workflow_id === 3 ? 'Custom (6T)' : 'Non-Wedding (5T)')}
-                                                </span>
-                                            </td>
-                                            <td className="py-2.5 px-2 text-right">
-                                                <span className="inline-flex px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                    Aktif
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    {/* Card 2: Alur Workflow Utama */}
-                    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-5 space-y-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h2 className="text-sm font-bold text-slate-900">Alur Workflow Utama</h2>
-                                <p className="text-[10.5px] text-slate-400 font-medium">
-                                    Klik workflow untuk melihat dan mengelola deliverables paket
-                                </p>
+                                <div>
+                                    <h2 className="text-sm font-extrabold text-slate-900">Alur Workflow Utama</h2>
+                                    <p className="text-[10.5px] text-slate-400 font-medium">
+                                        Pilih alur workflow untuk dikelola
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
@@ -982,7 +910,7 @@ export default function WorkflowIndex({
                                         onClick={() => setSelectedWorkflowId(wf.id)}
                                         className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
                                             isSelected
-                                                ? 'bg-indigo-50/70 border-[#3B46F1] shadow-2xs ring-1 ring-indigo-500/20'
+                                                ? 'bg-indigo-50/70 border-[#3B46F1] shadow-xs ring-1 ring-indigo-500/20'
                                                 : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/70'
                                         }`}
                                     >
@@ -994,7 +922,7 @@ export default function WorkflowIndex({
                                                     }`}
                                                 />
                                                 <h3
-                                                    className={`text-xs font-bold truncate ${
+                                                    className={`text-xs font-bold leading-tight break-words ${
                                                         isSelected ? 'text-[#3B46F1]' : 'text-slate-900'
                                                     }`}
                                                 >
@@ -1048,400 +976,466 @@ export default function WorkflowIndex({
                             })}
                         </div>
                     </div>
+
+                    {/* Card 2: Kategori Project (Flex-1 mengisi ruang tengah secara seimbang) */}
+                    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 space-y-3.5 flex-1 flex flex-col min-h-[360px]">
+                        <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3 shrink-0">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <h2 className="text-sm font-extrabold text-slate-900">Kategori Project</h2>
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-600">
+                                        {dbCategoryItems.length}
+                                    </span>
+                                </div>
+                                <p className="text-[10.5px] text-slate-400 font-medium mt-0.5">
+                                    Sinkron otomatis dengan database Master Kategori
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                                <Link
+                                    href="/master-data/categories"
+                                    className="p-1.5 rounded-xl border border-slate-200 text-slate-500 hover:text-[#3B46F1] hover:border-indigo-200 hover:bg-indigo-50/50 transition-colors"
+                                    title="Buka Master Data Kategori"
+                                >
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                </Link>
+                            </div>
+                        </div>
+
+                        {/* Scrollable category list container */}
+                        <div className="flex-1 overflow-y-auto pr-1 min-h-[220px] max-h-[460px] scrollbar-thin">
+                            <table className="w-full text-left text-xs border-collapse">
+                                <thead className="sticky top-0 bg-white z-10">
+                                    <tr className="text-[10px] uppercase font-bold text-slate-400 border-b border-slate-100">
+                                        <th className="py-2.5 px-2 w-[48%]">KATEGORI</th>
+                                        <th className="py-2.5 px-2 w-[34%]">WORKFLOW</th>
+                                        <th className="py-2.5 px-2 w-[18%] text-right">STATUS</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 text-slate-700">
+                                    {dbCategoryItems.map((cat) => (
+                                        <tr
+                                            key={cat.id}
+                                            onClick={() => handleOpenEditCategory(cat)}
+                                            className="hover:bg-indigo-50/40 transition-colors cursor-pointer group"
+                                            title="Klik untuk ubah alur workflow kategori ini"
+                                        >
+                                            <td className="py-2.5 px-2 align-middle">
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold text-slate-900 group-hover:text-[#3B46F1] transition-colors">
+                                                        {cat.name}
+                                                    </span>
+                                                    <span className="text-[10px] text-slate-400 font-medium">
+                                                        {cat.packages_count}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="py-2.5 px-2 align-middle">
+                                                <span
+                                                    className={`inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold ${cat.color}`}
+                                                >
+                                                    {cat.workflow_id === 1 ? 'Wedding (8T)' : (cat.workflow_id === 3 ? 'Custom (6T)' : 'Non-Wedding (5T)')}
+                                                </span>
+                                            </td>
+                                            <td className="py-2.5 px-2 text-right align-middle">
+                                                <span className="inline-flex px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                    Aktif
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Card 3: Rumus Target Deadline Otomatis (Panduan - Sits at bottom) */}
+                    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 space-y-3 shrink-0 mt-auto">
+                        <div className="flex items-center gap-2 border-b border-slate-100 pb-2.5">
+                            <div className="w-7 h-7 rounded-lg bg-indigo-50 text-[#3B46F1] flex items-center justify-center shrink-0">
+                                <Clock className="w-3.5 h-3.5" />
+                            </div>
+                            <div>
+                                <h3 className="text-xs font-extrabold text-slate-900">Rumus Target Deadline Otomatis</h3>
+                                <p className="text-[10px] text-slate-400">Ketentuan perhitungan estimasi tanggal deliverables</p>
+                            </div>
+                        </div>
+                        <ul className="space-y-1.5 text-[11px] text-slate-600 leading-relaxed list-disc list-inside">
+                            <li><strong>H-x</strong>: Wajib selesai beberapa hari sebelum acara dimulai.</li>
+                            <li><strong>Hari H</strong>: Deliverable diserahkan pada hari acara (misal: Same Day Edit).</li>
+                            <li><strong>H+x</strong>: Dihitung dari tanggal acara project (misal: H+14 = 14 hari setelah shooting).</li>
+                            <li>Tersimpan di database &amp; otomatis terintegrasi ke Timeline Proyek.</li>
+                        </ul>
+                    </div>
                 </div>
 
                 {/* ── RIGHT COLUMN: DETAIL WORKFLOW & TEMPLATE DELIVERABLES ─────── */}
-                <div className="lg:col-span-7 xl:col-span-8 bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-6 space-y-6">
-                    {/* Header Workflow Detail */}
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-100 pb-5">
-                        <div className="space-y-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                                <h2 className="text-lg font-black text-slate-900 tracking-tight">
-                                    {activeWorkflow.name}
-                                </h2>
-                                <span
-                                    className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                                        activeWorkflow.status === 'Aktif'
-                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                            : 'bg-slate-100 text-slate-600 border-slate-200'
-                                    }`}
-                                >
-                                    {activeWorkflow.status}
-                                </span>
-                                <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
-                                    {activeWorkflow.steps_count} Tahapan
-                                </span>
-                                <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-[#3B46F1]">
-                                    {activePackages.length} Paket Tersedia
-                                </span>
+                <div className="lg:col-span-7 xl:col-span-8 bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 space-y-6 flex flex-col justify-between h-full">
+                    {/* Top Group of Right Column Content */}
+                    <div className="space-y-6">
+                        {/* Header Workflow Detail */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+                            <div className="space-y-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <h2 className="text-lg font-black text-slate-900 tracking-tight">
+                                        {activeWorkflow.name}
+                                    </h2>
+                                    <span
+                                        className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                            activeWorkflow.status === 'Aktif'
+                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                : 'bg-slate-100 text-slate-600 border-slate-200'
+                                        }`}
+                                    >
+                                        {activeWorkflow.status}
+                                    </span>
+                                    <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                                        {activeWorkflow.steps_count} Tahapan
+                                    </span>
+                                    <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-[#3B46F1]">
+                                        {activePackages.length} Paket Tersedia
+                                    </span>
+                                </div>
+                                <p className="text-xs text-slate-500">{activeWorkflow.description}</p>
                             </div>
-                            <p className="text-xs text-slate-500">{activeWorkflow.description}</p>
-                        </div>
 
-                        <div className="flex items-center gap-2">
                             <button
                                 type="button"
                                 onClick={() => handleOpenEditWorkflow(activeWorkflow)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+                                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 text-slate-700 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer shrink-0"
                             >
                                 <Edit2 className="w-3.5 h-3.5 text-slate-500" />
                                 <span>Edit Workflow</span>
                             </button>
                         </div>
-                    </div>
 
-                    {/* Timeline Visual Stepper */}
-                    <div className="py-2 overflow-x-auto pb-4">
-                        <div className="flex items-center justify-between min-w-[560px] relative px-4">
-                            {/* Connecting Line */}
-                            <div className="absolute top-4 left-8 right-8 h-0.5 bg-slate-200 z-0" />
+                        {/* Timeline Visual Stepper - Durations Aligned Sejajar */}
+                        <div className="py-2 overflow-x-auto pb-4 scrollbar-thin">
+                            <div className="flex items-start justify-between min-w-[680px] relative px-6">
+                                {/* Connecting Line */}
+                                <div className="absolute top-4 left-10 right-10 h-0.5 bg-slate-200 z-0" />
 
-                            {activeWorkflow.steps.map((st, idx) => (
-                                <div
-                                    key={st.id || idx}
-                                    className="flex flex-col items-center text-center relative z-10 group min-w-[90px] px-1"
-                                >
+                                {activeWorkflow.steps.map((st, idx) => (
                                     <div
-                                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all ${
-                                            idx === 0
-                                                ? 'bg-[#3B46F1] text-white shadow-md shadow-indigo-500/25 ring-4 ring-indigo-50'
-                                                : 'bg-white border-2 border-slate-300 text-slate-700 hover:border-indigo-400'
-                                        }`}
+                                        key={st.id || idx}
+                                        className="flex flex-col items-center text-center relative z-10 group flex-1 max-w-[95px] px-1"
                                     >
-                                        {idx + 1}
-                                    </div>
-                                    <span
-                                        className={`text-[10.5px] mt-2 max-w-[90px] leading-tight font-semibold break-words ${
-                                            idx === 0 ? 'text-[#3B46F1] font-bold' : 'text-slate-700'
-                                        }`}
-                                    >
-                                        {st.name || st.title}
-                                    </span>
-                                    {st.duration && (
-                                        <span className="mt-1 text-[9px] font-mono font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-100 whitespace-nowrap">
-                                            {st.duration}
-                                        </span>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Section Template Deadline Deliverables */}
-                    <div className="space-y-4 pt-4 border-t border-slate-100">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                            <div>
-                                <div className="flex items-center gap-2">
-                                    <h3 className="font-bold text-sm text-slate-900">
-                                        Template Deadline Deliverables per Paket
-                                    </h3>
-                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-[#3B46F1]">
-                                        {currentDeliverables.length} Deliverables
-                                    </span>
-                                </div>
-                                <p className="text-xs text-slate-500 mt-0.5">
-                                    Target turnaround deliverable otomatis disinkronkan saat project baru dibuat.
-                                </p>
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={handleOpenAddDeliverable}
-                                disabled={!selectedPackage || isProcessing}
-                                className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#3B46F1] hover:bg-[#323BD8] disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer shrink-0"
-                            >
-                                <Plus className="w-3.5 h-3.5" />
-                                <span>Tambah Deliverable</span>
-                            </button>
-                        </div>
-
-                        {/* Package Selection Pills Tabs (Gambar 1) */}
-                        <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-thin">
-                            {activePackages.length > 0 ? (
-                                <>
-                                    {activePackages.map((pkg: DbPackage) => (
-                                        <button
-                                            key={pkg.id}
-                                            type="button"
-                                            onClick={() => setSelectedPackageId(pkg.id)}
-                                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                                                selectedPackage?.id === pkg.id
-                                                    ? 'bg-[#3B46F1] text-white shadow-xs ring-2 ring-indigo-500/20'
-                                                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                                        <div
+                                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all shrink-0 ${
+                                                idx === 0
+                                                    ? 'bg-[#3B46F1] text-white shadow-md shadow-indigo-500/25 ring-4 ring-indigo-50'
+                                                    : 'bg-white border-2 border-slate-300 text-slate-700 hover:border-indigo-400'
                                             }`}
                                         >
-                                            {pkg.name}
-                                        </button>
-                                    ))}
-                                    <button
-                                        type="button"
-                                        onClick={handleOpenAddPackage}
-                                        className="px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-50 border border-indigo-200 text-[#3B46F1] hover:bg-indigo-100 transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1"
-                                        title="Tambah Paket Baru ke Database"
-                                    >
-                                        <Plus className="w-3 h-3" />
-                                        <span>Paket Baru</span>
-                                    </button>
-                                </>
-                            ) : (
-                                <div className="text-xs text-slate-400 py-1 flex items-center gap-2">
-                                    <span>Belum ada paket untuk alur workflow ini.</span>
-                                    <button
-                                        type="button"
-                                        onClick={handleOpenAddPackage}
-                                        className="text-[#3B46F1] font-bold hover:underline"
-                                    >
-                                        + Tambah Paket
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Active Package Info & CRUD Toolbar */}
-                        {selectedPackage && (
-                            <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                                <div className="flex items-center gap-2.5 flex-wrap text-xs">
-                                    <div className="flex items-center gap-1.5 font-bold text-slate-900">
-                                        <Tag className="w-3.5 h-3.5 text-indigo-600" />
-                                        <span>{selectedPackage.name}</span>
-                                    </div>
-                                    <span className="text-slate-300">•</span>
-                                    <span className="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
-                                        <Coins className="w-3.5 h-3.5 text-emerald-600" />
-                                        {formatRupiah(selectedPackage.base_price)}
-                                    </span>
-                                    {selectedPackage.category && (
-                                        <>
-                                            <span className="text-slate-300">•</span>
-                                            <span className="text-[10.5px] px-2 py-0.5 rounded-md bg-white border border-slate-200 font-bold text-slate-700">
-                                                Kategori: {selectedPackage.category.name}
+                                            {idx + 1}
+                                        </div>
+                                        {/* Step Title Container with uniform height so badges align */}
+                                        <div className="h-9 mt-2 flex items-center justify-center">
+                                            <span
+                                                className={`text-[10.5px] max-w-[85px] leading-tight font-semibold break-words ${
+                                                    idx === 0 ? 'text-[#3B46F1] font-bold' : 'text-slate-700'
+                                                }`}
+                                            >
+                                                {st.name || st.title}
                                             </span>
-                                        </>
-                                    )}
-                                </div>
-
-                                <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-                                    <button
-                                        type="button"
-                                        onClick={() => handleOpenEditPackage(selectedPackage)}
-                                        disabled={isProcessing}
-                                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-lg text-[11px] font-bold shadow-2xs transition-colors cursor-pointer"
-                                        title="Edit nama paket, kategori, dan harga di database"
-                                    >
-                                        <Edit2 className="w-3 h-3 text-slate-500" />
-                                        <span>Edit Paket</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleDeletePackage(selectedPackage)}
-                                        disabled={isProcessing}
-                                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-rose-200 hover:bg-rose-50 text-rose-600 rounded-lg text-[11px] font-bold shadow-2xs transition-colors cursor-pointer"
-                                        title="Hapus paket ini dari database"
-                                    >
-                                        <Trash2 className="w-3 h-3 text-rose-500" />
-                                        <span>Hapus Paket</span>
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Deliverables Table (Gambar 2) */}
-                        <div className="overflow-x-auto rounded-xl border border-slate-200/80">
-                            <table className="w-full text-left text-xs border-collapse">
-                                <thead className="bg-slate-50/80">
-                                    <tr className="text-[10px] uppercase font-bold text-slate-500 border-b border-slate-200/80">
-                                        <th className="py-2.5 px-3 w-8">NO</th>
-                                        <th className="py-2.5 px-3">DELIVERABLE</th>
-                                        <th className="py-2.5 px-3">JENIS</th>
-                                        <th className="py-2.5 px-3">DESKRIPSI</th>
-                                        <th className="py-2.5 px-3">TARGET DEADLINE</th>
-                                        <th className="py-2.5 px-3 text-center">WAJIB</th>
-                                        <th className="py-2.5 px-3 text-center">BY OWNER</th>
-                                        <th className="py-2.5 px-3 text-center w-20">AKSI</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 text-[11px] text-slate-800 bg-white">
-                                    {paginatedDeliverables.length > 0 ? (
-                                        paginatedDeliverables.map((item, idx) => (
-                                            <tr key={item.id || idx} className="hover:bg-slate-50/70 transition-colors">
-                                                <td className="py-3 px-3 text-slate-400 font-bold">{(deliverablePage - 1) * deliverablesPerPage + idx + 1}</td>
-                                                <td className="py-3 px-3 font-bold text-slate-900 break-words min-w-[150px]">
-                                                    {item.name}
-                                                </td>
-                                                <td className="py-3 px-3 whitespace-nowrap">
-                                                    <span
-                                                        className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold border ${
-                                                            item.type_class || getTypeClass(item.type)
-                                                        }`}
-                                                    >
-                                                        {item.type}
-                                                    </span>
-                                                </td>
-                                                <td className="py-3 px-3 text-slate-600 break-words min-w-[220px] leading-relaxed">
-                                                    {item.description || '—'}
-                                                </td>
-                                                <td className="py-3 px-3 whitespace-nowrap">
-                                                    {getDeadlineBadge(item.deadline)}
-                                                </td>
-                                                <td className="py-3 px-3 text-center">
-                                                    {item.required ? (
-                                                        <span className="inline-flex p-1 bg-emerald-50 text-emerald-600 rounded-md" title="Deliverable Wajib">
-                                                            <Check className="w-3.5 h-3.5" />
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-slate-400 font-medium">—</span>
-                                                    )}
-                                                </td>
-                                                <td className="py-3 px-3 text-center">
-                                                    {item.by_owner ? (
-                                                        <span className="inline-flex p-1 bg-indigo-50 text-[#3B46F1] rounded-md" title="Diawasi By Owner">
-                                                            <Check className="w-3.5 h-3.5" />
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-slate-400 font-medium">—</span>
-                                                    )}
-                                                </td>
-                                                <td className="py-3 px-3 text-center whitespace-nowrap">
-                                                    <div className="flex items-center justify-center gap-1.5 text-slate-400">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleOpenEditDeliverable(item)}
-                                                            className="p-1.5 hover:text-[#3B46F1] rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
-                                                            title="Edit Deliverable"
-                                                        >
-                                                            <Edit2 className="w-3.5 h-3.5" />
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleDeleteDeliverable(item)}
-                                                            className="p-1.5 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
-                                                            title="Hapus Deliverable"
-                                                        >
-                                                            <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={8} className="py-8 text-center text-slate-400">
-                                                Belum ada deliverable untuk paket {selectedPackage?.name || ''}. Klik tombol &ldquo;Tambah Deliverable&rdquo; di atas untuk menyimpan ke database.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Deliverables Pagination */}
-                        {currentDeliverables.length > 0 && (
-                            <Pagination
-                                currentPage={deliverablePage}
-                                lastPage={Math.max(1, Math.ceil(currentDeliverables.length / deliverablesPerPage))}
-                                total={currentDeliverables.length}
-                                from={(deliverablePage - 1) * deliverablesPerPage + 1}
-                                to={Math.min(deliverablePage * deliverablesPerPage, currentDeliverables.length)}
-                                perPage={deliverablesPerPage}
-                                itemLabel="deliverables"
-                                onPageChange={(pg) => setDeliverablePage(pg)}
-                                onPerPageChange={(newPerPage) => {
-                                    setDeliverablesPerPage(newPerPage);
-                                    setDeliverablePage(1);
-                                }}
-                            />
-                        )}
-
-                        {/* Legend Keterangan */}
-                        <div className="pt-2 flex items-center gap-4 text-xs font-semibold text-slate-600 flex-wrap">
-                            <span className="text-slate-400 font-normal">Kategori Deliverable:</span>
-                            <div className="flex items-center gap-1">
-                                <span className="px-2 py-0.5 bg-sky-50 text-sky-700 text-[10px] rounded font-bold border border-sky-200">
-                                    Photo
-                                </span>
-                                <span className="text-[11px] text-slate-500">Foto & Retouch</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                <span className="px-2 py-0.5 bg-cyan-50 text-cyan-700 text-[10px] rounded font-bold border border-cyan-200">
-                                    Video
-                                </span>
-                                <span className="text-[11px] text-slate-500">Teaser & Cinematic</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                <span className="px-2 py-0.5 bg-amber-50 text-amber-700 text-[10px] rounded font-bold border border-amber-200">
-                                    Album
-                                </span>
-                                <span className="text-[11px] text-slate-500">Layout & Cetak</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                <span className="px-2 py-0.5 bg-purple-50 text-purple-700 text-[10px] rounded font-bold border border-purple-200">
-                                    Special
-                                </span>
-                                <span className="text-[11px] text-slate-500">Canvas & Drive Link</span>
+                                        </div>
+                                        {/* Step Duration Badge - Exactly on same horizontal line */}
+                                        {st.duration ? (
+                                            <span className="mt-1 text-[9px] font-mono font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 whitespace-nowrap shadow-2xs">
+                                                {st.duration}
+                                            </span>
+                                        ) : (
+                                            <span className="mt-1 text-[9px] py-0.5 px-1.5 invisible">—</span>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
                         </div>
-                    </div>
 
-                    {/* Bottom Two Info Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-100 text-xs">
-                        {/* Left Card: Catatan Workflow */}
-                        <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-2">
-                            <div className="flex items-center gap-1.5 font-bold text-slate-900">
-                                <Clock className="w-4 h-4 text-[#3B46F1]" />
-                                <span>Rumus Target Deadline Otomatis</span>
-                            </div>
-                            <ul className="space-y-1.5 text-[11px] text-slate-600 leading-relaxed list-disc list-inside">
-                                <li><strong>H-x</strong>: Wajib selesai beberapa hari sebelum acara dimulai.</li>
-                                <li><strong>Hari H</strong>: Deliverable diserahkan langsung pada hari acara (misal: Same Day Edit).</li>
-                                <li><strong>H+x</strong>: Dihitung otomatis dari tanggal acara project (misal: H+14 = 14 hari setelah shooting).</li>
-                                <li>Tersimpan di database dan otomatis terintegrasi ke Timeline Proyek.</li>
-                            </ul>
-                        </div>
-
-                        {/* Right Card: Paket yang Menggunakan Workflow Ini */}
-                        <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-2.5">
-                            <div className="flex items-center gap-1.5 font-bold text-slate-900">
-                                <Layers className="w-4 h-4 text-[#3B46F1]" />
-                                <span>Paket yang Menggunakan Workflow Ini</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                                {activePackages.length > 0 ? (
-                                    activePackages.map((p) => (
-                                        <span
-                                            key={p.id}
-                                            className="px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-100 text-[#3B46F1] font-semibold text-[10.5px]"
-                                        >
-                                            {p.name}
+                        {/* Section Template Deadline Deliverables */}
+                        <div className="space-y-4 pt-4 border-t border-slate-100">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="text-sm font-extrabold text-slate-900">
+                                            Template Deadline Deliverables per Paket
+                                        </h3>
+                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-50 text-[#3B46F1]">
+                                            {currentDeliverables.length} Deliverables
                                         </span>
-                                    ))
+                                    </div>
+                                    <p className="text-[10.5px] text-slate-400 font-medium mt-0.5">
+                                        Target turnaround deliverable otomatis disinkronkan saat project baru dibuat.
+                                    </p>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={handleOpenAddDeliverable}
+                                    disabled={!selectedPackage || isProcessing}
+                                    className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#3B46F1] hover:bg-[#323BD8] disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-xs transition-all hover:scale-[1.02] cursor-pointer shrink-0"
+                                >
+                                    <Plus className="w-3.5 h-3.5" />
+                                    <span>Tambah Deliverable</span>
+                                </button>
+                            </div>
+
+                            {/* Package Selection Pills Tabs */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                                {activePackages.length > 0 ? (
+                                    <>
+                                        {activePackages.map((pkg: DbPackage) => (
+                                            <button
+                                                key={pkg.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    setSelectedPackageId(pkg.id);
+                                                    setDeliverablePage(1);
+                                                }}
+                                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shadow-2xs ${
+                                                    selectedPackageId === pkg.id
+                                                        ? 'bg-[#3B46F1] text-white shadow-xs scale-[1.02]'
+                                                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                                                }`}
+                                            >
+                                                {pkg.name}
+                                            </button>
+                                        ))}
+                                        <button
+                                            type="button"
+                                            onClick={handleOpenAddPackage}
+                                            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-50/80 border border-indigo-200 text-[#3B46F1] hover:bg-indigo-100 transition-colors cursor-pointer whitespace-nowrap inline-flex items-center gap-1"
+                                            title="Tambah Paket Baru ke Database"
+                                        >
+                                            <Plus className="w-3.5 h-3.5" />
+                                            <span>Paket Baru</span>
+                                        </button>
+                                    </>
                                 ) : (
-                                    <span className="text-[10.5px] text-slate-400">Belum ada paket terhubung</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-slate-400 italic">Belum ada paket untuk alur ini.</span>
+                                        <button
+                                            type="button"
+                                            onClick={handleOpenAddPackage}
+                                            className="px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-50 text-[#3B46F1] hover:bg-indigo-100 transition-colors cursor-pointer"
+                                        >
+                                            + Buat Paket Pertama
+                                        </button>
+                                    </div>
                                 )}
                             </div>
-                            <p className="text-[10px] text-slate-400 font-medium">
-                                Total {activePackages.length} paket terhubung di database
-                            </p>
+
+                            {/* Active Package Info Bar */}
+                            {selectedPackage && (
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-slate-50/80 rounded-xl border border-slate-200/70 text-xs">
+                                    <div className="flex items-center gap-2 flex-wrap text-slate-700">
+                                        <span className="font-bold text-slate-900 flex items-center gap-1.5">
+                                            <Tag className="w-3.5 h-3.5 text-[#3B46F1]" />
+                                            {selectedPackage.name}
+                                        </span>
+                                        <span className="text-slate-300">•</span>
+                                        <span className="font-semibold text-slate-600 flex items-center gap-1">
+                                            <Coins className="w-3.5 h-3.5 text-emerald-600" />
+                                            {formatRupiah(selectedPackage.base_price)}
+                                        </span>
+                                        <span className="text-slate-300">•</span>
+                                        <span className="inline-flex px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-white text-slate-700 border border-slate-200">
+                                            Kategori: {selectedPackage.category?.name || 'General'}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleOpenEditPackage(selectedPackage)}
+                                            disabled={isProcessing}
+                                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold shadow-2xs transition-colors cursor-pointer"
+                                            title="Edit nama paket, kategori, dan harga di database"
+                                        >
+                                            <Edit2 className="w-3.5 h-3.5 text-slate-500" />
+                                            <span>Edit Paket</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDeletePackage(selectedPackage)}
+                                            disabled={isProcessing}
+                                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-rose-200 hover:bg-rose-50 text-rose-600 rounded-xl text-xs font-bold shadow-2xs transition-colors cursor-pointer"
+                                            title="Hapus paket ini dari database"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                                            <span>Hapus Paket</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Deliverables Table - Aligned cells and clean widths */}
+                            <div className="overflow-x-auto rounded-xl border border-slate-200/80">
+                                <table className="w-full text-left text-xs border-collapse">
+                                    <thead className="bg-slate-50/80">
+                                        <tr className="text-[10px] uppercase font-bold text-slate-500 border-b border-slate-200/80">
+                                            <th className="py-2.5 px-3 w-10 text-center">NO</th>
+                                            <th className="py-2.5 px-3">DELIVERABLE</th>
+                                            <th className="py-2.5 px-3">JENIS</th>
+                                            <th className="py-2.5 px-3">DESKRIPSI</th>
+                                            <th className="py-2.5 px-3">TARGET DEADLINE</th>
+                                            <th className="py-2.5 px-3 text-center">WAJIB</th>
+                                            <th className="py-2.5 px-3 text-center">BY OWNER</th>
+                                            <th className="py-2.5 px-3 text-center w-20">AKSI</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 text-[11px] text-slate-800 bg-white">
+                                        {paginatedDeliverables.length > 0 ? (
+                                            paginatedDeliverables.map((item, idx) => (
+                                                <tr key={item.id || idx} className="hover:bg-slate-50/70 transition-colors">
+                                                    <td className="py-3 px-3 text-slate-400 font-bold text-center align-middle">{(deliverablePage - 1) * deliverablesPerPage + idx + 1}</td>
+                                                    <td className="py-3 px-3 font-bold text-slate-900 break-words align-middle">
+                                                        {item.name}
+                                                    </td>
+                                                    <td className="py-3 px-3 whitespace-nowrap align-middle">
+                                                        <span
+                                                            className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold border ${
+                                                                item.type_class || getTypeClass(item.type)
+                                                            }`}
+                                                        >
+                                                            {item.type}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-3 px-3 text-slate-600 break-words leading-relaxed align-middle">
+                                                        {item.description || '—'}
+                                                    </td>
+                                                    <td className="py-3 px-3 whitespace-nowrap align-middle">
+                                                        {getDeadlineBadge(item.deadline)}
+                                                    </td>
+                                                    <td className="py-3 px-3 text-center align-middle">
+                                                        {item.required ? (
+                                                            <span className="inline-flex p-1 bg-emerald-50 text-emerald-600 rounded-md" title="Deliverable Wajib">
+                                                                <Check className="w-3.5 h-3.5" />
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-slate-400 font-medium">—</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="py-3 px-3 text-center align-middle">
+                                                        {item.by_owner ? (
+                                                            <span className="inline-flex p-1 bg-indigo-50 text-[#3B46F1] rounded-md" title="Diawasi By Owner">
+                                                                <Check className="w-3.5 h-3.5" />
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-slate-400 font-medium">—</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="py-3 px-3 text-center whitespace-nowrap align-middle">
+                                                        <div className="flex items-center justify-center gap-1.5 text-slate-400">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleOpenEditDeliverable(item)}
+                                                                className="p-1.5 hover:text-[#3B46F1] rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                                                                title="Edit Deliverable"
+                                                            >
+                                                                <Edit2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleDeleteDeliverable(item)}
+                                                                className="p-1.5 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                                                                title="Hapus Deliverable"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan={8} className="py-8 text-center text-slate-400">
+                                                    Belum ada deliverable untuk paket {selectedPackage?.name || ''}. Klik tombol &ldquo;Tambah Deliverable&rdquo; di atas untuk menyimpan ke database.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Deliverables Pagination */}
+                            {currentDeliverables.length > 0 && (
+                                <Pagination
+                                    currentPage={deliverablePage}
+                                    lastPage={Math.max(1, Math.ceil(currentDeliverables.length / deliverablesPerPage))}
+                                    total={currentDeliverables.length}
+                                    from={(deliverablePage - 1) * deliverablesPerPage + 1}
+                                    to={Math.min(deliverablePage * deliverablesPerPage, currentDeliverables.length)}
+                                    perPage={deliverablesPerPage}
+                                    itemLabel="deliverables"
+                                    onPageChange={(pg) => setDeliverablePage(pg)}
+                                    onPerPageChange={(newPerPage) => {
+                                        setDeliverablesPerPage(newPerPage);
+                                        setDeliverablePage(1);
+                                    }}
+                                />
+                            )}
+
+                            {/* Legend Keterangan */}
+                            <div className="pt-2 flex items-center gap-4 text-xs font-semibold text-slate-600 flex-wrap">
+                                <span className="text-slate-400 font-normal">Kategori Deliverable:</span>
+                                <div className="flex items-center gap-1">
+                                    <span className="px-2 py-0.5 bg-sky-50 text-sky-700 text-[10px] rounded font-bold border border-sky-200">
+                                        Photo
+                                    </span>
+                                    <span className="text-[11px] text-slate-500">Foto &amp; Retouch</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <span className="px-2 py-0.5 bg-cyan-50 text-cyan-700 text-[10px] rounded font-bold border border-cyan-200">
+                                        Video
+                                    </span>
+                                    <span className="text-[11px] text-slate-500">Teaser &amp; Cinematic</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <span className="px-2 py-0.5 bg-amber-50 text-amber-700 text-[10px] rounded font-bold border border-amber-200">
+                                        Album
+                                    </span>
+                                    <span className="text-[11px] text-slate-500">Layout &amp; Cetak</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <span className="px-2 py-0.5 bg-purple-50 text-purple-700 text-[10px] rounded font-bold border border-purple-200">
+                                        Special
+                                    </span>
+                                    <span className="text-[11px] text-slate-500">Canvas &amp; Drive Link</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Toggle Status Workflow Button */}
-                    <div className="pt-2 flex justify-end">
-                        <button
-                            type="button"
-                            onClick={handleToggleWorkflowStatus}
-                            className={`inline-flex items-center gap-1.5 px-4 py-2 border rounded-xl text-xs font-bold transition-colors cursor-pointer ${
-                                activeWorkflow.status === 'Aktif'
-                                    ? 'border-rose-200 text-rose-600 hover:bg-rose-50'
-                                    : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'
-                            }`}
-                        >
-                            <Power className="w-3.5 h-3.5" />
-                            <span>
-                                {activeWorkflow.status === 'Aktif'
-                                    ? 'Nonaktifkan Workflow'
-                                    : 'Aktifkan Workflow'}
-                            </span>
-                        </button>
+                    {/* Bottom Area: Paket yang Menggunakan Workflow & Toggle Status Button (Clean Header + Pills) */}
+                    <div className="pt-4 border-t border-slate-100 space-y-2.5">
+                        <div className="flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-2 font-bold text-xs text-slate-900">
+                                <Layers className="w-3.5 h-3.5 text-[#3B46F1]" />
+                                <span>Paket yang Menggunakan Workflow Ini</span>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-[#3B46F1]">
+                                    {activePackages.length}
+                                </span>
+                            </div>
+
+                            {/* Toggle Status Button - Sejajar dengan Baris Header */}
+                            <button
+                                type="button"
+                                onClick={handleToggleWorkflowStatus}
+                                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 border rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer shrink-0 ${
+                                    activeWorkflow.status === 'Aktif'
+                                        ? 'border-rose-200 text-rose-600 hover:bg-rose-50'
+                                        : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+                                }`}
+                            >
+                                <Power className="w-3.5 h-3.5" />
+                                <span>
+                                    {activeWorkflow.status === 'Aktif'
+                                        ? 'Nonaktifkan Workflow'
+                                        : 'Aktifkan Workflow'}
+                                </span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

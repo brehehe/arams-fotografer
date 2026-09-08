@@ -13,6 +13,7 @@ class PromoSlide extends Model
     use HasFactory, HasUuids, SoftDeletes;
 
     protected $fillable = [
+        'project_id',
         'title',
         'tag',
         'description',
@@ -28,8 +29,24 @@ class PromoSlide extends Model
         'sort_order' => 'integer',
     ];
 
+    public function project(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Project::class);
+    }
+
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true)->orderBy('sort_order');
     }
+
+    public function scopeGeneral(Builder $query): Builder
+    {
+        return $query->whereNull('project_id');
+    }
+
+    public function scopeForProject(Builder $query, string $projectId): Builder
+    {
+        return $query->where('project_id', $projectId);
+    }
 }
+

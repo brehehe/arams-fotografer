@@ -29,8 +29,18 @@ interface AramsSidebarProps {
 export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarProps) {
     const { url, props: pageProps } = usePage<any>();
     const currentPath = (url || '').split('?')[0].split('#')[0];
-    const isMasterData = currentPath.startsWith('/master-data');
+    const isMasterData = currentPath.startsWith('/master-data') &&
+        !currentPath.startsWith('/master-data/promo-slides') &&
+        !currentPath.startsWith('/master-data/testimonials') &&
+        !currentPath.startsWith('/master-data/instagram-posts');
     const [masterDataOpen, setMasterDataOpen] = useState(isMasterData);
+
+    const isSettingSection = currentPath.startsWith('/setting') ||
+        currentPath.startsWith('/settings') ||
+        currentPath.startsWith('/master-data/promo-slides') ||
+        currentPath.startsWith('/master-data/testimonials') ||
+        currentPath.startsWith('/master-data/instagram-posts');
+    const [settingsOpen, setSettingsOpen] = useState(isSettingSection);
 
     useEffect(() => {
         if (isMasterData) {
@@ -38,9 +48,14 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
         }
     }, [currentPath, isMasterData]);
 
+    useEffect(() => {
+        if (isSettingSection) {
+            setSettingsOpen(true);
+        }
+    }, [currentPath, isSettingSection]);
+
     const isCurrent = (path: string) => {
         if (path === '/dashboard') return currentPath === '/dashboard' || currentPath === '/';
-        if (path === '/settings') return currentPath.startsWith('/settings');
         if (path === '/wedding-organizer') return currentPath.startsWith('/wedding-organizer') || currentPath.startsWith('/wedding-organizers') || currentPath.startsWith('/weeding-organizer');
         if (path === '/client-sources') return currentPath.startsWith('/client-sources') || currentPath.startsWith('/sumber-klien');
         return currentPath === path || currentPath.startsWith(path + '/');
@@ -72,12 +87,30 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
         { name: 'Jenis Layanan', href: '/master-data/services' },
         { name: 'Paket & Harga', href: '/master-data/packages' },
         { name: 'Add-on & Biaya', href: '/master-data/addons' },
-        { name: 'Promo Slide', href: '/master-data/promo-slides' },
-        { name: 'Ulasan Klien', href: '/master-data/testimonials' },
-        { name: 'Instagram Kami', href: '/master-data/instagram-posts' },
         { name: 'Workflow & Template', href: '/master-data/workflows' },
         { name: 'Metode Pembayaran', href: '/master-data/payment-methods' },
         { name: 'Template Catatan', href: '/master-data/notes' },
+    ];
+
+    const isFormKlienActive = currentPath.startsWith('/setting/form-klien') ||
+        currentPath.startsWith('/settings/form-klien') ||
+        (currentPath.startsWith('/settings') && (url || '').includes('tab=form_klien'));
+    const isPortalKlienActive = currentPath.startsWith('/setting/portal-klien') ||
+        currentPath.startsWith('/settings/portal-klien') ||
+        (currentPath.startsWith('/settings') && (url || '').includes('tab=portal_klien'));
+    const isAdminActive =
+        currentPath.startsWith('/setting/admin') ||
+        currentPath.startsWith('/settings/admin') ||
+        (currentPath.startsWith('/settings') && !isFormKlienActive && !isPortalKlienActive) ||
+        (currentPath === '/setting') ||
+        currentPath.startsWith('/master-data/promo-slides') ||
+        currentPath.startsWith('/master-data/testimonials') ||
+        currentPath.startsWith('/master-data/instagram-posts');
+
+    const settingNav = [
+        { name: 'Admin', href: '/setting/admin', active: isAdminActive },
+        { name: 'Form Klien', href: '/setting/form-klien', active: isFormKlienActive },
+        { name: 'Portal Klien', href: '/setting/portal-klien', active: isPortalKlienActive },
     ];
 
     const secondaryNav = [
@@ -85,7 +118,6 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
         { name: 'Users', href: '/users', icon: UserCog, show: canAccessUsers },
         { name: 'Reports', href: '/reports', icon: BarChart3, show: canAccessReports },
         { name: 'Files', href: '/files', icon: HardDrive, show: true },
-        { name: 'Settings', href: '/settings', icon: Settings, show: canAccessSettings },
     ].filter((item) => item.show !== false);
 
     const companyName = pageProps?.appSettings?.company_name || 'ARAMS PHOTOGRAPHY';
@@ -282,8 +314,65 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
                         );
                     })}
 
+                    {/* Setting Collapsible Section */}
+                    {canAccessSettings && (
+                        <div className="pt-0.5">
+                            <button
+                                type="button"
+                                onClick={() => setSettingsOpen(!settingsOpen)}
+                                style={!isSettingSection && sidebarTextColor ? { color: sidebarTextColor } : undefined}
+                                className={`flex items-center justify-between w-full px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${isSettingSection
+                                    ? 'text-white font-bold bg-white/5'
+                                    : 'hover:bg-white/10'
+                                    }`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <Settings
+                                        className="w-4 h-4 shrink-0"
+                                        style={{ color: isSettingSection ? (sidebarActiveBg || '#F05322') : (sidebarTextColor || undefined) }}
+                                    />
+                                    <span>Setting</span>
+                                </div>
+                                <div style={{ color: sidebarTextColor || undefined }}>
+                                    {settingsOpen ? (
+                                        <ChevronDown className="w-3.5 h-3.5" />
+                                    ) : (
+                                        <ChevronRight className="w-3.5 h-3.5" />
+                                    )}
+                                </div>
+                            </button>
+
+                            {/* Setting Submenu */}
+                            {settingsOpen && (
+                                <div className="mt-1 ml-4 pl-3 border-l border-white/10 space-y-0.5 py-0.5 animate-in slide-in-from-top-1 duration-150">
+                                    {settingNav.map((sub) => {
+                                        return (
+                                            <Link
+                                                key={sub.name}
+                                                href={sub.href}
+                                                style={sub.active ? {
+                                                    background: sidebarActiveBgGradient || sidebarActiveBg,
+                                                    color: sidebarActiveText,
+                                                } : (sidebarTextColor ? { color: sidebarTextColor } : undefined)}
+                                                className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors ${sub.active
+                                                    ? 'font-bold shadow-xs'
+                                                    : 'hover:bg-white/10 font-medium'
+                                                    }`}
+                                            >
+                                                <span>{sub.name}</span>
+                                                {sub.active && (
+                                                    <Circle className="w-1.5 h-1.5 fill-current" />
+                                                )}
+                                            </Link>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* Help & Support Card */}
-                    <div className="pt-4 pb-2">
+                    {/* <div className="pt-4 pb-2">
                         <div className="p-3.5 rounded-2xl bg-[#111A2E]/80 border border-white/10 space-y-2">
                             <div className="flex items-center gap-2 text-amber-500">
                                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -304,7 +393,7 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
                                 Contact Support
                             </a>
                         </div>
-                    </div>
+                    </div> */}
                 </div>
 
                 {/* Footer / Logout (Compact) */}

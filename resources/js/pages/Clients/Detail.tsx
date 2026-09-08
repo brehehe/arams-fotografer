@@ -25,11 +25,14 @@ import {
     Sparkles,
     Check,
     X,
+    Box,
     Receipt,
     Camera,
     ChevronRight,
     ChevronLeft,
     Edit3,
+    Pencil,
+    UserCheck,
     Layers,
     Share2,
     Shield,
@@ -61,8 +64,13 @@ import {
     MessageSquare,
     HardDrive,
     Copy,
+    PlayCircle,
+    Trash2,
+    ChevronDown,
+    Baby,
 } from 'lucide-react';
-import { formatRupiah, formatDate } from '@/lib/formatters';
+import { formatRupiah, formatDate, formatCurrencyShort } from '@/lib/formatters';
+import { ALL_WORKFLOWS, resolveWorkflow, type WorkflowDefinition } from '@/lib/workflows';
 import {
     Modal,
     Input,
@@ -77,6 +85,12 @@ import {
     Badge,
     Button,
     Checkbox,
+    Textarea,
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
 } from '@/components/ui';
 
 interface ClientDetailProps {
@@ -90,6 +104,12 @@ interface ClientDetailProps {
         groom_nickname?: string;
         bride_birth_date?: string;
         groom_birth_date?: string;
+        child_name?: string;
+        child_birth_date?: string;
+        child_gender?: string;
+        father_name?: string | null;
+        mother_name?: string | null;
+        children?: Array<{ name: string; nickname?: string; birth_date?: string; gender?: string }> | null;
         company_name?: string;
         client_type?: string;
         email: string;
@@ -155,8 +175,26 @@ interface ClientDetailProps {
         payments_count: number;
         referrals_count?: number;
     };
-    categories?: Array<{ id: string; name: string; slug?: string; description?: string; color?: string }>;
-    packages?: Array<{ id: string; name: string; category_id: string; base_price: number | string; duration_hours?: number; description?: string }>;
+    categories?: Array<{ id: string; name: string; slug?: string; description?: string; color?: string; workflow_type?: string; form_type?: string }>;
+    packages?: Array<{
+        id: string;
+        name: string;
+        category_id: string;
+        base_price: number | string;
+        duration_hours?: number;
+        description?: string;
+        included_deliverables?: Array<{
+            id: number | string;
+            name: string;
+            type: 'Photo' | 'Video' | 'Album' | 'Special' | string;
+            deadline: string;
+            description?: string;
+            required?: boolean;
+            by_owner?: boolean;
+        }>;
+        included_services?: string[];
+    }>;
+    workflows?: Array<any>;
     team_members?: Array<{ id: string; name: string; email: string; avatar?: string | null; role?: string }>;
     payment_methods?: Array<{ id: string; name: string; account_number?: string; account_holder?: string }>;
     wedding_organizers?: Array<{
@@ -175,6 +213,7 @@ interface ClientDetailProps {
         email?: string;
         bride_name?: string;
         groom_name?: string;
+        child_name?: string;
     }>;
 }
 
@@ -188,6 +227,7 @@ export default function ClientDetail({
     client,
     categories = [],
     packages = [],
+    workflows = [],
     team_members = [],
     payment_methods = [],
     wedding_organizers = [],
@@ -250,6 +290,14 @@ export default function ClientDetail({
         groom_nickname: client.groom_nickname || '',
         bride_birth_date: client.bride_birth_date ? String(client.bride_birth_date).substring(0, 10) : '',
         groom_birth_date: client.groom_birth_date ? String(client.groom_birth_date).substring(0, 10) : '',
+        child_name: client.child_name || '',
+        child_birth_date: client.child_birth_date ? String(client.child_birth_date).substring(0, 10) : '',
+        child_gender: (client.child_gender || 'male') as 'male' | 'female',
+        father_name: client.father_name || '',
+        mother_name: client.mother_name || '',
+        children: (client.children && Array.isArray(client.children) && client.children.length > 0)
+            ? client.children
+            : [{ name: client.child_name || '', nickname: '', birth_date: client.child_birth_date ? String(client.child_birth_date).substring(0, 10) : '', gender: (client.child_gender || 'male') }],
         company_name: client.company_name || '',
         email: client.email || '',
         instagram: client.instagram || '',
@@ -280,7 +328,7 @@ export default function ClientDetail({
         referral_name: client.referral_name || '',
         status: client.status || 'active',
         notes: client.notes || '',
-        tags: (client.tags || ['VIP', 'Wedding 2026']) as string[],
+        tags: (Array.isArray(client.tags) ? client.tags : []) as string[],
     });
 
     const DEFAULT_INDONESIA_PROVINCES: RegionItem[] = [
@@ -490,11 +538,14 @@ export default function ClientDetail({
 
     // Category options for Edit Client Form (Master Data Categories)
     const categoryOptions = useMemo(() => {
-        const list = (categories || []).map((cat: any) => ({
-            value: cat.slug || String(cat.id),
-            label: cat.name,
-            subtitle: cat.description || `Master Kategori: ${cat.name}`,
-        }));
+        const list = (categories || []).map((cat: any) => {
+            const formLabel = cat.form_type === 'wedding' ? '👰🤵 CPP & CPW' : cat.form_type === 'newborn' ? '👶 Nama Anak' : '👤 Standar';
+            return {
+                value: cat.slug || String(cat.id),
+                label: cat.name,
+                subtitle: `${cat.description || `Master Kategori: ${cat.name}`} • Input: ${formLabel}`,
+            };
+        });
 
         const cur = editFormData.client_type;
         if (cur && !list.some((o: any) => o.value === cur)) {
@@ -503,13 +554,19 @@ export default function ClientDetail({
                 list.unshift({
                     value: 'personal',
                     label: perorangan ? `${perorangan.label} (Personal)` : 'Personal Portrait',
-                    subtitle: 'Kategori Klien',
+                    subtitle: 'Kategori Klien • Input: 👤 Standar',
                 });
             } else if (cur === 'family') {
                 list.unshift({
                     value: 'family',
                     label: 'Family & Maternity',
-                    subtitle: 'Kategori Klien',
+                    subtitle: 'Kategori Klien • Input: 👤 Standar',
+                });
+            } else if (cur === 'newborn') {
+                list.unshift({
+                    value: 'newborn',
+                    label: 'Newborn',
+                    subtitle: 'Kategori Klien • Input: 👶 Nama Anak',
                 });
             } else {
                 list.push({
@@ -521,6 +578,16 @@ export default function ClientDetail({
         }
 
         return list;
+    }, [categories, editFormData.client_type]);
+
+    const activeEditFormType = useMemo(() => {
+        const found = (categories || []).find(
+            (c: any) => c.slug === editFormData.client_type || String(c.id) === editFormData.client_type
+        );
+        if (found?.form_type) return found.form_type;
+        if (editFormData.client_type === 'newborn') return 'newborn';
+        if (editFormData.client_type === 'wedding' || editFormData.client_type === 'prewedding') return 'wedding';
+        return 'standard';
     }, [categories, editFormData.client_type]);
 
     // Modal Tambah Pembayaran States
@@ -580,7 +647,7 @@ export default function ClientDetail({
         }));
     };
 
-    // Dynamic Projects list data
+    // Dynamic Projects list data from real database
     const rawProjects = useMemo(() => {
         if (client.projects && client.projects.length > 0) {
             return client.projects.map((p) => {
@@ -591,13 +658,13 @@ export default function ClientDetail({
 
                 return {
                     id: p.id,
-                    name: p.name,
+                    name: p.name || 'Project',
                     package_name: p.package?.name
                         ? `${p.category?.name || 'Project'} • ${p.package?.name}`
                         : (p.category?.name || 'Photoshoot Project'),
                     project_number: p.project_number || 'PRJ-AUTO',
-                    event_date: p.event_date ? formatDate(p.event_date) : '22 Mei 2026',
-                    location: p.location || 'Studio Arams, Surabaya',
+                    event_date: p.event_date ? formatDate(p.event_date) : '-',
+                    location: p.location || '-',
                     thumbnail: p.thumbnail || (p.category?.name?.toLowerCase().includes('prewed')
                         ? 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=600&auto=format&fit=crop&q=80'
                         : 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&auto=format&fit=crop&q=80'),
@@ -609,51 +676,7 @@ export default function ClientDetail({
                 };
             });
         }
-
-        return [
-            {
-                id: '1',
-                name: 'Wedding Kevin & Jessica',
-                package_name: 'Wedding • Wedding Gold Package',
-                project_number: 'PRJ-2608-0001',
-                event_date: '21 Desember 2025',
-                location: 'The Ritz Carlton Jakarta',
-                thumbnail: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&auto=format&fit=crop&q=80',
-                total_amount: 85750000,
-                paid_amount: 60000000,
-                progress: 70,
-                status: 'in_progress',
-                status_label: 'Sedang Dikerjakan',
-            },
-            {
-                id: '2',
-                name: 'Prewedding Kevin & Jessica',
-                package_name: 'Prewedding • Premium Prewed',
-                project_number: 'PRJ-2505-0012',
-                event_date: '15 Mei 2024',
-                location: 'Bali Safari & Marine Park',
-                thumbnail: 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=600&auto=format&fit=crop&q=80',
-                total_amount: 25000000,
-                paid_amount: 25000000,
-                progress: 100,
-                status: 'completed',
-                status_label: 'Selesai',
-            },
-            {
-                id: '3',
-                name: 'Engagement Kevin & Jessica',
-                package_name: 'Engagement • Intimate Package',
-                project_number: 'PRJ-2503-0004',
-                event_date: '20 Januari 2024',
-                location: 'Plataran Dharmawangsa',
-                thumbnail: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=600&auto=format&fit=crop&q=80',
-                total_amount: 15000000,
-                paid_amount: 0,
-                progress: 0,
-                status: 'lead',
-                status_label: 'Akan Datang',
-            },
-        ];
+        return [];
     }, [client.projects]);
 
     // Financial Calculation (Dynamic from DB)
@@ -661,7 +684,7 @@ export default function ClientDetail({
         if (client.projects && client.projects.length > 0) {
             return client.projects.reduce((acc, p) => acc + Number(p.total_amount || 0), 0);
         }
-        return 85750000;
+        return 0;
     }, [client.projects]);
 
     const totalPaid = useMemo(() => {
@@ -671,24 +694,75 @@ export default function ClientDetail({
         if (client.projects && client.projects.length > 0) {
             return client.projects.reduce((acc, p) => acc + Number(p.paid_amount || 0), 0);
         }
-        return 60000000;
+        return 0;
     }, [client.payments, client.projects]);
 
     const outstanding = Math.max(0, totalProjectValue - totalPaid);
 
-    // Project counts by status
+    // Project counts by status from DB
     const completedCount = useMemo(() => {
-        return rawProjects.filter((p) => p.status === 'completed' || p.progress === 100).length || 1;
+        return rawProjects.filter((p) => p.status === 'completed' || p.progress === 100).length;
     }, [rawProjects]);
 
     const inProgressCount = useMemo(() => {
-        return rawProjects.filter((p) => p.status === 'in_progress' || (p.progress > 0 && p.progress < 100)).length || 1;
+        return rawProjects.filter((p) => p.status === 'in_progress' || (p.progress > 0 && p.progress < 100)).length;
     }, [rawProjects]);
 
     const upcomingCount = useMemo(() => {
-        return rawProjects.filter((p) => p.status === 'lead' || p.progress === 0).length || 1;
+        return rawProjects.filter((p) => p.status === 'lead' || p.progress === 0).length;
     }, [rawProjects]);
 
+
+    const handleAddEditChild = () => {
+        setEditFormData((prev) => {
+            const nextChildren = [
+                ...(prev.children || []),
+                { name: '', nickname: '', birth_date: '', gender: 'male' as const },
+            ];
+            const names = nextChildren.map((c) => c.name.trim()).filter(Boolean).join(' & ');
+            const isTwin = nextChildren.length > 1;
+            return {
+                ...prev,
+                children: nextChildren,
+                child_name: isTwin && names ? `${names} (Kembar)` : names,
+            };
+        });
+    };
+
+    const handleRemoveEditChild = (index: number) => {
+        setEditFormData((prev) => {
+            const currentChildren = prev.children || [];
+            if (currentChildren.length <= 1) return prev;
+            const nextChildren = currentChildren.filter((_, i) => i !== index);
+            const names = nextChildren.map((c) => c.name.trim()).filter(Boolean).join(' & ');
+            const isTwin = nextChildren.length > 1;
+            return {
+                ...prev,
+                children: nextChildren,
+                child_name: isTwin && names ? `${names} (Kembar)` : names,
+                child_birth_date: nextChildren[0]?.birth_date || '',
+                child_gender: (nextChildren[0]?.gender || 'male') as 'male' | 'female',
+            };
+        });
+    };
+
+    const handleChildEditChange = (index: number, field: string, value: any) => {
+        setEditFormData((prev) => {
+            const currentChildren = prev.children || [];
+            const nextChildren = currentChildren.map((child, i) =>
+                i === index ? { ...child, [field]: value } : child
+            );
+            const names = nextChildren.map((c) => c.name.trim()).filter(Boolean).join(' & ');
+            const isTwin = nextChildren.length > 1;
+            return {
+                ...prev,
+                children: nextChildren,
+                child_name: isTwin && names ? `${names} (Kembar)` : names,
+                child_birth_date: nextChildren[0]?.birth_date || prev.child_birth_date,
+                child_gender: (nextChildren[0]?.gender || prev.child_gender) as 'male' | 'female',
+            };
+        });
+    };
 
     // Submit Edit Client Modal
     const handleSaveClientEdit = () => {
@@ -711,6 +785,12 @@ export default function ClientDetail({
                 groom_nickname: editFormData.groom_nickname || null,
                 bride_birth_date: editFormData.bride_birth_date || null,
                 groom_birth_date: editFormData.groom_birth_date || null,
+                child_name: editFormData.child_name || null,
+                child_birth_date: editFormData.child_birth_date || null,
+                child_gender: editFormData.child_gender || null,
+                father_name: editFormData.father_name || null,
+                mother_name: editFormData.mother_name || null,
+                children: editFormData.children || null,
                 company_name: editFormData.company_name || null,
                 email: editFormData.email || null,
                 instagram: editFormData.instagram || null,
@@ -810,7 +890,7 @@ export default function ClientDetail({
         );
     };
 
-    // Dynamic Activities Log
+    // Dynamic Activities Log from DB
     const activityItems = useMemo(() => {
         const items: Array<any> = [];
 
@@ -822,48 +902,43 @@ export default function ClientDetail({
                     type: 'payment',
                     title: 'Pembayaran diterima',
                     subtitle: `Invoice #${pay.reference_number || `INV-${new Date().getFullYear()}-01${idx + 1}`}`,
-                    timeText: pay.payment_date ? `${formatDate(pay.payment_date)}, 14:30 WIB` : '18 Mei 2024, 14:30 WIB',
+                    timeText: pay.payment_date ? `${formatDate(pay.payment_date)}, 14:30 WIB` : '-',
                     iconBg: 'bg-emerald-50 border-emerald-100 text-emerald-600',
                     icon: Receipt,
                 });
             });
         }
 
-        // Real or demo fallback activities
-        if (items.length === 0) {
-            items.push(
-                {
-                    id: '1',
-                    type: 'payment',
-                    title: 'Pembayaran diterima',
-                    subtitle: 'Invoice #INV-2025-017',
-                    timeText: '18 Mei 2024, 14:30 WIB',
-                    iconBg: 'bg-emerald-50 border-emerald-100 text-emerald-600',
-                    icon: Receipt,
-                },
-                {
-                    id: '2',
-                    type: 'note',
-                    title: 'Catatan ditambahkan',
-                    subtitle: 'Diskusi konsep prewedding',
-                    timeText: '15 Mei 2024, 10:15 WIB',
-                    iconBg: 'bg-blue-50 border-blue-100 text-blue-600',
-                    icon: MessageCircle,
-                },
-                {
-                    id: '3',
+        // Real projects
+        if (client.projects && client.projects.length > 0) {
+            client.projects.slice(0, 2).forEach((proj, idx) => {
+                items.push({
+                    id: `proj-${proj.id || idx}`,
                     type: 'project',
-                    title: 'Project dibuat',
-                    subtitle: 'Wedding - The Ritz Carlton',
-                    timeText: '10 Mei 2024, 09:20 WIB',
+                    title: 'Project dibuat / berjalan',
+                    subtitle: `${proj.category?.name || 'Project'} - ${proj.name}`,
+                    timeText: proj.created_at ? formatDate(proj.created_at) : (proj.event_date ? formatDate(proj.event_date) : '-'),
                     iconBg: 'bg-purple-50 border-purple-100 text-purple-600',
                     icon: Calendar,
-                }
-            );
+                });
+            });
+        }
+
+        // Client Intake registration
+        if (client.created_at) {
+            items.push({
+                id: 'client-intake',
+                type: 'client',
+                title: 'Klien Terdaftar',
+                subtitle: 'Data profil klien berhasil disimpan ke sistem',
+                timeText: formatDate(client.created_at),
+                iconBg: 'bg-indigo-50 border-indigo-100 text-indigo-600',
+                icon: Shield,
+            });
         }
 
         return items;
-    }, [client.payments]);
+    }, [client.payments, client.projects, client.created_at]);
 
     const openEditModal = () => {
         setEditFormData({
@@ -876,6 +951,14 @@ export default function ClientDetail({
             groom_nickname: client.groom_nickname || '',
             bride_birth_date: client.bride_birth_date ? String(client.bride_birth_date).substring(0, 10) : '',
             groom_birth_date: client.groom_birth_date ? String(client.groom_birth_date).substring(0, 10) : '',
+            child_name: client.child_name || '',
+            child_birth_date: client.child_birth_date ? String(client.child_birth_date).substring(0, 10) : '',
+            child_gender: (client.child_gender || 'male') as 'male' | 'female',
+            father_name: client.father_name || '',
+            mother_name: client.mother_name || '',
+            children: (client.children && Array.isArray(client.children) && client.children.length > 0)
+                ? client.children
+                : [{ name: client.child_name || '', nickname: '', birth_date: client.child_birth_date ? String(client.child_birth_date).substring(0, 10) : '', gender: (client.child_gender || 'male') }],
             company_name: client.company_name || '',
             email: client.email || '',
             instagram: client.instagram || '',
@@ -906,11 +989,72 @@ export default function ClientDetail({
             referral_name: client.referral_name || '',
             status: client.status || 'active',
             notes: client.notes || '',
-            tags: (client.tags || ['VIP', 'Wedding 2026']) as string[],
+            tags: (Array.isArray(client.tags) ? client.tags : []) as string[],
         });
         setEditActiveFormTab('profile');
         setFormErrors({});
         setIsEditClientModalOpen(true);
+    };
+
+    // -------------------------------------------------------------
+    // -------------------------------------------------------------
+    // PROJECT STATUS CONSTANTS & HELPERS
+    // -------------------------------------------------------------
+    const PROJECT_STATUS_OPTIONS = [
+        { value: 'draft', label: 'Draft', dotColor: 'bg-slate-400', textColor: 'text-slate-700' },
+        { value: 'in_progress', label: 'Dalam Proses', dotColor: 'bg-indigo-500', textColor: 'text-indigo-700' },
+        { value: 'editing', label: 'Editing', dotColor: 'bg-purple-500', textColor: 'text-purple-700' },
+        { value: 'completed', label: 'Selesai', dotColor: 'bg-emerald-500', textColor: 'text-emerald-700' },
+        { value: 'on_hold', label: 'Ditunda', dotColor: 'bg-amber-500', textColor: 'text-amber-700' },
+        { value: 'cancelled', label: 'Dibatalkan', dotColor: 'bg-rose-500', textColor: 'text-rose-700' },
+    ];
+
+    const getProjectStatusBadgeStyle = (status?: string) => {
+        switch (status) {
+            case 'completed':
+                return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+            case 'in_progress':
+                return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+            case 'editing':
+                return 'bg-purple-50 text-purple-700 border-purple-200';
+            case 'on_hold':
+                return 'bg-amber-50 text-amber-700 border-amber-200';
+            case 'cancelled':
+                return 'bg-rose-50 text-rose-700 border-rose-200';
+            case 'draft':
+            default:
+                return 'bg-slate-100 text-slate-700 border-slate-200';
+        }
+    };
+
+    const getProjectStatusBadgeVariant = (status?: string) => {
+        switch (status) {
+            case 'completed': return 'success';
+            case 'in_progress': return 'info';
+            case 'editing': return 'primary';
+            case 'on_hold': return 'warning';
+            case 'cancelled': return 'danger';
+            case 'draft':
+            default: return 'outline';
+        }
+    };
+
+    const getProjectStatusLabel = (status?: string) => {
+        switch (status) {
+            case 'completed':
+                return 'Selesai';
+            case 'in_progress':
+                return 'Dalam Proses';
+            case 'editing':
+                return 'Editing';
+            case 'on_hold':
+                return 'Ditunda';
+            case 'cancelled':
+                return 'Dibatalkan';
+            case 'draft':
+            default:
+                return 'Draft';
+        }
     };
 
     // -------------------------------------------------------------
@@ -925,63 +1069,18 @@ export default function ClientDetail({
         if (client.projects && client.projects.length > 0) {
             return client.projects.map((p, idx) => ({
                 id: p.id || String(idx + 1),
-                code: p.project_number || `PRJ-250500${idx + 1}`,
-                name: p.name || 'Wedding Kevin & Jessica',
-                event_date: p.event_date ? formatDate(p.event_date) : '21 Des 2025',
-                package_name: p.package?.name || (client.client_type === 'corporate' ? 'Company Profile Full HD' : 'Wedding Gold Package'),
-                status: p.status === 'completed' ? 'Selesai' : p.status === 'in_progress' ? 'Sedang Dikerjakan' : p.status === 'lead' ? 'Akan Datang' : 'Sedang Dikerjakan',
-                status_color: p.status === 'completed' ? 'success' : p.status === 'in_progress' ? 'info' : 'warning',
-                total_amount: Number(p.total_amount || 85750000),
-                updated_at: '18 Mei 2025, 10:15 WIB',
+                code: p.project_number || `PRJ-${String(idx + 1).padStart(4, '0')}`,
+                name: p.name || 'Project',
+                event_date: p.event_date ? formatDate(p.event_date) : '-',
+                package_name: p.package?.name || (client.client_type === 'corporate' ? 'Company Profile' : (p.category?.name || 'Paket Dokumentasi')),
+                status: getProjectStatusLabel(p.status),
+                status_color: getProjectStatusBadgeVariant(p.status),
+                total_amount: Number(p.total_amount || 0),
+                updated_at: p.updated_at ? formatDate(p.updated_at) : (p.created_at ? formatDate(p.created_at) : '-'),
             }));
         }
-        return [
-            {
-                id: '1',
-                code: 'PRJ-2505003',
-                name: 'Wedding Kevin & Jessica - Grand Ballroom',
-                event_date: '21 Desember 2025',
-                package_name: 'Wedding Gold Package (Photo & Video)',
-                status: 'Sedang Dikerjakan',
-                status_color: 'info',
-                total_amount: 85750000,
-                updated_at: '18 Mei 2025, 10:15 WIB',
-            },
-            {
-                id: '2',
-                code: 'PRJ-2505002',
-                name: 'Prewedding Outdoor Bandung',
-                event_date: '18 Mei 2024',
-                package_name: 'Prewedding Premium',
-                status: 'Selesai',
-                status_color: 'success',
-                total_amount: 15750000,
-                updated_at: '20 Mei 2024, 14:00 WIB',
-            },
-            {
-                id: '3',
-                code: 'PRJ-2505001',
-                name: 'Engagement / Lamaran Session',
-                event_date: '10 Januari 2024',
-                package_name: 'Engagement Standard',
-                status: 'Selesai',
-                status_color: 'success',
-                total_amount: 12500000,
-                updated_at: '12 Januari 2024, 09:30 WIB',
-            },
-            {
-                id: '4',
-                code: 'PRJ-2505004',
-                name: 'Family Session & Studio Portrait',
-                event_date: '15 Maret 2026',
-                package_name: 'Family Studio Session',
-                status: 'Akan Datang',
-                status_color: 'warning',
-                total_amount: 8500000,
-                updated_at: '01 Februari 2025, 11:20 WIB',
-            },
-        ];
-    }, [client.projects]);
+        return [];
+    }, [client.projects, client.client_type]);
 
     const filteredProjectsTable = useMemo(() => {
         return initialProjectsList.filter((item) => {
@@ -1012,64 +1111,21 @@ export default function ClientDetail({
                 const total = Number(p.amount || 0);
                 return {
                     id: String(p.id || idx + 1),
-                    invoice_no: p.reference_number || `INV-2025-01${idx + 1}`,
-                    project_name: p.project?.name || client.projects?.[0]?.name || 'Wedding Kevin & Jessica',
-                    invoice_date: p.payment_date ? formatDate(p.payment_date) : '18 Mei 2024',
-                    due_date: '25 Mei 2024',
+                    invoice_no: p.reference_number || `INV-${String(idx + 1).padStart(4, '0')}`,
+                    project_name: p.project?.name || client.projects?.[0]?.name || 'Project',
+                    invoice_date: p.payment_date ? formatDate(p.payment_date) : '-',
+                    due_date: p.due_date ? formatDate(p.due_date) : '-',
                     total_amount: total,
                     paid_amount: total,
                     remaining_amount: 0,
                     status: 'Lunas',
                     status_variant: 'success',
-                    payment_method: p.payment_method?.name || 'Transfer BCA',
-                    paid_at: p.payment_date ? formatDate(p.payment_date) : '18 Mei 2024',
+                    payment_method: p.payment_method?.name || (typeof p.payment_method === 'string' ? p.payment_method : 'Transfer BCA'),
+                    paid_at: p.payment_date ? formatDate(p.payment_date) : '-',
                 };
             });
         }
-        return [
-            {
-                id: '1',
-                invoice_no: 'INV-2025-017',
-                project_name: 'Kevin & Jessica Wedding',
-                invoice_date: '18 Mei 2024',
-                due_date: '25 Mei 2024',
-                total_amount: 85750000,
-                paid_amount: 85750000,
-                remaining_amount: 0,
-                status: 'Lunas',
-                status_variant: 'success',
-                payment_method: 'Transfer BCA',
-                paid_at: '18 Mei 2024',
-            },
-            {
-                id: '2',
-                invoice_no: 'INV-2025-018',
-                project_name: 'Prewedding Outdoor Bandung',
-                invoice_date: '10 Mei 2024',
-                due_date: '17 Mei 2024',
-                total_amount: 15750000,
-                paid_amount: 15750000,
-                remaining_amount: 0,
-                status: 'Lunas',
-                status_variant: 'success',
-                payment_method: 'Transfer Mandiri',
-                paid_at: '15 Mei 2024',
-            },
-            {
-                id: '3',
-                invoice_no: 'INV-2025-019',
-                project_name: 'Family Session & Studio Portrait',
-                invoice_date: '01 Feb 2025',
-                due_date: '15 Feb 2025',
-                total_amount: 8500000,
-                paid_amount: 4000000,
-                remaining_amount: 4500000,
-                status: 'Sebagian',
-                status_variant: 'info',
-                payment_method: 'Transfer BCA',
-                paid_at: '02 Feb 2025',
-            },
-        ];
+        return [];
     }, [client.payments, client.projects]);
 
     const filteredInvoicesList = useMemo(() => {
@@ -1088,55 +1144,120 @@ export default function ClientDetail({
         });
     }, [initialInvoicesList, paymentSearchQuery, paymentStatusFilter, paymentMethodFilter]);
 
-    // -------------------------------------------------------------
-    // STATES FOR TAB 4: FILES & TIMELINE (Gambar 2)
-    // -------------------------------------------------------------
-    const [selectedProjectId, setSelectedProjectId] = useState<string>('1');
-    const [activeWorkflowTab, setActiveWorkflowTab] = useState<'wedding' | 'prewedding'>('wedding');
-    const [selectedStageIndex, setSelectedStageIndex] = useState<number>(3);
-    const [jobChecklist, setJobChecklist] = useState({
-        editedPhoto: true,
-        revisiEditedPhoto: false,
-        finalEditedPhoto: false,
-        editedVideoHL: true,
-        revisiEditedVideoHL: false,
-        editedFullDoc: false,
-        finalEditedVideoHL: false,
-        finalEditedFullDoc: false,
-    });
-    const [isAddDriveLinkModalOpen, setIsAddDriveLinkModalOpen] = useState(false);
-    const [driveLinksList, setDriveLinksList] = useState([
-        {
-            id: '1',
-            projectId: '1',
-            title: 'Sneak Peak Photo - Kevin & Jessica',
-            url: 'https://drive.google.com/drive/folders/1w7nK-9zPq9yX2l3m4n5',
-            uploader: 'Budi Santoso (Supervisor)',
-            date: '18 Mei 2024',
-        },
-        {
-            id: '2',
-            projectId: '2',
-            title: 'Final High-Res Prewedding Outdoor',
-            url: 'https://drive.google.com/drive/folders/2a8bC-4xYq1zM9k8l7j6',
-            uploader: 'Dimas Prasetyo (Lead Editor)',
-            date: '20 Mei 2024',
-        },
-        {
-            id: '3',
-            projectId: '3',
-            title: 'Raw & Edited Engagement Photos',
-            url: 'https://drive.google.com/drive/folders/3c9dE-5vWp2yN8j7k6h5',
-            uploader: 'Admin Arams',
-            date: '12 Januari 2024',
-        },
-    ]);
-    const [newDriveTitle, setNewDriveTitle] = useState('');
-    const [newDriveUrl, setNewDriveUrl] = useState('');
+    const paymentSummary = useMemo(() => {
+        const totalTagihan = totalProjectValue > 0
+            ? totalProjectValue
+            : (initialInvoicesList.reduce((acc, i) => acc + i.total_amount, 0) || 101500000);
+        const totalDibayar = totalPaid > 0
+            ? totalPaid
+            : (initialInvoicesList.reduce((acc, i) => acc + i.paid_amount, 0) || 85750000);
+        const sisaTagihan = Math.max(0, totalTagihan - totalDibayar);
+        const percent = totalTagihan > 0 ? Math.min(100, Number(((totalDibayar / totalTagihan) * 100).toFixed(2))) : 0;
+        const invoiceCount = initialInvoicesList.length || client.projects?.length || 9;
+        const paymentCount = client.payments?.length || 8;
+        const unpaidInvoiceCount = initialInvoicesList.filter((i) => i.remaining_amount > 0).length || (sisaTagihan > 0 ? 3 : 0);
 
+        return {
+            totalTagihan,
+            totalDibayar,
+            sisaTagihan,
+            percent,
+            invoiceCount,
+            paymentCount,
+            unpaidInvoiceCount,
+        };
+    }, [totalProjectValue, totalPaid, initialInvoicesList, client.projects, client.payments]);
+
+    // -------------------------------------------------------------
+    // STATES FOR TAB 4: FILES & TIMELINE — REAL-TIME DATABASE
+    // -------------------------------------------------------------
+    // Init selectedProjectId from first real project in DB
+    const [selectedProjectId, setSelectedProjectId] = useState<string>(
+        () => String(client.projects?.[0]?.id || '1')
+    );
+
+    // Master Workflows from DB props or standard definitions
+    const masterWorkflows: WorkflowDefinition[] = useMemo(() => {
+        if (workflows && workflows.length > 0) {
+            return workflows.map((wf: any, idx: number) => ({
+                id: Number(wf.id) || idx + 1,
+                type: (wf.type || 'wedding') as 'wedding' | 'non_wedding' | 'custom',
+                name: wf.name || `Workflow ${idx + 1}`,
+                description: wf.description || '',
+                steps_count: wf.steps?.length || wf.steps_count || 0,
+                steps: (wf.steps || []).map((s: any, sIdx: number) => ({
+                    id: s.id || sIdx + 1,
+                    num: s.num || sIdx + 1,
+                    name: s.name || s.title || `Tahap ${sIdx + 1}`,
+                    phase: s.phase || 'Operasional',
+                    duration: s.duration || s.dl || s.dur || 'H+14',
+                    activity: s.activity || s.description || '',
+                    dur: s.dur || s.duration || 'H+14',
+                    dl: s.dl || s.duration || 'H+14',
+                    deliv: s.deliv || s.name,
+                    description: s.description || s.activity || '',
+                })),
+            }));
+        }
+        return ALL_WORKFLOWS;
+    }, [workflows]);
+
+    // Selected project from initialProjectsList (frontend shape)
     const selectedProject = useMemo(() => {
         return initialProjectsList.find((p) => String(p.id) === String(selectedProjectId)) || initialProjectsList[0];
     }, [initialProjectsList, selectedProjectId]);
+
+    // Raw project from client.projects (backend shape, has workflow_step, custom_timeline, file_links)
+    const selectedRawProject = useMemo(() => {
+        return client.projects?.find((p: any) => String(p.id) === String(selectedProject?.id)) || client.projects?.[0];
+    }, [client.projects, selectedProject?.id]);
+
+    // Selected project's Category & Package from Master Data
+    const projectCategory = useMemo(() => {
+        return (
+            selectedRawProject?.category ||
+            categories.find((c) => String(c.id) === String(selectedRawProject?.category_id)) ||
+            null
+        );
+    }, [selectedRawProject, categories]);
+
+    const selectedProjectPackage = useMemo(() => {
+        return (
+            selectedRawProject?.package ||
+            packages.find((p) => String(p.id) === String(selectedRawProject?.package_id)) ||
+            null
+        );
+    }, [selectedRawProject, packages]);
+
+    // Automatically resolve workflow definition from selected project category and package
+    const activeWorkflowDef = useMemo(() => {
+        return resolveWorkflow(projectCategory, masterWorkflows, {
+            name: selectedProjectPackage?.name || selectedProject?.package_name || selectedProject?.name,
+            service_name: selectedProject?.name,
+        });
+    }, [projectCategory, masterWorkflows, selectedProjectPackage, selectedProject]);
+
+    const [selectedStageIndex, setSelectedStageIndex] = useState<number>(0);
+    const [isAddDriveLinkModalOpen, setIsAddDriveLinkModalOpen] = useState(false);
+    // Local list only for optimistic additions (no dummy data)
+    const [driveLinksList, setDriveLinksList] = useState<Array<{ id: string; projectId: string; title: string; url: string; uploader: string; date: string }>>([]);
+    const [newDriveTitle, setNewDriveTitle] = useState('');
+    const [newDriveUrl, setNewDriveUrl] = useState('');
+
+    // Checklist synced from DB custom_timeline.checklist
+    const [jobChecklist, setJobChecklist] = useState(() => {
+        const dbChecklist = client.projects?.[0]?.custom_timeline?.checklist || {};
+        return {
+            editedPhoto: dbChecklist.editedPhoto ?? false,
+            revisiEditedPhoto: dbChecklist.revisiEditedPhoto ?? false,
+            finalEditedPhoto: dbChecklist.finalEditedPhoto ?? false,
+            editedVideoHL: dbChecklist.editedVideoHL ?? false,
+            revisiEditedVideoHL: dbChecklist.revisiEditedVideoHL ?? false,
+            editedFullDoc: dbChecklist.editedFullDoc ?? false,
+            finalEditedVideoHL: dbChecklist.finalEditedVideoHL ?? false,
+            finalEditedFullDoc: dbChecklist.finalEditedFullDoc ?? false,
+        };
+    });
 
     const projectSearchOptions = useMemo(() => {
         return initialProjectsList.map((p) => ({
@@ -1146,150 +1267,89 @@ export default function ClientDetail({
         }));
     }, [initialProjectsList]);
 
-    const stageDescriptions: Record<string, string> = {
-        'Booking & DP': 'Penerimaan uang muka (DP) telah terverifikasi. Jadwal tim, fotografer & videografer telah di-booking pada kalender kerja sistem.',
-        'TM Wedding': 'Technical Meeting bersama perwakilan klien dan Wedding Organizer untuk finalisasi rundown serta checklist shot list foto.',
-        'Hari H': 'Pelaksanaan liputan dan dokumentasi live di lokasi acara oleh seluruh tim yang bertugas.',
-        'Sneak Peak Photo Editing': 'Tim sedang melakukan color grading dan pemilihan foto highlight utama untuk preview kilat klien.',
-        'Flashdrive + Box Delivery': 'Penyimpanan seluruh master raw file & hasil liputan ke dalam Flashdrive eksklusif dan penyiapan box kemasan.',
-        'Full Version Photo & Video Editing': 'Editing menyeluruh seluruh foto terpilih dan perakitan video cinematic highlight & full documentary berdurasi lengkap.',
-        'Album Layout Editing': 'Desain penataan layout halaman photobook wedding dan konfirmasi approval kepada klien sebelum dikirim ke percetakan.',
-        'Final Delivery': 'Pengiriman seluruh paket fisik (album cetak, frame, flashdrive) dan berkas digital resolusi tinggi ke alamat klien.',
-        'Concept & Briefing': 'Penyusunan konsep visual, referensi moodboard, penentuan wardrobe, dan lokasi pemotretan bersama klien.',
-        'Photoshoot Day': 'Sesi pemotretan foto & video prewedding di lokasi yang telah disepakati bersama.',
-        'Photo Editing & Retouch': 'Retouching detail, color grading tone artistik, dan perbaikan komposisi pada seluruh foto pilihan klien.',
-        'Final Delivery & Print': 'Penyelesaian cetak kanvas, frame mini, dan penyerahan link Google Drive resolusi tinggi kepada klien.',
-    };
-
     const currentStages = useMemo(() => {
         const isCompleted = selectedProject?.status === 'Selesai';
         const isUpcoming = selectedProject?.status === 'Akan Datang';
+        // Real workflow_step from DB to mark the active stage
+        const dbWorkflowStep = (selectedRawProject?.workflow_step || '').toLowerCase().trim();
+        const steps = activeWorkflowDef.steps || [];
+        const customStagesList: any[] = selectedRawProject?.custom_timeline?.stages || [];
 
-        if (activeWorkflowTab === 'prewedding') {
-            return [
-                {
-                    step: 1,
-                    title: 'Booking & DP',
-                    date: '18 Mei 2024',
-                    status: 'done' as const,
-                    progress: 100,
-                    pic: 'Admin Finance & CRM',
-                    description: stageDescriptions['Booking & DP'],
-                },
-                {
-                    step: 2,
-                    title: 'Concept & Briefing',
-                    date: isUpcoming ? 'Belum Dimulai' : '20 Mei 2024',
-                    status: isUpcoming ? ('pending' as const) : ('done' as const),
-                    progress: isUpcoming ? 0 : 100,
-                    pic: 'Art Director Arams',
-                    description: stageDescriptions['Concept & Briefing'],
-                },
-                {
-                    step: 3,
-                    title: 'Photoshoot Day',
-                    date: isUpcoming ? selectedProject?.event_date || '18 Mei 2024' : '22 Mei 2024',
-                    status: isUpcoming ? ('pending' as const) : ('done' as const),
-                    progress: isUpcoming ? 0 : 100,
-                    pic: 'Lead Photographer & Crew',
-                    description: stageDescriptions['Photoshoot Day'],
-                },
-                {
-                    step: 4,
-                    title: 'Photo Editing & Retouch',
-                    date: isCompleted ? 'Selesai' : isUpcoming ? 'Belum Dimulai' : 'Sedang Dikerjakan (60%)',
-                    status: isCompleted ? ('done' as const) : isUpcoming ? ('pending' as const) : ('active' as const),
-                    progress: isCompleted ? 100 : isUpcoming ? 0 : 60,
-                    pic: 'Lead Retoucher Arams',
-                    description: stageDescriptions['Photo Editing & Retouch'],
-                },
-                {
-                    step: 5,
-                    title: 'Final Delivery & Print',
-                    date: isCompleted ? 'Selesai' : 'Belum Dimulai',
-                    status: isCompleted ? ('done' as const) : ('pending' as const),
-                    progress: isCompleted ? 100 : 0,
-                    pic: 'Production & Logistic Team',
-                    description: stageDescriptions['Final Delivery & Print'],
-                },
-            ];
-        }
+        // Helper: determine stage status based on DB workflow_step and progress
+        const getStageStatus = (
+            stageTitle: string,
+            stageIndex: number,
+            totalStages: number
+        ): 'done' | 'active' | 'pending' => {
+            if (isCompleted) return 'done';
+            if (isUpcoming) return stageIndex === 0 ? 'active' : 'pending';
+            // Match by workflow_step name from DB
+            const isActiveStep = dbWorkflowStep && stageTitle.toLowerCase().includes(dbWorkflowStep.split(' ')[0]);
+            if (isActiveStep) return 'active';
+            // Determine by DB progress if no workflow_step match
+            const dbProgress = Number(selectedRawProject?.progress || 0);
+            const progressPerStep = 100 / (totalStages || 1);
+            const stepsCompleted = Math.floor(dbProgress / progressPerStep);
+            if (stageIndex < stepsCompleted) return 'done';
+            if (stageIndex === stepsCompleted) return 'active';
+            return 'pending';
+        };
 
-        return [
-            {
-                step: 1,
-                title: 'Booking & DP',
-                date: '18 Mei 2024',
-                status: 'done' as const,
-                progress: 100,
-                pic: 'Admin Finance & CRM',
-                description: stageDescriptions['Booking & DP'],
-            },
-            {
-                step: 2,
-                title: 'TM Wedding',
-                date: isUpcoming ? 'Belum Dimulai' : '25 Mei 2024',
-                status: isUpcoming ? ('pending' as const) : ('done' as const),
-                progress: isUpcoming ? 0 : 100,
-                pic: 'Project Officer Arams',
-                description: stageDescriptions['TM Wedding'],
-            },
-            {
-                step: 3,
-                title: 'Hari H',
-                date: isUpcoming ? selectedProject?.event_date || '21 Des 2025' : '18 Mei 2024',
-                status: isUpcoming ? ('pending' as const) : ('done' as const),
-                progress: isUpcoming ? 0 : 100,
-                pic: 'Tim Dokumentasi (Foto & Video)',
-                description: stageDescriptions['Hari H'],
-            },
-            {
-                step: 4,
-                title: 'Sneak Peak Photo Editing',
-                date: isCompleted ? 'Selesai' : isUpcoming ? 'Belum Dimulai' : 'Sedang Dikerjakan (60%)',
-                status: isCompleted ? ('done' as const) : isUpcoming ? ('pending' as const) : ('active' as const),
-                progress: isCompleted ? 100 : isUpcoming ? 0 : 60,
-                pic: 'Budi Santoso (Lead Colorist)',
-                description: stageDescriptions['Sneak Peak Photo Editing'],
-            },
-            {
-                step: 5,
-                title: 'Flashdrive + Box Delivery',
-                date: isCompleted ? 'Selesai' : 'Belum Dimulai',
-                status: isCompleted ? ('done' as const) : ('pending' as const),
-                progress: isCompleted ? 100 : 0,
-                pic: 'Warehouse & Packaging',
-                description: stageDescriptions['Flashdrive + Box Delivery'],
-            },
-            {
-                step: 6,
-                title: 'Full Version Photo & Video Editing',
-                date: isCompleted ? 'Selesai' : 'Belum Dimulai',
-                status: isCompleted ? ('done' as const) : ('pending' as const),
-                progress: isCompleted ? 100 : 0,
-                pic: 'Video Editor & Colorist',
-                description: stageDescriptions['Full Version Photo & Video Editing'],
-            },
-            {
-                step: 7,
-                title: 'Album Layout Editing',
-                date: isCompleted ? 'Selesai' : 'Belum Dimulai',
-                status: isCompleted ? ('done' as const) : ('pending' as const),
-                progress: isCompleted ? 100 : 0,
-                pic: 'Album Layout Designer',
-                description: stageDescriptions['Album Layout Editing'],
-            },
-            {
-                step: 8,
-                title: 'Final Delivery',
-                date: isCompleted ? 'Selesai' : 'Belum Dimulai',
-                status: isCompleted ? ('done' as const) : ('pending' as const),
-                progress: isCompleted ? 100 : 0,
-                pic: 'Production & Courier Team',
-                description: stageDescriptions['Final Delivery'],
-            },
-        ];
-    }, [activeWorkflowTab, selectedProject]);
+        return steps.map((s, idx) => {
+            const customOverride = customStagesList.find(
+                (cs: any) => cs.step === (s.num || idx + 1) || String(cs.id) === String(s.id)
+            );
+            const defaultStatus = getStageStatus(s.name, idx, steps.length);
+            const defaultPic =
+                idx === 0
+                    ? 'Admin Finance & CRM'
+                    : idx === 1
+                        ? 'Project Officer & WO'
+                        : idx === 2
+                            ? 'Lead Photographer & Crew'
+                            : idx === 3
+                                ? 'Lead Colorist & Retoucher'
+                                : idx === 4
+                                    ? 'Warehouse & Packaging'
+                                    : idx === 5
+                                        ? 'Video Editor & Colorist'
+                                        : idx === 6
+                                            ? 'Album Layout Designer'
+                                            : 'Logistics & Handover Team';
+
+            const title = customOverride?.title || s.name;
+            const phase = customOverride?.phase || s.phase || 'Operasional';
+            const duration = customOverride?.duration || s.duration || s.dl || s.dur || 'H+14';
+            const deliv = customOverride?.deliv || s.deliv || s.name;
+            const activity = customOverride?.activity || s.activity || s.description || '';
+            const pic = customOverride?.pic || defaultPic;
+            const stStatus: 'done' | 'active' | 'pending' = customOverride?.status || defaultStatus;
+            const progress =
+                typeof customOverride?.progress === 'number'
+                    ? customOverride.progress
+                    : stStatus === 'done'
+                        ? 100
+                        : stStatus === 'active'
+                            ? Number(selectedRawProject?.progress || 0)
+                            : 0;
+
+            return {
+                id: s.id || idx + 1,
+                step: s.num || idx + 1,
+                title: title,
+                phase: phase,
+                duration: duration,
+                deliv: deliv,
+                activity: activity,
+                date: stStatus === 'done' ? 'Selesai' : stStatus === 'active' ? 'Sedang Dikerjakan' : duration || 'Belum Dimulai',
+                status: stStatus,
+                progress: progress,
+                pic: pic,
+                description: activity || 'Pekerjaan berjalan sesuai SOP dan timeline produksi.',
+                isCustom: !!customOverride,
+            };
+        });
+    }, [activeWorkflowDef, selectedProject, selectedRawProject]);
 
     const completedStagesCount = useMemo(() => {
         return currentStages.filter((s) => s.status === 'done').length;
@@ -1298,42 +1358,379 @@ export default function ClientDetail({
     const overallProgressPercent = useMemo(() => {
         if (selectedProject?.status === 'Selesai') return 100;
         if (selectedProject?.status === 'Akan Datang') return 15;
-        return Math.round((completedStagesCount / currentStages.length) * 100);
+        return Math.round((completedStagesCount / (currentStages.length || 1)) * 100);
     }, [selectedProject, completedStagesCount, currentStages.length]);
 
     const selectedStage = useMemo(() => {
         if (selectedStageIndex >= currentStages.length) {
-            return currentStages[currentStages.length - 1];
+            return currentStages[currentStages.length - 1] || currentStages[0];
         }
         return currentStages[selectedStageIndex] || currentStages[0];
     }, [currentStages, selectedStageIndex]);
 
-    const handleSelectProject = (projectId: string) => {
-        setSelectedProjectId(projectId);
-        const targetProj = initialProjectsList.find((p) => String(p.id) === String(projectId));
-        if (targetProj) {
-            const combinedName = `${targetProj.name || ''} ${targetProj.package_name || ''}`.toLowerCase();
-            if (
-                combinedName.includes('prewedding') ||
-                combinedName.includes('family') ||
-                combinedName.includes('engagement') ||
-                combinedName.includes('studio') ||
-                combinedName.includes('lamaran') ||
-                combinedName.includes('siraman')
-            ) {
-                setActiveWorkflowTab('prewedding');
-            } else {
-                setActiveWorkflowTab('wedding');
-            }
+    // Modal Edit Stage Timeline States
+    const [isEditStageModalOpen, setIsEditStageModalOpen] = useState(false);
+    const [editingStageIndex, setEditingStageIndex] = useState<number>(0);
+    const [stageFormData, setStageFormData] = useState({
+        step: 1,
+        title: '',
+        phase: 'Pra-Acara',
+        duration: '',
+        deliv: '',
+        activity: '',
+        pic: '',
+        status: 'pending' as 'done' | 'active' | 'pending',
+        progress: 0,
+    });
+    const [isSavingStage, setIsSavingStage] = useState(false);
 
-            if (targetProj.status === 'Selesai') {
-                setSelectedStageIndex(0);
-            } else if (targetProj.status === 'Akan Datang') {
-                setSelectedStageIndex(0);
-            } else {
-                setSelectedStageIndex(3);
+    const openEditStageModal = (stageIdx: number) => {
+        const stage = currentStages[stageIdx];
+        if (!stage) return;
+        setEditingStageIndex(stageIdx);
+        setStageFormData({
+            step: stage.step,
+            title: stage.title,
+            phase: stage.phase,
+            duration: stage.duration,
+            deliv: stage.deliv,
+            activity: stage.activity || stage.description || '',
+            pic: stage.pic,
+            status: stage.status,
+            progress: stage.progress,
+        });
+        setIsEditStageModalOpen(true);
+    };
+
+    const handleSaveStageEdit = (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        const rawProject = client.projects?.find((p: any) => String(p.id) === String(selectedProject?.id));
+        if (!rawProject?.id) {
+            toast.error('Project tidak ditemukan.');
+            return;
+        }
+
+        if (!stageFormData.title.trim()) {
+            toast.error('Nama tahap tidak boleh kosong.');
+            return;
+        }
+
+        setIsSavingStage(true);
+
+        const currentCustomTimeline = rawProject.custom_timeline || {};
+        const existingStages: any[] = currentCustomTimeline.stages || [];
+
+        const updatedStageItem = {
+            step: stageFormData.step,
+            title: stageFormData.title.trim(),
+            phase: stageFormData.phase.trim(),
+            duration: stageFormData.duration.trim(),
+            deliv: stageFormData.deliv.trim(),
+            activity: stageFormData.activity.trim(),
+            pic: stageFormData.pic.trim(),
+            status: stageFormData.status,
+            progress: Number(stageFormData.progress) || 0,
+        };
+
+        const otherStages = existingStages.filter((s: any) => s.step !== stageFormData.step);
+        const newStagesList = [...otherStages, updatedStageItem].sort((a, b) => a.step - b.step);
+
+        const newCustomTimeline = {
+            ...currentCustomTimeline,
+            stages: newStagesList,
+        };
+
+        let updatedWorkflowStep = rawProject.workflow_step;
+        let updatedProjectStatus = rawProject.status;
+        let updatedProjectProgress = rawProject.progress;
+
+        if (stageFormData.status === 'active') {
+            updatedWorkflowStep = stageFormData.title;
+            updatedProjectStatus = 'in_progress';
+            updatedProjectProgress = Math.round((editingStageIndex / (currentStages.length || 1)) * 100);
+        } else if (stageFormData.status === 'done') {
+            const allDone = currentStages.every((s, idx) => (idx === editingStageIndex ? true : s.status === 'done'));
+            if (allDone) {
+                updatedProjectStatus = 'completed';
+                updatedProjectProgress = 100;
             }
         }
+
+        router.patch(
+            `/projects/${rawProject.id}/status`,
+            {
+                custom_timeline: newCustomTimeline,
+                workflow_step: updatedWorkflowStep,
+                status: updatedProjectStatus,
+                progress: updatedProjectProgress,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success(`Tahap ${stageFormData.step} "${stageFormData.title}" berhasil diperbarui!`);
+                    setIsEditStageModalOpen(false);
+                },
+                onError: () => {
+                    toast.error('Gagal memperbarui detail tahap. Silakan coba lagi.');
+                },
+                onFinish: () => {
+                    setIsSavingStage(false);
+                },
+            }
+        );
+    };
+
+    const handleResetStageToDefault = () => {
+        const rawProject = client.projects?.find((p: any) => String(p.id) === String(selectedProject?.id));
+        if (!rawProject?.id) return;
+
+        setIsSavingStage(true);
+        const currentCustomTimeline = rawProject.custom_timeline || {};
+        const existingStages: any[] = currentCustomTimeline.stages || [];
+        const newStagesList = existingStages.filter((s: any) => s.step !== stageFormData.step);
+
+        router.patch(
+            `/projects/${rawProject.id}/status`,
+            {
+                custom_timeline: {
+                    ...currentCustomTimeline,
+                    stages: newStagesList,
+                },
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success(`Tahap ${stageFormData.step} dikembalikan ke alur standar.`);
+                    setIsEditStageModalOpen(false);
+                },
+                onError: () => {
+                    toast.error('Gagal mereset tahap.');
+                },
+                onFinish: () => {
+                    setIsSavingStage(false);
+                },
+            }
+        );
+    };
+
+    const handleSelectProject = (projectId: string) => {
+        setSelectedProjectId(projectId);
+        setSelectedStageIndex(0);
+
+        const rawProj = client.projects?.find((p: any) => String(p.id) === String(projectId));
+        if (rawProj) {
+            // Sync checklist from the newly selected project's DB custom_timeline
+            const dbChecklist = rawProj.custom_timeline?.checklist || {};
+            setJobChecklist({
+                editedPhoto: dbChecklist.editedPhoto ?? false,
+                revisiEditedPhoto: dbChecklist.revisiEditedPhoto ?? false,
+                finalEditedPhoto: dbChecklist.finalEditedPhoto ?? false,
+                editedVideoHL: dbChecklist.editedVideoHL ?? false,
+                revisiEditedVideoHL: dbChecklist.revisiEditedVideoHL ?? false,
+                editedFullDoc: dbChecklist.editedFullDoc ?? false,
+                finalEditedVideoHL: dbChecklist.finalEditedVideoHL ?? false,
+                finalEditedFullDoc: dbChecklist.finalEditedFullDoc ?? false,
+            });
+        }
+    };
+
+    // Update timetable stage — PATCH /projects/{id}/status
+    const [updatingStage, setUpdatingStage] = useState(false);
+    const handleUpdateStage = (newWorkflowStep: string, newStatus: 'in_progress' | 'completed', newProgress: number) => {
+        const rawProject = client.projects?.find((p: any) => String(p.id) === String(selectedProject?.id));
+        if (!rawProject?.id) { toast.error('Project tidak ditemukan'); return; }
+        setUpdatingStage(true);
+        router.patch(
+            `/projects/${rawProject.id}/status`,
+            { workflow_step: newWorkflowStep, status: newStatus, progress: newProgress },
+            {
+                preserveScroll: true,
+                onSuccess: () => toast.success(`Tahap "${newWorkflowStep}" berhasil diperbarui!`),
+                onError: () => toast.error('Gagal memperbarui status tahap. Silakan coba lagi.'),
+                onFinish: () => setUpdatingStage(false),
+            }
+        );
+    };
+
+    // Quick Update Project Overall Status — Gambar 2
+    const handleUpdateProjectStatus = (newStatus: string) => {
+        const rawProject = client.projects?.find((p: any) => String(p.id) === String(selectedProject?.id));
+        if (!rawProject?.id) {
+            toast.error('Project tidak ditemukan.');
+            return;
+        }
+
+        let newProgress = rawProject.progress;
+        let newStep = rawProject.workflow_step;
+
+        if (newStatus === 'completed') {
+            newProgress = 100;
+            newStep = currentStages[currentStages.length - 1]?.title || 'Selesai';
+        } else if (newStatus === 'draft') {
+            newProgress = 0;
+            newStep = currentStages[0]?.title || 'Booking';
+        } else if (newStatus === 'in_progress' && (rawProject.progress === 0 || !rawProject.progress)) {
+            newProgress = Math.round((1 / (currentStages.length || 1)) * 100);
+            newStep = currentStages[1]?.title || currentStages[0]?.title || 'Dalam Proses';
+        } else if (newStatus === 'editing') {
+            const editingStage = currentStages.find((s) => s.title.toLowerCase().includes('edit') || s.phase.toLowerCase().includes('edit'));
+            if (editingStage) {
+                newStep = editingStage.title;
+            }
+        }
+
+        router.patch(
+            `/projects/${rawProject.id}/status`,
+            {
+                status: newStatus,
+                progress: newProgress,
+                workflow_step: newStep,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success(`Status project berhasil diubah menjadi: ${getProjectStatusLabel(newStatus)}`);
+                },
+                onError: () => {
+                    toast.error('Gagal memperbarui status project.');
+                },
+            }
+        );
+    };
+
+    // Quick Update Individual Stage Status from Stepper — Gambar 1
+    const handleQuickUpdateStageStatus = (stageIdx: number, newStatus: 'done' | 'active' | 'pending') => {
+        const rawProject = client.projects?.find((p: any) => String(p.id) === String(selectedProject?.id));
+        if (!rawProject?.id) {
+            toast.error('Project tidak ditemukan.');
+            return;
+        }
+
+        const targetStage = currentStages[stageIdx];
+        if (!targetStage) return;
+
+        const currentCustomTimeline = rawProject.custom_timeline || {};
+        const existingStages: any[] = currentCustomTimeline.stages || [];
+
+        const updatedStageItem = {
+            step: targetStage.step,
+            title: targetStage.title,
+            phase: targetStage.phase,
+            duration: targetStage.duration,
+            deliv: targetStage.deliv,
+            activity: targetStage.activity,
+            pic: targetStage.pic,
+            status: newStatus,
+            progress: newStatus === 'done' ? 100 : newStatus === 'active' ? (rawProject.progress || 50) : 0,
+        };
+
+        const otherStages = existingStages.filter((s: any) => s.step !== targetStage.step);
+        const newStagesList = [...otherStages, updatedStageItem].sort((a, b) => a.step - b.step);
+
+        const newCustomTimeline = {
+            ...currentCustomTimeline,
+            stages: newStagesList,
+        };
+
+        let updatedWorkflowStep = rawProject.workflow_step;
+        let updatedProjectStatus = rawProject.status;
+        let updatedProjectProgress = rawProject.progress;
+
+        if (newStatus === 'active') {
+            updatedWorkflowStep = targetStage.title;
+            if (rawProject.status === 'draft' || rawProject.status === 'pending' || rawProject.status === 'completed') {
+                updatedProjectStatus = 'in_progress';
+            }
+            updatedProjectProgress = Math.round(((stageIdx + 0.5) / (currentStages.length || 1)) * 100);
+        } else if (newStatus === 'done') {
+            const allDone = currentStages.every((s, idx) => (idx === stageIdx ? true : s.status === 'done'));
+            if (allDone) {
+                updatedProjectStatus = 'completed';
+                updatedProjectProgress = 100;
+            } else {
+                const nextIdx = stageIdx + 1;
+                if (nextIdx < currentStages.length) {
+                    updatedWorkflowStep = currentStages[nextIdx].title;
+                }
+                if (rawProject.status === 'draft' || rawProject.status === 'pending') {
+                    updatedProjectStatus = 'in_progress';
+                }
+                const completedCount = currentStages.filter((s, idx) => (idx === stageIdx ? true : s.status === 'done')).length;
+                updatedProjectProgress = Math.round((completedCount / (currentStages.length || 1)) * 100);
+            }
+        } else if (newStatus === 'pending') {
+            if (rawProject.workflow_step === targetStage.title) {
+                const prevStage = stageIdx > 0 ? currentStages[stageIdx - 1] : null;
+                updatedWorkflowStep = prevStage ? prevStage.title : currentStages[0]?.title || 'Booking';
+            }
+            if (rawProject.status === 'completed') {
+                updatedProjectStatus = 'in_progress';
+            }
+            const completedCount = currentStages.filter((s, idx) => (idx === stageIdx ? false : s.status === 'done')).length;
+            updatedProjectProgress = Math.round((completedCount / (currentStages.length || 1)) * 100);
+        }
+
+        router.patch(
+            `/projects/${rawProject.id}/status`,
+            {
+                custom_timeline: newCustomTimeline,
+                workflow_step: updatedWorkflowStep,
+                status: updatedProjectStatus,
+                progress: updatedProjectProgress,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    const statusLabels = {
+                        done: 'Selesai',
+                        active: 'Sedang Dikerjakan',
+                        pending: 'Belum Dimulai',
+                    };
+                    toast.success(`Tahap ${targetStage.step} "${targetStage.title}" ditandai ${statusLabels[newStatus]}!`);
+                },
+                onError: () => {
+                    toast.error('Gagal memperbarui status tahap.');
+                },
+            }
+        );
+    };
+
+    // Checklist toggle — PATCH custom_timeline.checklist to DB
+    const [savingChecklist, setSavingChecklist] = useState(false);
+    const handleChecklistChange = (taskId: string, isNowChecked: boolean, taskLabel: string) => {
+        const newChecklist = { ...jobChecklist, [taskId]: isNowChecked };
+        setJobChecklist(newChecklist as any);
+        toast.success(isNowChecked ? `"${taskLabel}" ditandai selesai!` : `"${taskLabel}" dibatalkan.`);
+
+        const rawProject = client.projects?.find((p: any) => String(p.id) === String(selectedProject?.id));
+        if (!rawProject?.id) return;
+        const currentTimeline = rawProject.custom_timeline || {};
+        setSavingChecklist(true);
+        router.patch(
+            `/projects/${rawProject.id}/status`,
+            { custom_timeline: { ...currentTimeline, checklist: newChecklist } },
+            {
+                preserveScroll: true,
+                onError: () => {
+                    setJobChecklist((prev) => ({ ...prev, [taskId]: !isNowChecked }));
+                    toast.error('Gagal menyimpan checklist ke database.');
+                },
+                onFinish: () => setSavingChecklist(false),
+            }
+        );
+    };
+
+    // Delete file link — DELETE /files/{id}
+    const [deletingLinkId, setDeletingLinkId] = useState<string | null>(null);
+    const handleDeleteLink = (linkId: string, linkTitle: string) => {
+        if (!confirm(`Hapus link "${linkTitle}"?`)) return;
+        setDeletingLinkId(linkId);
+        router.delete(`/files/${linkId}`, {
+            preserveScroll: true,
+            onSuccess: () => toast.success(`Link "${linkTitle}" berhasil dihapus!`),
+            onError: () => toast.error('Gagal menghapus link. Silakan coba lagi.'),
+            onFinish: () => setDeletingLinkId(null),
+        });
     };
 
     const handleCopyLink = (url: string) => {
@@ -1345,16 +1742,48 @@ export default function ClientDetail({
         }
     };
 
+    // Merge DB file_links from selected project with locally-added ones
     const projectDriveLinks = useMemo(() => {
-        const list = driveLinksList.filter(
-            (dl) => !dl.projectId || String(dl.projectId) === String(selectedProject?.id)
+        const selectedRawProject = client.projects?.find((p: any) => String(p.id) === String(selectedProject?.id));
+        const dbLinks: Array<{ id: string; projectId: string; title: string; url: string; uploader: string; date: string }> =
+            (selectedRawProject?.file_links || []).map((fl: any) => ({
+                id: String(fl.id),
+                projectId: String(selectedRawProject.id),
+                // FileLink model fields: name (judul), drive_url (URL), sender_name (accessor), sent_at (accessor)
+                title: fl.name || 'Link Google Drive',
+                url: fl.drive_url || '#',
+                uploader: fl.sender_name || 'Admin Arams',
+                date: fl.sent_at || fl.created_at?.substring(0, 10) || '-',
+            }));
+
+        // Append locally-added links for this project (optimistic UI)
+        const localLinks = driveLinksList.filter(
+            (dl) => String(dl.projectId) === String(selectedProject?.id)
         );
-        return list.length > 0 ? list : driveLinksList;
-    }, [driveLinksList, selectedProject?.id]);
+
+        // Return DB links combined with any local ones
+        return [...dbLinks, ...localLinks];
+    }, [driveLinksList, selectedProject?.id, client.projects]);
 
     const checkedTasksCount = useMemo(() => {
         return Object.values(jobChecklist).filter(Boolean).length;
     }, [jobChecklist]);
+
+    // Sync selectedStageIndex to active stage from DB workflow_step on project switch
+    useEffect(() => {
+        const dbStep = (selectedRawProject?.workflow_step || '').toLowerCase().trim();
+        if (!dbStep || selectedProject?.status === 'Selesai') {
+            setSelectedStageIndex(0);
+            return;
+        }
+        const stageIdx = currentStages.findIndex(
+            (s) => s.title.toLowerCase().includes(dbStep.split(' ')[0])
+        );
+        setSelectedStageIndex(stageIdx >= 0 ? stageIdx : 0);
+    }, [selectedRawProject?.workflow_step, currentStages, selectedProject?.status]);
+
+    const [savingDriveLink, setSavingDriveLink] = useState(false);
+    const [newDriveLinkType, setNewDriveLinkType] = useState('google_drive');
 
     const handleSaveDriveLink = (e?: React.FormEvent) => {
         if (e) e.preventDefault();
@@ -1362,21 +1791,53 @@ export default function ClientDetail({
             toast.error('Judul dan URL Google Drive wajib diisi');
             return;
         }
-        setDriveLinksList((prev) => [
-            ...prev,
-            {
-                id: String(Date.now()),
-                projectId: String(selectedProject?.id || '1'),
-                title: newDriveTitle.trim(),
-                url: newDriveUrl.trim(),
-                uploader: 'Admin Arams',
-                date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
-            },
-        ]);
-        setNewDriveTitle('');
-        setNewDriveUrl('');
-        setIsAddDriveLinkModalOpen(false);
-        toast.success('Link Google Drive berhasil disimpan!');
+
+        const rawProject = client.projects?.find((p: any) => String(p.id) === String(selectedProject?.id));
+        const projectId = rawProject?.id || selectedProject?.id;
+
+        if (projectId) {
+            // Persist to database via backend
+            setSavingDriveLink(true);
+            router.post(
+                `/projects/${projectId}/file-links`,
+                {
+                    name: newDriveTitle.trim(),
+                    drive_url: newDriveUrl.trim(),
+                    file_type: newDriveLinkType,
+                    is_link: true,
+                },
+                {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        setNewDriveTitle('');
+                        setNewDriveUrl('');
+                        setIsAddDriveLinkModalOpen(false);
+                        toast.success('Link Google Drive berhasil disimpan ke database!');
+                    },
+                    onError: () => {
+                        toast.error('Gagal menyimpan link. Periksa koneksi atau format URL.');
+                    },
+                    onFinish: () => setSavingDriveLink(false),
+                }
+            );
+        } else {
+            // Optimistic local add (no project selected from DB)
+            setDriveLinksList((prev) => [
+                ...prev,
+                {
+                    id: String(Date.now()),
+                    projectId: String(selectedProject?.id || '1'),
+                    title: newDriveTitle.trim(),
+                    url: newDriveUrl.trim(),
+                    uploader: 'Admin Arams',
+                    date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }),
+                },
+            ]);
+            setNewDriveTitle('');
+            setNewDriveUrl('');
+            setIsAddDriveLinkModalOpen(false);
+            toast.success('Link Google Drive berhasil disimpan!');
+        }
     };
 
     // -------------------------------------------------------------
@@ -1386,60 +1847,36 @@ export default function ClientDetail({
     const [noteInputCategory, setNoteInputCategory] = useState('Preferensi');
     const [noteCategoryFilter, setNoteCategoryFilter] = useState('all');
     const [noteAuthorFilter, setNoteAuthorFilter] = useState('all');
-    const [notesList, setNotesList] = useState([
-        {
-            id: '1',
-            title: 'Preferensi Klien',
-            category: 'Preferensi',
-            badge_color: 'warning' as const,
-            border_color: 'border-l-amber-400',
-            icon_color: 'text-amber-500 bg-amber-50',
-            content:
-                'Klien menginginkan hasil foto dengan tone warm natural dan video cinematic. Fokus pada emotion dan candid moment.',
-            author: 'Admin Arams',
-            date: '18 Mei 2024, 10:30 WIB',
-            project: 'Prewedding Kevin & Jessica',
-        },
-        {
-            id: '2',
-            title: 'Informasi Lokasi Prewedding',
-            category: 'Informasi',
-            badge_color: 'success' as const,
-            border_color: 'border-l-emerald-400',
-            icon_color: 'text-emerald-500 bg-emerald-50',
-            content:
-                'Lokasi outdoor di Bandung (Kawah Putih & Ranca Upas). Izin lokasi sudah diurus oleh klien.',
-            author: 'Budi Santoso (Supervisor)',
-            date: '17 Mei 2024, 16:20 WIB',
-            project: 'Prewedding Kevin & Jessica',
-        },
-        {
-            id: '3',
-            title: 'Pembayaran & Invoice',
-            category: 'Pembayaran',
-            badge_color: 'info' as const,
-            border_color: 'border-l-blue-400',
-            icon_color: 'text-blue-500 bg-blue-50',
-            content:
-                'DP sudah dibayarkan tanggal 15 Mei 2024 sebesar Rp 10.000.000. Invoice akan dikirim setelah meeting TM Wedding.',
-            author: 'Admin Arams',
-            date: '16 Mei 2024, 14:05 WIB',
-            project: 'Wedding Kevin & Jessica',
-        },
-        {
-            id: '4',
-            title: 'Catatan Meeting TM Wedding',
-            category: 'Meeting',
-            badge_color: 'purple' as const,
-            border_color: 'border-l-purple-400',
-            icon_color: 'text-purple-500 bg-purple-50',
-            content:
-                'TM Wedding dijadwalkan 25 Mei 2024 di kantor. Membahas rundown acara, shotlist, dan kebutuhan khusus.',
-            author: 'Budi Santoso (Supervisor)',
-            date: '15 Mei 2024, 11:15 WIB',
-            project: 'Wedding Kevin & Jessica',
-        },
-    ]);
+    const [notesList, setNotesList] = useState<Array<{
+        id: string;
+        title: string;
+        category: string;
+        badge_color: 'warning' | 'success' | 'info' | 'purple';
+        border_color: string;
+        icon_color: string;
+        content: string;
+        author: string;
+        date: string;
+        project: string;
+    }>>(() => {
+        if (client.notes && client.notes.trim()) {
+            return [
+                {
+                    id: 'client-note-1',
+                    title: 'Catatan Klien',
+                    category: 'Informasi',
+                    badge_color: 'success' as const,
+                    border_color: 'border-l-emerald-400',
+                    icon_color: 'text-emerald-500 bg-emerald-50',
+                    content: client.notes.trim(),
+                    author: 'Admin Arams',
+                    date: client.created_at ? formatDate(client.created_at) : '-',
+                    project: client.projects?.[0]?.name || 'Profil Klien',
+                },
+            ];
+        }
+        return [];
+    });
 
     const handleAddNote = () => {
         if (!noteInputText.trim()) {
@@ -1466,7 +1903,7 @@ export default function ClientDetail({
             content: noteInputText.trim(),
             author: 'Admin Arams',
             date: `${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}, ${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB`,
-            project: client.projects?.[0]?.name || 'Wedding Kevin & Jessica',
+            project: client.projects?.[0]?.name || 'Profil Klien',
         };
 
         setNotesList((prev) => [newNoteObj, ...prev]);
@@ -1488,38 +1925,16 @@ export default function ClientDetail({
     const [commSearchQuery, setCommSearchQuery] = useState('');
     const [commChannelFilter, setCommChannelFilter] = useState('all');
     const [isAddCommModalOpen, setIsAddCommModalOpen] = useState(false);
-    const [commList, setCommList] = useState([
-        {
-            id: '1',
-            channel: 'WhatsApp',
-            icon_type: 'whatsapp',
-            title: 'Konfirmasi Jadwal Technical Meeting',
-            content: 'Klien menyetujui jadwal technical meeting prewedding hari Sabtu, 25 Mei 2024 pukul 14:00 WIB di studio.',
-            author: 'Admin Arams',
-            date: '18 Mei 2024, 15:30 WIB',
-            status: 'Terkirim & Dibalas',
-        },
-        {
-            id: '2',
-            channel: 'Email',
-            icon_type: 'email',
-            title: 'Pengiriman Invoice DP & Kontrak Digital',
-            content: 'Invoice #INV-2025-017 beserta PDF kontrak kerjasama telah dikirimkan ke email klien.',
-            author: 'Finance Team',
-            date: '15 Mei 2024, 11:20 WIB',
-            status: 'Terkirim',
-        },
-        {
-            id: '3',
-            channel: 'Telepon',
-            icon_type: 'phone',
-            title: 'Follow-up Konsep Moodboard & Wardrobe',
-            content: 'Telepon 15 menit dengan calon pengantin mendiskusikan palet warna pakaian dan referensi pose.',
-            author: 'Budi Santoso (Supervisor)',
-            date: '12 Mei 2024, 16:45 WIB',
-            status: 'Selesai',
-        },
-    ]);
+    const [commList, setCommList] = useState<Array<{
+        id: string;
+        channel: string;
+        icon_type: string;
+        title: string;
+        content: string;
+        author: string;
+        date: string;
+        status: string;
+    }>>([]);
     const [newCommFormData, setNewCommFormData] = useState({
         channel: 'WhatsApp',
         title: '',
@@ -1574,9 +1989,9 @@ export default function ClientDetail({
     const [showAccountPassword, setShowAccountPassword] = useState(false);
     const [showAccountPasswordConfirm, setShowAccountPasswordConfirm] = useState(false);
     const [accountMessage, setAccountMessage] = useState(
-        `Halo Kak ${client.name || 'Klien'},\n\nBerikut informasi akun login portal klien Arams Photography Anda:\nSilakan login untuk melihat progress project, review foto, dan download file Anda.`
+        'Silakan login untuk memantau progress project, review foto, dan mengunduh file dokumentasi Anda.'
     );
-    const [accountShareMethod, setAccountShareMethod] = useState<'email' | 'whatsapp' | 'both'>('whatsapp');
+    const [accountShareMethod, setAccountShareMethod] = useState<'email' | 'whatsapp' | 'both'>('email');
     const [submittingAccount, setSubmittingAccount] = useState(false);
 
     // Sync state if client props change
@@ -1647,206 +2062,194 @@ export default function ClientDetail({
         <>
             <Head title={`${client.name || 'Detail Client'} - Arams Photography`} />
 
-            <div className="space-y-4 pb-12 text-slate-800 w-full max-w-full">
-                {/* 1. TOP BREADCRUMB */}
-                <nav className="flex items-center gap-1.5 text-xs text-slate-400">
-                    <Link href="/dashboard" className="hover:text-slate-700 transition-colors">
-                        Dashboard
-                    </Link>
-                    <span>›</span>
-                    <Link href="/clients" className="hover:text-slate-700 transition-colors">
-                        Clients
-                    </Link>
-                    <span>›</span>
-                    <span className="font-semibold text-slate-900">Detail Client</span>
-                </nav>
+            <div className="space-y-5 pb-12 text-slate-800 w-full max-w-full">
 
-                {/* 2. TWO-COLUMN SPLIT: LEFT (HERO + TABS) vs RIGHT (SIDEBAR WIDGETS) */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-                    {/* LEFT COLUMN: HERO PROFILE CARD + TABS CARD (8 COLS) */}
-                    <div className="lg:col-span-8 space-y-5">
-                        {/* TOP HERO PROFILE CARD (MATCHING REFERENCE MOCKUP EXACTLY) */}
-                        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs">
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-5">
-                                {/* Left: Avatar + Identity + 6 Info Chips */}
-                                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1 min-w-0">
-                                    {/* Avatar */}
-                                    <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-full overflow-hidden bg-slate-100 ring-4 ring-slate-100/80 shadow-xs shrink-0">
-                                        <img
-                                            src={
-                                                client.avatar ||
-                                                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'
-                                            }
-                                            alt={client.name}
-                                            className="w-full h-full object-cover"
-                                        />
+                {/* 1. TOP HERO PROFILE CARD (FULL-WIDTH 12 COLS - LUXURY BALANCED BANNER) */}
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs">
+                    <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5">
+                        {/* Left: Avatar + Identity + 6 Info Chips */}
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 flex-1 min-w-0">
+                            {/* Avatar */}
+                            <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-full overflow-hidden bg-slate-100 ring-4 ring-slate-100/80 shadow-xs shrink-0">
+                                <img
+                                    src={
+                                        client.avatar ||
+                                        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'
+                                    }
+                                    alt={client.name}
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+
+                            {/* Identity Header & 6 Chips */}
+                            <div className="space-y-3 flex-1 min-w-0">
+                                {/* Top Row: Name + Klien Premium + [Aktif] Badge on Far Right */}
+                                <div className="flex items-center justify-between gap-3 flex-wrap">
+                                    <div className="flex items-center gap-2.5 flex-wrap">
+                                        <h2 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
+                                            {client.name || '-'}
+                                        </h2>
+                                        <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-[#F3E8FF] text-[#7E22CE]">
+                                            {client.client_type === 'corporate' ? 'Klien Corporate' : 'Klien Premium'}
+                                        </span>
                                     </div>
 
-                                    {/* Identity Header & 6 Chips */}
-                                    <div className="space-y-2.5 flex-1 min-w-0">
-                                        {/* Top Row: Name + Klien Premium + [Aktif] Badge on Far Right */}
-                                        <div className="flex items-center justify-between gap-2 flex-wrap">
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                <h2 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
-                                                    {client.name || 'Kevin Sanjaya & Jessica Mila'}
-                                                </h2>
-                                                <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-[#F3E8FF] text-[#7E22CE]">
-                                                    {client.client_type === 'corporate' ? 'Klien Corporate' : 'Klien Premium'}
-                                                </span>
-                                            </div>
-
-                                            {/* Status Badge right-aligned before Aksi Cepat */}
-                                            <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-[#DCFCE7] text-[#15803D]">
-                                                {client.status === 'completed' ? 'Selesai' : client.status === 'lead' ? 'Lead' : 'Aktif'}
-                                            </span>
-                                        </div>
-
-                                        {/* 6 Information Chips (3 cols x 2 rows) */}
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-3.5 gap-y-2.5 text-xs pt-0.5">
-                                            {/* 1. No. HP */}
-                                            <div className="flex items-center gap-2 min-w-0">
-                                                <div className="w-7 h-7 rounded-lg bg-[#F5F3FF] text-[#7C3AED] flex items-center justify-center shrink-0">
-                                                    <Phone className="w-3.5 h-3.5" />
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <span className="text-[10px] text-slate-400 font-semibold block leading-tight">No. HP</span>
-                                                    <span className="font-extrabold text-slate-900 font-mono text-[11px] block leading-tight truncate">
-                                                        {client.phone || '0813 9876 5432'}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            {/* 2. Email */}
-                                            <div className="flex items-center gap-2 min-w-0">
-                                                <div className="w-7 h-7 rounded-lg bg-[#F5F3FF] text-[#7C3AED] flex items-center justify-center shrink-0">
-                                                    <Mail className="w-3.5 h-3.5" />
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <span className="text-[10px] text-slate-400 font-semibold block leading-tight">Email</span>
-                                                    <span className="font-extrabold text-slate-900 text-[11px] block leading-tight truncate">
-                                                        {client.email || 'kevin.sanjaya@gmail.com'}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            {/* 3. Domisili Klien */}
-                                            <div className="flex items-center gap-2 min-w-0">
-                                                <div className="w-7 h-7 rounded-lg bg-[#F5F3FF] text-[#7C3AED] flex items-center justify-center shrink-0">
-                                                    <MapPin className="w-3.5 h-3.5" />
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <span className="text-[10px] text-slate-400 font-semibold block leading-tight">Domisili Klien</span>
-                                                    <span className="font-extrabold text-slate-900 text-[11px] block leading-tight truncate">
-                                                        {client.city || [client.district, client.city].filter(Boolean).join(', ') || 'Jakarta Selatan, DKI Jakarta'}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            {/* 4. Sumber Klien */}
-                                            <div className="flex items-center gap-2 min-w-0">
-                                                <div className="w-7 h-7 rounded-lg bg-[#F5F3FF] text-[#7C3AED] flex items-center justify-center shrink-0">
-                                                    <Users className="w-3.5 h-3.5" />
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <span className="text-[10px] text-slate-400 font-semibold block leading-tight">Sumber Klien</span>
-                                                    <span className="font-extrabold text-slate-900 text-[11px] block leading-tight truncate">
-                                                        {client.source || 'Instagram Ads'}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            {/* 5. IG Klien */}
-                                            <div className="flex items-center gap-2 min-w-0">
-                                                <div className="w-7 h-7 rounded-lg bg-[#F5F3FF] text-[#7C3AED] flex items-center justify-center shrink-0">
-                                                    <Instagram className="w-3.5 h-3.5" />
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <span className="text-[10px] text-slate-400 font-semibold block leading-tight">IG Klien</span>
-                                                    <span className="font-extrabold text-slate-900 text-[11px] block leading-tight truncate">
-                                                        {client.instagram || '@kevinjessica_wedding'}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            {/* 6. Preferensi Komunikasi */}
-                                            <div className="flex items-center gap-2 min-w-0">
-                                                <div className="w-7 h-7 rounded-lg bg-[#F5F3FF] text-[#7C3AED] flex items-center justify-center shrink-0">
-                                                    <MessageCircle className="w-3.5 h-3.5" />
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <span className="text-[10px] text-slate-400 font-semibold block leading-tight">Preferensi Komunikasi</span>
-                                                    <span className="font-extrabold text-slate-900 capitalize text-[11px] block leading-tight truncate">
-                                                        {client.preferred_contact === 'email' ? 'Email' : client.preferred_contact === 'phone' ? 'Telepon' : 'WhatsApp'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    {/* Status Badge right-aligned before Aksi Cepat */}
+                                    <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-[#DCFCE7] text-[#15803D]">
+                                        {client.status === 'completed' ? 'Selesai' : client.status === 'lead' ? 'Lead' : 'Aktif'}
+                                    </span>
                                 </div>
 
-                                {/* Right: Aksi Cepat Card (With 3 Buttons - EXACT MATCH) */}
-                                <div className="w-full sm:w-44 bg-[#F8FAFC] border border-slate-200/80 rounded-2xl p-3.5 space-y-2 shrink-0">
-                                    <div className="flex items-center justify-between pb-0.5">
-                                        <h3 className="text-xs font-extrabold text-slate-900">Aksi Cepat</h3>
-                                        <button
-                                            type="button"
-                                            onClick={openEditModal}
-                                            className="text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
-                                        >
-                                            <MoreVertical className="w-3.5 h-3.5" />
-                                        </button>
+                                {/* 6 Information Chips (3 atas 3 bawah) */}
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3 text-xs pt-0.5">
+                                    {/* 1. No. HP */}
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <div className="w-7 h-7 rounded-lg bg-[#F5F3FF] text-[#7C3AED] flex items-center justify-center shrink-0">
+                                            <Phone className="w-3.5 h-3.5" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <span className="text-[10px] text-slate-400 font-semibold block leading-tight">No. HP</span>
+                                            <span className="font-extrabold text-slate-900 font-mono text-[11px] block leading-tight truncate">
+                                                {client.phone || '-'}
+                                            </span>
+                                        </div>
                                     </div>
 
-                                    <button
-                                        type="button"
-                                        onClick={openEditModal}
-                                        className="w-full py-1.5 px-3 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-[11px] transition-colors flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
-                                    >
-                                        <Edit3 className="w-3 h-3 text-slate-600" />
-                                        <span>Edit Klien</span>
-                                    </button>
+                                    {/* 2. Email */}
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <div className="w-7 h-7 rounded-lg bg-[#F5F3FF] text-[#7C3AED] flex items-center justify-center shrink-0">
+                                            <Mail className="w-3.5 h-3.5" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <span className="text-[10px] text-slate-400 font-semibold block leading-tight">Email</span>
+                                            <span className="font-extrabold text-slate-900 text-[11px] block leading-tight truncate" title={client.email || '-'}>
+                                                {client.email || '-'}
+                                            </span>
+                                        </div>
+                                    </div>
 
-                                    <Link
-                                        href={`/projects/create?client_id=${client.id}`}
-                                        className="w-full py-1.5 px-3 rounded-xl bg-[#5438DC] hover:bg-[#462ec0] text-white font-bold text-[11px] transition-all flex items-center justify-center gap-1.5 shadow-xs hover:scale-[1.01] cursor-pointer"
-                                    >
-                                        <FolderPlus className="w-3 h-3 text-white" />
-                                        <span>Buat Project</span>
-                                    </Link>
+                                    {/* 3. Domisili Klien */}
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <div className="w-7 h-7 rounded-lg bg-[#F5F3FF] text-[#7C3AED] flex items-center justify-center shrink-0">
+                                            <MapPin className="w-3.5 h-3.5" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <span className="text-[10px] text-slate-400 font-semibold block leading-tight">Domisili Klien</span>
+                                            <span className="font-extrabold text-slate-900 text-[11px] block leading-tight truncate">
+                                                {client.city || [client.district, client.city].filter(Boolean).join(', ') || '-'}
+                                            </span>
+                                        </div>
+                                    </div>
 
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setPaymentFormData({
-                                                project_id: client.projects?.[0]?.id || '',
-                                                amount: '',
-                                                payment_date: new Date().toISOString().split('T')[0],
-                                                payment_method_id: payment_methods?.[0]?.id || '1',
-                                                reference_number: '',
-                                                notes: 'Pelunasan / DP Project',
-                                            });
-                                            setIsPaymentModalOpen(true);
-                                        }}
-                                        className="w-full py-1.5 px-3 rounded-xl bg-[#E57A00] hover:bg-[#cf6d00] text-white font-bold text-[11px] transition-all flex items-center justify-center gap-1 shadow-xs hover:scale-[1.01] cursor-pointer"
-                                    >
-                                        <Plus className="w-3 h-3 text-white" />
-                                        <span>Pembayaran</span>
-                                    </button>
+                                    {/* 4. Sumber Klien */}
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <div className="w-7 h-7 rounded-lg bg-[#F5F3FF] text-[#7C3AED] flex items-center justify-center shrink-0">
+                                            <Users className="w-3.5 h-3.5" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <span className="text-[10px] text-slate-400 font-semibold block leading-tight">Sumber Klien</span>
+                                            <span className="font-extrabold text-slate-900 text-[11px] block leading-tight truncate">
+                                                {client.source || '-'}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* 5. IG Klien */}
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <div className="w-7 h-7 rounded-lg bg-[#F5F3FF] text-[#7C3AED] flex items-center justify-center shrink-0">
+                                            <Instagram className="w-3.5 h-3.5" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <span className="text-[10px] text-slate-400 font-semibold block leading-tight">IG Klien</span>
+                                            <span className="font-extrabold text-slate-900 text-[11px] block leading-tight truncate">
+                                                {client.instagram || '-'}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* 6. Preferensi Komunikasi */}
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <div className="w-7 h-7 rounded-lg bg-[#F5F3FF] text-[#7C3AED] flex items-center justify-center shrink-0">
+                                            <MessageCircle className="w-3.5 h-3.5" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <span className="text-[10px] text-slate-400 font-semibold block leading-tight">Preferensi Komunikasi</span>
+                                            <span className="font-extrabold text-slate-900 capitalize text-[11px] block leading-tight truncate">
+                                                {client.preferred_contact === 'email' ? 'Email' : client.preferred_contact === 'phone' ? 'Telepon' : 'WhatsApp'}
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
+                        {/* Right: Aksi Cepat Card (With 3 Buttons) */}
+                        <div className="w-full lg:w-48 bg-[#F8FAFC] border border-slate-200/80 rounded-2xl p-3.5 space-y-2 shrink-0">
+                            <div className="flex items-center justify-between pb-0.5">
+                                <h3 className="text-xs font-extrabold text-slate-900">Aksi Cepat</h3>
+                                <button
+                                    type="button"
+                                    onClick={openEditModal}
+                                    className="text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+                                >
+                                    <MoreVertical className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={openEditModal}
+                                className="w-full py-1.5 px-3 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-[11px] transition-colors flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+                            >
+                                <Edit3 className="w-3 h-3 text-slate-600" />
+                                <span>Edit Klien</span>
+                            </button>
+
+                            <Link
+                                href={`/projects/create?client_id=${client.id}`}
+                                className="w-full py-1.5 px-3 rounded-xl bg-[#5438DC] hover:bg-[#462ec0] text-white font-bold text-[11px] transition-all flex items-center justify-center gap-1.5 shadow-xs hover:scale-[1.01] cursor-pointer"
+                            >
+                                <FolderPlus className="w-3 h-3 text-white" />
+                                <span>Buat Project</span>
+                            </Link>
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setPaymentFormData({
+                                        project_id: client.projects?.[0]?.id || '',
+                                        amount: '',
+                                        payment_date: new Date().toISOString().split('T')[0],
+                                        payment_method_id: payment_methods?.[0]?.id || '1',
+                                        reference_number: '',
+                                        notes: 'Pelunasan / DP Project',
+                                    });
+                                    setIsPaymentModalOpen(true);
+                                }}
+                                className="w-full py-1.5 px-3 rounded-xl bg-[#E57A00] hover:bg-[#cf6d00] text-white font-bold text-[11px] transition-all flex items-center justify-center gap-1 shadow-xs hover:scale-[1.01] cursor-pointer"
+                            >
+                                <Plus className="w-3 h-3 text-white" />
+                                <span>Pembayaran</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 2. TWO-COLUMN SPLIT: LEFT (TABS CONTENT) vs RIGHT (SIDEBAR WIDGETS) - SEJAJAR HORIZONTAL SEMPURNA & TIDAK BOLONG */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                    {/* LEFT COLUMN: TABS CONTENT CARD (8 COLS) */}
+                    <div className="lg:col-span-8 flex flex-col h-full">
                         {/* UNIFIED CARD WITH TABS & TAB CONTENT */}
-                        <div className="bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden">
+                        <div className="bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden h-full flex flex-col">
                             {/* Tab Bar Header inside Card */}
-                            <div className="px-6 pt-4 border-b border-slate-100 flex items-center gap-7 sm:gap-8 overflow-x-auto scrollbar-none">
+                            <div className="px-6 pt-4 border-b border-slate-100 flex items-center gap-7 sm:gap-8 overflow-x-auto scrollbar-none shrink-0">
                                 {[
                                     { id: 'ringkasan', label: 'Ringkasan' },
                                     { id: 'projects', label: 'Projects & Orders' },
                                     { id: 'pembayaran', label: 'Pembayaran' },
                                     { id: 'files', label: 'Files' },
                                     { id: 'catatan', label: 'Catatan' },
-                                    { id: 'komunikasi', label: 'Riwayat Komunikasi' },
+                                    // { id: 'komunikasi', label: 'Riwayat Komunikasi' }, // Dihide sementara sesuai permintaan
                                     { id: 'akun', label: 'Informasi Akun' },
                                 ].map((t) => {
                                     const isActive = mainTab === t.id;
@@ -1856,8 +2259,8 @@ export default function ClientDetail({
                                             type="button"
                                             onClick={() => setMainTab(t.id as any)}
                                             className={`pb-3 text-xs whitespace-nowrap cursor-pointer relative transition-colors ${isActive
-                                                    ? 'font-extrabold text-[#E57A00]'
-                                                    : 'font-semibold text-slate-500 hover:text-slate-900'
+                                                ? 'font-extrabold text-[#E57A00]'
+                                                : 'font-semibold text-slate-500 hover:text-slate-900'
                                                 }`}
                                         >
                                             {t.label}
@@ -1871,113 +2274,317 @@ export default function ClientDetail({
 
                             {/* TAB 1: RINGKASAN (INFORMASI DETAIL KLIEN - EXACT MATCH TO SCREENSHOT) */}
                             {mainTab === 'ringkasan' && (
-                                <div className="p-6 space-y-5 animate-in fade-in duration-150">
+                                <div className="p-6 space-y-5 animate-in fade-in duration-150 flex-1 flex flex-col justify-between">
                                     <h3 className="text-sm font-extrabold text-slate-900 tracking-tight">
                                         Informasi Detail Klien
                                     </h3>
 
-                                    {/* SECTION 1 & 2: CPW & CPP Side by Side */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {/* CPW Card */}
-                                        <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5">
-                                            <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
-                                                <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
-                                                    <User className="w-3.5 h-3.5" />
+                                    {/* SECTION 1 & 2: Dynamic Cards based on client category */}
+                                    {Boolean(client.child_name || (client.children && client.children.length > 0) || client.client_type === 'newborn') ? (
+                                        /* NEWBORN CARDS: Bayi & Orang Tua */
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+                                            {/* Data Bayi Card */}
+                                            <div className="bg-amber-50/50 border border-amber-200/80 rounded-2xl p-4.5 space-y-3.5 flex flex-col justify-between h-full">
+                                                <div className="flex items-center justify-between pb-1 border-b border-amber-200/70">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-6 h-6 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 border border-amber-200">
+                                                            <Baby className="w-3.5 h-3.5" />
+                                                        </div>
+                                                        <h4 className="text-xs font-bold text-amber-950">
+                                                            Informasi Bayi / Anak (Newborn)
+                                                        </h4>
+                                                    </div>
+                                                    {client.children && client.children.length > 1 && (
+                                                        <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 font-bold text-[10px]">
+                                                            👶 Kembar ({client.children.length} Bayi)
+                                                        </span>
+                                                    )}
                                                 </div>
-                                                <h4 className="text-xs font-bold text-slate-900">
-                                                    Informasi Calon Pengantin (CPW)
-                                                </h4>
+
+                                                <div className="space-y-3 text-xs flex-1">
+                                                    {client.children && client.children.length > 0 ? (
+                                                        <div className="space-y-2.5">
+                                                            {client.children.map((child, idx) => (
+                                                                <div key={idx} className="p-2.5 rounded-xl bg-white/90 border border-amber-200/70 space-y-1.5">
+                                                                    <div className="flex items-center justify-between pb-1 border-b border-amber-100 text-[11px] font-bold text-amber-950">
+                                                                        <span>Bayi #{idx + 1} {client.children && client.children.length > 1 ? '(Kembar)' : ''}</span>
+                                                                        <span className="text-amber-700 font-semibold">{child.gender || '-'}</span>
+                                                                    </div>
+                                                                    <div className="flex items-start">
+                                                                        <span className="text-slate-500 w-24 shrink-0 text-[11px]">Nama Lengkap</span>
+                                                                        <span className="text-slate-400 mr-2 shrink-0">:</span>
+                                                                        <span className="font-semibold text-slate-900 flex-1">{child.name || '-'}</span>
+                                                                    </div>
+                                                                    {child.nickname && (
+                                                                        <div className="flex items-start">
+                                                                            <span className="text-slate-500 w-24 shrink-0 text-[11px]">Panggilan</span>
+                                                                            <span className="text-slate-400 mr-2 shrink-0">:</span>
+                                                                            <span className="font-semibold text-slate-900 flex-1">{child.nickname}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    <div className="flex items-start">
+                                                                        <span className="text-slate-500 w-24 shrink-0 text-[11px]">Tanggal Lahir</span>
+                                                                        <span className="text-slate-400 mr-2 shrink-0">:</span>
+                                                                        <span className="font-semibold text-slate-900 flex-1">{child.birth_date ? formatDate(child.birth_date) : '-'}</span>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="space-y-2.5">
+                                                            <div className="flex items-start">
+                                                                <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Nama Lengkap</span>
+                                                                <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                                <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                                    {client.child_name || client.name || '-'}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-start">
+                                                                <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Tanggal Lahir / HPL</span>
+                                                                <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                                <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                                    {client.child_birth_date ? formatDate(client.child_birth_date) : '-'}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-start">
+                                                                <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Jenis Kelamin</span>
+                                                                <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                                <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                                    {client.child_gender === 'male' ? '👦 Laki-laki (Boy)' : client.child_gender === 'female' ? '👧 Perempuan (Girl)' : '-'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
 
-                                            <div className="space-y-2.5 text-xs">
-                                                <div className="flex items-start">
-                                                    <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Nama Lengkap</span>
-                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug break-words flex-1 min-w-0">
-                                                        {client.bride_name || client.name?.split('&')?.[0]?.trim() || 'Andi Pratama'}
-                                                    </span>
+                                            {/* Data Orang Tua Card */}
+                                            <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5 flex flex-col justify-between h-full">
+                                                <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
+                                                    <div className="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100/80">
+                                                        <User className="w-3.5 h-3.5" />
+                                                    </div>
+                                                    <h4 className="text-xs font-bold text-slate-900">
+                                                        Data Orang Tua / Wali
+                                                    </h4>
                                                 </div>
-                                                <div className="flex items-start">
-                                                    <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Panggilan</span>
-                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                        {client.bride_nickname || (client.bride_name ? client.bride_name.split(' ')[0] : client.name?.split(' ')?.[0]) || 'Andi'}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-start">
-                                                    <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Tanggal Lahir</span>
-                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                        {client.bride_birth_date ? formatDate(client.bride_birth_date) : '15 Mei 1992'}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-start">
-                                                    <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Pekerjaan</span>
-                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                        {client.job_title || 'Pengusaha'}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-start">
-                                                    <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Akun Instagram</span>
-                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug break-words flex-1 min-w-0">
-                                                        {client.instagram || '@kevin_sanjaya'}
-                                                    </span>
+
+                                                <div className="space-y-2.5 text-xs flex-1">
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Nama Ayah</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {client.father_name || client.partner_name || client.name || '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Nama Ibu</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {client.mother_name || '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Pekerjaan</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {client.occupation || '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Akun Instagram</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {client.instagram || client.partner_instagram || '-'}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-
-                                        {/* CPP Card */}
-                                        <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5">
-                                            <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
-                                                <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
-                                                    <User className="w-3.5 h-3.5" />
+                                    ) : Boolean(client.bride_name || client.groom_name || client.client_type === 'wedding' || client.client_type === 'prewedding') ? (
+                                        /* WEDDING CARDS: CPW & CPP Side by Side */
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+                                            {/* CPW Card */}
+                                            <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5 flex flex-col justify-between h-full">
+                                                <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
+                                                    <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
+                                                        <User className="w-3.5 h-3.5" />
+                                                    </div>
+                                                    <h4 className="text-xs font-bold text-slate-900">
+                                                        Informasi Calon Pengantin (CPW)
+                                                    </h4>
                                                 </div>
-                                                <h4 className="text-xs font-bold text-slate-900">
-                                                    Informasi Calon Pengantin (CPP)
-                                                </h4>
+
+                                                <div className="space-y-2.5 text-xs flex-1">
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Nama Lengkap</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {client.bride_name || client.name || '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Panggilan</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {client.bride_nickname || '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Tanggal Lahir</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {client.bride_birth_date ? formatDate(client.bride_birth_date) : '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Pekerjaan</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {client.occupation || '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Akun Instagram</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {client.instagram || '-'}
+                                                        </span>
+                                                    </div>
+                                                </div>
                                             </div>
 
-                                            <div className="space-y-2.5 text-xs">
-                                                <div className="flex items-start">
-                                                    <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Nama Lengkap</span>
-                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug break-words flex-1 min-w-0">
-                                                        {client.groom_name || client.partner_name || (client.name?.includes('&') ? client.name.split('&')[1]?.trim() : 'Sarah Wijaya')}
-                                                    </span>
+                                            {/* CPP Card */}
+                                            <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5 flex flex-col justify-between h-full">
+                                                <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
+                                                    <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
+                                                        <User className="w-3.5 h-3.5" />
+                                                    </div>
+                                                    <h4 className="text-xs font-bold text-slate-900">
+                                                        Informasi Calon Pengantin (CPP)
+                                                    </h4>
                                                 </div>
-                                                <div className="flex items-start">
-                                                    <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Panggilan</span>
-                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                        {client.groom_nickname || (client.partner_name ? client.partner_name.split(' ')[0] : 'Sarah')}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-start">
-                                                    <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Tanggal Lahir</span>
-                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                        {client.groom_birth_date ? formatDate(client.groom_birth_date) : '03 Agustus 1992'}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-start">
-                                                    <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Pekerjaan</span>
-                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                        {client.occupation || 'Aktris'}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-start">
-                                                    <span className="text-slate-400 w-28 shrink-0 text-[11px] pt-0.5">Akun Instagram</span>
-                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug break-words flex-1 min-w-0">
-                                                        {client.partner_instagram || client.instagram || '@jessica_mila'}
-                                                    </span>
+
+                                                <div className="space-y-2.5 text-xs flex-1">
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Nama Lengkap</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {client.groom_name || client.partner_name || '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Panggilan</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {client.groom_nickname || '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Tanggal Lahir</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {client.groom_birth_date ? formatDate(client.groom_birth_date) : '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Pekerjaan</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {client.occupation || '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Akun Instagram</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {client.partner_instagram || '-'}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    ) : (
+                                        /* STANDARD CARDS: Klien Pemesan Umum */
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+                                            <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5 flex flex-col justify-between h-full">
+                                                <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
+                                                    <div className="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100/80">
+                                                        <User className="w-3.5 h-3.5" />
+                                                    </div>
+                                                    <h4 className="text-xs font-bold text-slate-900">
+                                                        Informasi Pemesan / Klien
+                                                    </h4>
+                                                </div>
+
+                                                <div className="space-y-2.5 text-xs flex-1">
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Nama Lengkap</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {client.name}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Kontak PIC</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {client.contact_person || client.partner_name || '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Perusahaan / Brand</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {client.company_name || '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Pekerjaan / Bidang</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {client.occupation || '-'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5 flex flex-col justify-between h-full">
+                                                <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
+                                                    <div className="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100/80">
+                                                        <Tag className="w-3.5 h-3.5" />
+                                                    </div>
+                                                    <h4 className="text-xs font-bold text-slate-900">
+                                                        Informasi Tambahan
+                                                    </h4>
+                                                </div>
+
+                                                <div className="space-y-2.5 text-xs flex-1">
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Sumber Lead</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {client.source || '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Instagram</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {client.instagram || '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Catatan</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-medium text-slate-600 leading-snug flex-1 min-w-0">
+                                                            {client.notes || 'Tidak ada catatan.'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* SECTION 3: Informasi Alamat & Kontak (Numbered 1-12 Badges) */}
                                     <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5">
@@ -1986,61 +2593,61 @@ export default function ClientDetail({
                                                 <MapPin className="w-3.5 h-3.5" />
                                             </div>
                                             <h4 className="text-xs font-bold text-slate-900">
-                                                Informasi Alamat & Kontak
+                                                Informasi Alamat &amp; Kontak
                                             </h4>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-xs">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 sm:gap-x-8 gap-y-3 text-xs">
                                             {/* Column 1: Items 1 to 6 */}
                                             <div className="space-y-2.5">
                                                 <div className="flex items-start">
-                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
-                                                        <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">1</span>
+                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
+                                                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">1</span>
                                                         <span className="text-[11px]">Provinsi</span>
                                                     </div>
-                                                    <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.province || 'DKI Jakarta'}</span>
+                                                    <span className="text-slate-400 mr-2.5 shrink-0">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.province || '-'}</span>
                                                 </div>
                                                 <div className="flex items-start">
-                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
-                                                        <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">2</span>
-                                                        <span className="text-[11px]">Kota / Kabupaten</span>
+                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
+                                                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">2</span>
+                                                        <span className="text-[11px]">Kota/Kabupaten</span>
                                                     </div>
-                                                    <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.city || 'Jakarta Selatan'}</span>
+                                                    <span className="text-slate-400 mr-2.5 shrink-0">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.city || '-'}</span>
                                                 </div>
                                                 <div className="flex items-start">
-                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
-                                                        <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">3</span>
+                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
+                                                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">3</span>
                                                         <span className="text-[11px]">Kecamatan</span>
                                                     </div>
-                                                    <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.district || 'Kebayoran Baru'}</span>
+                                                    <span className="text-slate-400 mr-2.5 shrink-0">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.district || '-'}</span>
                                                 </div>
                                                 <div className="flex items-start">
-                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
-                                                        <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">4</span>
+                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
+                                                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">4</span>
                                                         <span className="text-[11px]">Kelurahan</span>
                                                     </div>
-                                                    <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.village || 'Melawai'}</span>
+                                                    <span className="text-slate-400 mr-2.5 shrink-0">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.village || '-'}</span>
                                                 </div>
                                                 <div className="flex items-start">
-                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
-                                                        <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">5</span>
+                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
+                                                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">5</span>
                                                         <span className="text-[11px]">Kode Pos</span>
                                                     </div>
-                                                    <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                    <span className="font-mono font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.postal_code || '12160'}</span>
+                                                    <span className="text-slate-400 mr-2.5 shrink-0">:</span>
+                                                    <span className="font-mono font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.postal_code || '-'}</span>
                                                 </div>
                                                 <div className="flex items-start">
-                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
-                                                        <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">6</span>
+                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500 pt-0.5">
+                                                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">6</span>
                                                         <span className="text-[11px]">Alamat Lengkap</span>
                                                     </div>
-                                                    <span className="text-slate-400 mr-2 shrink-0">:</span>
+                                                    <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
                                                     <span className="font-semibold text-slate-900 leading-relaxed flex-1 min-w-0">
-                                                        {client.address || 'Jl. Senopati No. 45, Kebayoran Baru, Jakarta Selatan'}
+                                                        {client.address || '-'}
                                                     </span>
                                                 </div>
                                             </div>
@@ -2048,55 +2655,59 @@ export default function ClientDetail({
                                             {/* Column 2: Items 7 to 12 */}
                                             <div className="space-y-2.5">
                                                 <div className="flex items-start">
-                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
-                                                        <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">7</span>
+                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
+                                                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">7</span>
                                                         <span className="text-[11px]">Contact Person</span>
                                                     </div>
-                                                    <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.contact_person || 'Jessica Mila (CPP)'}</span>
+                                                    <span className="text-slate-400 mr-2.5 shrink-0">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 whitespace-nowrap">{client.contact_person || client.name || '-'}</span>
                                                 </div>
                                                 <div className="flex items-start">
-                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
-                                                        <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">8</span>
-                                                        <span className="text-[11px]">Pref. Kontak</span>
+                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
+                                                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">8</span>
+                                                        <span className="text-[11px]">Preferensi Kontak</span>
                                                     </div>
-                                                    <span className="text-slate-400 mr-2 shrink-0">:</span>
+                                                    <span className="text-slate-400 mr-2.5 shrink-0">:</span>
                                                     <span className="font-semibold text-slate-900 leading-snug capitalize flex-1 min-w-0">
                                                         {client.preferred_contact === 'email' ? 'Email' : client.preferred_contact === 'phone' ? 'Telepon' : 'WhatsApp'}
                                                     </span>
                                                 </div>
                                                 <div className="flex items-start">
-                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
-                                                        <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">9</span>
+                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
+                                                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">9</span>
                                                         <span className="text-[11px]">Pekerjaan</span>
                                                     </div>
-                                                    <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.occupation || 'Aktris'}</span>
+                                                    <span className="text-slate-400 mr-2.5 shrink-0">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.occupation || '-'}</span>
                                                 </div>
                                                 <div className="flex items-start">
-                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
-                                                        <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">10</span>
+                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
+                                                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">10</span>
                                                         <span className="text-[11px]">Email Aktif</span>
                                                     </div>
-                                                    <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug break-words flex-1 min-w-0">{client.email || 'client@arams.com'}</span>
+                                                    <span className="text-slate-400 mr-2.5 shrink-0">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 truncate" title={client.email || '-'}>
+                                                        {client.email || '-'}
+                                                    </span>
                                                 </div>
                                                 <div className="flex items-start">
-                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
-                                                        <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">11</span>
+                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
+                                                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">11</span>
                                                         <span className="text-[11px]">Akun Instagram</span>
                                                     </div>
-                                                    <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug break-words flex-1 min-w-0">{client.instagram || '@kevinjessica_wedding'}</span>
+                                                    <span className="text-slate-400 mr-2.5 shrink-0">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 whitespace-nowrap">
+                                                        {client.instagram || '-'}
+                                                    </span>
                                                 </div>
                                                 <div className="flex items-start">
-                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-400">
-                                                        <span className="w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold flex items-center justify-center shrink-0">12</span>
-                                                        <span className="text-[11px]">Sosmed Lain</span>
+                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500 pt-0.5">
+                                                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">12</span>
+                                                        <span className="text-[11px]">Media Sosial Lain</span>
                                                     </div>
-                                                    <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-relaxed flex-1 min-w-0">
-                                                        {client.other_social_media || 'TikTok: @kevinjessica_wed • YouTube: Kevin & Mila'}
+                                                    <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 whitespace-pre-line">
+                                                        {client.other_social_media || '-'}
                                                     </span>
                                                 </div>
                                             </div>
@@ -2114,51 +2725,51 @@ export default function ClientDetail({
                                             </h4>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2.5 text-xs">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2.5 text-xs">
                                             <div className="space-y-2.5">
                                                 <div className="flex items-start">
-                                                    <span className="text-slate-400 w-28 sm:w-32 shrink-0 text-[11px] pt-0.5">Jenis Acara</span>
-                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
+                                                    <span className="text-slate-500 w-44 sm:w-48 shrink-0 text-[11px] pt-0.5">Jenis Acara</span>
+                                                    <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
                                                     <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                        {client.projects?.[0]?.category?.name || 'Wedding'}
+                                                        {client.projects?.[0]?.category?.name || '-'}
                                                     </span>
                                                 </div>
                                                 <div className="flex items-start">
-                                                    <span className="text-slate-400 w-28 sm:w-32 shrink-0 text-[11px] pt-0.5">Tanggal Acara</span>
-                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
+                                                    <span className="text-slate-500 w-44 sm:w-48 shrink-0 text-[11px] pt-0.5">Tanggal Pelaksanaan Acara</span>
+                                                    <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
                                                     <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                        {client.projects?.[0]?.event_date ? formatDate(client.projects[0].event_date) : '22 Mei 2026'}
+                                                        {client.projects?.[0]?.event_date ? formatDate(client.projects[0].event_date) : '-'}
                                                     </span>
                                                 </div>
                                                 <div className="flex items-start">
-                                                    <span className="text-slate-400 w-28 sm:w-32 shrink-0 text-[11px] pt-0.5">Waktu Acara</span>
-                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
+                                                    <span className="text-slate-500 w-44 sm:w-48 shrink-0 text-[11px] pt-0.5">Waktu Pelaksanaan Acara</span>
+                                                    <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
                                                     <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                        {client.projects?.[0]?.event_time || '16:00 – Selesai'}
+                                                        {client.projects?.[0]?.event_time || '-'}
                                                     </span>
                                                 </div>
                                             </div>
 
                                             <div className="space-y-2.5">
                                                 <div className="flex items-start">
-                                                    <span className="text-slate-400 w-28 sm:w-32 shrink-0 text-[11px] pt-0.5">Lokasi / Venue</span>
-                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
+                                                    <span className="text-slate-500 w-32 sm:w-36 shrink-0 text-[11px] pt-0.5">Tempat Acara</span>
+                                                    <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
                                                     <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                        {client.projects?.[0]?.location || 'Grand Ballroom Hotel Mulia Senayan, Jakarta'}
+                                                        {client.projects?.[0]?.location || '-'}
                                                     </span>
                                                 </div>
                                                 <div className="flex items-start">
-                                                    <span className="text-slate-400 w-28 sm:w-32 shrink-0 text-[11px] pt-0.5">Paket Layanan</span>
-                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
+                                                    <span className="text-slate-500 w-32 sm:w-36 shrink-0 text-[11px] pt-0.5">Paket Dipilih</span>
+                                                    <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
                                                     <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                        {client.projects?.[0]?.package?.name || 'Royal Wedding Package'}
+                                                        {client.projects?.[0]?.package?.name || '-'}
                                                     </span>
                                                 </div>
                                                 <div className="flex items-start">
-                                                    <span className="text-slate-400 w-28 sm:w-32 shrink-0 text-[11px] pt-0.5">Kategori Project</span>
-                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
+                                                    <span className="text-slate-500 w-32 sm:w-36 shrink-0 text-[11px] pt-0.5">Kategori Project</span>
+                                                    <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
                                                     <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                        {client.projects?.[0]?.category?.name || 'Wedding'}
+                                                        {client.projects?.[0]?.category?.name || '-'}
                                                     </span>
                                                 </div>
                                             </div>
@@ -2177,10 +2788,10 @@ export default function ClientDetail({
                                         </div>
 
                                         <div className="flex items-start text-xs">
-                                            <span className="text-slate-400 w-20 shrink-0 text-[11px] pt-0.5">Catatan</span>
+                                            <span className="text-slate-500 w-44 sm:w-48 shrink-0 text-[11px] pt-0.5">Catatan</span>
                                             <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                            <p className="font-medium text-slate-700 leading-relaxed flex-1 min-w-0">
-                                                {client.notes || 'Klien menginginkan konsep elegan & timeless. Request outdoor photo session di venue.'}
+                                            <p className="font-semibold text-slate-900 leading-relaxed flex-1 min-w-0">
+                                                {client.notes || '-'}
                                             </p>
                                         </div>
                                     </div>
@@ -2429,17 +3040,20 @@ export default function ClientDetail({
                                         </div>
                                     </div>
 
-                                    {/* 4 KPI Summary Cards (Gambar 1) */}
+                                    {/* 4 KPI Summary Cards (Gambar 3) */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
                                         <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-1">
                                             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
                                                 Total Tagihan
                                             </span>
-                                            <div className="text-lg font-bold font-mono text-slate-900">
-                                                Rp 101.500.000
+                                            <div
+                                                className="text-lg font-bold font-mono text-slate-900"
+                                                title={formatRupiah(paymentSummary.totalTagihan)}
+                                            >
+                                                {formatCurrencyShort(paymentSummary.totalTagihan)}
                                             </div>
                                             <span className="text-[11px] text-slate-400 block">
-                                                9 Invoice
+                                                {paymentSummary.invoiceCount} Invoice
                                             </span>
                                         </div>
 
@@ -2447,11 +3061,14 @@ export default function ClientDetail({
                                             <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">
                                                 Total Dibayar
                                             </span>
-                                            <div className="text-lg font-bold font-mono text-emerald-600">
-                                                Rp 85.750.000
+                                            <div
+                                                className="text-lg font-bold font-mono text-emerald-600"
+                                                title={formatRupiah(paymentSummary.totalDibayar)}
+                                            >
+                                                {formatCurrencyShort(paymentSummary.totalDibayar)}
                                             </div>
                                             <span className="text-[11px] text-emerald-600/80 block">
-                                                8 Pembayaran
+                                                {paymentSummary.paymentCount} Pembayaran
                                             </span>
                                         </div>
 
@@ -2459,11 +3076,14 @@ export default function ClientDetail({
                                             <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider block">
                                                 Sisa Tagihan
                                             </span>
-                                            <div className="text-lg font-bold font-mono text-amber-600">
-                                                Rp 15.750.000
+                                            <div
+                                                className="text-lg font-bold font-mono text-amber-600"
+                                                title={formatRupiah(paymentSummary.sisaTagihan)}
+                                            >
+                                                {formatCurrencyShort(paymentSummary.sisaTagihan)}
                                             </div>
                                             <span className="text-[11px] text-amber-600/80 block">
-                                                3 Invoice
+                                                {paymentSummary.unpaidInvoiceCount} Invoice
                                             </span>
                                         </div>
 
@@ -2473,14 +3093,23 @@ export default function ClientDetail({
                                                     Persentase Dibayar
                                                 </span>
                                                 <span className="text-xs font-bold font-mono text-slate-900">
-                                                    84,52%
+                                                    {paymentSummary.percent.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%
                                                 </span>
                                             </div>
                                             <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                                                <div className="h-full bg-emerald-500 rounded-full" style={{ width: '84.52%' }} />
+                                                <div
+                                                    className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                                                    style={{ width: `${paymentSummary.percent}%` }}
+                                                />
                                             </div>
                                             <span className="text-[10px] text-slate-400 block pt-0.5">
-                                                Tingkat pelunasan sangat baik
+                                                {paymentSummary.percent >= 100
+                                                    ? 'Tagihan sudah lunas sepenuhnya'
+                                                    : paymentSummary.percent >= 80
+                                                        ? 'Tingkat pelunasan sangat baik'
+                                                        : paymentSummary.percent >= 50
+                                                            ? 'Pembayaran sebagian telah diterima'
+                                                            : 'Menunggu pembayaran tahap berikutnya'}
                                             </span>
                                         </div>
                                     </div>
@@ -2612,41 +3241,22 @@ export default function ClientDetail({
                                     </div>
 
                                     {/* PROJECT SWITCHER BAR WITH SELECT SEARCH */}
-                                    <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 shadow-2xs space-y-4">
-                                        {/* Header Row with Label & Workflow Switcher Pills */}
-                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 shadow-2xs space-y-3.5">
+                                        {/* Header Row with Title & Active Workflow Indicator */}
+                                        <div className="flex items-center justify-between gap-3">
                                             <div>
-                                                <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                                                    <Folder className="w-3.5 h-3.5 text-primary-accent" />
+                                                <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                                    <Folder className="w-4 h-4 text-primary-accent" />
                                                     <span>Pilih Project Klien ({initialProjectsList.length} Project)</span>
                                                 </label>
-                                                <p className="text-[11px] text-slate-400 mt-0.5">
-                                                    Cari & pilih project untuk cek alur tahapan & berkas pengerjaan
+                                                <p className="text-[11px] text-slate-500 mt-0.5">
+                                                    Cari & pilih project untuk cek alur tahapan kerja, berkas & deliverables pengerjaan
                                                 </p>
                                             </div>
 
-                                            {/* Workflow Switcher Pills (Adapts cleanly on all viewports) */}
-                                            <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200/80 shadow-2xs self-start sm:self-auto shrink-0">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setActiveWorkflowTab('wedding')}
-                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeWorkflowTab === 'wedding'
-                                                            ? 'bg-primary-accent text-white shadow-xs'
-                                                            : 'text-slate-600 hover:bg-slate-100'
-                                                        }`}
-                                                >
-                                                    Wedding (8 Tahap)
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setActiveWorkflowTab('prewedding')}
-                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${activeWorkflowTab === 'prewedding'
-                                                            ? 'bg-primary-accent text-white shadow-xs'
-                                                            : 'text-slate-600 hover:bg-slate-100'
-                                                        }`}
-                                                >
-                                                    Prewedding / Event (5 Tahap)
-                                                </button>
+                                            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs text-xs font-bold text-slate-700 shrink-0">
+                                                <Layers className="w-3.5 h-3.5 text-primary-accent" />
+                                                <span>{activeWorkflowDef.name}</span>
                                             </div>
                                         </div>
 
@@ -2663,7 +3273,7 @@ export default function ClientDetail({
                                             />
                                         </div>
 
-                                        {/* Active Project Info Strip */}
+                                        {/* Active Project Info Strip (Gambar 2: Interactive Project Status Switcher) */}
                                         <div className="pt-3 border-t border-slate-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
                                             <div className="flex items-center gap-2 flex-wrap min-w-0">
                                                 <span className="font-mono text-xs font-extrabold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-primary-accent shadow-2xs shrink-0">
@@ -2683,91 +3293,203 @@ export default function ClientDetail({
                                                     <Calendar className="w-3.5 h-3.5 text-slate-400" />
                                                     {selectedProject?.event_date}
                                                 </span>
-                                                <Badge
-                                                    variant={selectedProject?.status_color as any}
-                                                    className="text-[10px] font-bold px-2 py-0.5"
-                                                >
-                                                    {selectedProject?.status}
-                                                </Badge>
+
+                                                {/* Project Overall Status Dropdown Switcher */}
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <button
+                                                            type="button"
+                                                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border shadow-2xs cursor-pointer transition-all hover:ring-2 hover:ring-primary-accent/20 ${getProjectStatusBadgeStyle(selectedRawProject?.status || 'draft')}`}
+                                                            title="Klik untuk mengubah status project langsung ke database"
+                                                        >
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                                                            <span>{getProjectStatusLabel(selectedRawProject?.status || 'draft')}</span>
+                                                            <ChevronDown className="w-3 h-3 opacity-70" />
+                                                        </button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="w-48 p-1.5 text-xs bg-white shadow-xl rounded-xl border border-slate-200 z-50">
+                                                        <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                                            Ubah Status Project
+                                                        </div>
+                                                        {PROJECT_STATUS_OPTIONS.map((opt) => (
+                                                            <DropdownMenuItem
+                                                                key={opt.value}
+                                                                onClick={() => handleUpdateProjectStatus(opt.value)}
+                                                                className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${selectedRawProject?.status === opt.value ? 'bg-slate-100 font-bold' : 'hover:bg-slate-50'}`}
+                                                            >
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className={`w-2 h-2 rounded-full ${opt.dotColor}`} />
+                                                                    <span className={opt.textColor}>{opt.label}</span>
+                                                                </div>
+                                                                {selectedRawProject?.status === opt.value && (
+                                                                    <Check className="w-3.5 h-3.5 text-slate-600" />
+                                                                )}
+                                                            </DropdownMenuItem>
+                                                        ))}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Connected Horizontal Stepper Timeline */}
-                                    <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs overflow-x-auto space-y-2">
-                                        <div className="flex items-center justify-between pb-1 text-[11px] text-slate-400 font-medium">
-                                            <span>Alur Tahapan Pekerjaan (Klik salah satu step untuk rincian)</span>
-                                            <span>
-                                                {completedStagesCount} dari {currentStages.length} Tahap Selesai
-                                            </span>
+                                    {/* Connected Horizontal Stepper Timeline (Gambar 1: Direct Timeline Status Update) */}
+                                    <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-3">
+                                        <div className="flex items-center justify-between pb-1 border-b border-slate-100 text-xs">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-6 h-6 rounded-lg bg-primary-accent/10 flex items-center justify-center text-primary-accent shrink-0">
+                                                    <Layers className="w-3.5 h-3.5" />
+                                                </div>
+                                                <div>
+                                                    <span className="font-bold text-slate-900 block text-xs">
+                                                        {activeWorkflowDef.name} — Alur Tahapan Kerja
+                                                    </span>
+                                                    <span className="text-[11px] text-slate-400 block sm:hidden">
+                                                        {completedStagesCount} dari {currentStages.length} Tahap Selesai
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="hidden sm:flex items-center gap-2">
+                                                <span className="text-[11px] text-slate-500">Status Alur:</span>
+                                                <span className="font-bold text-slate-800 font-mono text-xs px-2.5 py-0.5 rounded-md bg-slate-100">
+                                                    {completedStagesCount} dari {currentStages.length} Tahap Selesai
+                                                </span>
+                                            </div>
                                         </div>
 
-                                        <div className="relative min-w-[760px] pt-3 pb-2">
-                                            {/* Background connecting line bar */}
-                                            <div className="absolute top-[27px] left-8 right-8 h-1 bg-slate-200 -z-0 rounded-full overflow-hidden">
+                                        <div className="overflow-x-auto pb-2 pt-2 -mx-1 px-1">
+                                            <div
+                                                className="relative pt-2 pb-1"
+                                                style={{ minWidth: currentStages.length > 5 ? `${currentStages.length * 115}px` : '100%' }}
+                                            >
+                                                {/* Connecting line bar aligned to the center of first & last circle */}
                                                 <div
-                                                    className="h-full bg-emerald-500 transition-all duration-300 rounded-full"
+                                                    className="absolute top-[26px] h-1 bg-slate-200 -z-0 rounded-full overflow-hidden"
                                                     style={{
-                                                        width: `${Math.min(
-                                                            100,
-                                                            (completedStagesCount / (currentStages.length - 1 || 1)) * 100
-                                                        )}%`,
+                                                        left: `calc(100% / (${currentStages.length} * 2))`,
+                                                        right: `calc(100% / (${currentStages.length} * 2))`,
                                                     }}
-                                                />
-                                            </div>
+                                                >
+                                                    <div
+                                                        className="h-full bg-emerald-500 transition-all duration-300 rounded-full"
+                                                        style={{
+                                                            width: `${Math.min(
+                                                                100,
+                                                                currentStages.length > 1
+                                                                    ? (completedStagesCount / (currentStages.length - 1)) * 100
+                                                                    : completedStagesCount === 1 ? 100 : 0
+                                                            )}%`,
+                                                        }}
+                                                    />
+                                                </div>
 
-                                            <div className="flex items-start justify-between relative z-10 gap-2">
-                                                {currentStages.map((s, idx) => {
-                                                    const isStepSelected = selectedStageIndex === idx;
-                                                    return (
-                                                        <button
-                                                            key={s.step}
-                                                            type="button"
-                                                            onClick={() => setSelectedStageIndex(idx)}
-                                                            className="flex-1 flex flex-col items-center text-center cursor-pointer group transition-all"
-                                                        >
+                                                <div className="flex items-start justify-between relative z-10">
+                                                    {currentStages.map((s, idx) => {
+                                                        const isStepSelected = selectedStageIndex === idx;
+                                                        return (
                                                             <div
-                                                                className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shadow-2xs mb-2 transition-all relative ${s.status === 'done'
-                                                                        ? 'bg-emerald-500 text-white shadow-emerald-200 ring-2 ring-white'
-                                                                        : s.status === 'active'
-                                                                            ? 'bg-primary-accent text-white ring-4 ring-primary-accent/25 shadow-md scale-105'
-                                                                            : 'bg-white border-2 border-slate-300 text-slate-500 group-hover:border-slate-400 group-hover:bg-slate-50'
-                                                                    } ${isStepSelected
-                                                                        ? 'ring-2 ring-offset-2 ring-primary-accent'
-                                                                        : ''
-                                                                    }`}
+                                                                key={s.step || idx}
+                                                                className="flex-1 flex flex-col items-center text-center group transition-all px-1"
                                                             >
-                                                                {s.status === 'done' ? (
-                                                                    <Check className="w-4 h-4" />
-                                                                ) : (
-                                                                    <span>{s.step}</span>
-                                                                )}
+                                                                {/* Step Circle & Title Button (Selects Stage) */}
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setSelectedStageIndex(idx)}
+                                                                    className="w-full flex flex-col items-center text-center cursor-pointer focus:outline-none"
+                                                                    title={`Klik untuk lihat detail Tahap ${s.step}: ${s.title}`}
+                                                                >
+                                                                    <div
+                                                                        className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shadow-2xs mb-2 transition-all relative ${s.status === 'done'
+                                                                                ? 'bg-emerald-500 text-white shadow-emerald-200 ring-2 ring-white'
+                                                                                : s.status === 'active'
+                                                                                    ? 'bg-primary-accent text-white ring-4 ring-primary-accent/25 shadow-md scale-105'
+                                                                                    : 'bg-white border-2 border-slate-300 text-slate-500 group-hover:border-slate-400 group-hover:bg-slate-50'
+                                                                            } ${isStepSelected ? 'ring-2 ring-offset-2 ring-primary-accent' : ''}`}
+                                                                    >
+                                                                        {s.status === 'done' ? (
+                                                                            <Check className="w-4 h-4 stroke-[2.5]" />
+                                                                        ) : (
+                                                                            <span>{s.step}</span>
+                                                                        )}
+                                                                    </div>
+
+                                                                    <span
+                                                                        className={`text-[11px] font-bold line-clamp-2 max-w-[110px] leading-tight transition-colors ${isStepSelected
+                                                                                ? 'text-primary-accent font-extrabold'
+                                                                                : s.status === 'active'
+                                                                                    ? 'text-slate-900 font-extrabold'
+                                                                                    : 'text-slate-700 group-hover:text-slate-900'
+                                                                            }`}
+                                                                    >
+                                                                        {s.title}
+                                                                    </span>
+                                                                </button>
+
+                                                                {/* Direct Stage Status Update Dropdown Trigger (Gambar 1) */}
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild>
+                                                                        <button
+                                                                            type="button"
+                                                                            className={`text-[10px] font-semibold mt-1.5 px-2 py-0.5 rounded-md flex items-center gap-1 cursor-pointer transition-all hover:ring-2 hover:ring-primary-accent/20 border shadow-2xs ${s.status === 'done'
+                                                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80 hover:bg-emerald-100'
+                                                                                    : s.status === 'active'
+                                                                                        ? 'bg-amber-50 text-amber-700 border-amber-200/80 font-bold hover:bg-amber-100'
+                                                                                        : 'text-slate-500 bg-slate-50 border-slate-200 hover:bg-slate-100'
+                                                                                }`}
+                                                                            title="Klik untuk ubah status tahap ini"
+                                                                        >
+                                                                            <span className={`w-1.5 h-1.5 rounded-full ${s.status === 'done' ? 'bg-emerald-500' : s.status === 'active' ? 'bg-amber-500' : 'bg-slate-300'}`} />
+                                                                            <span>{s.status === 'done' ? 'Selesai' : s.status === 'active' ? 'Dikerjakan' : 'Belum Mulai'}</span>
+                                                                            <ChevronDown className="w-2.5 h-2.5 opacity-60 ml-0.5" />
+                                                                        </button>
+                                                                    </DropdownMenuTrigger>
+                                                                    <DropdownMenuContent align="center" className="w-48 p-1.5 text-xs bg-white shadow-xl rounded-xl border border-slate-200 z-50">
+                                                                        <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                                                            Status Tahap {s.step}
+                                                                        </div>
+                                                                        <DropdownMenuItem
+                                                                            onClick={() => handleQuickUpdateStageStatus(idx, 'done')}
+                                                                            className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-700 hover:bg-emerald-50 ${s.status === 'done' ? 'bg-emerald-50 font-bold' : ''}`}
+                                                                        >
+                                                                            <div className="flex items-center gap-2">
+                                                                                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                                                                <span>Tandai Selesai</span>
+                                                                            </div>
+                                                                            {s.status === 'done' && <Check className="w-3.5 h-3.5 text-emerald-600" />}
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuItem
+                                                                            onClick={() => handleQuickUpdateStageStatus(idx, 'active')}
+                                                                            className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium text-amber-700 hover:bg-amber-50 ${s.status === 'active' ? 'bg-amber-50 font-bold' : ''}`}
+                                                                        >
+                                                                            <div className="flex items-center gap-2">
+                                                                                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                                                                                <span>Sedang Dikerjakan</span>
+                                                                            </div>
+                                                                            {s.status === 'active' && <Check className="w-3.5 h-3.5 text-amber-600" />}
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuItem
+                                                                            onClick={() => handleQuickUpdateStageStatus(idx, 'pending')}
+                                                                            className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 ${s.status === 'pending' ? 'bg-slate-100 font-bold' : ''}`}
+                                                                        >
+                                                                            <div className="flex items-center gap-2">
+                                                                                <span className="w-2 h-2 rounded-full bg-slate-300" />
+                                                                                <span>Belum Dimulai</span>
+                                                                            </div>
+                                                                            {s.status === 'pending' && <Check className="w-3.5 h-3.5 text-slate-600" />}
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuSeparator />
+                                                                        <DropdownMenuItem
+                                                                            onClick={() => openEditStageModal(idx)}
+                                                                            className="flex items-center gap-2 cursor-pointer text-slate-700 hover:bg-slate-50 px-2.5 py-1.5 rounded-lg text-xs font-medium"
+                                                                        >
+                                                                            <Pencil className="w-3 h-3 text-slate-400" />
+                                                                            <span>Edit Detail Tahap...</span>
+                                                                        </DropdownMenuItem>
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
                                                             </div>
-
-                                                            <span
-                                                                className={`text-[11px] font-bold line-clamp-2 max-w-[95px] transition-colors ${isStepSelected
-                                                                        ? 'text-primary-accent font-extrabold'
-                                                                        : s.status === 'active'
-                                                                            ? 'text-slate-900'
-                                                                            : 'text-slate-700'
-                                                                    }`}
-                                                            >
-                                                                {s.title}
-                                                            </span>
-
-                                                            <span
-                                                                className={`text-[10px] font-semibold mt-1 px-1.5 py-0.5 rounded-md ${s.status === 'done'
-                                                                        ? 'bg-emerald-50 text-emerald-700'
-                                                                        : s.status === 'active'
-                                                                            ? 'bg-amber-50 text-amber-700 font-bold'
-                                                                            : 'text-slate-400 bg-slate-50'
-                                                                    }`}
-                                                            >
-                                                                {s.date}
-                                                            </span>
-                                                        </button>
-                                                    );
-                                                })}
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -2777,28 +3499,91 @@ export default function ClientDetail({
                                         {/* Left Card: Detail Tahap Terpilih */}
                                         <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex flex-col justify-between gap-4">
                                             {/* Stage Pill & Status Header */}
-                                            <div className="space-y-2 pb-3 border-b border-slate-100">
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <span className="px-2.5 py-1 rounded-lg bg-primary-accent/10 text-primary-accent text-xs font-black tracking-wide shrink-0">
-                                                        Tahap {selectedStage.step}
-                                                    </span>
-                                                    <Badge
-                                                        variant={
-                                                            selectedStage.status === 'done'
-                                                                ? 'success'
-                                                                : selectedStage.status === 'active'
-                                                                    ? 'info'
-                                                                    : 'secondary'
-                                                        }
-                                                        className="text-[10px] font-bold px-2.5 py-1 shrink-0"
-                                                    >
-                                                        {selectedStage.status === 'done'
-                                                            ? 'Selesai (100%)'
-                                                            : selectedStage.status === 'active'
-                                                                ? 'Sedang Dikerjakan (60%)'
-                                                                : 'Belum Dimulai (0%)'}
-                                                    </Badge>
+                                            <div className="space-y-2.5 pb-3 border-b border-slate-100">
+                                                <div className="flex items-center justify-between gap-2 flex-wrap">
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                        <span className="px-2.5 py-1 rounded-lg bg-primary-accent/10 text-primary-accent text-xs font-black tracking-wide whitespace-nowrap shrink-0">
+                                                            Tahap {selectedStage.step} dari {currentStages.length}
+                                                        </span>
+                                                        {selectedStage.isCustom && (
+                                                            <span className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-100 text-[10px] font-extrabold whitespace-nowrap shrink-0">
+                                                                Custom
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        {/* Stage Status Dropdown Switcher on Detail Card */}
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <button
+                                                                    type="button"
+                                                                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold border shadow-2xs cursor-pointer transition-all hover:ring-2 hover:ring-primary-accent/20 ${selectedStage.status === 'done'
+                                                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                                            : selectedStage.status === 'active'
+                                                                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                                                                : 'bg-slate-100 text-slate-700 border-slate-200'
+                                                                        }`}
+                                                                    title="Klik untuk ubah status tahap ini"
+                                                                >
+                                                                    <span className={`w-1.5 h-1.5 rounded-full ${selectedStage.status === 'done' ? 'bg-emerald-500' : selectedStage.status === 'active' ? 'bg-amber-500' : 'bg-slate-300'}`} />
+                                                                    <span>
+                                                                        {selectedStage.status === 'done'
+                                                                            ? 'Selesai (100%)'
+                                                                            : selectedStage.status === 'active'
+                                                                                ? 'Sedang Dikerjakan'
+                                                                                : 'Belum Dimulai'}
+                                                                    </span>
+                                                                    <ChevronDown className="w-2.5 h-2.5 opacity-60 ml-0.5" />
+                                                                </button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end" className="w-48 p-1.5 text-xs bg-white shadow-xl rounded-xl border border-slate-200 z-50">
+                                                                <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                                                    Status Tahap {selectedStage.step}
+                                                                </div>
+                                                                <DropdownMenuItem
+                                                                    onClick={() => handleQuickUpdateStageStatus(selectedStageIndex, 'done')}
+                                                                    className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-700 hover:bg-emerald-50 ${selectedStage.status === 'done' ? 'bg-emerald-50 font-bold' : ''}`}
+                                                                >
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                                                        <span>Tandai Selesai</span>
+                                                                    </div>
+                                                                    {selectedStage.status === 'done' && <Check className="w-3.5 h-3.5 text-emerald-600" />}
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem
+                                                                    onClick={() => handleQuickUpdateStageStatus(selectedStageIndex, 'active')}
+                                                                    className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium text-amber-700 hover:bg-amber-50 ${selectedStage.status === 'active' ? 'bg-amber-50 font-bold' : ''}`}
+                                                                >
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="w-2 h-2 rounded-full bg-amber-500" />
+                                                                        <span>Sedang Dikerjakan</span>
+                                                                    </div>
+                                                                    {selectedStage.status === 'active' && <Check className="w-3.5 h-3.5 text-amber-600" />}
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem
+                                                                    onClick={() => handleQuickUpdateStageStatus(selectedStageIndex, 'pending')}
+                                                                    className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 ${selectedStage.status === 'pending' ? 'bg-slate-100 font-bold' : ''}`}
+                                                                >
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="w-2 h-2 rounded-full bg-slate-300" />
+                                                                        <span>Belum Dimulai</span>
+                                                                    </div>
+                                                                    {selectedStage.status === 'pending' && <Check className="w-3.5 h-3.5 text-slate-600" />}
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuItem
+                                                                    onClick={() => openEditStageModal(selectedStageIndex)}
+                                                                    className="flex items-center gap-2 cursor-pointer text-slate-700 hover:bg-slate-50 px-2.5 py-1.5 rounded-lg text-xs font-medium"
+                                                                >
+                                                                    <Pencil className="w-3 h-3 text-slate-400" />
+                                                                    <span>Edit Detail Tahap...</span>
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </div>
                                                 </div>
+
                                                 <h4 className="text-base sm:text-lg font-extrabold text-slate-900 leading-snug">
                                                     {selectedStage.title}
                                                 </h4>
@@ -2823,26 +3608,94 @@ export default function ClientDetail({
                                                 </div>
                                             </div>
 
+                                            {/* Target Duration & Output Deliverable Info */}
+                                            {/* <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                                                <div className="p-3.5 rounded-xl bg-slate-50/90 border border-slate-100 space-y-1">
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                                                        <Clock className="w-3 h-3 text-slate-400" />
+                                                        <span>Target Durasi / Deadline</span>
+                                                    </span>
+                                                    <span className="font-bold text-slate-900 block font-mono text-xs">
+                                                        {selectedStage.duration}
+                                                    </span>
+                                                </div>
+                                                <div className="p-3.5 rounded-xl bg-slate-50/90 border border-slate-100 space-y-1">
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                                                        <Box className="w-3 h-3 text-slate-400" />
+                                                        <span>Output / Deliverable</span>
+                                                    </span>
+                                                    <span className="font-bold text-slate-900 block leading-snug text-xs">
+                                                        {selectedStage.deliv}
+                                                    </span>
+                                                </div>
+                                            </div> */}
+
                                             {/* Description Box */}
-                                            <div className="p-3.5 rounded-xl bg-slate-50/80 border-l-4 border-primary-accent border border-slate-100 space-y-1">
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                                                    Deskripsi & Catatan Tahapan
+                                            {/* <div className="p-3.5 rounded-xl bg-slate-50/80 border-l-4 border-primary-accent border border-slate-100 space-y-1">
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                                                    <FileText className="w-3 h-3 text-slate-400" />
+                                                    <span>Aktivitas Tim & Deskripsi</span>
                                                 </span>
                                                 <p className="text-xs text-slate-600 leading-relaxed">
                                                     {selectedStage.description || 'Pekerjaan berjalan sesuai SOP dan timeline produksi.'}
                                                 </p>
-                                            </div>
+                                            </div> */}
 
                                             {/* Footer Metadata */}
                                             <div className="grid grid-cols-2 gap-3 pt-2 text-xs border-t border-slate-100">
                                                 <div>
-                                                    <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Status / Tanggal</span>
+                                                    <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Status Tahap</span>
                                                     <span className="font-bold text-slate-800 mt-0.5 block">{selectedStage.date}</span>
                                                 </div>
                                                 <div>
                                                     <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Penanggung Jawab (PIC)</span>
-                                                    <span className="font-bold text-slate-800 mt-0.5 block">{selectedStage.pic}</span>
+                                                    <span className="font-bold text-slate-800 mt-0.5 block truncate" title={selectedStage.pic}>{selectedStage.pic}</span>
                                                 </div>
+                                            </div>
+
+                                            {/* Action Buttons: Edit Stage & Update Status to DB */}
+                                            <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                                                {/* <button
+                                                    type="button"
+                                                    onClick={() => openEditStageModal(selectedStageIndex)}
+                                                    className="py-2 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:scale-[0.99] text-slate-700 font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs shrink-0"
+                                                >
+                                                    <Pencil className="w-3.5 h-3.5 text-primary-accent" />
+                                                    <span>Edit Detail Tahap</span>
+                                                </button> */}
+
+                                                {selectedProject?.status !== 'Selesai' && (
+                                                    <>
+                                                        {selectedStage.status === 'pending' && (
+                                                            <button
+                                                                type="button"
+                                                                disabled={updatingStage}
+                                                                onClick={() => handleUpdateStage(selectedStage.title, 'in_progress', Math.round(((selectedStageIndex) / currentStages.length) * 100))}
+                                                                className="flex-1 py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                                            >
+                                                                <PlayCircle className="w-3.5 h-3.5" />
+                                                                <span>{updatingStage ? 'Menyimpan...' : 'Jadikan Aktif'}</span>
+                                                            </button>
+                                                        )}
+                                                        {selectedStage.status === 'active' && (
+                                                            <button
+                                                                type="button"
+                                                                disabled={updatingStage}
+                                                                onClick={() => handleUpdateStage(selectedStage.title, 'completed', Math.round(((selectedStageIndex + 1) / currentStages.length) * 100))}
+                                                                className="flex-1 py-2 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                                            >
+                                                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                                                <span>{updatingStage ? 'Menyimpan...' : 'Tandai Selesai'}</span>
+                                                            </button>
+                                                        )}
+                                                        {selectedStage.status === 'done' && (
+                                                            <span className="flex-1 py-2 px-3 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 font-bold text-xs flex items-center justify-center gap-1.5">
+                                                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                                                Tahap ini sudah selesai
+                                                            </span>
+                                                        )}
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
 
@@ -2921,6 +3774,108 @@ export default function ClientDetail({
                                         </div>
                                     </div>
 
+                                    {/* SECTION: RINCIAN DELIVERABLES & LAYANAN PAKET (SESUAI MASTER DATA) */}
+                                    {selectedProjectPackage && (
+                                        <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-4">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Box className="w-4 h-4 text-primary-accent" />
+                                                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                                                            Rincian Deliverables & Layanan Paket ({selectedProjectPackage.name})
+                                                        </h4>
+                                                    </div>
+                                                    <p className="text-xs text-slate-500 mt-0.5">
+                                                        Daftar deliverable, estimasi target deadline, dan layanan yang termasuk dalam paket pengerjaan ini
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    <span className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-mono font-bold text-xs">
+                                                        {formatRupiah(Number(selectedProjectPackage.base_price || 0))}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* Included Deliverables Grid */}
+                                            {selectedProjectPackage.included_deliverables && selectedProjectPackage.included_deliverables.length > 0 ? (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                    {selectedProjectPackage.included_deliverables.map((deliv: any, dIdx: number) => {
+                                                        const isPhoto = deliv.type === 'Photo';
+                                                        const isVideo = deliv.type === 'Video';
+                                                        const isAlbum = deliv.type === 'Album';
+                                                        return (
+                                                            <div
+                                                                key={deliv.id || dIdx}
+                                                                className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 flex flex-col justify-between gap-2.5 hover:border-slate-300 transition-colors"
+                                                            >
+                                                                <div className="space-y-1.5">
+                                                                    <div className="flex items-center justify-between gap-2">
+                                                                        <span
+                                                                            className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${isPhoto
+                                                                                    ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                                                                                    : isVideo
+                                                                                        ? 'bg-purple-50 text-purple-700 border border-purple-100'
+                                                                                        : isAlbum
+                                                                                            ? 'bg-amber-50 text-amber-700 border border-amber-100'
+                                                                                            : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                                                                                }`}
+                                                                        >
+                                                                            {deliv.type || 'Deliverable'}
+                                                                        </span>
+                                                                        <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
+                                                                            {deliv.deadline || 'H+14'}
+                                                                        </span>
+                                                                    </div>
+                                                                    <span className="font-bold text-xs text-slate-900 block leading-snug">
+                                                                        {deliv.name}
+                                                                    </span>
+                                                                    {deliv.description && (
+                                                                        <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
+                                                                            {deliv.description}
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+
+                                                                <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[10px]">
+                                                                    <span className="font-semibold text-slate-500">
+                                                                        {deliv.required ? 'Deliverable Utama' : 'Deliverable Tambahan'}
+                                                                    </span>
+                                                                    {deliv.by_owner && (
+                                                                        <span className="text-purple-600 font-bold">
+                                                                            Approval Owner
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ) : (
+                                                <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 text-center text-xs text-slate-500">
+                                                    Deliverables standar paket mengikuti alur tahapan {activeWorkflowDef.name}.
+                                                </div>
+                                            )}
+
+                                            {/* Included Services Tags */}
+                                            {selectedProjectPackage.included_services && selectedProjectPackage.included_services.length > 0 && (
+                                                <div className="pt-2 border-t border-slate-100 flex items-center gap-2 flex-wrap">
+                                                    <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1 shrink-0">
+                                                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                                                        <span>Layanan Termasuk:</span>
+                                                    </span>
+                                                    {selectedProjectPackage.included_services.map((srv: string, sIdx: number) => (
+                                                        <span
+                                                            key={sIdx}
+                                                            className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 text-[11px] font-medium"
+                                                        >
+                                                            {srv}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
                                     {/* 2-Column Split: Checklist + Link Google Drive */}
                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                                         {/* Left Card: Opsi Pekerjaan (Internal) */}
@@ -2955,20 +3910,15 @@ export default function ClientDetail({
                                                         <label
                                                             key={task.id}
                                                             className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all cursor-pointer select-none ${isChecked
-                                                                    ? 'border-emerald-300 bg-emerald-50/50 text-emerald-950 shadow-2xs font-semibold'
-                                                                    : 'border-slate-200/80 bg-slate-50/40 hover:bg-slate-100/70 hover:border-slate-300 text-slate-800'
+                                                                ? 'border-emerald-300 bg-emerald-50/50 text-emerald-950 shadow-2xs font-semibold'
+                                                                : 'border-slate-200/80 bg-slate-50/40 hover:bg-slate-100/70 hover:border-slate-300 text-slate-800'
                                                                 }`}
                                                         >
                                                             <Checkbox
                                                                 checked={isChecked}
+                                                                disabled={savingChecklist}
                                                                 onCheckedChange={(val) => {
-                                                                    const isNowChecked = !!val;
-                                                                    setJobChecklist((prev) => ({ ...prev, [task.id]: isNowChecked }));
-                                                                    toast.success(
-                                                                        isNowChecked
-                                                                            ? `Tugas "${task.label}" ditandai selesai!`
-                                                                            : `Tugas "${task.label}" dibatalkan.`
-                                                                    );
+                                                                    handleChecklistChange(task.id, !!val, task.label);
                                                                 }}
                                                                 className="shrink-0"
                                                             />
@@ -3001,6 +3951,13 @@ export default function ClientDetail({
                                             </div>
 
                                             <div className="space-y-3">
+                                                {projectDriveLinks.length === 0 && (
+                                                    <div className="py-8 flex flex-col items-center justify-center text-center gap-2 text-slate-400">
+                                                        <Folder className="w-8 h-8 text-slate-300" />
+                                                        <p className="text-xs font-semibold">Belum ada link Google Drive</p>
+                                                        <p className="text-[11px]">Klik "Tambah Link" untuk menyimpan folder berkas project ini ke database.</p>
+                                                    </div>
+                                                )}
                                                 {projectDriveLinks.map((dl) => (
                                                     <div
                                                         key={dl.id}
@@ -3046,6 +4003,15 @@ export default function ClientDetail({
                                                                 <span>Buka</span>
                                                                 <ExternalLink className="w-3 h-3" />
                                                             </a>
+                                                            <button
+                                                                type="button"
+                                                                disabled={deletingLinkId === dl.id}
+                                                                onClick={() => handleDeleteLink(dl.id, dl.title)}
+                                                                className="p-1.5 rounded-lg border border-red-100 bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-700 text-xs shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
+                                                                title="Hapus Link"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -3177,81 +4143,91 @@ export default function ClientDetail({
                                         </button>
                                     </div>
 
-                                    {/* 4 Note Cards (Gambar 3) */}
+                                    {/* Note Cards */}
                                     <div className="space-y-3.5">
-                                        {filteredNotesList.map((note) => (
-                                            <div
-                                                key={note.id}
-                                                className={`p-4 rounded-2xl bg-white border border-slate-200/80 border-l-4 ${note.border_color} shadow-2xs space-y-2`}
-                                            >
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2">
-                                                        <div
-                                                            className={`w-6 h-6 rounded-lg flex items-center justify-center ${note.icon_color}`}
-                                                        >
-                                                            {note.category === 'Preferensi' ? (
-                                                                <Star className="w-3.5 h-3.5" />
-                                                            ) : note.category === 'Informasi' ? (
-                                                                <FileText className="w-3.5 h-3.5" />
-                                                            ) : note.category === 'Pembayaran' ? (
-                                                                <Receipt className="w-3.5 h-3.5" />
-                                                            ) : (
-                                                                <MessageSquare className="w-3.5 h-3.5" />
-                                                            )}
+                                        {filteredNotesList.length > 0 ? (
+                                            filteredNotesList.map((note) => (
+                                                <div
+                                                    key={note.id}
+                                                    className={`p-4 rounded-2xl bg-white border border-slate-200/80 border-l-4 ${note.border_color} shadow-2xs space-y-2`}
+                                                >
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            <div
+                                                                className={`w-6 h-6 rounded-lg flex items-center justify-center ${note.icon_color}`}
+                                                            >
+                                                                {note.category === 'Preferensi' ? (
+                                                                    <Star className="w-3.5 h-3.5" />
+                                                                ) : note.category === 'Informasi' ? (
+                                                                    <FileText className="w-3.5 h-3.5" />
+                                                                ) : note.category === 'Pembayaran' ? (
+                                                                    <Receipt className="w-3.5 h-3.5" />
+                                                                ) : (
+                                                                    <MessageSquare className="w-3.5 h-3.5" />
+                                                                )}
+                                                            </div>
+                                                            <h4 className="text-xs font-bold text-slate-900">
+                                                                {note.title}
+                                                            </h4>
                                                         </div>
-                                                        <h4 className="text-xs font-bold text-slate-900">
-                                                            {note.title}
-                                                        </h4>
+
+                                                        <Badge variant={note.badge_color as any} className="text-[10px] font-bold">
+                                                            {note.category}
+                                                        </Badge>
                                                     </div>
 
-                                                    <Badge variant={note.badge_color as any} className="text-[10px] font-bold">
-                                                        {note.category}
-                                                    </Badge>
-                                                </div>
+                                                    <p className="text-xs text-slate-700 leading-relaxed pl-8">
+                                                        {note.content}
+                                                    </p>
 
-                                                <p className="text-xs text-slate-700 leading-relaxed pl-8">
-                                                    {note.content}
-                                                </p>
-
-                                                <div className="text-[11px] text-slate-400 font-medium pl-8 flex items-center gap-2">
-                                                    <span>{note.author}</span>
-                                                    <span>•</span>
-                                                    <span>{note.date}</span>
-                                                    <span>•</span>
-                                                    <span>{note.project}</span>
+                                                    <div className="text-[11px] text-slate-400 font-medium pl-8 flex items-center gap-2">
+                                                        <span>{note.author}</span>
+                                                        <span>•</span>
+                                                        <span>{note.date}</span>
+                                                        <span>•</span>
+                                                        <span>{note.project}</span>
+                                                    </div>
                                                 </div>
+                                            ))
+                                        ) : (
+                                            <div className="p-8 rounded-2xl bg-slate-50/70 border border-slate-200/80 text-center space-y-2">
+                                                <FileText className="w-8 h-8 text-slate-300 mx-auto" />
+                                                <p className="text-xs font-semibold text-slate-700">Belum Ada Catatan Khusus</p>
+                                                <p className="text-[11px] text-slate-400">Tulis catatan preferensi, briefing, atau instruksi kerja untuk klien ini di atas.</p>
                                             </div>
-                                        ))}
+                                        )}
                                     </div>
 
                                     {/* Pagination */}
-                                    <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
-                                        <span>
-                                            Menampilkan 1 - {filteredNotesList.length} dari {filteredNotesList.length} catatan
-                                        </span>
-                                        <div className="flex items-center gap-1">
-                                            <button
-                                                type="button"
-                                                disabled
-                                                className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 cursor-not-allowed"
-                                            >
-                                                &lt;
-                                            </button>
-                                            <button
-                                                type="button"
-                                                className="w-7 h-7 rounded-lg bg-indigo-600 text-white font-bold flex items-center justify-center text-xs shadow-2xs"
-                                            >
-                                                1
-                                            </button>
-                                            <button
-                                                type="button"
-                                                disabled
-                                                className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 cursor-not-allowed"
-                                            >
-                                                &gt;
-                                            </button>
+                                    {filteredNotesList.length > 0 && (
+                                        <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+                                            <span>
+                                                Menampilkan 1 - {filteredNotesList.length} dari {filteredNotesList.length} catatan
+                                            </span>
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    type="button"
+                                                    disabled
+                                                    className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 cursor-not-allowed"
+                                                >
+                                                    &lt;
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="w-7 h-7 rounded-lg bg-indigo-600 text-white font-bold flex items-center justify-center text-xs shadow-2xs"
+                                                >
+                                                    1
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    disabled
+                                                    className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 cursor-not-allowed"
+                                                >
+                                                    &gt;
+                                                </button>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
                             )}
 
@@ -3306,60 +4282,73 @@ export default function ClientDetail({
 
                                     {/* Communication Cards List */}
                                     <div className="space-y-3">
-                                        {commList
-                                            .filter(
-                                                (c) =>
-                                                    (commChannelFilter === 'all' || c.channel === commChannelFilter) &&
-                                                    (c.title.toLowerCase().includes(commSearchQuery.toLowerCase()) ||
-                                                        c.content.toLowerCase().includes(commSearchQuery.toLowerCase()))
-                                            )
-                                            .map((item) => (
-                                                <div
-                                                    key={item.id}
-                                                    className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex items-start gap-3.5 hover:border-slate-300 transition-colors"
-                                                >
+                                        {commList.filter(
+                                            (c) =>
+                                                (commChannelFilter === 'all' || c.channel === commChannelFilter) &&
+                                                (c.title.toLowerCase().includes(commSearchQuery.toLowerCase()) ||
+                                                    c.content.toLowerCase().includes(commSearchQuery.toLowerCase()))
+                                        ).length > 0 ? (
+                                            commList
+                                                .filter(
+                                                    (c) =>
+                                                        (commChannelFilter === 'all' || c.channel === commChannelFilter) &&
+                                                        (c.title.toLowerCase().includes(commSearchQuery.toLowerCase()) ||
+                                                            c.content.toLowerCase().includes(commSearchQuery.toLowerCase()))
+                                                )
+                                                .map((item) => (
                                                     <div
-                                                        className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${item.channel === 'WhatsApp'
+                                                        key={item.id}
+                                                        className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex items-start gap-3.5 hover:border-slate-300 transition-colors"
+                                                    >
+                                                        <div
+                                                            className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${item.channel === 'WhatsApp'
                                                                 ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
                                                                 : item.channel === 'Email'
                                                                     ? 'bg-blue-50 text-blue-600 border border-blue-100'
                                                                     : 'bg-amber-50 text-amber-600 border border-amber-100'
-                                                            }`}
-                                                    >
-                                                        {item.channel === 'WhatsApp' ? (
-                                                            <MessageCircle className="w-4 h-4" />
-                                                        ) : item.channel === 'Email' ? (
-                                                            <Mail className="w-4 h-4" />
-                                                        ) : (
-                                                            <Phone className="w-4 h-4" />
-                                                        )}
-                                                    </div>
-
-                                                    <div className="flex-1 space-y-1 min-w-0">
-                                                        <div className="flex items-center justify-between gap-2">
-                                                            <h4 className="text-xs font-bold text-slate-900 truncate">
-                                                                {item.channel}: {item.title}
-                                                            </h4>
-                                                            <Badge
-                                                                variant={item.channel === 'WhatsApp' ? 'success' : item.channel === 'Email' ? 'info' : 'warning'}
-                                                                className="text-[10px] font-bold shrink-0"
-                                                            >
-                                                                {item.status}
-                                                            </Badge>
+                                                                }`}
+                                                        >
+                                                            {item.channel === 'WhatsApp' ? (
+                                                                <MessageCircle className="w-4 h-4" />
+                                                            ) : item.channel === 'Email' ? (
+                                                                <Mail className="w-4 h-4" />
+                                                            ) : (
+                                                                <Phone className="w-4 h-4" />
+                                                            )}
                                                         </div>
 
-                                                        <p className="text-xs text-slate-600 leading-relaxed">
-                                                            {item.content}
-                                                        </p>
+                                                        <div className="flex-1 space-y-1 min-w-0">
+                                                            <div className="flex items-center justify-between gap-2">
+                                                                <h4 className="text-xs font-bold text-slate-900 truncate">
+                                                                    {item.channel}: {item.title}
+                                                                </h4>
+                                                                <Badge
+                                                                    variant={item.channel === 'WhatsApp' ? 'success' : item.channel === 'Email' ? 'info' : 'warning'}
+                                                                    className="text-[10px] font-bold shrink-0"
+                                                                >
+                                                                    {item.status}
+                                                                </Badge>
+                                                            </div>
 
-                                                        <div className="text-[10px] text-slate-400 flex items-center gap-2 pt-1">
-                                                            <span>{item.author}</span>
-                                                            <span>•</span>
-                                                            <span>{item.date}</span>
+                                                            <p className="text-xs text-slate-600 leading-relaxed">
+                                                                {item.content}
+                                                            </p>
+
+                                                            <div className="text-[10px] text-slate-400 flex items-center gap-2 pt-1">
+                                                                <span>{item.author}</span>
+                                                                <span>•</span>
+                                                                <span>{item.date}</span>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                ))
+                                        ) : (
+                                            <div className="p-8 rounded-2xl bg-slate-50/70 border border-slate-200/80 text-center space-y-2">
+                                                <MessageCircle className="w-8 h-8 text-slate-300 mx-auto" />
+                                                <p className="text-xs font-semibold text-slate-700">Belum Ada Riwayat Komunikasi</p>
+                                                <p className="text-[11px] text-slate-400">Klik tombol "+ Catat Komunikasi" untuk mencatat WhatsApp, email, atau telepon klien.</p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -3434,7 +4423,7 @@ export default function ClientDetail({
                                                                 onClick={() => {
                                                                     const cleanPhone = (client.phone || '').replace(/[^0-9]/g, '').replace(/^0/, '62');
                                                                     const loginUrl = `${window.location.origin}/login`;
-                                                                    const msg = `Halo Kak ${client.name},\n\nBerikut pengingat akses login portal klien Arams Photography Anda:\n🌐 Link Portal: ${loginUrl}\n📧 Email: ${clientUser.email}\n\nSilakan login untuk melihat progress project, review foto, dan download file Anda. Terima kasih!`;
+                                                                    const msg = `Halo Kak ${client.name},\n\nBerikut pengingat akses login Portal Klien Arams Photography Anda:\n\n🌐 Link Login : ${loginUrl}\n👤 Nama Klien : ${client.name}\n📧 Email      : ${clientUser.email}\n\nSilakan login untuk memantau progress project, review foto, dan download file dokumentasi Anda. Terima kasih!`;
                                                                     window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
                                                                 }}
                                                                 className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
@@ -3561,45 +4550,107 @@ export default function ClientDetail({
 
                                                 <div>
                                                     <label className="text-[11px] font-bold text-slate-700 block mb-2">
-                                                        Bagikan Akun Melalui
+                                                        Metode Pengiriman Kredensial Akun
                                                     </label>
                                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                                         <button
                                                             type="button"
                                                             onClick={() => setAccountShareMethod('email')}
-                                                            className={`p-3.5 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer ${accountShareMethod === 'email'
-                                                                    ? 'border-indigo-600 bg-indigo-50/40 text-indigo-900 font-bold ring-1 ring-indigo-600'
-                                                                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                                            className={`p-3.5 rounded-xl border text-left flex flex-col justify-between gap-2 transition-all cursor-pointer ${accountShareMethod === 'email'
+                                                                ? 'border-indigo-600 bg-indigo-50/50 text-indigo-950 font-bold ring-1 ring-indigo-600 shadow-2xs'
+                                                                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                                                                 }`}
                                                         >
-                                                            <Mail className="w-4 h-4 text-indigo-600 shrink-0" />
-                                                            <span className="text-xs">Email</span>
+                                                            <div className="flex items-center gap-2">
+                                                                <Mail className="w-4 h-4 text-indigo-600 shrink-0" />
+                                                                <span className="text-xs font-bold">Email</span>
+                                                            </div>
+                                                            <p className="text-[11px] font-normal text-slate-500 leading-tight">
+                                                                Kirim detail login ke email klien.
+                                                            </p>
                                                         </button>
 
                                                         <button
                                                             type="button"
                                                             onClick={() => setAccountShareMethod('whatsapp')}
-                                                            className={`p-3.5 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer ${accountShareMethod === 'whatsapp'
-                                                                    ? 'border-emerald-600 bg-emerald-50/40 text-emerald-900 font-bold ring-1 ring-emerald-600'
-                                                                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                                            className={`p-3.5 rounded-xl border text-left flex flex-col justify-between gap-2 transition-all cursor-pointer ${accountShareMethod === 'whatsapp'
+                                                                ? 'border-emerald-600 bg-emerald-50/50 text-emerald-950 font-bold ring-1 ring-emerald-600 shadow-2xs'
+                                                                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                                                                 }`}
                                                         >
-                                                            <MessageCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                                                            <span className="text-xs">WhatsApp</span>
+                                                            <div className="flex items-center gap-2">
+                                                                <MessageCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                                                                <span className="text-xs font-bold">WhatsApp</span>
+                                                            </div>
+                                                            <p className="text-[11px] font-normal text-slate-500 leading-tight">
+                                                                Buka chat WhatsApp dengan draft kredensial klien.
+                                                            </p>
                                                         </button>
 
                                                         <button
                                                             type="button"
                                                             onClick={() => setAccountShareMethod('both')}
-                                                            className={`p-3.5 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer ${accountShareMethod === 'both'
-                                                                    ? 'border-primary-accent bg-amber-50/25 text-slate-900 font-bold ring-1 ring-primary-accent'
-                                                                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                                            className={`p-3.5 rounded-xl border text-left flex flex-col justify-between gap-2 transition-all cursor-pointer ${accountShareMethod === 'both'
+                                                                ? 'border-primary-accent bg-amber-50/30 text-slate-950 font-bold ring-1 ring-primary-accent shadow-2xs'
+                                                                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                                                                 }`}
                                                         >
-                                                            <Send className="w-4 h-4 text-primary-accent shrink-0" />
-                                                            <span className="text-xs">Keduanya (Email & WA)</span>
+                                                            <div className="flex items-center gap-2">
+                                                                <Send className="w-4 h-4 text-primary-accent shrink-0" />
+                                                                <span className="text-xs font-bold">Email &amp; WhatsApp</span>
+                                                            </div>
+                                                            <p className="text-[11px] font-normal text-slate-500 leading-tight">
+                                                                Kirim email sekaligus siapkan chat WhatsApp.
+                                                            </p>
                                                         </button>
                                                     </div>
+
+                                                    {/* Pratinjau Teks Pesan WhatsApp (wa.me) */}
+                                                    {accountShareMethod !== 'email' && (
+                                                        <div className="mt-3 p-3.5 bg-emerald-50/80 border border-emerald-200 rounded-xl space-y-2">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                                                                    <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                                                                    Format Pesan WhatsApp
+                                                                </span>
+                                                                {client.phone ? (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            const cleanPhone = (client.phone || '').replace(/[^0-9]/g, '').replace(/^0/, '62');
+                                                                            const loginUrl = `${window.location.origin}/login`;
+                                                                            const note = accountMessage || 'Silakan login untuk memantau progress project, review foto, dan download file dokumentasi Anda.';
+                                                                            const msg = `Halo Kak ${client.name},\n\nBerikut informasi akun akses Portal Klien Arams Photography Anda:\n\n🌐 Link Login : ${loginUrl}\n👤 Nama Klien : ${client.name}\n📧 Email      : ${accountEmail}\n🔑 Password   : ${accountPassword}\n\n📝 Keterangan:\n${note}\n\nTerima kasih!`;
+                                                                            window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+                                                                        }}
+                                                                        className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 underline flex items-center gap-1 cursor-pointer"
+                                                                    >
+                                                                        <span>Uji / Buka di WhatsApp Sekarang</span>
+                                                                        <ExternalLink className="w-3 h-3" />
+                                                                    </button>
+                                                                ) : (
+                                                                    <span className="text-[11px] text-amber-700 font-medium">
+                                                                        ⚠️ Nomor HP klien belum diisi
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-[11px] font-mono text-emerald-950 bg-white p-3 rounded-lg border border-emerald-200/70 whitespace-pre-line leading-relaxed select-all">
+                                                                {`Halo Kak ${client.name},
+
+Berikut informasi akun akses Portal Klien Arams Photography Anda:
+
+🌐 Link Login : ${typeof window !== 'undefined' ? window.location.origin : ''}/login
+👤 Nama Klien : ${client.name}
+📧 Email      : ${accountEmail || '(email klien)'}
+🔑 Password   : ${accountPassword || '(password akun)'}
+
+📝 Keterangan:
+${accountMessage || '-'}
+
+Terima kasih!`}
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -3637,10 +4688,10 @@ export default function ClientDetail({
                         </div>
                     </div>
 
-                    {/* RIGHT COLUMN: 3 SIDEBAR WIDGETS (MATCHING REFERENCE SCREENSHOT EXACTLY) */}
-                    <div className="lg:col-span-4 space-y-5">
+                    {/* RIGHT COLUMN: 3 SIDEBAR WIDGETS (MATCHING REFERENCE SCREENSHOT EXACTLY & TIDAK BOLONG) */}
+                    <div className="lg:col-span-4 flex flex-col gap-5 h-full">
                         {/* WIDGET 1: RINGKASAN PROJECT */}
-                        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs space-y-3.5">
+                        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs space-y-3.5 shrink-0">
                             <div className="flex items-center justify-between">
                                 <h3 className="text-xs font-bold text-slate-900">Ringkasan Project</h3>
                                 <div className="w-7 h-7 rounded-lg border border-indigo-100 bg-indigo-50/50 flex items-center justify-center text-indigo-600">
@@ -3650,7 +4701,7 @@ export default function ClientDetail({
 
                             <div>
                                 <span className="text-3xl font-extrabold text-slate-900 font-mono block">
-                                    {client.projects_count || rawProjects.length || 3}
+                                    {client.projects_count ?? rawProjects.length}
                                 </span>
                                 <span className="text-[11px] text-slate-400 font-medium block mt-0.5">
                                     Total Project
@@ -3685,7 +4736,7 @@ export default function ClientDetail({
                         </div>
 
                         {/* WIDGET 2: RINGKASAN PEMBAYARAN */}
-                        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs space-y-3.5">
+                        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs space-y-3.5 shrink-0">
                             <div className="flex items-center gap-2">
                                 <div className="w-5 h-5 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 text-xs font-bold shrink-0">
                                     $
@@ -3764,40 +4815,42 @@ export default function ClientDetail({
                             </div>
                         </div>
 
-                        {/* WIDGET 3: AKTIVITAS TERAKHIR */}
-                        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs space-y-3.5">
-                            <div className="flex items-center gap-2">
-                                <Clock className="w-4 h-4 text-purple-600" />
-                                <h3 className="text-xs font-bold text-slate-900">Aktivitas Terakhir</h3>
+                        {/* WIDGET 3: AKTIVITAS TERAKHIR (STRETCHED TO BOTTOM TO MATCH LEFT CARD) */}
+                        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs flex-1 flex flex-col justify-between">
+                            <div className="space-y-3.5">
+                                <div className="flex items-center gap-2 pb-1 border-b border-slate-100">
+                                    <Clock className="w-4 h-4 text-purple-600" />
+                                    <h3 className="text-xs font-bold text-slate-900">Aktivitas Terakhir</h3>
+                                </div>
+
+                                <div className="space-y-3 text-xs">
+                                    {activityItems.map((act) => {
+                                        const IconCmp = act.icon;
+                                        return (
+                                            <div key={act.id} className="flex items-start gap-3">
+                                                <div
+                                                    className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${act.iconBg}`}
+                                                >
+                                                    <IconCmp className="w-3.5 h-3.5" />
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <span className="font-bold text-slate-900 block leading-tight truncate">
+                                                        {act.title}
+                                                    </span>
+                                                    <span className="text-[11px] text-slate-500 block truncate">
+                                                        {act.subtitle}
+                                                    </span>
+                                                    <span className="text-[10px] text-slate-400 block mt-0.5">
+                                                        {act.timeText}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
 
-                            <div className="space-y-3 text-xs">
-                                {activityItems.map((act) => {
-                                    const IconCmp = act.icon;
-                                    return (
-                                        <div key={act.id} className="flex items-start gap-3">
-                                            <div
-                                                className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${act.iconBg}`}
-                                            >
-                                                <IconCmp className="w-3.5 h-3.5" />
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <span className="font-bold text-slate-900 block leading-tight truncate">
-                                                    {act.title}
-                                                </span>
-                                                <span className="text-[11px] text-slate-500 block truncate">
-                                                    {act.subtitle}
-                                                </span>
-                                                <span className="text-[10px] text-slate-400 block mt-0.5">
-                                                    {act.timeText}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-
-                            <div className="pt-2 border-t border-slate-100">
+                            <div className="pt-3 mt-4 border-t border-slate-100">
                                 <button
                                     type="button"
                                     onClick={() => setMainTab('catatan')}
@@ -3878,18 +4931,18 @@ export default function ClientDetail({
                                         type="button"
                                         onClick={() => goToEditStep(s.id as any)}
                                         className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex-1 justify-center ${isActive
-                                                ? 'bg-white text-slate-900 shadow-2xs ring-1 ring-slate-200/80 font-extrabold'
-                                                : isPassed
-                                                    ? 'text-emerald-700 hover:text-emerald-800 hover:bg-white/50'
-                                                    : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'
+                                            ? 'bg-white text-slate-900 shadow-2xs ring-1 ring-slate-200/80 font-extrabold'
+                                            : isPassed
+                                                ? 'text-emerald-700 hover:text-emerald-800 hover:bg-white/50'
+                                                : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'
                                             }`}
                                     >
                                         <span
                                             className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${isActive
-                                                    ? 'bg-[#C89445] text-white'
-                                                    : isPassed
-                                                        ? 'bg-emerald-100 text-emerald-700'
-                                                        : 'bg-slate-200 text-slate-600'
+                                                ? 'bg-[#C89445] text-white'
+                                                : isPassed
+                                                    ? 'bg-emerald-100 text-emerald-700'
+                                                    : 'bg-slate-200 text-slate-600'
                                                 }`}
                                         >
                                             {isPassed ? <Check className="w-3 h-3 text-emerald-700 stroke-[3]" /> : s.stepNum}
@@ -3924,157 +4977,406 @@ export default function ClientDetail({
                                     </p>
                                 </div>
 
-                                {/* Nama Lengkap Klien / Acara */}
-                                <div>
-                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                        Nama Lengkap Klien / Judul Acara <span className="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={editFormData.name}
-                                        onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                                        placeholder="Contoh: Kevin Sanjaya & Jessica Mila"
-                                        className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                    />
-                                    <p className="text-[10px] text-slate-400 mt-1">
-                                        Nama utama yang akan tampil pada invoice, kontrak, dan laporan project.
-                                    </p>
-                                </div>
-
-                                {/* Calon Pengantin (CPW & CPP) Side by Side */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-                                    {/* CPW Card */}
-                                    <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 space-y-3">
-                                        <div className="flex items-center gap-2 text-purple-900">
-                                            <div className="w-6 h-6 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
-                                                <User className="w-3.5 h-3.5" />
-                                            </div>
-                                            <h4 className="text-xs font-bold text-slate-900">
-                                                Informasi Calon Pengantin (CPW)
-                                            </h4>
+                                {/* WEDDING EDIT FIELDS */}
+                                {activeEditFormType === 'wedding' && (
+                                    <>
+                                        <div>
+                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                Judul Acara / Nama Project Wedding <span className="text-slate-400 font-normal">(Opsional)</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={editFormData.name}
+                                                onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                                                placeholder="Contoh: Kevin Sanjaya & Jessica Mila"
+                                                className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                            />
                                         </div>
 
-                                        <div className="space-y-2.5">
+                                        {/* Calon Pengantin (CPW & CPP) Side by Side */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                                            {/* CPW Card */}
+                                            <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 space-y-3">
+                                                <div className="flex items-center gap-2 text-purple-900">
+                                                    <div className="w-6 h-6 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+                                                        <User className="w-3.5 h-3.5" />
+                                                    </div>
+                                                    <h4 className="text-xs font-bold text-slate-900">
+                                                        Informasi Calon Pengantin (CPW)
+                                                    </h4>
+                                                </div>
+
+                                                <div className="space-y-2.5">
+                                                    <div>
+                                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                            Nama Lengkap CPW
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={editFormData.bride_name}
+                                                            onChange={(e) => setEditFormData({ ...editFormData, bride_name: e.target.value })}
+                                                            placeholder="Nama lengkap CPW"
+                                                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                        />
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <div>
+                                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                                Panggilan
+                                                            </label>
+                                                            <input
+                                                                type="text"
+                                                                value={editFormData.bride_nickname}
+                                                                onChange={(e) => setEditFormData({ ...editFormData, bride_nickname: e.target.value })}
+                                                                placeholder="Panggilan"
+                                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                                Tanggal Lahir
+                                                            </label>
+                                                            <input
+                                                                type="date"
+                                                                value={editFormData.bride_birth_date}
+                                                                onChange={(e) => setEditFormData({ ...editFormData, bride_birth_date: e.target.value })}
+                                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* CPP Card */}
+                                            <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 space-y-3">
+                                                <div className="flex items-center gap-2 text-purple-900">
+                                                    <div className="w-6 h-6 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+                                                        <User className="w-3.5 h-3.5" />
+                                                    </div>
+                                                    <h4 className="text-xs font-bold text-slate-900">
+                                                        Informasi Calon Pengantin (CPP)
+                                                    </h4>
+                                                </div>
+
+                                                <div className="space-y-2.5">
+                                                    <div>
+                                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                            Nama Lengkap CPP
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={editFormData.groom_name}
+                                                            onChange={(e) => setEditFormData({ ...editFormData, groom_name: e.target.value })}
+                                                            placeholder="Nama lengkap CPP"
+                                                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                        />
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <div>
+                                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                                Panggilan
+                                                            </label>
+                                                            <input
+                                                                type="text"
+                                                                value={editFormData.groom_nickname}
+                                                                onChange={(e) => setEditFormData({ ...editFormData, groom_nickname: e.target.value })}
+                                                                placeholder="Panggilan"
+                                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                                Tanggal Lahir
+                                                            </label>
+                                                            <input
+                                                                type="date"
+                                                                value={editFormData.groom_birth_date}
+                                                                onChange={(e) => setEditFormData({ ...editFormData, groom_birth_date: e.target.value })}
+                                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Additional / Corporate Details */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div>
                                                 <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                    Nama Lengkap CPW
+                                                    Nama Pasangan / Pendamping Tambahan
                                                 </label>
                                                 <input
                                                     type="text"
-                                                    value={editFormData.bride_name}
-                                                    onChange={(e) => setEditFormData({ ...editFormData, bride_name: e.target.value })}
-                                                    placeholder="Nama lengkap CPW"
-                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                    value={editFormData.partner_name}
+                                                    onChange={(e) => setEditFormData({ ...editFormData, partner_name: e.target.value })}
+                                                    placeholder="Opsional jika bukan wedding"
+                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
                                                 />
                                             </div>
-                                            <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                    Nama Perusahaan / Brand (B2B)
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={editFormData.company_name}
+                                                    onChange={(e) => setEditFormData({ ...editFormData, company_name: e.target.value })}
+                                                    placeholder="Contoh: PT Astra International"
+                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                />
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* NEWBORN EDIT FIELDS */}
+                                {activeEditFormType === 'newborn' && (
+                                    <div className="space-y-4">
+                                        {/* Baby Data Repeater */}
+                                        <div className="space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2 text-amber-900">
+                                                    <div className="w-6 h-6 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                                                        <Baby className="w-3.5 h-3.5" />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-xs font-bold text-slate-900">
+                                                            Informasi Bayi / Anak (Newborn) <span className="text-red-500">*</span>
+                                                        </h4>
+                                                        <p className="text-[10px] text-slate-500">
+                                                            Dapat mengisi lebih dari satu bayi jika kasus anak kembar.
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={handleAddEditChild}
+                                                    className="px-2.5 py-1 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                                                >
+                                                    <Plus className="w-3 h-3" />
+                                                    <span>+ Tambah Bayi (Kembar)</span>
+                                                </button>
+                                            </div>
+
+                                            {(editFormData.children || []).map((child, idx) => (
+                                                <div
+                                                    key={idx}
+                                                    className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200/70 space-y-3"
+                                                >
+                                                    <div className="flex items-center justify-between pb-1 border-b border-amber-200/50">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="px-2 py-0.5 rounded-md bg-amber-200/80 text-amber-900 font-bold text-[10px]">
+                                                                👶 Bayi #{idx + 1} {(editFormData.children || []).length > 1 ? '(Kembar)' : ''}
+                                                            </span>
+                                                        </div>
+                                                        {(editFormData.children || []).length > 1 && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleRemoveEditChild(idx)}
+                                                                className="text-red-600 hover:text-red-700 hover:bg-red-50 px-2 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                                                            >
+                                                                <Trash2 className="w-3 h-3" />
+                                                                <span>Hapus</span>
+                                                            </button>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                                Nama Lengkap Bayi #{idx + 1} <span className="text-red-500">*</span>
+                                                            </label>
+                                                            <input
+                                                                type="text"
+                                                                value={child.name}
+                                                                onChange={(e) => handleChildEditChange(idx, 'name', e.target.value)}
+                                                                placeholder="Nama bayi / anak"
+                                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                                Tanggal Lahir / HPL
+                                                            </label>
+                                                            <input
+                                                                type="date"
+                                                                value={child.birth_date}
+                                                                onChange={(e) => handleChildEditChange(idx, 'birth_date', e.target.value)}
+                                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                            Jenis Kelamin
+                                                        </label>
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleChildEditChange(idx, 'gender', 'male')}
+                                                                className={`py-1.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                                                                    child.gender === 'male'
+                                                                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                                                                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                                                }`}
+                                                            >
+                                                                <span>👦 Laki-laki (Boy)</span>
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleChildEditChange(idx, 'gender', 'female')}
+                                                                className={`py-1.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                                                                    child.gender === 'female'
+                                                                        ? 'bg-pink-600 text-white border-pink-600 shadow-xs'
+                                                                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                                                }`}
+                                                            >
+                                                                <span>👧 Perempuan (Girl)</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+
+                                            <button
+                                                type="button"
+                                                onClick={handleAddEditChild}
+                                                className="w-full py-2 px-3 rounded-xl border-2 border-dashed border-amber-300 hover:border-amber-400 bg-amber-50/40 hover:bg-amber-50 text-amber-800 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                                            >
+                                                <Plus className="w-3.5 h-3.5 text-amber-600" />
+                                                <span>+ Tambah Bayi Kembar (Twins)</span>
+                                            </button>
+                                        </div>
+
+                                        {/* Data Orang Tua */}
+                                        <div className="p-4 rounded-2xl bg-slate-50/70 border border-slate-200/80 space-y-3">
+                                            <div className="flex items-center gap-2 text-indigo-900">
+                                                <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                                                    <User className="w-3.5 h-3.5" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-xs font-bold text-slate-900">
+                                                        Data Orang Tua (Ayah &amp; Ibu)
+                                                    </h4>
+                                                    <p className="text-[10px] text-slate-500">
+                                                        Masukkan nama lengkap ayah dan ibu.
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                 <div>
                                                     <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                        Panggilan
+                                                        Nama Lengkap Ayah
                                                     </label>
                                                     <input
                                                         type="text"
-                                                        value={editFormData.bride_nickname}
-                                                        onChange={(e) => setEditFormData({ ...editFormData, bride_nickname: e.target.value })}
-                                                        placeholder="Panggilan"
+                                                        value={editFormData.father_name}
+                                                        onChange={(e) => {
+                                                            const f = e.target.value;
+                                                            const m = editFormData.mother_name;
+                                                            const combined = [f, m].filter(Boolean).join(' & ');
+                                                            setEditFormData({ ...editFormData, father_name: f, partner_name: combined, name: editFormData.child_name ? `Baby ${editFormData.child_name}` : combined });
+                                                        }}
+                                                        placeholder="Nama ayah"
                                                         className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
                                                     />
                                                 </div>
                                                 <div>
                                                     <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                        Tanggal Lahir
-                                                    </label>
-                                                    <input
-                                                        type="date"
-                                                        value={editFormData.bride_birth_date}
-                                                        onChange={(e) => setEditFormData({ ...editFormData, bride_birth_date: e.target.value })}
-                                                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* CPP Card */}
-                                    <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 space-y-3">
-                                        <div className="flex items-center gap-2 text-purple-900">
-                                            <div className="w-6 h-6 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
-                                                <User className="w-3.5 h-3.5" />
-                                            </div>
-                                            <h4 className="text-xs font-bold text-slate-900">
-                                                Informasi Calon Pengantin (CPP)
-                                            </h4>
-                                        </div>
-
-                                        <div className="space-y-2.5">
-                                            <div>
-                                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                    Nama Lengkap CPP
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={editFormData.groom_name}
-                                                    onChange={(e) => setEditFormData({ ...editFormData, groom_name: e.target.value })}
-                                                    placeholder="Nama lengkap CPP"
-                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                />
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <div>
-                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                        Panggilan
+                                                        Nama Lengkap Ibu
                                                     </label>
                                                     <input
                                                         type="text"
-                                                        value={editFormData.groom_nickname}
-                                                        onChange={(e) => setEditFormData({ ...editFormData, groom_nickname: e.target.value })}
-                                                        placeholder="Panggilan"
+                                                        value={editFormData.mother_name}
+                                                        onChange={(e) => {
+                                                            const m = e.target.value;
+                                                            const f = editFormData.father_name;
+                                                            const combined = [f, m].filter(Boolean).join(' & ');
+                                                            setEditFormData({ ...editFormData, mother_name: m, partner_name: combined, name: editFormData.child_name ? `Baby ${editFormData.child_name}` : combined });
+                                                        }}
+                                                        placeholder="Nama ibu"
                                                         className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
                                                     />
                                                 </div>
-                                                <div>
-                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                        Tanggal Lahir
-                                                    </label>
-                                                    <input
-                                                        type="date"
-                                                        value={editFormData.groom_birth_date}
-                                                        onChange={(e) => setEditFormData({ ...editFormData, groom_birth_date: e.target.value })}
-                                                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                    />
-                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                    Pekerjaan Orang Tua
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={editFormData.occupation}
+                                                    onChange={(e) => setEditFormData({ ...editFormData, occupation: e.target.value })}
+                                                    placeholder="Pekerjaan"
+                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                />
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                )}
 
-                                {/* Additional / Corporate Details */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                            Nama Pasangan / Pendamping Tambahan
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={editFormData.partner_name}
-                                            onChange={(e) => setEditFormData({ ...editFormData, partner_name: e.target.value })}
-                                            placeholder="Opsional jika bukan wedding"
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                        />
+                                {/* STANDARD EDIT FIELDS */}
+                                {activeEditFormType === 'standard' && (
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                Nama Lengkap Klien / Pemesan <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={editFormData.name}
+                                                onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                                                placeholder="Nama Klien"
+                                                className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                            />
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                    Nama Panggilan / Alias
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={editFormData.contact_person}
+                                                    onChange={(e) => setEditFormData({ ...editFormData, contact_person: e.target.value })}
+                                                    placeholder="Panggilan"
+                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                    Pekerjaan / Profesi
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={editFormData.occupation}
+                                                    onChange={(e) => setEditFormData({ ...editFormData, occupation: e.target.value })}
+                                                    placeholder="Profesi"
+                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                Perusahaan / Brand / Institusi
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={editFormData.company_name}
+                                                onChange={(e) => setEditFormData({ ...editFormData, company_name: e.target.value })}
+                                                placeholder="Nama Perusahaan"
+                                                className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                            />
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                            Nama Perusahaan / Brand (B2B)
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={editFormData.company_name}
-                                            onChange={(e) => setEditFormData({ ...editFormData, company_name: e.target.value })}
-                                            placeholder="Contoh: PT Astra International"
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                        />
-                                    </div>
-                                </div>
+                                )}
                             </div>
                         )}
 
@@ -4531,8 +5833,8 @@ export default function ClientDetail({
                                                         type="button"
                                                         onClick={() => toggleEditTag(tag)}
                                                         className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${isSelected
-                                                                ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                                                                : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
+                                                            ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                                            : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
                                                             }`}
                                                     >
                                                         {tag}
@@ -4764,14 +6066,16 @@ export default function ClientDetail({
                             <Button
                                 variant="outline"
                                 onClick={() => setIsAddDriveLinkModalOpen(false)}
+                                disabled={savingDriveLink}
                             >
                                 Batal
                             </Button>
                             <Button
                                 className="bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white"
                                 onClick={() => handleSaveDriveLink()}
+                                disabled={savingDriveLink}
                             >
-                                Simpan Link
+                                {savingDriveLink ? 'Menyimpan...' : 'Simpan Link'}
                             </Button>
                         </div>
                     }
@@ -4802,6 +6106,29 @@ export default function ClientDetail({
                                 placeholder="https://drive.google.com/drive/folders/..."
                             />
                         </div>
+
+                        <div>
+                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                Tipe Berkas
+                            </label>
+                            <NativeSelect
+                                value={newDriveLinkType}
+                                onChange={(e) => setNewDriveLinkType(e.target.value)}
+                                className="text-xs"
+                            >
+                                <option value="google_drive">Google Drive (Umum)</option>
+                                <option value="master_raw">Master RAW</option>
+                                <option value="highlight">Highlight Photo / Video</option>
+                                <option value="cinematic">Cinematic / Full Video</option>
+                                <option value="full_doc">Full Documentary</option>
+                                <option value="album">Album Layout</option>
+                                <option value="sneak_peak">Sneak Peak</option>
+                            </NativeSelect>
+                        </div>
+
+                        <p className="text-[11px] text-slate-400">
+                            Project aktif: <span className="font-bold text-slate-700">{selectedProject?.code} — {selectedProject?.name}</span>
+                        </p>
                     </form>
                 </Modal>
 
@@ -4884,6 +6211,188 @@ export default function ClientDetail({
                                 onChange={(e) => setNewCommFormData({ ...newCommFormData, content: e.target.value })}
                                 placeholder="Tuliskan ringkasan pembahasan atau tanggapan klien..."
                                 className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-accent/20 focus:border-primary-accent transition-all resize-none"
+                            />
+                        </div>
+                    </form>
+                </Modal>
+
+                {/* ========================================================================= */}
+                {/* MODAL 5: EDIT ALUR TAHAP TIMELINE */}
+                {/* ========================================================================= */}
+                <Modal
+                    isOpen={isEditStageModalOpen}
+                    onClose={() => setIsEditStageModalOpen(false)}
+                    title={`Edit Alur Tahap ${stageFormData.step} — ${selectedProject?.name || 'Project'}`}
+                    subtitle="Sesuaikan nama tahapan, fase, target durasi/deadline, output deliverable, PIC, status, dan deskripsi aktivitas pengerjaan."
+                    maxWidth="lg"
+                    footer={
+                        <div className="flex items-center justify-between w-full flex-wrap gap-2">
+                            <div>
+                                {currentStages[editingStageIndex]?.isCustom && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleResetStageToDefault}
+                                        disabled={isSavingStage}
+                                        className="text-xs text-amber-700 hover:bg-amber-50 border-amber-200 cursor-pointer"
+                                    >
+                                        <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                                        Reset ke Standar Alur
+                                    </Button>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setIsEditStageModalOpen(false)}
+                                    disabled={isSavingStage}
+                                >
+                                    Batal
+                                </Button>
+                                <Button
+                                    className="bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold"
+                                    onClick={(e) => handleSaveStageEdit(e)}
+                                    disabled={isSavingStage}
+                                >
+                                    {isSavingStage ? 'Menyimpan...' : 'Simpan Perubahan'}
+                                </Button>
+                            </div>
+                        </div>
+                    }
+                >
+                    <form onSubmit={handleSaveStageEdit} className="space-y-4 pt-1">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                    Nama / Judul Tahap <span className="text-red-500">*</span>
+                                </label>
+                                <Input
+                                    type="text"
+                                    required
+                                    value={stageFormData.title}
+                                    onChange={(e) => setStageFormData({ ...stageFormData, title: e.target.value })}
+                                    placeholder="Contoh: Booking & Briefing Sesi"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                    Fase Proyek <span className="text-red-500">*</span>
+                                </label>
+                                <NativeSelect
+                                    value={stageFormData.phase}
+                                    onChange={(e) => setStageFormData({ ...stageFormData, phase: e.target.value })}
+                                >
+                                    <option value="Pra-Acara">Pra-Acara</option>
+                                    <option value="Hari H">Hari H</option>
+                                    <option value="Pasca-Produksi">Pasca-Produksi</option>
+                                    <option value="Review">Review</option>
+                                    <option value="Finishing">Finishing</option>
+                                    <option value="Selesai">Selesai</option>
+                                    <option value="Operasional">Operasional</option>
+                                </NativeSelect>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                    Target Durasi / Deadline
+                                </label>
+                                <Input
+                                    type="text"
+                                    value={stageFormData.duration}
+                                    onChange={(e) => setStageFormData({ ...stageFormData, duration: e.target.value })}
+                                    placeholder="Contoh: H-7 s/d H-1 atau H+14"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                    Penanggung Jawab (PIC)
+                                </label>
+                                <Input
+                                    type="text"
+                                    value={stageFormData.pic}
+                                    onChange={(e) => setStageFormData({ ...stageFormData, pic: e.target.value })}
+                                    placeholder="Contoh: Admin Finance & CRM / Lead Photographer"
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                Output / Deliverable
+                            </label>
+                            <Input
+                                type="text"
+                                value={stageFormData.deliv}
+                                onChange={(e) => setStageFormData({ ...stageFormData, deliv: e.target.value })}
+                                placeholder="Contoh: Briefing & Moodboard Konsep Foto"
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                    Status Tahap
+                                </label>
+                                <NativeSelect
+                                    value={stageFormData.status}
+                                    onChange={(e) => {
+                                        const newStatus = e.target.value as 'done' | 'active' | 'pending';
+                                        setStageFormData({
+                                            ...stageFormData,
+                                            status: newStatus,
+                                            progress:
+                                                newStatus === 'done'
+                                                    ? 100
+                                                    : newStatus === 'active'
+                                                        ? stageFormData.progress || 50
+                                                        : 0,
+                                        });
+                                    }}
+                                >
+                                    <option value="pending">Belum Dimulai (Pending)</option>
+                                    <option value="active">Sedang Dikerjakan (In Progress)</option>
+                                    <option value="done">Selesai (Completed)</option>
+                                </NativeSelect>
+                            </div>
+
+                            <div>
+                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                    Progres Pengerjaan Tahap Ini ({stageFormData.progress}%)
+                                </label>
+                                <div className="flex items-center gap-3 pt-1">
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="100"
+                                        step="5"
+                                        value={stageFormData.progress}
+                                        onChange={(e) =>
+                                            setStageFormData({ ...stageFormData, progress: Number(e.target.value) })
+                                        }
+                                        className="flex-1 accent-primary-accent cursor-pointer"
+                                    />
+                                    <span className="font-mono font-bold text-xs px-2 py-1 rounded-md bg-slate-100 min-w-[50px] text-center">
+                                        {stageFormData.progress}%
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                Deskripsi & Aktivitas Tim
+                            </label>
+                            <Textarea
+                                rows={3}
+                                value={stageFormData.activity}
+                                onChange={(e) => setStageFormData({ ...stageFormData, activity: e.target.value })}
+                                placeholder="Deskripsikan SOP atau aktivitas detail yang dikerjakan pada tahap ini..."
+                                className="w-full text-xs"
                             />
                         </div>
                     </form>

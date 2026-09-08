@@ -329,26 +329,14 @@ export default function PackagesIndex({
         <div className="w-full max-w-full space-y-6 pb-20">
             <Head title="Paket & Harga - Master Data" />
 
-            {/* ── 1. BREADCRUMB & HEADER ────────────────────────────────────────── */}
-            <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs">
-                    <Link
-                        href="/master-data/categories"
-                        className="text-slate-500 hover:text-slate-800 transition-colors font-medium"
-                    >
-                        Master Data
-                    </Link>
-                    <span className="text-slate-400">›</span>
-                    <span className="text-primary-accent font-bold">Paket &amp; Harga</span>
+            {/* ── 1. HEADER TITLE & ACTIONS ────────────────────────────────────────── */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">Paket &amp; Harga</h1>
+                    <p className="text-slate-500 text-xs sm:text-sm mt-1">
+                        Kelola semua paket, harga layanan, dan konfigurasi deliverables yang terhubung otomatis ke Project.
+                    </p>
                 </div>
-
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-black text-slate-900 tracking-tight">Paket &amp; Harga</h1>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                            Kelola semua paket, harga layanan, dan konfigurasi deliverables yang terhubung otomatis ke Project.
-                        </p>
-                    </div>
 
                     <div className="flex items-center gap-2">
                         <Link
@@ -368,7 +356,6 @@ export default function PackagesIndex({
                         </button>
                     </div>
                 </div>
-            </div>
 
             {/* ── 2. TOP 4 STAT CARDS ── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

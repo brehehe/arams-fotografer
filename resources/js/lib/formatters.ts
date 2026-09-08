@@ -60,6 +60,41 @@ export function formatRupiahCompact(
     return `${sign}Rp ${abs.toLocaleString('id-ID')}`;
 }
 
+/**
+ * Format currency with compact lowercase Indonesian notation (k, jt, M, T)
+ * Examples:
+ * 101.500.000 -> "Rp 101,5 jt"
+ * 85.750.000  -> "Rp 85,75 jt"
+ * 15.750.000  -> "Rp 15,75 jt"
+ * 500.000     -> "Rp 500 k"
+ */
+export function formatCurrencyShort(amount: number | string | null | undefined): string {
+    if (amount === null || amount === undefined || isNaN(Number(amount))) {
+        return 'Rp 0';
+    }
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+    const abs = Math.abs(num);
+    const sign = num < 0 ? '-' : '';
+
+    if (abs >= 1_000_000_000_000) {
+        const val = (abs / 1_000_000_000_000).toFixed(2).replace(/\.?0+$/, '').replace('.', ',');
+        return `${sign}Rp ${val} T`;
+    }
+    if (abs >= 1_000_000_000) {
+        const val = (abs / 1_000_000_000).toFixed(2).replace(/\.?0+$/, '').replace('.', ',');
+        return `${sign}Rp ${val} M`;
+    }
+    if (abs >= 1_000_000) {
+        const val = (abs / 1_000_000).toFixed(2).replace(/\.?0+$/, '').replace('.', ',');
+        return `${sign}Rp ${val} jt`;
+    }
+    if (abs >= 1_000) {
+        const val = (abs / 1_000).toFixed(1).replace(/\.?0+$/, '').replace('.', ',');
+        return `${sign}Rp ${val} k`;
+    }
+    return `${sign}Rp ${abs.toLocaleString('id-ID')}`;
+}
+
 export function formatNumber(amount: number | string | null | undefined): string {
     if (amount === null || amount === undefined || isNaN(Number(amount))) {
         return '0';

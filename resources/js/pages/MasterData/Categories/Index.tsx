@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import { toast } from 'sonner';
 import { Pagination } from '@/components/ui/pagination';
+import { SelectSearch } from '@/components/ui/select-search';
+
 import {
     Folder,
     CheckCircle2,
@@ -41,6 +43,7 @@ interface CategoryItem {
     icon?: string;
     color?: string;
     workflow_type?: string;
+    form_type?: 'wedding' | 'newborn' | 'standard' | string;
     status?: string;
     projects_count?: number;
     packages_count?: number;
@@ -115,6 +118,7 @@ export default function CategoriesIndex({
         name: '',
         description: '',
         workflow_type: 'wedding',
+        form_type: 'standard',
         color: '#6366F1',
         icon: 'Tag',
         status: 'active',
@@ -144,6 +148,7 @@ export default function CategoriesIndex({
             name: '',
             description: '',
             workflow_type: 'non_wedding',
+            form_type: 'standard',
             color: '#6366F1',
             icon: 'Tag',
             status: 'active',
@@ -157,6 +162,7 @@ export default function CategoriesIndex({
             name: item.name,
             description: item.description || '',
             workflow_type: item.workflow_type || 'non_wedding',
+            form_type: item.form_type || (item.slug === 'wedding' || item.slug === 'prewedding' ? 'wedding' : (item.slug === 'newborn' ? 'newborn' : 'standard')),
             color: item.color || '#6366F1',
             icon: item.icon || 'Tag',
             status: item.status || 'active',
@@ -278,22 +284,37 @@ export default function CategoriesIndex({
         );
     };
 
+    const getFormTypeBadge = (formType?: string) => {
+        if (formType === 'wedding') {
+            return (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-pink-50 text-pink-700 border border-pink-200 shadow-2xs">
+                    <span>👰🤵 CPP &amp; CPW</span>
+                </span>
+            );
+        }
+        if (formType === 'newborn') {
+            return (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 shadow-2xs">
+                    <span>👶 Nama Anak</span>
+                </span>
+            );
+        }
+        return (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-50 text-slate-700 border border-slate-200 shadow-2xs">
+                <span>👤 Standar</span>
+            </span>
+        );
+    };
+
     return (
         <div className="w-full max-w-full space-y-6 pb-20">
             <Head title="Kategori Project - Master Data" />
 
-            {/* ── 1. BREADCRUMB & HEADER ── */}
+            {/* ── 1. HEADER TITLE & ACTIONS ── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1">
-                    <nav className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
-                        <Link href="/master-data/categories" className="hover:text-primary-accent transition-colors">
-                            Master Data
-                        </Link>
-                        <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="text-primary-accent font-semibold">Kategori Project</span>
-                    </nav>
-                    <h1 className="text-2xl font-black text-slate-900 tracking-tight">Kategori Project</h1>
-                    <p className="text-xs text-slate-500">
+                <div>
+                    <h1 className="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">Kategori Project</h1>
+                    <p className="text-slate-500 text-xs sm:text-sm mt-1">
                         Kelola kategori project yang terhubung langsung dengan Alur Workflow, Paket, Layanan, dan Project.
                     </p>
                 </div>
@@ -422,10 +443,11 @@ export default function CategoriesIndex({
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs border-collapse">
                         <thead>
-                            <tr className="border-b border-slate-100 bg-slate-50/40 text-[10px] font-bold tracking-wider text-slate-500 uppercase">
-                                <th className="py-3 px-5 w-12">NO</th>
-                                <th className="py-3 px-4">NAMA KATEGORI</th>
-                                <th className="py-3 px-4">ALUR WORKFLOW</th>
+                            <tr className="border-b border-slate-200/80 bg-slate-50/70 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                                <th className="py-3 px-4 w-12 text-center">#</th>
+                                <th className="py-3 px-4">Kategori</th>
+                                <th className="py-3 px-4">Alur Workflow</th>
+                                <th className="py-3 px-4">Tipe Input Form</th>
                                 <th className="py-3 px-4 text-center">PAKET</th>
                                 <th className="py-3 px-4 text-center">LAYANAN</th>
                                 <th className="py-3 px-4 text-center">PROJECTS</th>
@@ -470,6 +492,10 @@ export default function CategoriesIndex({
                                                 >
                                                     {getWorkflowBadge(cat.workflow_type)}
                                                 </Link>
+                                            </td>
+
+                                            <td className="py-3.5 px-4 whitespace-nowrap">
+                                                {getFormTypeBadge(cat.form_type)}
                                             </td>
 
                                             <td className="py-3.5 px-4 text-center whitespace-nowrap">
@@ -585,6 +611,26 @@ export default function CategoriesIndex({
                                     placeholder="Contoh: Wedding, Prewedding, Event, dll"
                                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                                 />
+                            </div>
+
+                            <div>
+                                <label className="block font-bold text-slate-700 mb-1.5">
+                                    Tipe Penginputan Form Klien &amp; Project <span className="text-rose-500">*</span>
+                                </label>
+                                <SelectSearch
+                                    options={[
+                                        { value: 'wedding', label: '👰🤵 Pernikahan — CPP & CPW (Calon Pengantin)' },
+                                        { value: 'newborn', label: '👶 Newborn — Nama anak/kembar, ayah & ibu' },
+                                        { value: 'standard', label: '👤 Umum / Standar — Data normal (nama klien saja)' },
+                                    ]}
+                                    value={form.form_type}
+                                    onChange={(val) => setForm({ ...form, form_type: val })}
+                                    placeholder="Pilih tipe form..."
+                                    clearable={false}
+                                />
+                                <p className="text-[10px] text-slate-400 mt-1.5">
+                                    Menentukan skema isian formulir di Form Klien publik, Tambah/Edit Klien, serta Tambah/Edit Project.
+                                </p>
                             </div>
 
                             <div>

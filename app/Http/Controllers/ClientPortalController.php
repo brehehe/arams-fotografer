@@ -71,4 +71,28 @@ class ClientPortalController extends Controller
 
         return redirect()->back()->with('success', 'Terima kasih! Ulasan Anda berhasil dikirim.');
     }
+
+    /**
+     * Store a new client note/briefing for the project.
+     */
+    public function addNote(Request $request, Project $project): \Illuminate\Http\RedirectResponse
+    {
+        $validated = $request->validate([
+            'title' => 'nullable|string|max:150',
+            'content' => 'required|string|max:2000',
+        ]);
+
+        $title = !empty(trim($validated['title'] ?? '')) ? trim($validated['title']) : 'Catatan Klien';
+        $user = $request->user();
+        $authorName = $user?->name ?? ($project->client?->name ?? 'Klien');
+        $timestamp = now()->isoFormat('D MMM YYYY, HH:mm');
+
+        $newEntry = "--- [{$timestamp}] {$title} (Oleh: {$authorName}) ---\n" . trim($validated['content']);
+
+        $existing = trim($project->notes ?? '');
+        $project->notes = $existing ? ($existing . "\n\n" . $newEntry) : $newEntry;
+        $project->save();
+
+        return redirect()->back()->with('success', 'Catatan baru berhasil ditambahkan ke project.');
+    }
 }

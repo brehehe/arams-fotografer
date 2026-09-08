@@ -21,7 +21,7 @@ class ProfileController extends Controller
     {
         $settings = \App\Models\Setting::all()->groupBy('group');
 
-        return Inertia::render('settings/Index', [
+        return Inertia::render('settings/profile', [
             'settings' => $settings,
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),

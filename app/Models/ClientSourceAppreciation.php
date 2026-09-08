@@ -22,6 +22,7 @@ class ClientSourceAppreciation extends Model
         'finance_reference',
         'is_recorded_in_finance',
         'notes',
+        'proof_image',
     ];
 
     protected $casts = [

@@ -75,7 +75,7 @@ class NotificationController extends Controller
             ->where('event_date', '<=', $now->copy()->addDays(7)->toDateString())
             ->whereNotIn('status', ['cancelled', 'completed'])
             ->orderBy('event_date')
-            ->limit(4)
+            ->limit(5)
             ->get();
 
         foreach ($upcomingShoots as $proj) {
@@ -86,7 +86,7 @@ class NotificationController extends Controller
                 'type' => 'upcoming_event',
                 'category' => 'schedule',
                 'title' => "Jadwal Shoot ({$dayLabel})",
-                'message' => "Acara \"{$proj->name}\" (" . ($proj->category?->name ?? 'Event') . ") dijadwalkan pada " . ($proj->event_date?->format('d M Y') ?? '-') . " di " . ($proj->location ?: 'Lokasi Klien') . ".",
+                'message' => "Project \"{$proj->name}\" (" . ($proj->category?->name ?? 'Pemotretan') . ") dijadwalkan pada " . ($proj->event_date?->format('d M Y') ?? '-') . ($proj->location ? " di {$proj->location}" : '') . ".",
                 'time_ago' => $dayLabel,
                 'url' => "/projects/{$proj->id}",
                 'priority' => $diffDays <= 1 ? 'high' : 'medium',
@@ -97,7 +97,64 @@ class NotificationController extends Controller
             ];
         }
 
-        // 4. Overdue / Unpaid Invoices
+        // 4. Upcoming Calendar Schedules (Next 7 Days)
+        $upcomingSchedules = \App\Models\ProjectSchedule::with('project')
+            ->where('date', '>=', $now->toDateString())
+            ->where('date', '<=', $now->copy()->addDays(7)->toDateString())
+            ->orderBy('date')
+            ->orderBy('start_time')
+            ->limit(5)
+            ->get();
+
+        foreach ($upcomingSchedules as $sched) {
+            $diffDays = $now->diffInDays(Carbon::parse($sched->date), false);
+            $dayLabel = $diffDays == 0 ? 'Hari Ini' : ($diffDays == 1 ? 'Besok' : "H-{$diffDays}");
+            $timeStr = $sched->start_time ? " (" . substr($sched->start_time, 0, 5) . ")" : '';
+            $notifications[] = [
+                'id' => "schedule_upcoming_{$sched->id}",
+                'type' => 'upcoming_schedule',
+                'category' => 'schedule',
+                'title' => "Jadwal Kalender ({$dayLabel})",
+                'message' => "{$sched->title}{$timeStr}" . ($sched->location ? " di {$sched->location}" : '') . ".",
+                'time_ago' => $dayLabel,
+                'url' => "/calendar",
+                'priority' => $diffDays <= 1 ? 'high' : 'medium',
+                'icon' => 'Clock',
+                'color' => 'indigo',
+                'is_read' => false,
+                'created_at' => Carbon::parse($sched->date)->toIso8601String(),
+            ];
+        }
+
+        // 5. Upcoming Project Deadlines (Next 5 Days)
+        $upcomingDeadlines = Project::whereNotNull('deadline')
+            ->where('deadline', '>=', $now->toDateString())
+            ->where('deadline', '<=', $now->copy()->addDays(5)->toDateString())
+            ->whereNotIn('status', ['cancelled', 'completed'])
+            ->orderBy('deadline')
+            ->limit(3)
+            ->get();
+
+        foreach ($upcomingDeadlines as $dl) {
+            $diffDays = $now->diffInDays($dl->deadline, false);
+            $dayLabel = $diffDays == 0 ? 'Hari Ini' : ($diffDays == 1 ? 'Besok' : "H-{$diffDays}");
+            $notifications[] = [
+                'id' => "deadline_upcoming_{$dl->id}",
+                'type' => 'upcoming_deadline',
+                'category' => 'schedule',
+                'title' => "Deadline Project ({$dayLabel})",
+                'message' => "Tenggat waktu project \"{$dl->name}\" jatuh pada " . ($dl->deadline?->format('d M Y') ?? '-') . ".",
+                'time_ago' => $dayLabel,
+                'url' => "/projects/{$dl->id}",
+                'priority' => 'high',
+                'icon' => 'AlertCircle',
+                'color' => 'rose',
+                'is_read' => false,
+                'created_at' => $dl->deadline?->toIso8601String() ?? $now->toIso8601String(),
+            ];
+        }
+
+        // 6. Overdue / Unpaid Invoices
         $pendingInvoices = Invoice::with(['client', 'project'])
             ->where('status', '!=', 'paid')
             ->where('remaining_amount', '>', 0)

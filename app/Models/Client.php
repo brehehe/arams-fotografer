@@ -17,6 +17,12 @@ class Client extends Model
     protected $fillable = [
         'name',
         'partner_name',
+        'child_name',
+        'child_birth_date',
+        'child_gender',
+        'father_name',
+        'mother_name',
+        'children',
         'bride_name',
         'bride_nickname',
         'groom_name',
@@ -52,8 +58,10 @@ class Client extends Model
 
     protected $casts = [
         'tags' => 'array',
+        'children' => 'array',
         'bride_birth_date' => 'date',
         'groom_birth_date' => 'date',
+        'child_birth_date' => 'date',
     ];
 
     public function getActivitylogOptions(): LogOptions

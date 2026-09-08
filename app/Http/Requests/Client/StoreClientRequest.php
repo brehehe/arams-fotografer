@@ -19,6 +19,11 @@ class StoreClientRequest extends FormRequest
             $names = array_filter([$this->bride_name, $this->groom_name]);
             if (!empty($names)) {
                 $this->merge(['name' => implode(' & ', $names)]);
+            } elseif (!empty($this->father_name) || !empty($this->mother_name)) {
+                $parents = array_filter([$this->father_name, $this->mother_name]);
+                $this->merge(['name' => implode(' & ', $parents)]);
+            } elseif (!empty($this->child_name)) {
+                $this->merge(['name' => $this->child_name . ' (Newborn)']);
             } elseif (!empty($this->contact_person)) {
                 $this->merge(['name' => $this->contact_person]);
             }
@@ -30,6 +35,16 @@ class StoreClientRequest extends FormRequest
         return [
             'name' => 'required|string|max:255',
             'partner_name' => 'nullable|string|max:255',
+            'child_name' => 'nullable|string|max:255',
+            'child_birth_date' => 'nullable|date',
+            'child_gender' => 'nullable|string|max:50',
+            'father_name' => 'nullable|string|max:255',
+            'mother_name' => 'nullable|string|max:255',
+            'children' => 'nullable|array',
+            'children.*.name' => 'nullable|string|max:255',
+            'children.*.nickname' => 'nullable|string|max:100',
+            'children.*.birth_date' => 'nullable|date',
+            'children.*.gender' => 'nullable|string|max:50',
             'bride_name' => 'nullable|string|max:255',
             'bride_nickname' => 'nullable|string|max:100',
             'groom_name' => 'nullable|string|max:255',

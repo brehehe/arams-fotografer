@@ -39,6 +39,7 @@ import {
     Layers,
     Upload,
     Image as ImageIcon,
+    Baby,
 } from 'lucide-react';
 import { SelectSearch, SelectSearchOption } from '@/components/ui/select-search';
 import { Input } from '@/components/ui/input';
@@ -54,6 +55,20 @@ interface ClientItem {
     phone?: string | null;
     city?: string | null;
     instagram?: string | null;
+    bride_name?: string | null;
+    groom_name?: string | null;
+    father_name?: string | null;
+    mother_name?: string | null;
+    child_name?: string | null;
+    child_birth_date?: string | null;
+    child_gender?: string | null;
+    children?: Array<{
+        name: string;
+        nickname?: string;
+        birth_date?: string;
+        gender?: string;
+        [key: string]: any;
+    }> | null;
 }
 
 interface CategoryItem {
@@ -62,6 +77,7 @@ interface CategoryItem {
     slug?: string;
     color?: string;
     workflow_type?: string;
+    form_type?: string | null;
 }
 
 interface PackageItem {
@@ -377,6 +393,15 @@ export default function ProjectsEdit({
         return categories.find((c) => String(c.id) === String(categoryId)) || categories[0];
     }, [categories, categoryId]);
 
+    const activeFormType = useMemo(() => {
+        const cat = selectedCategory;
+        if (cat?.form_type) return cat.form_type;
+        const name = cat?.name?.toLowerCase() || '';
+        if (name.includes('wedding')) return 'wedding';
+        if (name.includes('newborn')) return 'newborn';
+        return 'standard';
+    }, [selectedCategory]);
+
     const availablePackages = useMemo(() => {
         if (!categoryId) return packages;
         const filtered = packages.filter((p) => String(p.category_id) === String(categoryId));
@@ -499,18 +524,34 @@ export default function ProjectsEdit({
 
     // ── SELECT SEARCH OPTIONS MAPPING (100% Database Master Data) ────────
     const clientOptions = useMemo<SelectSearchOption[]>(() => {
-        return clients.map((c) => ({
-            value: String(c.id),
-            label: c.name,
-            subtitle: [c.phone, c.city].filter(Boolean).join(' • '),
-        }));
+        return clients.map((c) => {
+            const extra = c.children && c.children.length > 1
+                ? `👶 Kembar (${c.children.length} Bayi: ${c.children.map((k) => k.name).filter(Boolean).join(', ')})`
+                : c.child_name
+                ? `👶 ${c.child_name}`
+                : c.groom_name && c.bride_name
+                ? `👰🤵 ${c.groom_name} & ${c.bride_name}`
+                : null;
+            return {
+                value: String(c.id),
+                label: c.name,
+                subtitle: [extra, c.phone, c.city].filter(Boolean).join(' • '),
+            };
+        });
     }, [clients]);
 
     const categoryOptions = useMemo<SelectSearchOption[]>(() => {
-        return categories.map((cat) => ({
-            value: String(cat.id),
-            label: cat.name,
-        }));
+        return categories.map((cat) => {
+            const formType = cat.form_type || (cat.name.toLowerCase().includes('wedding') ? 'wedding' : cat.name.toLowerCase().includes('newborn') ? 'newborn' : 'standard');
+            let subtitle = 'Form Standar';
+            if (formType === 'wedding') subtitle = '👰🤵 CPP & CPW (Wedding)';
+            else if (formType === 'newborn') subtitle = '👶 Data Bayi & Anak (Newborn)';
+            return {
+                value: String(cat.id),
+                label: cat.name,
+                subtitle,
+            };
+        });
     }, [categories]);
 
     const packageOptions = useMemo<SelectSearchOption[]>(() => {
@@ -981,21 +1022,9 @@ export default function ProjectsEdit({
                             </span>
                         )}
                     </div>
-                    <nav className="flex items-center gap-1.5 text-xs text-slate-500 flex-wrap">
-                        <Link href="/dashboard" className="hover:text-slate-900 transition-colors whitespace-nowrap shrink-0">
-                            Dashboard
-                        </Link>
-                        <span>›</span>
-                        <Link href="/projects" className="hover:text-slate-900 transition-colors whitespace-nowrap shrink-0">
-                            Projects &amp; Orders
-                        </Link>
-                        <span>›</span>
-                        <Link href={`/projects/${project.id}`} className="hover:text-slate-900 transition-colors truncate max-w-[220px]">
-                            {project.name}
-                        </Link>
-                        <span>›</span>
-                        <span className="text-slate-900 font-medium whitespace-nowrap shrink-0">Edit Project</span>
-                    </nav>
+                    <p className="text-slate-500 text-xs sm:text-sm mt-1">
+                        Perbarui rincian data project, klien, paket layanan, atau penyesuaian biaya.
+                    </p>
                 </div>
 
                 <div className="flex items-center gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">
@@ -1285,6 +1314,24 @@ export default function ProjectsEdit({
                                 )}
                             </div>
 
+                            {/* Category Selection */}
+                            <div className="space-y-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-[11px] font-bold text-slate-600 block">
+                                        Kategori Project <span className="text-rose-500">*</span>
+                                    </label>
+                                    <span className="text-[10px] text-slate-400">Tipe alur & formulir</span>
+                                </div>
+                                <SelectSearch
+                                    options={categoryOptions}
+                                    value={categoryId}
+                                    onChange={handleCategoryChange}
+                                    placeholder="Pilih Kategori Project..."
+                                    searchPlaceholder="Cari kategori..."
+                                    clearable={false}
+                                />
+                            </div>
+
                             {/* Client Selection */}
                             <div className="space-y-1 min-w-0">
                                 <label className="text-[11px] font-bold text-slate-600 block">
@@ -1298,21 +1345,53 @@ export default function ProjectsEdit({
                                     searchPlaceholder="Ketik nama klien atau telepon..."
                                     clearable={false}
                                 />
-                            </div>
-
-                            {/* Category Selection */}
-                            <div className="space-y-1 min-w-0">
-                                <label className="text-[11px] font-bold text-slate-600 block">
-                                    Kategori Project <span className="text-rose-500">*</span>
-                                </label>
-                                <SelectSearch
-                                    options={categoryOptions}
-                                    value={categoryId}
-                                    onChange={handleCategoryChange}
-                                    placeholder="Pilih Kategori Project..."
-                                    searchPlaceholder="Cari kategori..."
-                                    clearable={false}
-                                />
+                                {selectedClient && (
+                                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 text-xs mt-1.5 space-y-1">
+                                        {activeFormType === 'newborn' && (selectedClient.child_name || (selectedClient.children && selectedClient.children.length > 0)) ? (
+                                            <div className="space-y-1">
+                                                {selectedClient.children && selectedClient.children.length > 1 ? (
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center gap-1.5 text-amber-900 font-bold text-[11px]">
+                                                            <Baby className="w-3.5 h-3.5 text-amber-600" />
+                                                            <span>Bayi Kembar ({selectedClient.children.length} Anak):</span>
+                                                        </div>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pl-2 border-l-2 border-amber-300">
+                                                            {selectedClient.children.map((c, idx) => (
+                                                                <div key={idx} className="text-amber-800 text-[11px] bg-amber-50/80 px-2 py-1 rounded border border-amber-200/60">
+                                                                    <span className="font-semibold">#{idx + 1} {c.name || 'Tanpa Nama'}</span>
+                                                                    {c.nickname && <span className="text-[10px] text-slate-500 ml-1">({c.nickname})</span>}
+                                                                    <span className="text-[10px] text-amber-600 ml-1">({c.gender === 'P' || c.gender === 'Perempuan' ? 'Perempuan' : 'Laki-laki'})</span>
+                                                                    {c.birth_date && <span className="text-[10px] text-slate-500 block">🎂 {c.birth_date}</span>}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center justify-between text-amber-800 font-semibold text-[11px]">
+                                                        <span>👶 Bayi: {selectedClient.child_name || selectedClient.children?.[0]?.name || '-'} {(selectedClient.child_gender || selectedClient.children?.[0]?.gender) ? `(${selectedClient.child_gender === 'L' || selectedClient.children?.[0]?.gender === 'L' ? 'Laki-laki' : 'Perempuan'})` : ''}</span>
+                                                        {(selectedClient.child_birth_date || selectedClient.children?.[0]?.birth_date) && <span>🎂 {selectedClient.child_birth_date || selectedClient.children?.[0]?.birth_date}</span>}
+                                                    </div>
+                                                )}
+                                                {(selectedClient.father_name || selectedClient.mother_name) && (
+                                                    <div className="text-[10px] text-slate-600 flex flex-wrap items-center gap-2 pt-0.5 border-t border-slate-200/60">
+                                                        {selectedClient.father_name && <span>👨 Ayah: <strong className="text-slate-800">{selectedClient.father_name}</strong></span>}
+                                                        {selectedClient.father_name && selectedClient.mother_name && <span>•</span>}
+                                                        {selectedClient.mother_name && <span>👩 Ibu: <strong className="text-slate-800">{selectedClient.mother_name}</strong></span>}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : activeFormType === 'wedding' && (selectedClient.bride_name || selectedClient.groom_name) ? (
+                                            <div className="text-rose-800 font-semibold text-[11px]">
+                                                👰 {selectedClient.bride_name || '-'} & 🤵 {selectedClient.groom_name || '-'}
+                                            </div>
+                                        ) : null}
+                                        <div className="text-slate-500 text-[10px] flex items-center gap-3">
+                                            {selectedClient.phone && <span>📞 {selectedClient.phone}</span>}
+                                            {selectedClient.email && <span>✉️ {selectedClient.email}</span>}
+                                            {selectedClient.city && <span>📍 {selectedClient.city}</span>}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Package Selection */}
@@ -1536,28 +1615,36 @@ export default function ProjectsEdit({
                                     <label className="text-[11px] font-bold text-slate-600 block">
                                         Photographer <span className="text-rose-500">*</span>
                                     </label>
-                                    <SelectSearch
-                                        options={photographerOptions}
+                                    <Input
                                         value={photographerName}
-                                        onChange={setPhotographerName}
-                                        placeholder="Pilih Photographer..."
-                                        searchPlaceholder="Cari nama photographer..."
-                                        clearable={false}
+                                        onChange={(e) => setPhotographerName(e.target.value)}
+                                        placeholder="Ketik nama photographer..."
+                                        className="h-[42px]"
+                                        list="photographer-suggestions-edit"
                                     />
+                                    <datalist id="photographer-suggestions-edit">
+                                        {(team_members.length > 0 ? team_members : supervisors).map((p) => (
+                                            <option key={p.id} value={p.name} />
+                                        ))}
+                                    </datalist>
                                 </div>
 
                                 <div className="space-y-1 min-w-0">
                                     <label className="text-[11px] font-bold text-slate-600 block">
                                         Editor <span className="text-rose-500">*</span>
                                     </label>
-                                    <SelectSearch
-                                        options={editorOptions}
+                                    <Input
                                         value={editorName}
-                                        onChange={setEditorName}
-                                        placeholder="Pilih Editor..."
-                                        searchPlaceholder="Cari nama editor..."
-                                        clearable={false}
+                                        onChange={(e) => setEditorName(e.target.value)}
+                                        placeholder="Ketik nama editor..."
+                                        className="h-[42px]"
+                                        list="editor-suggestions-edit"
                                     />
+                                    <datalist id="editor-suggestions-edit">
+                                        {(team_members.length > 0 ? team_members : supervisors).map((ed) => (
+                                            <option key={ed.id} value={ed.name} />
+                                        ))}
+                                    </datalist>
                                 </div>
 
                                 <div className="space-y-1 min-w-0 pt-2 border-t border-slate-100">

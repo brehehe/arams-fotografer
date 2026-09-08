@@ -111,18 +111,30 @@ class ClientPortalService
                 ];
             });
 
-        // 1. Promo Slides from Database
-        $promoSlides = \App\Models\PromoSlide::active()->get()->map(function ($p) {
-            return [
-                'id' => $p->id,
-                'tag' => $p->tag,
-                'title' => $p->title,
-                'description' => $p->description,
-                'button_text' => $p->button_text,
-                'button_url' => $p->button_url ?: '/form-klien',
-                'image' => $p->image ?: '/images/wedding-couple.jpg',
-            ];
-        });
+        // 1. Promo Slides from Database (prioritize active project slide if exists, combined with general studio slides)
+        $activeProjectId = $activeProject?->id;
+        $promoSlides = \App\Models\PromoSlide::active()
+            ->where(function ($q) use ($activeProjectId) {
+                $q->whereNull('project_id');
+                if ($activeProjectId) {
+                    $q->orWhere('project_id', $activeProjectId);
+                }
+            })
+            ->orderByRaw('CASE WHEN project_id IS NOT NULL THEN 0 ELSE 1 END')
+            ->orderBy('sort_order')
+            ->get()
+            ->map(function ($p) {
+                return [
+                    'id' => $p->id,
+                    'tag' => $p->tag,
+                    'title' => $p->title,
+                    'description' => $p->description,
+                    'button_text' => $p->button_text,
+                    'button_url' => $p->button_url ?: '/form-klien',
+                    'image' => $p->image ?: '/images/wedding-couple.jpg',
+                    'project_id' => $p->project_id,
+                ];
+            });
 
         // 2. Instagram Posts from Database
         $instagramPosts = \App\Models\InstagramPost::active()->get()->map(function ($p) {
@@ -161,6 +173,14 @@ class ClientPortalService
             'gdrive_url' => Setting::get('company_gdrive_url', 'https://drive.google.com'),
         ];
 
+        $totalProjects = $client ? Project::where('client_id', $client->id)->count() : Project::count();
+        $totalInvoices = $activeProject ? $activeProject->invoices()->count() : ($client ? \App\Models\Invoice::where('client_id', $client->id)->count() : 1);
+        $totalPayments = $activeProject ? $activeProject->payments()->count() : 0;
+
+        $fileLinksCollection = ($activeProject && $activeProject->fileLinks && $activeProject->fileLinks->isNotEmpty())
+            ? $activeProject->fileLinks
+            : \App\Models\FileLink::latest()->limit(3)->get();
+
         return [
             'client' => $client ? [
                 'id' => $client->id,
@@ -174,26 +194,48 @@ class ClientPortalService
                 'bride_nickname' => $client->bride_nickname,
                 'groom_nickname' => $client->groom_nickname,
             ] : null,
+            'metrics' => [
+                'total_projects' => $totalProjects,
+                'total_invoices' => $totalInvoices,
+                'total_payments' => $totalPayments,
+                'event_date' => $activeProject?->event_date?->isoFormat('D MMM YYYY') ?? 'Belum Dijadwalkan',
+                'event_category' => $activeProject?->category?->name ?? ($activeProject?->package?->name ?? 'Dokumentasi'),
+            ],
             'active_project' => $activeProject ? [
                 'id' => $activeProject->id,
                 'project_number' => $activeProject->project_number,
                 'name' => $activeProject->name,
                 'status' => $activeProject->status,
+                'status_label' => match ($activeProject->status) {
+                    'completed', 'delivered' => 'Selesai',
+                    'in_progress', 'editing', 'review' => 'Dalam Proses',
+                    'scheduled', 'confirmed' => 'Terkonfirmasi',
+                    'cancelled' => 'Dibatalkan',
+                    default => 'Dalam Proses',
+                },
+                'last_updated' => $activeProject->updated_at?->isoFormat('D MMMM YYYY') ?? now()->isoFormat('D MMMM YYYY'),
                 'workflow_step' => $activeProject->workflow_step,
                 'progress' => (int) $activeProject->progress,
                 'event_date' => $activeProject->event_date?->isoFormat('D MMMM YYYY') ?? null,
+                'event_date_short' => $activeProject->event_date?->isoFormat('D MMM YYYY') ?? null,
                 'event_date_raw' => $activeProject->event_date?->format('Y-m-d') ?? null,
-                'location' => $activeProject->location,
+                'location' => $activeProject->location ?: 'Studio Arams Pictures',
                 'category_name' => $activeProject->category?->name ?? 'Wedding Photography',
                 'package_name' => $activeProject->package?->name ?? 'Custom Package',
                 'total_amount' => (float) $activeProject->total_amount,
                 'paid_amount' => (float) $activeProject->paid_amount,
                 'payment_status' => $activeProject->payment_status,
-                'file_links' => $activeProject->fileLinks->map(fn($f) => [
+                'thumbnail' => $activeProject->thumbnail
+                    ?: ($activeProject->highlights->where('is_cover', true)->first()?->image_url
+                        ?: ($activeProject->highlights->first()?->image_url ?: '/images/wedding-couple.jpg')),
+                'invoices_count' => $totalInvoices,
+                'payments_count' => $totalPayments,
+                'file_links' => $fileLinksCollection->map(fn($f) => [
                     'id' => $f->id,
                     'name' => $f->name,
-                    'drive_url' => $f->drive_url,
+                    'drive_url' => $f->drive_url ?: '#',
                     'file_type' => $f->file_type,
+                    'created_at_formatted' => $f->created_at?->isoFormat('D MMM YYYY') ?? 'Baru saja',
                     'expires_at' => $f->expires_at?->isoFormat('D MMMM YYYY'),
                     'is_expired' => $f->isExpired(),
                     'days_remaining' => $f->daysRemaining(),
@@ -242,8 +284,11 @@ class ClientPortalService
             ->latest('event_date')
             ->get();
 
-        // If client has no projects (or admin previewing), get latest active projects
-        if ($projectsCollection->isEmpty()) {
+        // If client has no projects AND user is not an actual client (e.g. admin previewing), get latest active projects
+        $user = $request->user();
+        $isActualClient = $user && ($user->client_id || Client::where('email', $user->email)->exists());
+
+        if ($projectsCollection->isEmpty() && !$isActualClient) {
             $projectsCollection = Project::with(['category', 'package', 'highlights'])
                 ->latest('event_date')
                 ->limit(6)
@@ -280,8 +325,11 @@ class ClientPortalService
                 'current_step' => $currentStepNum,
                 'total_steps' => $totalStepsNum,
                 'step_label' => $stepLabel,
+                'active_step_desc' => $timelineData['active_step_desc'] ?? null,
+                'progress_percentage' => $timelineData['progress_percentage'] ?? 0,
+                'timeline_steps' => $timelineData['steps'] ?? [],
                 'completed_date' => in_array($p->status, ['completed', 'delivered']) ? ($p->updated_at?->isoFormat('D MMMM YYYY')) : null,
-                'estimated_done' => $p->deadline?->isoFormat('D MMMM YYYY') ?? null,
+                'estimated_done' => $p->deadline?->isoFormat('D MMMM YYYY') ?? ($p->event_date ? $p->event_date->copy()->addDays(30)->isoFormat('D MMMM YYYY') : null),
             ];
         });
 
@@ -310,12 +358,43 @@ class ClientPortalService
             'supervisor:id,name,avatar',
             'fileLinks' => fn ($q) => $q->active()->latest(),
             'payments.paymentMethod',
+            'invoices' => fn ($q) => $q->latest(),
             'projectAddons.addon',
             'highlights' => fn ($q) => $q->orderBy('sort_order'),
             'testimonials' => fn ($q) => $q->approved()->latest(),
         ]);
 
-        $timeline = $this->computeTimeline($project);
+        $coverImage = $project->thumbnail
+            ?: $project->highlights->where('is_cover', true)->first()?->image_url
+            ?: $project->highlights->first()?->image_url
+            ?: $this->getPackageSampleImage($project->package?->name ?? $project->category?->name ?? '');
+
+        if ($coverImage && str_contains($coverImage, 'images.unsplash.com') && str_contains($coverImage, 'w=')) {
+            $coverImage = preg_replace('/w=\d+/', 'w=1400', $coverImage);
+        }
+
+        $isClientUser = ($project->supervisor_id && $project->supervisor_id === $project->client_id)
+            || ($project->supervisor && $project->client && $project->supervisor->name === $project->client->name);
+        $supervisorName = (!$isClientUser && $project->supervisor?->name) ? $project->supervisor->name : 'Bima Arams';
+        $supervisorAvatar = (!$isClientUser) ? $project->supervisor?->avatar : null;
+
+        $photographerName = $project->photographer?->name;
+        if (!$photographerName && $project->notes) {
+            if (preg_match('/Photographer:\s*([^|\n\r]+)/i', $project->notes, $matches)) {
+                $photographerName = trim($matches[1]);
+            }
+        }
+        $photographerName = $photographerName ?: 'Tim Fotografer Arams';
+
+        $editorName = $project->editor?->name;
+        if (!$editorName && $project->notes) {
+            if (preg_match('/Editor:\s*([^|\n\r]+)/i', $project->notes, $matches)) {
+                $editorName = trim($matches[1]);
+            }
+        }
+        $editorName = $editorName ?: 'Tim Editor Arams';
+
+        $timeline = $this->computeTimeline($project, $supervisorName, $photographerName, $editorName);
         $paymentSummary = $this->computePaymentSummary($project);
 
         $companySettings = [
@@ -327,26 +406,69 @@ class ClientPortalService
             'website' => Setting::get('company_website', 'www.aramspictures.com'),
         ];
 
-        $notesList = array_values(array_filter([
-            $project->notes ? [
-                'id' => 'note-main',
-                'title' => 'Catatan & Briefing Project',
-                'content' => $project->notes,
-                'author' => $project->client?->name ?? 'Klien',
-                'role' => 'Briefing',
-                'date' => $project->created_at?->isoFormat('D') ?? '01',
-                'monthYear' => $project->created_at?->isoFormat('MMM YYYY') ?? '2026',
-            ] : null,
-            $project->location ? [
+        $notesList = [];
+        if ($project->notes) {
+            $pattern = '/---\s*\[(.*?)\]\s*(.*?)\s*\(Oleh:\s*(.*?)\)\s*---\n?(.*?)(?=(?:---\s*\[|$))/s';
+            if (preg_match_all($pattern, $project->notes, $matches, PREG_SET_ORDER)) {
+                $firstDelim = strpos($project->notes, '--- [');
+                if ($firstDelim !== false && $firstDelim > 0) {
+                    $initialText = trim(substr($project->notes, 0, $firstDelim));
+                    if (!empty($initialText)) {
+                        $notesList[] = [
+                            'id' => 'note-main',
+                            'title' => 'Catatan & Briefing Project',
+                            'content' => $initialText,
+                            'author' => $project->client?->name ?? 'Klien',
+                            'role' => 'Briefing Awal',
+                            'date' => $project->created_at?->isoFormat('D') ?? now()->isoFormat('D'),
+                            'monthYear' => $project->created_at?->isoFormat('MMM YYYY') ?? now()->isoFormat('MMM YYYY'),
+                        ];
+                    }
+                }
+                foreach ($matches as $idx => $m) {
+                    $rawDate = trim($m[1]);
+                    $nTitle = trim($m[2]);
+                    $nAuthor = trim($m[3]);
+                    $nContent = trim($m[4]);
+
+                    $parsedTime = strtotime(explode(',', $rawDate)[0]);
+                    $dateDay = $parsedTime ? date('d', $parsedTime) : now()->isoFormat('D');
+                    $dateMonthYear = $parsedTime ? date('M Y', $parsedTime) : now()->isoFormat('MMM YYYY');
+
+                    $notesList[] = [
+                        'id' => 'note-added-' . ($idx + 1),
+                        'title' => $nTitle ?: 'Catatan Tambahan',
+                        'content' => $nContent,
+                        'author' => $nAuthor ?: 'Klien',
+                        'role' => ($nAuthor === $supervisorName) ? 'Operasional' : 'Klien',
+                        'date' => $dateDay,
+                        'monthYear' => $dateMonthYear,
+                    ];
+                }
+            } else {
+                $notesList[] = [
+                    'id' => 'note-main',
+                    'title' => 'Catatan & Briefing Project',
+                    'content' => $project->notes,
+                    'author' => $project->client?->name ?? 'Klien',
+                    'role' => 'Briefing',
+                    'date' => $project->created_at?->isoFormat('D') ?? now()->isoFormat('D'),
+                    'monthYear' => $project->created_at?->isoFormat('MMM YYYY') ?? now()->isoFormat('MMM YYYY'),
+                ];
+            }
+        }
+
+        if ($project->location) {
+            $notesList[] = [
                 'id' => 'note-venue',
                 'title' => 'Konfirmasi Lokasi & Venue',
                 'content' => 'Acara berlangsung di ' . $project->location . ($project->event_time ? (' pada pukul ' . $project->event_time) : ''),
-                'author' => $project->supervisor?->name ?? 'Tim Arams',
+                'author' => $supervisorName,
                 'role' => 'Operasional',
-                'date' => $project->event_date?->isoFormat('D') ?? '12',
-                'monthYear' => $project->event_date?->isoFormat('MMM YYYY') ?? '2026',
-            ] : null,
-        ]));
+                'date' => $project->event_date?->isoFormat('D') ?? now()->isoFormat('D'),
+                'monthYear' => $project->event_date?->isoFormat('MMM YYYY') ?? now()->isoFormat('MMM YYYY'),
+            ];
+        }
 
         $testimonialsList = $project->testimonials->isNotEmpty()
             ? $project->testimonials->map(fn($t) => [
@@ -368,6 +490,15 @@ class ClientPortalService
                 'date' => $t->created_at?->isoFormat('D MMMM YYYY'),
             ]);
 
+        $paymentMethodsList = \App\Models\PaymentMethod::where('status', 'active')->get()->map(fn($pm) => [
+            'id' => $pm->id,
+            'name' => $pm->name,
+            'code' => $pm->code,
+            'account_number' => $pm->account_number,
+            'account_holder' => $pm->account_holder,
+            'icon' => $pm->icon,
+        ]);
+
         return [
             'project' => [
                 'id' => $project->id,
@@ -380,6 +511,7 @@ class ClientPortalService
                 'event_date_raw' => $project->event_date?->format('Y-m-d'),
                 'event_time' => $project->event_time,
                 'deadline' => $project->deadline?->isoFormat('D MMMM YYYY'),
+                'updated_at_formatted' => $project->updated_at?->isoFormat('D MMMM YYYY') ?? now()->isoFormat('D MMMM YYYY'),
                 'location' => $project->location,
                 'notes' => $project->notes,
                 'category_name' => $project->category?->name ?? 'Photography',
@@ -387,18 +519,19 @@ class ClientPortalService
                 'total_amount' => (float) $project->total_amount,
                 'paid_amount' => (float) $project->paid_amount,
                 'payment_status' => $project->payment_status,
-                'photographer' => $project->photographer ? [
-                    'name' => $project->photographer->name,
-                    'avatar' => $project->photographer->avatar,
-                ] : null,
-                'supervisor' => $project->supervisor ? [
-                    'name' => $project->supervisor->name,
-                    'avatar' => $project->supervisor->avatar,
-                ] : null,
-                'editor' => $project->editor ? [
-                    'name' => $project->editor->name,
-                    'avatar' => $project->editor->avatar,
-                ] : null,
+                'thumbnail' => $coverImage,
+                'photographer' => [
+                    'name' => $photographerName,
+                    'avatar' => $project->photographer?->avatar,
+                ],
+                'supervisor' => [
+                    'name' => $supervisorName,
+                    'avatar' => $supervisorAvatar,
+                ],
+                'editor' => [
+                    'name' => $editorName,
+                    'avatar' => $project->editor?->avatar,
+                ],
                 'addons' => $project->projectAddons->map(fn($pa) => [
                     'name' => $pa->addon?->name ?? $pa->custom_name ?? 'Add-on Item',
                     'qty' => $pa->qty,
@@ -426,17 +559,31 @@ class ClientPortalService
                 ]),
                 'payments' => $project->payments->map(fn($p) => [
                     'id' => $p->id,
+                    'payment_number' => $p->payment_number,
                     'amount' => (float) $p->amount,
                     'payment_date' => $p->payment_date?->isoFormat('D MMMM YYYY'),
                     'payment_method' => $p->paymentMethod?->name ?? 'Transfer Bank',
+                    'account_number' => $p->paymentMethod?->account_number,
+                    'account_holder' => $p->paymentMethod?->account_holder,
                     'reference_number' => $p->reference_number,
                     'status' => $p->status,
+                ]),
+                'invoices' => $project->invoices->map(fn($inv) => [
+                    'id' => $inv->id,
+                    'invoice_number' => $inv->invoice_number,
+                    'total' => (float) $inv->total,
+                    'paid_amount' => (float) $inv->paid_amount,
+                    'remaining_amount' => (float) $inv->remaining_amount,
+                    'status' => $inv->status,
+                    'issue_date' => $inv->issue_date?->isoFormat('D MMMM YYYY'),
+                    'due_date' => $inv->due_date?->isoFormat('D MMMM YYYY'),
                 ]),
                 'notes_list' => $notesList,
             ],
             'testimonials' => $testimonialsList,
             'timeline' => $timeline,
             'payment_summary' => $paymentSummary,
+            'payment_methods' => $paymentMethodsList,
             'company' => $companySettings,
         ];
     }
@@ -444,7 +591,7 @@ class ClientPortalService
     /**
      * Compute Timeline steps for the project.
      */
-    public function computeTimeline(?Project $project): array
+    public function computeTimeline(?Project $project, ?string $supervisorName = null, ?string $photographerName = null, ?string $editorName = null): array
     {
         if (!$project) {
             return [
@@ -459,6 +606,30 @@ class ClientPortalService
         }
 
         $workflowType = $project->category?->workflow_type ?? 'wedding';
+
+        if (!$supervisorName) {
+            $isClientUser = ($project->supervisor_id && $project->supervisor_id === $project->client_id)
+                || ($project->supervisor && $project->client && $project->supervisor->name === $project->client->name);
+            $supervisorName = (!$isClientUser && $project->supervisor?->name) ? $project->supervisor->name : 'Bima Arams';
+        }
+        if (!$photographerName) {
+            $photographerName = $project->photographer?->name;
+            if (!$photographerName && $project->notes) {
+                if (preg_match('/Photographer:\s*([^|\n\r]+)/i', $project->notes, $matches)) {
+                    $photographerName = trim($matches[1]);
+                }
+            }
+            $photographerName = $photographerName ?: 'Tim Fotografer Arams';
+        }
+        if (!$editorName) {
+            $editorName = $project->editor?->name;
+            if (!$editorName && $project->notes) {
+                if (preg_match('/Editor:\s*([^|\n\r]+)/i', $project->notes, $matches)) {
+                    $editorName = trim($matches[1]);
+                }
+            }
+            $editorName = $editorName ?: 'Tim Editor Arams';
+        }
 
         $weddingSteps = [
             ['step' => 1, 'key' => 'booking', 'name' => 'Booking & DP', 'desc' => 'Tanda jadi & penguncian jadwal tanggal acara'],
@@ -479,7 +650,8 @@ class ClientPortalService
             ['step' => 5, 'key' => 'selesai_kirim', 'name' => 'Selesai & Kirim File', 'desc' => 'Pengiriman file resolusi tinggi & tautan Google Drive'],
         ];
 
-        $stepDefinitions = ($workflowType === 'photoshoot') ? $photoshootSteps : $weddingSteps;
+        $isPhotoshoot = in_array($workflowType, ['photoshoot', 'non_wedding', 'studio', 'portrait']);
+        $stepDefinitions = $isPhotoshoot ? $photoshootSteps : $weddingSteps;
         $totalSteps = count($stepDefinitions);
 
         // Normalize current step key
@@ -530,8 +702,8 @@ class ClientPortalService
                 'status_label' => $statusLabel,
                 'date' => $dateFormatted,
                 'icon' => $this->getStepIcon($def['key']),
-                'pic' => $this->getStepPic($def['key'], $project),
-                'tasks' => $this->getStepTasks($def['key'], $status),
+                'pic' => $this->getStepPic($def['key'], $project, $supervisorName, $photographerName, $editorName),
+                'tasks' => $this->getStepTasks($def['key'], $status, $isPhotoshoot),
             ];
         }
 
@@ -622,11 +794,11 @@ class ClientPortalService
         };
     }
 
-    protected function getStepPic(string $stepKey, Project $project): string
+    protected function getStepPic(string $stepKey, Project $project, ?string $supervisorName = null, ?string $photographerName = null, ?string $editorName = null): string
     {
-        $supervisor = $project->supervisor?->name ?? 'Bima Arams';
-        $photographer = $project->photographer?->name ?? 'Tim Fotografer Arams';
-        $editor = $project->editor?->name ?? 'Tim Editor Arams';
+        $supervisor = $supervisorName ?: ($project->supervisor?->name ?? 'Bima Arams');
+        $photographer = $photographerName ?: ($project->photographer?->name ?? 'Tim Fotografer Arams');
+        $editor = $editorName ?: ($project->editor?->name ?? 'Tim Editor Arams');
 
         return match ($stepKey) {
             'booking' => "Client Relations & Supervisor ($supervisor)",
@@ -641,10 +813,44 @@ class ClientPortalService
         };
     }
 
-    protected function getStepTasks(string $stepKey, string $status): array
+    protected function getStepTasks(string $stepKey, string $status, bool $isPhotoshoot = false): array
     {
         $isDone = ($status === 'completed');
         $isActive = ($status === 'active');
+
+        if ($isPhotoshoot) {
+            return match ($stepKey) {
+                'booking' => [
+                    ['title' => 'Formulir data sesi foto & preferensi gaya pemotretan terverifikasi', 'completed' => true],
+                    ['title' => 'Pembayaran Uang Muka (DP) / Pelunasan terkonfirmasi', 'completed' => true],
+                    ['title' => 'Penjadwalan studio, fotografer & waktu pemotretan terkunci', 'completed' => true],
+                ],
+                'briefing' => [
+                    ['title' => 'Diskusi tema visual, wardrobe, kostum & properti khusus', 'completed' => $isDone || $isActive],
+                    ['title' => 'Panduan persiapan sesi & arahan kenyamanan subjek / bayi', 'completed' => $isDone],
+                    ['title' => 'Finalisasi jadwal kedatangan tim / waktu pemotretan', 'completed' => $isDone],
+                ],
+                'shooting' => [
+                    ['title' => 'Kehadiran tim fotografer spesialis & asisten di lokasi / studio', 'completed' => $isDone || $isActive],
+                    ['title' => 'Pelaksanaan sesi pemotretan sesuai tema & moodboard terpilih', 'completed' => $isDone],
+                    ['title' => 'Pencadangan (backup) seluruh file RAW foto ke cloud server', 'completed' => $isDone],
+                ],
+                'editing_seleksi' => [
+                    ['title' => 'Kurasi foto terbaik & seleksi foto bersama klien', 'completed' => $isDone || $isActive],
+                    ['title' => 'Color grading tone sinematik & fine art retouching khas Arams', 'completed' => $isDone],
+                    ['title' => 'Penyusunan hasil editing resolusi tinggi siap cetak', 'completed' => $isDone],
+                ],
+                'selesai_kirim' => [
+                    ['title' => 'Quality check (QC) final hasil foto & dokumen pendukung', 'completed' => $isDone || $isActive],
+                    ['title' => 'Pemberian tautan Google Drive / Cloud Album resolusi tinggi (HD)', 'completed' => $isDone],
+                    ['title' => 'Serah terima hasil karya & penutupan project', 'completed' => $isDone],
+                ],
+                default => [
+                    ['title' => 'Persiapan tahapan pengerjaan', 'completed' => $isDone || $isActive],
+                    ['title' => 'Pelaksanaan & koordinasi tim', 'completed' => $isDone],
+                ],
+            };
+        }
 
         return match ($stepKey) {
             'booking' => [
@@ -697,15 +903,27 @@ class ClientPortalService
     protected function getPackageSampleImage(string $packageName): string
     {
         $lower = strtolower($packageName);
+        if (str_contains($lower, 'newborn') || str_contains($lower, 'baby') || str_contains($lower, 'bayi')) {
+            return 'https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=1200&auto=format&fit=crop&q=80';
+        }
+        if (str_contains($lower, 'maternity') || str_contains($lower, 'hamil')) {
+            return 'https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=1200&auto=format&fit=crop&q=80';
+        }
         if (str_contains($lower, 'prewedding')) {
-            return 'https://images.unsplash.com/photo-1519741497674-611481863552?w=800&auto=format&fit=crop&q=80';
+            return 'https://images.unsplash.com/photo-1519741497674-611481863552?w=1200&auto=format&fit=crop&q=80';
         }
         if (str_contains($lower, 'exclusive') || str_contains($lower, 'royal')) {
-            return 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=800&auto=format&fit=crop&q=80';
+            return 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=1200&auto=format&fit=crop&q=80';
         }
         if (str_contains($lower, 'engagement') || str_contains($lower, 'lamaran')) {
-            return 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=800&auto=format&fit=crop&q=80';
+            return 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=1200&auto=format&fit=crop&q=80';
         }
-        return 'https://images.unsplash.com/photo-1537633552985-df8429e8048b?w=800&auto=format&fit=crop&q=80';
+        if (str_contains($lower, 'birthday') || str_contains($lower, 'ulang tahun') || str_contains($lower, 'family') || str_contains($lower, 'keluarga')) {
+            return 'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=1200&auto=format&fit=crop&q=80';
+        }
+        if (str_contains($lower, 'corporate') || str_contains($lower, 'commercial') || str_contains($lower, 'product')) {
+            return 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&auto=format&fit=crop&q=80';
+        }
+        return 'https://images.unsplash.com/photo-1537633552985-df8429e8048b?w=1200&auto=format&fit=crop&q=80';
     }
 }

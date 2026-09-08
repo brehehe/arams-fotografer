@@ -32,12 +32,14 @@ import {
     MessageCircle,
     FileText,
     Check,
+    Ban,
     ChevronRight,
     ChevronLeft,
     Globe,
     Building,
     Share2,
     Copy,
+    Baby,
 } from 'lucide-react';
 import { formatRupiah, formatRupiahCompact, formatNumber } from '@/lib/formatters';
 import {
@@ -78,6 +80,12 @@ interface ClientItem {
     groom_nickname?: string;
     bride_birth_date?: string;
     groom_birth_date?: string;
+    child_name?: string;
+    child_birth_date?: string;
+    child_gender?: string;
+    father_name?: string | null;
+    mother_name?: string | null;
+    children?: Array<{ name: string; nickname?: string; birth_date?: string; gender?: string }> | null;
     company_name?: string;
     client_type?: string;
     email: string;
@@ -148,6 +156,7 @@ interface ClientsIndexProps {
         slug?: string;
         description?: string;
         color?: string;
+        form_type?: string;
     }>;
     packages?: Array<{
         id: string | number;
@@ -173,10 +182,12 @@ interface ClientsIndexProps {
         email?: string;
         bride_name?: string;
         groom_name?: string;
+        child_name?: string;
     }>;
     stats: {
         total_clients: number;
         active_clients: number;
+        blocked_clients?: number;
         new_this_month?: number;
         total_projects?: number;
         ongoing_projects: number;
@@ -213,6 +224,12 @@ const getInitialsBg = (name?: string) => {
 };
 
 const getClientTypeLabel = (client: ClientItem) => {
+    if (client.child_name) {
+        return `👶 ${client.child_name}`;
+    }
+    if (client.bride_name && client.groom_name) {
+        return `👰🤵 ${client.groom_name} & ${client.bride_name}`;
+    }
     if (client.client_type === 'corporate' || client.company_name || client.name?.toLowerCase().includes('pt ') || client.name?.toLowerCase().includes('bank')) {
         return 'Klien Corporate';
     }
@@ -258,7 +275,7 @@ export default function ClientsIndex({
     packages = [],
     wedding_organizers = [],
     all_clients = [],
-    stats = { total_clients: 0, active_clients: 0, new_this_month: 0, total_projects: 0, ongoing_projects: 0, total_value: 0, total_received: 0 },
+    stats = { total_clients: 0, active_clients: 0, blocked_clients: 0, new_this_month: 0, total_projects: 0, ongoing_projects: 0, total_value: 0, total_received: 0 },
 }: ClientsIndexProps) {
     // Search & Filter State
     const [search, setSearch] = useState(typeof filters?.search === 'string' ? filters.search : '');
@@ -292,6 +309,40 @@ export default function ClientsIndex({
         isBulk?: boolean;
     }>({ isOpen: false });
 
+    // Confirmation Alert state for Toggle Block / Unblock
+    const [confirmToggleBlock, setConfirmToggleBlock] = useState<{
+        isOpen: boolean;
+        client?: ClientItem | null;
+        isProcessing?: boolean;
+    }>({ isOpen: false, client: null, isProcessing: false });
+
+    const handleExecuteToggleBlock = () => {
+        if (!confirmToggleBlock.client) return;
+        const targetClient = confirmToggleBlock.client;
+        const isCurrentlyBlocked = targetClient.status === 'blocked';
+
+        setConfirmToggleBlock((prev) => ({ ...prev, isProcessing: true }));
+        router.patch(
+            `/clients/${targetClient.id}/toggle-block`,
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success(
+                        isCurrentlyBlocked
+                            ? `Blokir pada klien ${targetClient.name} berhasil dibuka.`
+                            : `Klien ${targetClient.name} berhasil diblokir.`
+                    );
+                    setConfirmToggleBlock({ isOpen: false, client: null, isProcessing: false });
+                },
+                onError: () => {
+                    toast.error('Gagal memperbarui status klien. Silakan coba lagi.');
+                    setConfirmToggleBlock((prev) => ({ ...prev, isProcessing: false }));
+                },
+            }
+        );
+    };
+
     // Create / Edit Form State
     const initialFormData = {
         name: '',
@@ -303,11 +354,20 @@ export default function ClientsIndex({
         groom_nickname: '',
         bride_birth_date: '',
         groom_birth_date: '',
+        child_name: '',
+        child_nickname: '',
+        child_birth_date: '',
+        child_gender: 'male' as 'male' | 'female',
+        father_name: '',
+        mother_name: '',
+        children: [
+            { name: '', nickname: '', birth_date: '', gender: 'male' },
+        ],
         company_name: '',
         email: '',
         instagram: '',
         other_social_media: '',
-        phone: '',
+        phone: '',  
         secondary_phone: '',
         preferred_contact: 'WhatsApp',
         contact_person: '',
@@ -522,11 +582,14 @@ export default function ClientsIndex({
 
     // Kategori / Tipe Klien dynamically fetched from Master Data Categories
     const categoryOptions = useMemo(() => {
-        const list = (categories || []).map((cat) => ({
-            value: cat.slug || String(cat.id),
-            label: cat.name,
-            subtitle: cat.description || `Master Kategori: ${cat.name}`,
-        }));
+        const list = (categories || []).map((cat) => {
+            const formLabel = cat.form_type === 'wedding' ? '👰🤵 CPP & CPW' : cat.form_type === 'newborn' ? '👶 Nama Anak' : '👤 Standar';
+            return {
+                value: cat.slug || String(cat.id),
+                label: cat.name,
+                subtitle: `${cat.description || `Master Kategori: ${cat.name}`} • Input: ${formLabel}`,
+            };
+        });
 
         const cur = formData.client_type;
         if (cur && !list.some((o) => o.value === cur)) {
@@ -535,13 +598,19 @@ export default function ClientsIndex({
                 list.unshift({
                     value: 'personal',
                     label: perorangan ? `${perorangan.label} (Personal)` : 'Personal Portrait',
-                    subtitle: 'Kategori Klien',
+                    subtitle: 'Kategori Klien • Input: 👤 Standar',
                 });
             } else if (cur === 'family') {
                 list.unshift({
                     value: 'family',
                     label: 'Family & Maternity',
-                    subtitle: 'Kategori Klien',
+                    subtitle: 'Kategori Klien • Input: 👤 Standar',
+                });
+            } else if (cur === 'newborn') {
+                list.unshift({
+                    value: 'newborn',
+                    label: 'Newborn',
+                    subtitle: 'Kategori Klien • Input: 👶 Nama Anak',
                 });
             } else {
                 list.push({
@@ -553,6 +622,16 @@ export default function ClientsIndex({
         }
 
         return list;
+    }, [categories, formData.client_type]);
+
+    const activeFormType = useMemo(() => {
+        const found = (categories || []).find(
+            (c) => c.slug === formData.client_type || String(c.id) === formData.client_type
+        );
+        if (found?.form_type) return found.form_type;
+        if (formData.client_type === 'newborn') return 'newborn';
+        if (formData.client_type === 'wedding' || formData.client_type === 'prewedding') return 'wedding';
+        return 'standard';
     }, [categories, formData.client_type]);
 
     const presetTags = [
@@ -653,6 +732,57 @@ export default function ClientsIndex({
         }
     };
 
+    const handleAddModalChild = () => {
+        setFormData((prev) => {
+            const nextChildren = [
+                ...(prev.children || []),
+                { name: '', nickname: '', birth_date: '', gender: 'male' as const },
+            ];
+            const names = nextChildren.map((c) => c.name.trim()).filter(Boolean).join(' & ');
+            const isTwin = nextChildren.length > 1;
+            return {
+                ...prev,
+                children: nextChildren,
+                child_name: isTwin && names ? `${names} (Kembar)` : names,
+            };
+        });
+    };
+
+    const handleRemoveModalChild = (index: number) => {
+        setFormData((prev) => {
+            const currentChildren = prev.children || [];
+            if (currentChildren.length <= 1) return prev;
+            const nextChildren = currentChildren.filter((_, i) => i !== index);
+            const names = nextChildren.map((c) => c.name.trim()).filter(Boolean).join(' & ');
+            const isTwin = nextChildren.length > 1;
+            return {
+                ...prev,
+                children: nextChildren,
+                child_name: isTwin && names ? `${names} (Kembar)` : names,
+                child_birth_date: nextChildren[0]?.birth_date || '',
+                child_gender: (nextChildren[0]?.gender || 'male') as 'male' | 'female',
+            };
+        });
+    };
+
+    const handleChildModalChange = (index: number, field: string, value: any) => {
+        setFormData((prev) => {
+            const currentChildren = prev.children || [];
+            const nextChildren = currentChildren.map((child, i) =>
+                i === index ? { ...child, [field]: value } : child
+            );
+            const names = nextChildren.map((c) => c.name.trim()).filter(Boolean).join(' & ');
+            const isTwin = nextChildren.length > 1;
+            return {
+                ...prev,
+                children: nextChildren,
+                child_name: isTwin && names ? `${names} (Kembar)` : names,
+                child_birth_date: nextChildren[0]?.birth_date || prev.child_birth_date,
+                child_gender: (nextChildren[0]?.gender || prev.child_gender) as 'male' | 'female',
+            };
+        });
+    };
+
     const steps = [
         { id: 'profile', stepNum: 1, title: 'Identitas & Profil', subtitle: 'Kategori & Calon Pengantin' },
         { id: 'contact', stepNum: 2, title: 'Kontak & Sosmed', subtitle: 'WhatsApp & Instagram' },
@@ -666,10 +796,22 @@ export default function ClientsIndex({
     const validateStep = (tabId: string) => {
         const errs: Record<string, string> = {};
         if (tabId === 'profile') {
-            const hasName = formData.name.trim() || formData.bride_name.trim() || formData.groom_name.trim() || formData.company_name.trim();
-            if (!hasName) {
-                errs.name = 'Nama lengkap klien wajib diisi';
-                toast.error('Nama klien / calon pengantin wajib diisi');
+            if (activeFormType === 'newborn') {
+                if (!formData.child_name.trim() && !formData.name.trim()) {
+                    errs.child_name = 'Nama lengkap bayi / anak wajib diisi';
+                    toast.error('Nama lengkap bayi / anak wajib diisi');
+                }
+            } else if (activeFormType === 'wedding') {
+                const hasWeddingName = formData.name.trim() || formData.bride_name.trim() || formData.groom_name.trim();
+                if (!hasWeddingName) {
+                    errs.name = 'Nama calon pengantin wajib diisi';
+                    toast.error('Nama calon pengantin (CPP & CPW) wajib diisi');
+                }
+            } else {
+                if (!formData.name.trim()) {
+                    errs.name = 'Nama lengkap klien / pemesan wajib diisi';
+                    toast.error('Nama lengkap klien / pemesan wajib diisi');
+                }
             }
         }
         if (tabId === 'contact') {
@@ -711,16 +853,20 @@ export default function ClientsIndex({
 
         let clientName = formData.name.trim();
         if (!clientName) {
-            const bride = formData.bride_name.trim();
-            const groom = formData.groom_name.trim();
-            if (bride && groom) {
-                clientName = `${bride} & ${groom}`;
-            } else if (bride) {
-                clientName = bride;
-            } else if (groom) {
-                clientName = groom;
-            } else if (formData.contact_person.trim()) {
-                clientName = formData.contact_person.trim();
+            if (activeFormType === 'newborn') {
+                clientName = formData.child_name.trim() ? `Baby ${formData.child_name.trim()}` : (formData.partner_name.trim() || 'Client Newborn');
+            } else {
+                const bride = formData.bride_name.trim();
+                const groom = formData.groom_name.trim();
+                if (bride && groom) {
+                    clientName = `${groom} & ${bride}`;
+                } else if (groom) {
+                    clientName = groom;
+                } else if (bride) {
+                    clientName = bride;
+                } else if (formData.contact_person.trim()) {
+                    clientName = formData.contact_person.trim();
+                }
             }
         }
 
@@ -976,6 +1122,7 @@ export default function ClientsIndex({
                             { id: 'lead', label: 'Booking Online (Lead)', badge: 'Baru' },
                             { id: 'active', label: 'Klien Aktif', count: stats.active_clients },
                             { id: 'completed', label: 'Project Selesai' },
+                            { id: 'blocked', label: 'Diblokir', count: stats.blocked_clients },
                         ].map((tab) => {
                             const isTabActive = status === tab.id;
                             return (
@@ -984,8 +1131,8 @@ export default function ClientsIndex({
                                     type="button"
                                     onClick={() => handleStatusChange(tab.id)}
                                     className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer border ${isTabActive
-                                            ? 'bg-[#380E13] text-white border-[#380E13] shadow-xs'
-                                            : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200/60'
+                                        ? 'bg-[#380E13] text-white border-[#380E13] shadow-xs'
+                                        : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200/60'
                                         }`}
                                 >
                                     <span>{tab.label}</span>
@@ -1032,8 +1179,8 @@ export default function ClientsIndex({
                                     type="button"
                                     onClick={() => setShowFilterDropdown(!showFilterDropdown)}
                                     className={`inline-flex items-center gap-1.5 px-3.5 py-2 border rounded-xl text-xs font-semibold shadow-2xs transition-colors cursor-pointer ${status !== 'Semua' || city !== 'Semua' || source !== 'Semua'
-                                            ? 'bg-amber-50 border-amber-200 text-amber-900'
-                                            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                                        ? 'bg-amber-50 border-amber-200 text-amber-900'
+                                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                                         }`}
                                 >
                                     <SlidersHorizontal className="w-3.5 h-3.5 text-slate-500" />
@@ -1055,6 +1202,7 @@ export default function ClientsIndex({
                                                 <option value="active">Aktif</option>
                                                 <option value="completed">Selesai</option>
                                                 <option value="lead">Lead / Prospek</option>
+                                                <option value="blocked">Diblokir</option>
                                             </select>
                                         </div>
                                         <div>
@@ -1137,7 +1285,7 @@ export default function ClientsIndex({
                                         return (
                                             <TableRow
                                                 key={c.id}
-                                                className="transition-colors hover:bg-slate-50/60 border-b border-slate-100/80"
+                                                className={`transition-colors hover:bg-slate-50/60 border-b border-slate-100/80 ${c.status === 'blocked' ? 'bg-rose-50/20' : ''}`}
                                             >
                                                 {/* Client Avatar / Initials + Name + Type Badge */}
                                                 <TableCell className="py-4">
@@ -1200,8 +1348,8 @@ export default function ClientsIndex({
                                                             {formatRupiah(totalVal)}
                                                         </span>
                                                         <span className={`text-[11px] font-semibold block mt-0.5 ${isPaidOff || paidVal >= totalVal
-                                                                ? 'text-emerald-600'
-                                                                : 'text-amber-600'
+                                                            ? 'text-emerald-600'
+                                                            : 'text-amber-600'
                                                             }`}>
                                                             {isPaidOff || paidVal >= totalVal ? 'Lunas' : 'Belum Lunas'}
                                                         </span>
@@ -1210,13 +1358,15 @@ export default function ClientsIndex({
 
                                                 {/* Status Klien Badge */}
                                                 <TableCell className="py-4">
-                                                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-md border inline-block ${c.status === 'completed'
+                                                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-md border inline-block ${c.status === 'blocked'
+                                                        ? 'text-rose-700 bg-rose-50 border-rose-200'
+                                                        : c.status === 'completed'
                                                             ? 'text-blue-700 bg-blue-50 border-blue-200'
                                                             : c.status === 'lead'
                                                                 ? 'text-amber-700 bg-amber-50 border-amber-200'
                                                                 : 'text-emerald-700 bg-emerald-50 border-emerald-200'
                                                         }`}>
-                                                        {c.status === 'completed' ? 'Selesai' : c.status === 'lead' ? 'Lead' : 'Aktif'}
+                                                        {c.status === 'blocked' ? 'Diblokir' : c.status === 'completed' ? 'Selesai' : c.status === 'lead' ? 'Lead' : 'Aktif'}
                                                     </span>
                                                 </TableCell>
 
@@ -1232,65 +1382,57 @@ export default function ClientsIndex({
                                                     </div>
                                                 </TableCell>
 
-                                                {/* Aksi: Eye & 3-dots */}
+                                                {/* Aksi: Mata (Lihat Detail), Switch Toggle (Blokir / Buka Blokir), Hapus (Trash) */}
                                                 <TableCell className="text-center py-4">
-                                                    <div className="flex items-center justify-center gap-1.5 relative">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        {/* 1. Mata (Lihat Detail) */}
                                                         <Link
                                                             href={`/clients/${c.id}`}
-                                                            className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-blue-600 hover:bg-blue-50 transition-colors shadow-2xs"
-                                                            title="Lihat Detail Klien"
+                                                            className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-blue-600 hover:text-blue-700 hover:bg-blue-50 hover:border-blue-200 transition-colors shadow-2xs cursor-pointer"
+                                                            title="Lihat Detail"
                                                         >
                                                             <Eye className="w-4 h-4" />
                                                         </Link>
 
-                                                        {/* 3-dots Menu Button */}
-                                                        <div className="relative">
-                                                            <DropdownMenu>
-                                                                <DropdownMenuTrigger asChild>
-                                                                    <button
-                                                                        type="button"
-                                                                        className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors cursor-pointer shadow-2xs"
-                                                                    >
-                                                                        <MoreVertical className="w-4 h-4" />
-                                                                    </button>
-                                                                </DropdownMenuTrigger>
-                                                                <DropdownMenuContent align="end" className="w-44 bg-white border border-slate-200/90 rounded-xl shadow-xl p-1 z-50 text-xs">
-                                                                    <DropdownMenuItem
-                                                                        onClick={() => setDetailModalClient(c)}
-                                                                        className="px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50 rounded-lg flex items-center gap-2 cursor-pointer font-medium"
-                                                                    >
-                                                                        <Eye className="w-3.5 h-3.5 text-slate-500" />
-                                                                        <span>Lihat Ringkasan</span>
-                                                                    </DropdownMenuItem>
-                                                                    {c.phone && (
-                                                                        <DropdownMenuItem asChild>
-                                                                            <a
-                                                                                href={`https://wa.me/${c.phone.replace(/[^0-9]/g, '')}`}
-                                                                                target="_blank"
-                                                                                rel="noreferrer"
-                                                                                className="px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50 rounded-lg flex items-center gap-2 cursor-pointer font-medium"
-                                                                            >
-                                                                                <Phone className="w-3.5 h-3.5 text-emerald-600" />
-                                                                                <span>Chat WhatsApp</span>
-                                                                            </a>
-                                                                        </DropdownMenuItem>
-                                                                    )}
-                                                                    <DropdownMenuItem
-                                                                        onClick={() => {
-                                                                            setConfirmDelete({
-                                                                                isOpen: true,
-                                                                                clientId: c.id as number,
-                                                                                clientName: c.name,
-                                                                            });
-                                                                        }}
-                                                                        className="px-2.5 py-1.5 text-xs text-rose-600 hover:bg-rose-50 rounded-lg flex items-center gap-2 cursor-pointer font-semibold focus:bg-rose-50 focus:text-rose-600"
-                                                                    >
-                                                                        <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                                                                        <span>Hapus Klien</span>
-                                                                    </DropdownMenuItem>
-                                                                </DropdownMenuContent>
-                                                            </DropdownMenu>
-                                                        </div>
+                                                        {/* 2. Switch Toggle (Blokir / Buka Blokir) */}
+                                                        <button
+                                                            type="button"
+                                                            role="switch"
+                                                            aria-checked={c.status !== 'blocked'}
+                                                            onClick={() => setConfirmToggleBlock({ isOpen: true, client: c })}
+                                                            className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-2 shrink-0 ${c.status === 'blocked'
+                                                                    ? 'bg-rose-100 hover:bg-rose-200 border border-rose-200 focus-visible:ring-rose-400'
+                                                                    : 'bg-emerald-500 hover:bg-emerald-600 border border-emerald-600 focus-visible:ring-emerald-500'
+                                                                }`}
+                                                            title={c.status === 'blocked' ? 'Status: Diblokir (Klik untuk Buka Blokir)' : 'Status: Aktif (Klik untuk Blokir)'}
+                                                        >
+                                                            <span
+                                                                className={`w-4.5 h-4.5 rounded-full bg-white absolute top-0.5 transition-all shadow-xs flex items-center justify-center ${c.status === 'blocked' ? 'left-0.5' : 'left-5.5'
+                                                                    }`}
+                                                            >
+                                                                {c.status === 'blocked' ? (
+                                                                    <Ban className="w-2.5 h-2.5 text-rose-600" />
+                                                                ) : (
+                                                                    <Check className="w-2.5 h-2.5 text-emerald-600 stroke-[3]" />
+                                                                )}
+                                                            </span>
+                                                        </button>
+
+                                                        {/* 3. Tombol Icon Hapus (Trash) */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setConfirmDelete({
+                                                                    isOpen: true,
+                                                                    clientId: c.id,
+                                                                    clientName: c.name,
+                                                                });
+                                                            }}
+                                                            className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-rose-500 hover:text-rose-700 hover:bg-rose-50 hover:border-rose-200 transition-colors shadow-2xs cursor-pointer"
+                                                            title="Hapus Klien"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
@@ -1345,13 +1487,15 @@ export default function ClientsIndex({
                                                 </div>
                                             </div>
 
-                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${c.status === 'completed'
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border shrink-0 ${c.status === 'blocked'
+                                                ? 'text-rose-700 bg-rose-50 border-rose-200'
+                                                : c.status === 'completed'
                                                     ? 'text-blue-700 bg-blue-50 border-blue-200'
                                                     : c.status === 'lead'
                                                         ? 'text-amber-700 bg-amber-50 border-amber-200'
                                                         : 'text-emerald-700 bg-emerald-50 border-emerald-200'
                                                 }`}>
-                                                {c.status === 'completed' ? 'Selesai' : c.status === 'lead' ? 'Lead' : 'Aktif'}
+                                                {c.status === 'blocked' ? 'Diblokir' : c.status === 'completed' ? 'Selesai' : c.status === 'lead' ? 'Lead' : 'Aktif'}
                                             </span>
                                         </div>
 
@@ -1376,25 +1520,59 @@ export default function ClientsIndex({
                                         </div>
 
                                         {/* Action Button Links */}
-                                        <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+                                        <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
                                             <Link
                                                 href={`/clients/${c.id}`}
                                                 className="flex-1 py-2 text-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
                                             >
-                                                <Eye className="w-3.5 h-3.5 text-slate-500" />
-                                                <span>Lihat Profil Detail</span>
+                                                <Eye className="w-3.5 h-3.5 text-blue-600" />
+                                                <span>Lihat Detail</span>
                                             </Link>
-                                            {c.phone && (
-                                                <a
-                                                    href={`https://wa.me/${c.phone.replace(/[^0-9]/g, '')}`}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
+
+                                            {/* Toggle Switch Blokir / Buka Blokir */}
+                                            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50/70">
+                                                <span className="text-[10px] font-bold text-slate-500">
+                                                    {c.status === 'blocked' ? 'Diblokir' : 'Aktif'}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    role="switch"
+                                                    aria-checked={c.status !== 'blocked'}
+                                                    onClick={() => setConfirmToggleBlock({ isOpen: true, client: c })}
+                                                    className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer shrink-0 ${c.status === 'blocked'
+                                                            ? 'bg-rose-100 border border-rose-200'
+                                                            : 'bg-emerald-500 border border-emerald-600'
+                                                        }`}
+                                                    title={c.status === 'blocked' ? 'Buka Blokir' : 'Blokir'}
                                                 >
-                                                    <Phone className="w-3.5 h-3.5 text-emerald-600" />
-                                                    <span>WA</span>
-                                                </a>
-                                            )}
+                                                    <span
+                                                        className={`w-3.5 h-3.5 rounded-full bg-white absolute top-0.5 transition-all shadow-xs flex items-center justify-center ${c.status === 'blocked' ? 'left-0.5' : 'left-4.5'
+                                                            }`}
+                                                    >
+                                                        {c.status === 'blocked' ? (
+                                                            <Ban className="w-2 h-2 text-rose-600" />
+                                                        ) : (
+                                                            <Check className="w-2 h-2 text-emerald-600 stroke-[3]" />
+                                                        )}
+                                                    </span>
+                                                </button>
+                                            </div>
+
+                                            {/* Tombol Hapus */}
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setConfirmDelete({
+                                                        isOpen: true,
+                                                        clientId: c.id,
+                                                        clientName: c.name,
+                                                    });
+                                                }}
+                                                className="p-2 rounded-xl border border-slate-200 hover:border-rose-200 text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
+                                                title="Hapus Klien"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
                                         </div>
                                     </div>
                                 );
@@ -1445,8 +1623,8 @@ export default function ClientsIndex({
                                         type="button"
                                         onClick={() => handlePageChange(pg)}
                                         className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center justify-center ${(clients.current_page || 1) === pg
-                                                ? 'bg-slate-900 text-white'
-                                                : 'border border-slate-200 text-slate-700 hover:bg-slate-50'
+                                            ? 'bg-slate-900 text-white'
+                                            : 'border border-slate-200 text-slate-700 hover:bg-slate-50'
                                             }`}
                                     >
                                         {pg}
@@ -1533,18 +1711,18 @@ export default function ClientsIndex({
                                         type="button"
                                         onClick={() => goToStep(s.id as any)}
                                         className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex-1 justify-center ${isActive
-                                                ? 'bg-white text-slate-900 shadow-2xs ring-1 ring-slate-200/80 font-extrabold'
-                                                : isPassed
-                                                    ? 'text-emerald-700 hover:text-emerald-800 hover:bg-white/50'
-                                                    : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'
+                                            ? 'bg-white text-slate-900 shadow-2xs ring-1 ring-slate-200/80 font-extrabold'
+                                            : isPassed
+                                                ? 'text-emerald-700 hover:text-emerald-800 hover:bg-white/50'
+                                                : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'
                                             }`}
                                     >
                                         <span
                                             className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${isActive
-                                                    ? 'bg-[#C89445] text-white'
-                                                    : isPassed
-                                                        ? 'bg-emerald-100 text-emerald-700'
-                                                        : 'bg-slate-200 text-slate-600'
+                                                ? 'bg-[#C89445] text-white'
+                                                : isPassed
+                                                    ? 'bg-emerald-100 text-emerald-700'
+                                                    : 'bg-slate-200 text-slate-600'
                                                 }`}
                                         >
                                             {isPassed ? <Check className="w-3 h-3 text-emerald-700 stroke-[3]" /> : s.stepNum}
@@ -1579,157 +1757,406 @@ export default function ClientsIndex({
                                     </p>
                                 </div>
 
-                                {/* Nama Lengkap Klien / Acara */}
-                                <div>
-                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                        Nama Lengkap Klien / Judul Acara <span className="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        placeholder="Contoh: Kevin Sanjaya & Jessica Mila"
-                                        className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                    />
-                                    <p className="text-[10px] text-slate-400 mt-1">
-                                        Nama utama yang akan tampil pada invoice, kontrak, dan laporan project.
-                                    </p>
-                                </div>
-
-                                {/* Calon Pengantin (CPW & CPP) Side by Side */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-                                    {/* CPW Card */}
-                                    <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 space-y-3">
-                                        <div className="flex items-center gap-2 text-purple-900">
-                                            <div className="w-6 h-6 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
-                                                <User className="w-3.5 h-3.5" />
-                                            </div>
-                                            <h4 className="text-xs font-bold text-slate-900">
-                                                Informasi Calon Pengantin (CPW)
-                                            </h4>
+                                {/* WEDDING FORM FIELDS */}
+                                {activeFormType === 'wedding' && (
+                                    <>
+                                        <div>
+                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                Judul Acara / Nama Project Wedding <span className="text-slate-400 font-normal">(Opsional / Otomatis dari nama CPP &amp; CPW)</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={formData.name}
+                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                placeholder="Contoh: Kevin Sanjaya & Jessica Mila"
+                                                className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                            />
                                         </div>
 
-                                        <div className="space-y-2.5">
+                                        {/* Calon Pengantin (CPW & CPP) Side by Side */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                                            {/* CPW Card */}
+                                            <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 space-y-3">
+                                                <div className="flex items-center gap-2 text-purple-900">
+                                                    <div className="w-6 h-6 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+                                                        <User className="w-3.5 h-3.5" />
+                                                    </div>
+                                                    <h4 className="text-xs font-bold text-slate-900">
+                                                        Informasi Calon Pengantin (CPW) <span className="text-red-500">*</span>
+                                                    </h4>
+                                                </div>
+
+                                                <div className="space-y-2.5">
+                                                    <div>
+                                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                            Nama Lengkap CPW
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={formData.bride_name}
+                                                            onChange={(e) => setFormData({ ...formData, bride_name: e.target.value })}
+                                                            placeholder="Nama lengkap CPW"
+                                                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                        />
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <div>
+                                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                                Panggilan
+                                                            </label>
+                                                            <input
+                                                                type="text"
+                                                                value={formData.bride_nickname}
+                                                                onChange={(e) => setFormData({ ...formData, bride_nickname: e.target.value })}
+                                                                placeholder="Panggilan"
+                                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                                Tanggal Lahir
+                                                            </label>
+                                                            <input
+                                                                type="date"
+                                                                value={formData.bride_birth_date}
+                                                                onChange={(e) => setFormData({ ...formData, bride_birth_date: e.target.value })}
+                                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* CPP Card */}
+                                            <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 space-y-3">
+                                                <div className="flex items-center gap-2 text-purple-900">
+                                                    <div className="w-6 h-6 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+                                                        <User className="w-3.5 h-3.5" />
+                                                    </div>
+                                                    <h4 className="text-xs font-bold text-slate-900">
+                                                        Informasi Calon Pengantin (CPP) <span className="text-red-500">*</span>
+                                                    </h4>
+                                                </div>
+
+                                                <div className="space-y-2.5">
+                                                    <div>
+                                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                            Nama Lengkap CPP
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={formData.groom_name}
+                                                            onChange={(e) => setFormData({ ...formData, groom_name: e.target.value })}
+                                                            placeholder="Nama lengkap CPP"
+                                                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                        />
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <div>
+                                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                                Panggilan
+                                                            </label>
+                                                            <input
+                                                                type="text"
+                                                                value={formData.groom_nickname}
+                                                                onChange={(e) => setFormData({ ...formData, groom_nickname: e.target.value })}
+                                                                placeholder="Panggilan"
+                                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                                Tanggal Lahir
+                                                            </label>
+                                                            <input
+                                                                type="date"
+                                                                value={formData.groom_birth_date}
+                                                                onChange={(e) => setFormData({ ...formData, groom_birth_date: e.target.value })}
+                                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Additional / Corporate Details */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div>
                                                 <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                    Nama Lengkap CPW
+                                                    Nama Pasangan / Pendamping Tambahan
                                                 </label>
                                                 <input
                                                     type="text"
-                                                    value={formData.bride_name}
-                                                    onChange={(e) => setFormData({ ...formData, bride_name: e.target.value })}
-                                                    placeholder="Nama lengkap CPW"
-                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                    value={formData.partner_name}
+                                                    onChange={(e) => setFormData({ ...formData, partner_name: e.target.value })}
+                                                    placeholder="Opsional jika bukan wedding"
+                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
                                                 />
                                             </div>
-                                            <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                    Nama Perusahaan / Brand (B2B)
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.company_name}
+                                                    onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
+                                                    placeholder="Contoh: PT Astra International"
+                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                />
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* NEWBORN FORM FIELDS */}
+                                {activeFormType === 'newborn' && (
+                                    <div className="space-y-4">
+                                        {/* Baby Data Repeater */}
+                                        <div className="space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2 text-amber-900">
+                                                    <div className="w-6 h-6 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                                                        <Baby className="w-3.5 h-3.5" />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-xs font-bold text-slate-900">
+                                                            Informasi Bayi / Anak (Newborn) <span className="text-red-500">*</span>
+                                                        </h4>
+                                                        <p className="text-[10px] text-slate-500">
+                                                            Dapat mengisi lebih dari satu bayi jika kasus anak kembar.
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={handleAddModalChild}
+                                                    className="px-2.5 py-1 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                                                >
+                                                    <Plus className="w-3 h-3" />
+                                                    <span>+ Tambah Bayi (Kembar)</span>
+                                                </button>
+                                            </div>
+
+                                            {(formData.children || []).map((child, idx) => (
+                                                <div
+                                                    key={idx}
+                                                    className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200/70 space-y-3"
+                                                >
+                                                    <div className="flex items-center justify-between pb-1 border-b border-amber-200/50">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="px-2 py-0.5 rounded-md bg-amber-200/80 text-amber-900 font-bold text-[10px]">
+                                                                👶 Bayi #{idx + 1} {(formData.children || []).length > 1 ? '(Kembar)' : ''}
+                                                            </span>
+                                                        </div>
+                                                        {(formData.children || []).length > 1 && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleRemoveModalChild(idx)}
+                                                                className="text-red-600 hover:text-red-700 hover:bg-red-50 px-2 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                                                            >
+                                                                <Trash2 className="w-3 h-3" />
+                                                                <span>Hapus</span>
+                                                            </button>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                                Nama Lengkap Bayi #{idx + 1} <span className="text-red-500">*</span>
+                                                            </label>
+                                                            <input
+                                                                type="text"
+                                                                value={child.name}
+                                                                onChange={(e) => handleChildModalChange(idx, 'name', e.target.value)}
+                                                                placeholder={idx === 0 ? "Contoh: Muhammad Al-Fatih" : "Contoh: Muhammad Al-Haq"}
+                                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                                Tanggal Lahir / HPL
+                                                            </label>
+                                                            <input
+                                                                type="date"
+                                                                value={child.birth_date}
+                                                                onChange={(e) => handleChildModalChange(idx, 'birth_date', e.target.value)}
+                                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                            Jenis Kelamin
+                                                        </label>
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleChildModalChange(idx, 'gender', 'male')}
+                                                                className={`py-1.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                                                                    child.gender === 'male'
+                                                                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                                                                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                                                }`}
+                                                            >
+                                                                <span>👦 Laki-laki (Boy)</span>
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleChildModalChange(idx, 'gender', 'female')}
+                                                                className={`py-1.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                                                                    child.gender === 'female'
+                                                                        ? 'bg-pink-600 text-white border-pink-600 shadow-xs'
+                                                                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                                                                }`}
+                                                            >
+                                                                <span>👧 Perempuan (Girl)</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+
+                                            <button
+                                                type="button"
+                                                onClick={handleAddModalChild}
+                                                className="w-full py-2 px-3 rounded-xl border-2 border-dashed border-amber-300 hover:border-amber-400 bg-amber-50/40 hover:bg-amber-50 text-amber-800 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                                            >
+                                                <Plus className="w-3.5 h-3.5 text-amber-600" />
+                                                <span>+ Tambah Bayi Kembar (Twins)</span>
+                                            </button>
+                                        </div>
+
+                                        {/* Data Orang Tua */}
+                                        <div className="p-4 rounded-2xl bg-slate-50/70 border border-slate-200/80 space-y-3">
+                                            <div className="flex items-center gap-2 text-indigo-900">
+                                                <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                                                    <User className="w-3.5 h-3.5" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-xs font-bold text-slate-900">
+                                                        Data Orang Tua (Ayah &amp; Ibu)
+                                                    </h4>
+                                                    <p className="text-[10px] text-slate-500">
+                                                        Masukkan nama lengkap ayah dan ibu.
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                 <div>
                                                     <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                        Panggilan
+                                                        Nama Lengkap Ayah
                                                     </label>
                                                     <input
                                                         type="text"
-                                                        value={formData.bride_nickname}
-                                                        onChange={(e) => setFormData({ ...formData, bride_nickname: e.target.value })}
-                                                        placeholder="Panggilan"
+                                                        value={formData.father_name}
+                                                        onChange={(e) => {
+                                                            const f = e.target.value;
+                                                            const m = formData.mother_name;
+                                                            const combined = [f, m].filter(Boolean).join(' & ');
+                                                            setFormData({ ...formData, father_name: f, partner_name: combined, name: formData.child_name ? `Baby ${formData.child_name}` : combined });
+                                                        }}
+                                                        placeholder="Contoh: Dimas Pratama"
                                                         className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
                                                     />
                                                 </div>
                                                 <div>
                                                     <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                        Tanggal Lahir
-                                                    </label>
-                                                    <input
-                                                        type="date"
-                                                        value={formData.bride_birth_date}
-                                                        onChange={(e) => setFormData({ ...formData, bride_birth_date: e.target.value })}
-                                                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* CPP Card */}
-                                    <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 space-y-3">
-                                        <div className="flex items-center gap-2 text-purple-900">
-                                            <div className="w-6 h-6 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
-                                                <User className="w-3.5 h-3.5" />
-                                            </div>
-                                            <h4 className="text-xs font-bold text-slate-900">
-                                                Informasi Calon Pengantin (CPP)
-                                            </h4>
-                                        </div>
-
-                                        <div className="space-y-2.5">
-                                            <div>
-                                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                    Nama Lengkap CPP
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={formData.groom_name}
-                                                    onChange={(e) => setFormData({ ...formData, groom_name: e.target.value })}
-                                                    placeholder="Nama lengkap CPP"
-                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                />
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <div>
-                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                        Panggilan
+                                                        Nama Lengkap Ibu
                                                     </label>
                                                     <input
                                                         type="text"
-                                                        value={formData.groom_nickname}
-                                                        onChange={(e) => setFormData({ ...formData, groom_nickname: e.target.value })}
-                                                        placeholder="Panggilan"
+                                                        value={formData.mother_name}
+                                                        onChange={(e) => {
+                                                            const m = e.target.value;
+                                                            const f = formData.father_name;
+                                                            const combined = [f, m].filter(Boolean).join(' & ');
+                                                            setFormData({ ...formData, mother_name: m, partner_name: combined, name: formData.child_name ? `Baby ${formData.child_name}` : combined });
+                                                        }}
+                                                        placeholder="Contoh: Amanda Lestari"
                                                         className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
                                                     />
                                                 </div>
-                                                <div>
-                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                        Tanggal Lahir
-                                                    </label>
-                                                    <input
-                                                        type="date"
-                                                        value={formData.groom_birth_date}
-                                                        onChange={(e) => setFormData({ ...formData, groom_birth_date: e.target.value })}
-                                                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                    />
-                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                    Pekerjaan Orang Tua
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.occupation}
+                                                    onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
+                                                    placeholder="Contoh: Dokter & Dosen"
+                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                />
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                )}
 
-                                {/* Additional / Corporate Details */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                            Nama Pasangan / Pendamping Tambahan
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={formData.partner_name}
-                                            onChange={(e) => setFormData({ ...formData, partner_name: e.target.value })}
-                                            placeholder="Opsional jika bukan wedding"
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                        />
+                                {/* STANDARD / UMUM FORM FIELDS */}
+                                {activeFormType === 'standard' && (
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                Nama Lengkap Klien / Pemesan <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={formData.name}
+                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                placeholder="Contoh: Bpk. Aditya Pratama"
+                                                className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                            />
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                    Nama Panggilan / Alias
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.contact_person}
+                                                    onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
+                                                    placeholder="Contoh: Adit"
+                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                    Pekerjaan / Profesi
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.occupation}
+                                                    onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
+                                                    placeholder="Profesi / Pekerjaan"
+                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                Perusahaan / Brand / Institusi (Opsional)
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={formData.company_name}
+                                                onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
+                                                placeholder="Contoh: PT Surya Dinamika"
+                                                className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                            />
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                            Nama Perusahaan / Brand (B2B)
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={formData.company_name}
-                                            onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
-                                            placeholder="Contoh: PT Astra International"
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                        />
-                                    </div>
-                                </div>
+                                )}
                             </div>
                         )}
 
@@ -2127,6 +2554,7 @@ export default function ClientsIndex({
                                             <option value="active">Aktif (Sedang Berjalan)</option>
                                             <option value="lead">Lead / Calon Klien (Follow-up)</option>
                                             <option value="completed">Selesai (Arsip)</option>
+                                            <option value="blocked">Diblokir (Nonaktif)</option>
                                         </select>
                                     </div>
 
@@ -2186,8 +2614,8 @@ export default function ClientsIndex({
                                                         type="button"
                                                         onClick={() => toggleTag(tag)}
                                                         className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${isSelected
-                                                                ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                                                                : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
+                                                            ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                                            : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
                                                             }`}
                                                     >
                                                         {tag}
@@ -2248,6 +2676,59 @@ export default function ClientsIndex({
                         }
                     >
                         <div className="space-y-4 text-xs">
+                            {(detailModalClient.child_name || (detailModalClient.children && detailModalClient.children.length > 0)) && (
+                                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2 text-xs">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Baby className="w-4 h-4 text-amber-600" />
+                                            <span className="font-bold text-amber-900">
+                                                Data Bayi: {detailModalClient.child_name || 'Newborn'}
+                                            </span>
+                                        </div>
+                                        {detailModalClient.children && detailModalClient.children.length > 1 && (
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-200 text-amber-900">
+                                                Kembar ({detailModalClient.children.length} Bayi)
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {detailModalClient.children && detailModalClient.children.length > 0 ? (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                                            {detailModalClient.children.map((ch, idx) => (
+                                                <div key={idx} className="p-2 bg-white rounded-lg border border-amber-200/80 text-[11px] space-y-0.5">
+                                                    <div className="font-bold text-amber-900 flex justify-between">
+                                                        <span>Bayi #{idx + 1}</span>
+                                                        <span className="text-amber-700 font-semibold">{ch.gender || '-'}</span>
+                                                    </div>
+                                                    <div className="text-slate-800 font-medium">{ch.name || '-'}</div>
+                                                    {ch.birth_date && <div className="text-slate-500 text-[10px]">Lahir: {ch.birth_date}</div>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        detailModalClient.child_gender && (
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white border border-amber-200 text-amber-800 inline-block">
+                                                {detailModalClient.child_gender === 'male' ? 'Laki-laki (Boy)' : 'Perempuan (Girl)'}
+                                            </span>
+                                        )
+                                    )}
+
+                                    {(detailModalClient.father_name || detailModalClient.mother_name) && (
+                                        <div className="text-[11px] text-slate-700 pt-1 border-t border-amber-200/60 flex flex-wrap gap-x-4">
+                                            {detailModalClient.father_name && <span><strong>Ayah:</strong> {detailModalClient.father_name}</span>}
+                                            {detailModalClient.mother_name && <span><strong>Ibu:</strong> {detailModalClient.mother_name}</span>}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {detailModalClient.bride_name && detailModalClient.groom_name && (
+                                <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl flex items-center gap-2 text-xs text-purple-900 font-bold">
+                                    <Heart className="w-4 h-4 text-purple-600" />
+                                    <span>Pasangan Wedding: {detailModalClient.groom_name} &amp; {detailModalClient.bride_name}</span>
+                                </div>
+                            )}
+
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200/80">
                                 <div>
                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
@@ -2344,6 +2825,37 @@ export default function ClientsIndex({
                     confirmText="Ya, Hapus Klien"
                     cancelText="Batal"
                     variant="danger"
+                />
+
+                {/* ========================================================================= */}
+                {/* MODAL 4: KONFIRMASI BLOKIR / BUKA BLOKIR (AlertConfirmation Component) */}
+                {/* ========================================================================= */}
+                <AlertConfirmation
+                    isOpen={confirmToggleBlock.isOpen}
+                    onClose={() => setConfirmToggleBlock({ isOpen: false, client: null, isProcessing: false })}
+                    onConfirm={handleExecuteToggleBlock}
+                    isLoading={confirmToggleBlock.isProcessing}
+                    title={confirmToggleBlock.client?.status === 'blocked' ? 'Buka Blokir Klien?' : 'Blokir Klien Ini?'}
+                    description={
+                        <span>
+                            {confirmToggleBlock.client?.status === 'blocked' ? (
+                                <>
+                                    Apakah Anda yakin ingin membuka blokir klien{' '}
+                                    <strong className="text-slate-900">{confirmToggleBlock.client?.name}</strong>?
+                                    Status klien akan kembali aktif dan akses login portal akan dipulihkan.
+                                </>
+                            ) : (
+                                <>
+                                    Apakah Anda yakin ingin memblokir klien{' '}
+                                    <strong className="text-slate-900">{confirmToggleBlock.client?.name}</strong>?
+                                    Klien yang diblokir tidak akan dapat login ke portal klien dan aktivitas project akan dibatasi.
+                                </>
+                            )}
+                        </span>
+                    }
+                    confirmText={confirmToggleBlock.client?.status === 'blocked' ? 'Ya, Buka Blokir' : 'Ya, Blokir Klien'}
+                    cancelText="Batal"
+                    variant={confirmToggleBlock.client?.status === 'blocked' ? 'success' : 'danger'}
                 />
             </div>
         </>

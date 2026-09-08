@@ -59,6 +59,7 @@ class ClientService
         $clientStats = Client::selectRaw("
             COUNT(*) as total,
             COUNT(CASE WHEN status = 'active' THEN 1 END) as active,
+            COUNT(CASE WHEN status = 'blocked' THEN 1 END) as blocked,
             COUNT(CASE WHEN created_at >= ? THEN 1 END) as new_this_month
         ", [$startOfMonth])->first();
 
@@ -72,7 +73,7 @@ class ClientService
         $cities = Client::whereNotNull('city')->distinct()->pluck('city');
         $sources = Client::whereNotNull('source')->distinct()->pluck('source');
         $categories = \App\Models\Category::where('status', 'active')
-            ->select('id', 'name', 'slug', 'description', 'color')
+            ->select('id', 'name', 'slug', 'description', 'color', 'form_type')
             ->orderBy('sort_order')
             ->get();
         $packages = \App\Models\Package::where('status', 'active')->select('id', 'name', 'category_id', 'base_price', 'duration_hours', 'description')->get();
@@ -80,7 +81,7 @@ class ClientService
             ->select('id', 'name', 'pic_name', 'phone', 'city', 'tier')
             ->orderBy('name')
             ->get();
-        $allClients = Client::select('id', 'name', 'phone', 'city', 'email', 'bride_name', 'groom_name')
+        $allClients = Client::select('id', 'name', 'phone', 'city', 'email', 'bride_name', 'groom_name', 'child_name', 'father_name', 'mother_name', 'children')
             ->orderBy('name')
             ->get();
 
@@ -96,6 +97,7 @@ class ClientService
             'stats' => [
                 'total_clients' => (int) ($clientStats->total ?? 0),
                 'active_clients' => (int) ($clientStats->active ?? 0),
+                'blocked_clients' => (int) ($clientStats->blocked ?? 0),
                 'new_this_month' => (int) ($clientStats->new_this_month ?? 0),
                 'total_projects' => (int) ($projectStats->total_projects ?? 0),
                 'ongoing_projects' => (int) ($projectStats->ongoing ?? 0),
@@ -116,7 +118,9 @@ class ClientService
             'referrals:id,name,phone,city,referred_by_client_id,created_at',
             'weddingOrganizer:id,name,pic_name,phone,email,city,tier',
             'projects' => function ($q) {
-                $q->with(['category', 'package'])->latest('created_at');
+                $q->with(['category', 'package', 'fileLinks' => function ($q) {
+                    $q->latest();
+                }])->latest('created_at');
             },
             'invoices' => function ($q) {
                 $q->latest('created_at');

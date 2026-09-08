@@ -85,12 +85,14 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/projects', [ClientPortalController::class, 'projects'])->name('projects.index');
         Route::get('/projects/{project}', [ClientPortalController::class, 'projectDetail'])->name('projects.show');
         Route::post('/projects/{project}/review', [ClientPortalController::class, 'submitReview'])->name('projects.review');
+        Route::post('/projects/{project}/note', [ClientPortalController::class, 'addNote'])->name('projects.note');
     });
 
     // 1. Admin Studio Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // 2. Clients & Wedding Organizers (WO)
+    Route::patch('/clients/{client}/toggle-block', [ClientController::class, 'toggleBlock'])->name('clients.toggle-block');
     Route::post('/clients/{client}/account', [ClientController::class, 'storeAccount'])->name('clients.account.store');
     Route::resource('clients', ClientController::class);
     Route::resource('wedding-organizers', WeddingOrganizerController::class)->except(['create', 'edit', 'show']);
@@ -108,6 +110,10 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/projects/{project}/highlights/{highlight}', [ProjectHighlightController::class, 'update'])->name('projects.highlights.update');
     Route::post('/projects/{project}/highlights/{highlight}/cover', [ProjectHighlightController::class, 'setCover'])->name('projects.highlights.cover');
     Route::delete('/projects/{project}/highlights/{highlight}', [ProjectHighlightController::class, 'destroy'])->name('projects.highlights.destroy');
+    Route::post('/projects/{project}/promo-slides', [\App\Http\Controllers\MasterData\PromoSlideController::class, 'storeForProject'])->name('projects.promo-slides.store');
+    Route::patch('/projects/{project}/promo-slides/{promo_slide}', [\App\Http\Controllers\MasterData\PromoSlideController::class, 'updateForProject'])->name('projects.promo-slides.update');
+    Route::patch('/projects/{project}/promo-slides/{promo_slide}/toggle', [\App\Http\Controllers\MasterData\PromoSlideController::class, 'toggleActiveForProject'])->name('projects.promo-slides.toggle');
+    Route::delete('/projects/{project}/promo-slides/{promo_slide}', [\App\Http\Controllers\MasterData\PromoSlideController::class, 'destroyForProject'])->name('projects.promo-slides.destroy');
 
     // 4. Master Data
     Route::prefix('master-data')->name('master-data.')->group(function () {
@@ -174,10 +180,22 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
 
     // 12. Settings
+    Route::get('/setting/admin', [SettingController::class, 'admin'])->name('setting.admin');
+    Route::get('/setting/form-klien', [SettingController::class, 'formKlien'])->name('setting.form-klien');
+    Route::get('/setting/portal-klien', [SettingController::class, 'portalKlien'])->name('setting.portal-klien');
+
+    Route::get('/settings/admin', fn () => redirect()->route('setting.admin'));
+    Route::get('/settings/form-klien', fn () => redirect()->route('setting.form-klien'));
+    Route::get('/settings/portal-klien', fn () => redirect()->route('setting.portal-klien'));
+    Route::get('/setting', fn () => redirect()->route('setting.admin'));
+
     Route::get('/settings/company', [SettingController::class, 'index'])->name('settings.index');
     Route::post('/settings', [SettingController::class, 'update'])->name('settings.update');
     Route::get('/settings/backup/download', [SettingController::class, 'backupDownload'])->name('settings.backup.download');
     Route::get('/settings/export/{type}', [SettingController::class, 'exportData'])->name('settings.export');
+    Route::get('/settings/admin/promo-slides', fn() => redirect()->route('master-data.promo-slides.index'));
+    Route::get('/settings/admin/testimonials', fn() => redirect()->route('master-data.testimonials.index'));
+    Route::get('/settings/admin/instagram-posts', fn() => redirect()->route('master-data.instagram-posts.index'));
 });
 
 require __DIR__.'/settings.php';

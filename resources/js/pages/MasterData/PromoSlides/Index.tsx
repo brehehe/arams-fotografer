@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { toast } from 'sonner';
 import { Pagination } from '@/components/ui/pagination';
 import {
@@ -16,10 +16,18 @@ import {
     CheckCircle2,
     Tag,
     X,
+    Layers,
 } from 'lucide-react';
+import SettingsTabNav from '@/components/SettingsTabNav';
 
 interface PromoSlideItem {
     id: string;
+    project_id?: string | null;
+    project?: {
+        id: string;
+        name: string;
+        project_number?: string;
+    } | null;
     title: string;
     tag: string;
     description?: string;
@@ -46,10 +54,14 @@ interface PromoSlidesIndexProps {
         total: number;
         active: number;
         inactive: number;
+        general?: number;
+        project?: number;
     };
     filters?: {
         search?: string;
         per_page?: number;
+        type?: string;
+        project_id?: string;
     };
 }
 
@@ -58,6 +70,11 @@ export default function PromoSlidesIndex({
     stats = { total: 0, active: 0, inactive: 0 },
     filters = {},
 }: PromoSlidesIndexProps) {
+    const { props: pageProps } = usePage<any>();
+    const accentColor = pageProps?.appSettings?.primary_accent_color || '#C98922';
+    const headingColor = pageProps?.appSettings?.app_heading_color || '#0F172A';
+    const mutedColor = pageProps?.appSettings?.app_muted_text_color || '#64748B';
+
     const [search, setSearch] = useState(filters.search || '');
     const [modalOpen, setModalOpen] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -194,58 +211,77 @@ export default function PromoSlidesIndex({
 
     return (
         <div className="w-full max-w-full space-y-6 pb-20">
-            <Head title="Promo Slide - Master Data" />
+            <Head title="Promo Slide - Setting Admin" />
 
-            {/* ── 1. BREADCRUMB & HEADER SECTION ────────────────────────────────── */}
-            <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs">
-                    <Link
-                        href="/master-data/categories"
-                        className="text-slate-500 hover:text-slate-800 transition-colors font-medium"
+            {/* ── 1. HEADER UTAMA PENGATURAN ADMIN (Sama persis dengan Admin.tsx) ── */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h1
+                        className="text-2xl lg:text-3xl font-extrabold tracking-tight transition-colors"
+                        style={{ color: headingColor }}
                     >
-                        Master Data
-                    </Link>
-                    <span className="text-slate-400">›</span>
-                    <span className="text-[#F59E0B] font-bold">Promo Slide</span>
-                </div>
-
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
-                            <Sparkles className="w-6 h-6 text-amber-500" />
-                            <span>Promo Slide Portal Klien</span>
-                        </h1>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                            Kelola banner hero slider promosi yang tampil interaktif di dashboard portal klien.
-                        </p>
-                    </div>
-
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <Link
-                            href="/client/dashboard"
-                            target="_blank"
-                            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer"
-                        >
-                            <ExternalLink className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>Preview di Portal</span>
-                        </Link>
-                        <button
-                            type="button"
-                            onClick={handleOpenCreate}
-                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#3B46F1] hover:bg-[#323BD8] text-white rounded-xl text-xs font-bold shadow-xs transition-all hover:scale-[1.02] cursor-pointer shrink-0"
-                        >
-                            <Plus className="w-4 h-4" />
-                            <span>Tambah Promo Slide</span>
-                        </button>
-                    </div>
+                        Pengaturan Admin
+                    </h1>
+                    <p
+                        className="text-sm mt-0.5 transition-colors"
+                        style={{ color: mutedColor }}
+                    >
+                        Kelola identitas perusahaan, preferensi sistem, penomoran dokumen, dan backup data studio.
+                    </p>
                 </div>
             </div>
 
-            {/* ── 2. TOP STAT CARDS ─────────────────────────────────────────────── */}
+            {/* ── 2. TAB NAVIGASI HORIZONTAL (Posisi & warna identik dengan Admin.tsx) ── */}
+            <SettingsTabNav activeMainTab="admin" activeAdminSubTab="promo_slides" accentColor={accentColor} />
+
+            {/* ── 3. SUB-SECTION TITLE & ACTIONS: PROMO SLIDE PORTAL KLIEN ──────────── */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900/60 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+                <div>
+                    <div className="flex items-center gap-2.5">
+                        <div
+                            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                            style={{ backgroundColor: `${accentColor}18`, color: accentColor }}
+                        >
+                            <Sparkles className="w-5 h-5" />
+                        </div>
+                        <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                            Promo Slide Portal Klien
+                        </h2>
+                    </div>
+                    <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1 sm:ml-11">
+                        Kelola banner hero slider promosi yang tampil interaktif di dashboard portal klien.
+                    </p>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap sm:ml-auto">
+                    <Link
+                        href="/client/dashboard"
+                        target="_blank"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer"
+                    >
+                        <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Preview di Portal</span>
+                    </Link>
+                    <button
+                        type="button"
+                        onClick={handleOpenCreate}
+                        style={{ backgroundColor: accentColor }}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 hover:brightness-110 text-white rounded-xl text-xs font-bold shadow-xs transition-all hover:scale-[1.02] cursor-pointer shrink-0"
+                    >
+                        <Plus className="w-4 h-4" />
+                        <span>Tambah Promo Slide</span>
+                    </button>
+                </div>
+            </div>
+
+            {/* ── 4. TOP STAT CARDS ─────────────────────────────────────────────── */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[#EEF2FF] flex items-center justify-center shrink-0">
-                        <Sparkles className="w-6 h-6 text-[#3B46F1]" />
+                    <div
+                        className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: `${accentColor}18`, color: accentColor }}
+                    >
+                        <Sparkles className="w-6 h-6" />
                     </div>
                     <div>
                         <span className="text-xs font-bold text-slate-500 block uppercase tracking-wider">Total Slide</span>
@@ -292,6 +328,45 @@ export default function PromoSlidesIndex({
                         className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors"
                     />
                 </form>
+
+                {/* Filter Pills */}
+                <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto">
+                    <button
+                        type="button"
+                        onClick={() => router.get('/master-data/promo-slides', { search, type: undefined }, { preserveState: true })}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                            !filters.type || filters.type === 'all'
+                                ? 'bg-slate-900 text-white shadow-xs'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                    >
+                        Semua ({stats.total || 0})
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => router.get('/master-data/promo-slides', { search, type: 'general' }, { preserveState: true })}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                            filters.type === 'general'
+                                ? 'bg-amber-600 text-white shadow-xs'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                    >
+                        <Sparkles className="w-3 h-3" />
+                        <span>Slide Umum ({stats.general ?? 0})</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => router.get('/master-data/promo-slides', { search, type: 'project' }, { preserveState: true })}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                            filters.type === 'project'
+                                ? 'bg-[#3B46F1] text-white shadow-xs'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                    >
+                        <Layers className="w-3 h-3" />
+                        <span>Slide Project ({stats.project ?? 0})</span>
+                    </button>
+                </div>
             </div>
 
                 {/* ── PROMO SLIDES CARDS GRID ───────────────────────────────── */}
@@ -333,7 +408,29 @@ export default function PromoSlidesIndex({
                                     </div>
 
                                     {/* Slide Content Description */}
-                                    <div className="p-4 pt-1 space-y-2">
+                                    <div className="p-4 pt-2 space-y-2.5">
+                                        {slide.project ? (
+                                            <div className="flex items-center justify-between gap-1.5 px-2.5 py-1.5 rounded-xl bg-indigo-50/80 border border-indigo-100 text-indigo-800 text-[11px] font-semibold">
+                                                <div className="flex items-center gap-1.5 truncate">
+                                                    <Layers className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                                                    <span className="truncate">Project: {slide.project.name}</span>
+                                                </div>
+                                                <Link
+                                                    href={`/projects/${slide.project.id}`}
+                                                    className="inline-flex items-center gap-0.5 text-[10px] font-bold text-indigo-600 hover:text-indigo-900 shrink-0"
+                                                    title="Buka Project"
+                                                >
+                                                    <span>Buka</span>
+                                                    <ExternalLink className="w-2.5 h-2.5" />
+                                                </Link>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-50/70 border border-amber-100/80 text-amber-800 text-[11px] font-medium">
+                                                <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                                                <span>Slide Umum Studio (Semua Klien)</span>
+                                            </div>
+                                        )}
+
                                         <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
                                             {slide.description || 'Tidak ada deskripsi promo.'}
                                         </p>
@@ -394,7 +491,8 @@ export default function PromoSlidesIndex({
                         <button
                             type="button"
                             onClick={handleOpenCreate}
-                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#240B10] text-white text-xs font-bold hover:bg-[#380E13] transition-colors cursor-pointer"
+                            style={{ backgroundColor: accentColor }}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white text-xs font-bold hover:brightness-110 transition-all cursor-pointer"
                         >
                             <Plus className="w-4 h-4" />
                             <span>Tambah Slide Pertama</span>
@@ -567,7 +665,8 @@ export default function PromoSlidesIndex({
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-5 py-2 rounded-xl bg-[#240B10] hover:bg-[#380E13] text-white font-bold text-xs transition-colors cursor-pointer"
+                                    style={{ backgroundColor: accentColor }}
+                                    className="px-5 py-2 rounded-xl text-white font-bold text-xs hover:brightness-110 transition-all cursor-pointer"
                                 >
                                     {selectedSlide ? 'Simpan Perubahan' : 'Tambah Promo Slide'}
                                 </button>

@@ -43,6 +43,8 @@ import {
     Award,
     Printer,
     Eye,
+    EyeOff,
+    ChevronLeft,
     Upload,
     AlertCircle,
     Trash2,
@@ -57,6 +59,7 @@ import {
     Building2,
     ShieldCheck,
     Clock3,
+    Baby,
 } from 'lucide-react';
 import { formatRupiah, formatDate } from '@/lib/formatters';
 import { FormattedNumberInput } from '@/components/ui/formatted-number-input';
@@ -101,7 +104,7 @@ export default function ProjectDetail({
     const user = auth?.user;
 
     // Active Navigation Tab
-    const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'files' | 'catatan' | 'invoice' | 'highlight'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'files' | 'catatan' | 'invoice' | 'highlight' | 'slide'>('overview');
     const [actionDropdownOpen, setActionDropdownOpen] = useState(false);
     const [invoiceDropdownOpen, setInvoiceDropdownOpen] = useState(false);
 
@@ -194,6 +197,123 @@ export default function ProjectDetail({
         });
     };
 
+    // ── SLIDE PROJECT STATE & HANDLERS ──────────────────────────────────────
+    const [isSlideModalOpen, setIsSlideModalOpen] = useState(false);
+    const [editingSlide, setEditingSlide] = useState<any | null>(null);
+    const [slideSubmitting, setSlideSubmitting] = useState(false);
+    const [slidePreviewIndex, setSlidePreviewIndex] = useState(0);
+    const [slideFormData, setSlideFormData] = useState({
+        title: '',
+        tag: 'EXCLUSIVE PROJECT',
+        description: '',
+        button_text: 'Lihat Detail Project',
+        button_url: '',
+        image_url: '',
+        image_file: null as File | null,
+        is_active: true,
+        sort_order: 1,
+    });
+    const [slideFilePreview, setSlideFilePreview] = useState('');
+
+    const openCreateSlideModal = () => {
+        setEditingSlide(null);
+        setSlideFormData({
+            title: `Eksklusif: ${project?.name || 'Project Spesial'}`,
+            tag: 'EXCLUSIVE PROJECT',
+            description: `Dokumentasi dan momen berharga Anda telah siap. Buka galeri untuk melihat hasil karya terbaik dari studio kami.`,
+            button_text: 'Lihat Detail Project',
+            button_url: `/client/projects/${project?.id || ''}`,
+            image_url: project?.thumbnail || '',
+            image_file: null,
+            is_active: true,
+            sort_order: (project?.promo_slides?.length || 0) + 1,
+        });
+        setSlideFilePreview(project?.thumbnail || '');
+        setIsSlideModalOpen(true);
+    };
+
+    const openEditSlideModal = (slide: any) => {
+        setEditingSlide(slide);
+        setSlideFormData({
+            title: slide.title,
+            tag: slide.tag,
+            description: slide.description || '',
+            button_text: slide.button_text,
+            button_url: slide.button_url,
+            image_url: slide.image || '',
+            image_file: null,
+            is_active: Boolean(slide.is_active),
+            sort_order: slide.sort_order || 1,
+        });
+        setSlideFilePreview(slide.image || '');
+        setIsSlideModalOpen(true);
+    };
+
+    const handleSlideSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        setSlideSubmitting(true);
+        const form = new FormData();
+        form.append('title', slideFormData.title);
+        form.append('tag', slideFormData.tag);
+        form.append('description', slideFormData.description);
+        form.append('button_text', slideFormData.button_text);
+        form.append('button_url', slideFormData.button_url);
+        form.append('is_active', slideFormData.is_active ? '1' : '0');
+        form.append('sort_order', String(slideFormData.sort_order));
+
+        if (slideFormData.image_file) {
+            form.append('image_file', slideFormData.image_file);
+        } else if (slideFormData.image_url) {
+            form.append('image_url', slideFormData.image_url);
+        }
+
+        if (editingSlide) {
+            form.append('_method', 'PATCH');
+            router.post(`/projects/${project?.id}/promo-slides/${editingSlide.id}`, form, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success('Slide banner project berhasil diperbarui');
+                    setIsSlideModalOpen(false);
+                    setSlideSubmitting(false);
+                },
+                onError: (err) => {
+                    toast.error(Object.values(err)[0] as string || 'Gagal memperbarui slide banner');
+                    setSlideSubmitting(false);
+                },
+            });
+        } else {
+            router.post(`/projects/${project?.id}/promo-slides`, form, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success('Slide banner project berhasil ditambahkan');
+                    setIsSlideModalOpen(false);
+                    setSlideSubmitting(false);
+                },
+                onError: (err) => {
+                    toast.error(Object.values(err)[0] as string || 'Gagal menambahkan slide banner');
+                    setSlideSubmitting(false);
+                },
+            });
+        }
+    };
+
+    const handleToggleSlideActive = (slide: any) => {
+        router.patch(`/projects/${project?.id}/promo-slides/${slide.id}/toggle`, {}, {
+            preserveScroll: true,
+            onSuccess: () => toast.success('Status slide banner berhasil diubah'),
+            onError: () => toast.error('Gagal mengubah status slide banner'),
+        });
+    };
+
+    const handleDeleteSlide = (slide: any) => {
+        if (!confirm(`Hapus slide banner "${slide.title}"?`)) return;
+        router.delete(`/projects/${project?.id}/promo-slides/${slide.id}`, {
+            preserveScroll: true,
+            onSuccess: () => toast.success('Slide banner berhasil dihapus'),
+            onError: () => toast.error('Gagal menghapus slide banner'),
+        });
+    };
+
     const studioPhone = company_settings?.phone || '0812-3456-7890';
     const studioName = company_settings?.name || 'Arams Pictures';
     const studioEmail = company_settings?.email || 'hello@aramspictures.id';
@@ -230,10 +350,23 @@ export default function ProjectDetail({
     // ── DYNAMIC PROJECT CONTACT & TEAM INFORMATION ───────────────────────────
     const clientName = project?.client?.name || 'Klien';
     const clientPhone = project?.client?.phone || '-';
+    const clientSecondaryPhone = project?.client?.secondary_phone || null;
     const clientEmail = project?.client?.email || '-';
     const clientInstagram = project?.client?.instagram || '-';
     const clientAddress = project?.client?.address || project?.location || '-';
     const clientCity = project?.client?.city || '';
+    const clientChildName = project?.client?.child_name || null;
+    const clientChildBirthDate = project?.client?.child_birth_date || null;
+    const clientChildGender = project?.client?.child_gender || null;
+    const clientBrideName = project?.client?.bride_name || null;
+    const clientBrideNickname = project?.client?.bride_nickname || null;
+    const clientGroomName = project?.client?.groom_name || null;
+    const clientGroomNickname = project?.client?.groom_nickname || null;
+    const clientFatherName = project?.client?.father_name || null;
+    const clientMotherName = project?.client?.mother_name || null;
+    const clientChildren: Array<{ name: string; nickname?: string; birth_date?: string; gender?: string }> = Array.isArray(project?.client?.children) ? project.client.children : [];
+    const categoryFormType = project?.category?.form_type || (project?.category?.name?.toLowerCase().includes('wedding') ? 'wedding' : project?.category?.name?.toLowerCase().includes('newborn') ? 'newborn' : 'standard');
+
 
     const woName = project?.wedding_organizer?.name || project?.weddingOrganizer?.name || null;
     const woPic = project?.wedding_organizer?.pic_name || project?.weddingOrganizer?.pic_name || null;
@@ -874,6 +1007,21 @@ export default function ProjectDetail({
                             {project?.highlights?.length || 0}
                         </span>
                     </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab('slide')}
+                        className={`py-3.5 border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                            activeTab === 'slide'
+                                ? 'border-[#3B46F1] text-[#3B46F1]'
+                                : 'border-transparent text-slate-500 hover:text-slate-800'
+                        }`}
+                    >
+                        <Layers className="w-3.5 h-3.5 text-indigo-500" />
+                        <span>Slide Project</span>
+                        <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-indigo-100 text-indigo-800 font-bold">
+                            {project?.promo_slides?.length || 0}
+                        </span>
+                    </button>
                     <Link
                         href={`/projects/${project?.id}/invoice`}
                         className="py-3.5 border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1"
@@ -888,151 +1036,526 @@ export default function ProjectDetail({
             {activeTab === 'overview' && (
                 <div className="space-y-6">
                     {/* ── ROW 1: DESKRIPSI PROJECT, STATUS PROJECT, PIC & TIM PRODUKSI ─ */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
                         {/* 1. Deskripsi Project */}
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-3 flex flex-col justify-between">
-                            <div className="space-y-1.5">
-                                <h3 className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                                    <FileText className="w-3.5 h-3.5 text-indigo-600" />
-                                    <span>Deskripsi &amp; Konsep Acara</span>
-                                </h3>
+                        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between h-full">
+                            <div className="space-y-2.5">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                        <FileText className="w-4 h-4" />
+                                    </div>
+                                    <h3 className="font-bold text-xs text-slate-900">
+                                        Deskripsi &amp; Konsep Acara
+                                    </h3>
+                                </div>
                                 <p className="text-xs text-slate-600 leading-relaxed break-words whitespace-normal line-clamp-4">
                                     {cleanProjectDescription}
                                 </p>
                             </div>
-                            <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 gap-2">
+                            <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 gap-2">
                                 <span className="truncate max-w-[65%]">
                                     <strong className="font-semibold text-slate-600">Ref:</strong> {formattedReferral}
                                 </span>
-                                <span className="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md text-[10px] shrink-0">
+                                <span className="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md text-[10px] shrink-0 border border-slate-200/60">
                                     {project?.category?.name || 'Umum'}
                                 </span>
                             </div>
                         </div>
 
                         {/* 2. Status & Riwayat Project */}
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-3">
-                            <div className="flex items-center justify-between gap-2">
-                                <h3 className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                                    <Clock3 className="w-3.5 h-3.5 text-indigo-600" />
-                                    <span>Status &amp; Riwayat</span>
-                                </h3>
-                                <select
-                                    value={project?.status || 'draft'}
-                                    onChange={(e) => handleQuickStatusChange(e.target.value)}
-                                    className={`px-2 py-0.5 rounded text-[10px] font-bold border cursor-pointer outline-hidden bg-white shadow-2xs hover:ring-2 hover:ring-indigo-200 transition-all ${statusBadge.bg}`}
-                                    title="Klik untuk mengubah status project langsung ke database"
-                                >
-                                    <option value="draft">DRAFT</option>
-                                    <option value="in_progress">DALAM PROSES</option>
-                                    <option value="editing">EDITING</option>
-                                    <option value="completed">SELESAI</option>
-                                    <option value="on_hold">DITUNDA</option>
-                                    <option value="cancelled">DIBATALKAN</option>
-                                </select>
+                        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between h-full">
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                            <Clock3 className="w-4 h-4" />
+                                        </div>
+                                        <h3 className="font-bold text-xs text-slate-900">
+                                            Status &amp; Riwayat
+                                        </h3>
+                                    </div>
+                                    <div className="relative">
+                                        <select
+                                            value={project?.status || 'draft'}
+                                            onChange={(e) => handleQuickStatusChange(e.target.value)}
+                                            className={`pl-2.5 pr-6 py-1 rounded-lg text-[10px] font-bold border cursor-pointer outline-hidden bg-white shadow-2xs hover:ring-2 hover:ring-indigo-200 transition-all appearance-none ${statusBadge.bg}`}
+                                            title="Klik untuk mengubah status project langsung ke database"
+                                        >
+                                            <option value="draft">DRAFT</option>
+                                            <option value="in_progress">DALAM PROSES</option>
+                                            <option value="editing">EDITING</option>
+                                            <option value="completed">SELESAI</option>
+                                            <option value="on_hold">DITUNDA</option>
+                                            <option value="cancelled">DIBATALKAN</option>
+                                        </select>
+                                        <ChevronDown className="w-3 h-3 text-slate-500 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                    </div>
+                                </div>
+                                <div className="space-y-2 text-xs">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-slate-500">No. Project</span>
+                                        <span className="font-mono font-bold text-slate-900">{project?.project_number || '-'}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-slate-500">Tahap Workflow</span>
+                                        <span className="font-bold text-indigo-700 capitalize">
+                                            {project?.workflow_step || 'Booking'} ({project?.progress || 0}%)
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-slate-500">Tanggal Dibuat</span>
+                                        <span className="font-medium text-slate-900">{formatDateTimeIndo(project?.created_at)}</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="space-y-2 text-xs">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-500">No. Project</span>
-                                    <span className="font-mono font-bold text-slate-900">{project?.project_number || '-'}</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-500">Tahap Workflow</span>
-                                    <span className="font-bold text-indigo-700 capitalize">
-                                        {project?.workflow_step || 'Booking'} ({project?.progress || 0}%)
-                                    </span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-500">Tanggal Dibuat</span>
-                                    <span className="font-medium text-slate-900">{formatDateTimeIndo(project?.created_at)}</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-500">Terakhir Diedit</span>
-                                    <span className="font-medium text-slate-900">{formatDateTimeIndo(project?.updated_at)}</span>
-                                </div>
+                            <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                                <span>Terakhir Diedit</span>
+                                <span className="font-medium text-slate-700">{formatDateTimeIndo(project?.updated_at)}</span>
                             </div>
                         </div>
 
                         {/* 3. PIC & Tim Produksi Assigned */}
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-3">
-                            <h3 className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                                <Users className="w-3.5 h-3.5 text-indigo-600" />
-                                <span>Tim Produksi &amp; PIC</span>
-                            </h3>
-                            <div className="space-y-2 text-xs">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-500">Supervisor (PIC)</span>
-                                    <span className="font-bold text-slate-900">{supervisorName}</span>
+                        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between h-full">
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                        <Users className="w-4 h-4" />
+                                    </div>
+                                    <h3 className="font-bold text-xs text-slate-900">
+                                        Tim Produksi &amp; PIC
+                                    </h3>
                                 </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-500">Lead Photographer</span>
-                                    <span className="font-semibold text-slate-800">{parsedPhotographer}</span>
+                                <div className="space-y-2 text-xs">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-slate-500">Supervisor (PIC)</span>
+                                        <span className="font-bold text-slate-900">{supervisorName}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-slate-500">Lead Photographer</span>
+                                        <span className="font-semibold text-slate-800">{parsedPhotographer}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-slate-500">Lead Editor</span>
+                                        <span className="font-semibold text-slate-800">{parsedEditor}</span>
+                                    </div>
                                 </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-500">Lead Editor</span>
-                                    <span className="font-semibold text-slate-800">{parsedEditor}</span>
-                                </div>
-                                <div className="flex justify-between items-center pt-1 border-t border-slate-100 text-[11px]">
-                                    <span className="text-slate-500">Kontak PIC</span>
-                                    <span className="font-mono text-slate-700">
-                                        {supervisorPhone && supervisorPhone !== '-' ? supervisorPhone : 'Belum diisi'}
-                                    </span>
-                                </div>
+                            </div>
+                            <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                                <span>Kontak PIC</span>
+                                <span className="font-mono font-medium text-slate-800">
+                                    {supervisorPhone && supervisorPhone !== '-' ? supervisorPhone : 'Belum diisi'}
+                                </span>
                             </div>
                         </div>
                     </div>
 
-                    {/* ── ROW 2: 4 FINANCIAL & CLIENT CARDS ─────────────────────────── */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                        {/* 1. Informasi Kontak Klien & WO */}
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-3 flex flex-col justify-between">
-                            <div className="space-y-3">
-                                <h3 className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                                    <User className="w-3.5 h-3.5 text-indigo-600" />
-                                    <span>Informasi Klien</span>
-                                </h3>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center font-bold text-indigo-700 shrink-0">
-                                        {clientName.charAt(0)}
-                                    </div>
-                                    <div className="min-w-0">
-                                        <h4 className="font-bold text-xs text-slate-900 truncate">{clientName}</h4>
-                                        <span className="text-[11px] text-slate-400 block">{clientCity || 'Klien Utama'}</span>
-                                    </div>
+                    {/* ── ROW 2: INFORMASI KLIEN / PENGANTIN / BAYI & ORANG TUA (FULL-WIDTH CARD) ─── */}
+                    <div className={`bg-white p-5 sm:p-6 rounded-2xl border shadow-2xs hover:shadow-xs transition-all w-full ${
+                        categoryFormType === 'wedding'
+                            ? 'border-rose-200/90'
+                            : categoryFormType === 'newborn'
+                            ? 'border-amber-200/90'
+                            : 'border-slate-200/90'
+                    }`}>
+                        {/* Header Full Width */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                            <div className="flex items-center gap-3">
+                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                                    categoryFormType === 'wedding'
+                                        ? 'bg-rose-50 text-rose-600 border border-rose-200/60'
+                                        : categoryFormType === 'newborn'
+                                        ? 'bg-amber-50 text-amber-600 border border-amber-200/60'
+                                        : 'bg-indigo-50 text-indigo-600 border border-indigo-200/60'
+                                }`}>
+                                    {categoryFormType === 'wedding' ? (
+                                        <HeartHandshake className="w-5 h-5" />
+                                    ) : categoryFormType === 'newborn' ? (
+                                        <Baby className="w-5 h-5" />
+                                    ) : (
+                                        <User className="w-5 h-5" />
+                                    )}
                                 </div>
-                                <div className="space-y-1.5 text-xs text-slate-600 pt-1">
+                                <div>
                                     <div className="flex items-center gap-2">
-                                        <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                                        <span>{clientPhone}</span>
+                                        <h3 className="font-bold text-sm text-slate-900">
+                                            {categoryFormType === 'wedding'
+                                                ? 'Informasi Pengantin & Acara'
+                                                : categoryFormType === 'newborn'
+                                                ? 'Informasi Bayi & Orang Tua'
+                                                : 'Informasi Klien & Kontak'}
+                                        </h3>
+                                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                                            categoryFormType === 'wedding'
+                                                ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                                : categoryFormType === 'newborn'
+                                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                                : 'bg-slate-50 text-slate-600 border-slate-200'
+                                        }`}>
+                                            {categoryFormType === 'wedding' ? '👰🤵 Wedding' : categoryFormType === 'newborn' ? '👶 Newborn' : '👤 Standar'}
+                                        </span>
                                     </div>
-                                    <div className="flex items-center gap-2 truncate">
-                                        <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                                        <span className="truncate">{clientEmail}</span>
-                                    </div>
-                                    <div className="flex items-start gap-2">
-                                        <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-                                        <span className="leading-tight text-[11px]">{clientAddress}</span>
-                                    </div>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        {categoryFormType === 'wedding'
+                                            ? 'Data lengkap calon mempelai wanita, pria, serta kontak acara & wedding organizer'
+                                            : categoryFormType === 'newborn'
+                                            ? 'Identitas data bayi yang difoto beserta informasi orang tua dan kontak'
+                                            : 'Identitas pemesan project, kontak utama, dan alamat pelaksanaan'}
+                                    </p>
                                 </div>
                             </div>
-
-                            {woName && (
-                                <div className="pt-2 border-t border-slate-100 text-[11px] text-slate-600">
-                                    <span className="text-slate-400 block">Wedding Organizer:</span>
-                                    <span className="font-bold text-slate-800">{woName}</span> {woPic ? `(${woPic})` : ''}
-                                </div>
+                            {project?.client?.id && (
+                                <Link
+                                    href={`/clients/${project.client.id}/edit`}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-indigo-600 bg-slate-50 hover:bg-indigo-50/50 border border-slate-200/80 hover:border-indigo-200 transition-all self-start sm:self-auto shrink-0"
+                                >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                    <span>Edit Profil Klien</span>
+                                    <ExternalLink className="w-3 h-3 text-slate-400" />
+                                </Link>
                             )}
                         </div>
 
-                        {/* 2. Informasi Keuangan & Status Pembayaran */}
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-3 flex flex-col justify-between">
-                            <div className="space-y-2">
-                                <h3 className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                                    <Wallet className="w-3.5 h-3.5 text-indigo-600" />
-                                    <span>Ringkasan Tagihan</span>
-                                </h3>
+                        {/* ── 3-COLUMN CONTENT GRID ── */}
+                        {categoryFormType === 'wedding' && (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+                                {/* Col 1: CPW */}
+                                <div className="p-4 rounded-xl bg-rose-50/50 border border-rose-200/60 flex flex-col justify-between gap-3">
+                                    <div className="space-y-2">
+                                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-600 flex items-center gap-1.5">
+                                            👰 Calon Pengantin Wanita (CPW)
+                                        </span>
+                                        <div className="bg-white rounded-lg p-3 border border-rose-200/60 space-y-1 shadow-2xs">
+                                            <span className="font-bold text-sm text-slate-900 block">
+                                                {clientBrideName || clientName || '-'}
+                                            </span>
+                                            {clientBrideNickname && (
+                                                <span className="text-xs text-rose-600 font-medium block">
+                                                    Nama Panggilan: <strong className="text-slate-900">{clientBrideNickname}</strong>
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Col 2: CPP */}
+                                <div className="p-4 rounded-xl bg-rose-50/40 border border-rose-200/50 flex flex-col justify-between gap-3">
+                                    <div className="space-y-2">
+                                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-600 flex items-center gap-1.5">
+                                            🤵 Calon Pengantin Pria (CPP)
+                                        </span>
+                                        <div className="bg-white rounded-lg p-3 border border-rose-200/60 space-y-1 shadow-2xs">
+                                            <span className="font-bold text-sm text-slate-900 block">
+                                                {clientGroomName || '-'}
+                                            </span>
+                                            {clientGroomNickname && (
+                                                <span className="text-xs text-rose-600 font-medium block">
+                                                    Nama Panggilan: <strong className="text-slate-900">{clientGroomNickname}</strong>
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {clientName && clientName !== clientBrideName && clientName !== clientGroomName && (
+                                        <div className="pt-2 border-t border-rose-200/60 text-[11px] text-slate-600 flex items-center justify-between">
+                                            <span className="text-slate-500">Pemesan:</span>
+                                            <span className="font-semibold text-slate-900">{clientName}</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Col 3: Kontak & WO */}
+                                <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/70 flex flex-col justify-between gap-3">
+                                    <div className="space-y-2.5">
+                                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                                            <Phone className="w-3.5 h-3.5 text-slate-400" /> Kontak &amp; Lokasi Acara
+                                        </span>
+                                        <div className="space-y-1.5 text-xs">
+                                            <div className="flex items-center gap-2 text-slate-800">
+                                                <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                                <span className="font-mono font-medium">{clientPhone}</span>
+                                                {clientSecondaryPhone && (
+                                                    <span className="text-[10px] text-slate-500 font-mono">/ {clientSecondaryPhone}</span>
+                                                )}
+                                            </div>
+                                            {clientEmail && clientEmail !== '-' && (
+                                                <div className="flex items-center gap-2 text-slate-700 truncate">
+                                                    <Mail className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                                    <span className="truncate">{clientEmail}</span>
+                                                </div>
+                                            )}
+                                            {clientAddress && clientAddress !== '-' && (
+                                                <div className="flex items-start gap-2 text-slate-600 pt-1 border-t border-slate-200/60">
+                                                    <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
+                                                    <span className="text-[11px] leading-relaxed line-clamp-2">{clientAddress}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {woName && (
+                                        <div className="p-2.5 rounded-lg bg-purple-50/70 border border-purple-200/60 text-xs space-y-1">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[9px] font-extrabold uppercase tracking-wider text-purple-600">Wedding Organizer</span>
+                                                <span className="text-[10px]">🎀</span>
+                                            </div>
+                                            <span className="font-bold text-slate-900 block">{woName}</span>
+                                            <div className="flex items-center justify-between text-[11px] text-slate-500">
+                                                {woPic && <span>PIC: <strong className="text-slate-700">{woPic}</strong></span>}
+                                                {woPhone && <span className="font-mono">📞 {woPhone}</span>}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {categoryFormType === 'newborn' && (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+                                {/* Col 1: Data Bayi */}
+                                <div className="p-4 rounded-xl bg-amber-50/50 border border-amber-200/60 flex flex-col justify-between gap-3">
+                                    <div>
+                                        <div className="flex items-center justify-between mb-2.5">
+                                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700 flex items-center gap-1.5">
+                                                <Baby className="w-4 h-4 text-amber-600" />
+                                                {clientChildren.length > 1 ? `Data Bayi Kembar (${clientChildren.length} Anak)` : 'Data Bayi'}
+                                            </span>
+                                            {clientChildren.length > 1 && (
+                                                <span className="px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 text-[10px] font-bold">
+                                                    Kembar
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {clientChildren.length > 1 ? (
+                                            <div className="space-y-2">
+                                                {clientChildren.map((child, idx) => (
+                                                    <div key={idx} className="bg-white rounded-lg p-2.5 border border-amber-200/60 space-y-1 shadow-2xs">
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <span className="font-bold text-xs text-slate-900">
+                                                                👶 {child.name || `Bayi #${idx + 1}`}
+                                                                {child.nickname && <span className="text-amber-700 font-normal ml-1">({child.nickname})</span>}
+                                                            </span>
+                                                            {child.gender && (
+                                                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${
+                                                                    child.gender === 'L' || child.gender === 'Laki-laki'
+                                                                        ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                                                        : 'bg-pink-50 text-pink-700 border-pink-200'
+                                                                }`}>
+                                                                    {child.gender === 'L' || child.gender === 'Laki-laki' ? '♂ Laki-laki' : '♀ Perempuan'}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        {child.birth_date && (
+                                                            <span className="text-[11px] text-slate-600 block">
+                                                                🎂 {formatDateIndo(child.birth_date)}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (clientChildName || clientChildren[0]?.name) ? (
+                                            <div className="bg-white rounded-lg p-3 border border-amber-200/60 space-y-2 shadow-2xs">
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <div>
+                                                        <div className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
+                                                            <span className="text-lg leading-none">👶</span>
+                                                            <span>{clientChildName || clientChildren[0]?.name}</span>
+                                                        </div>
+                                                        {(clientChildren[0]?.nickname) && (
+                                                            <span className="text-xs text-amber-800 font-medium ml-6 block">
+                                                                Panggilan: <strong className="text-slate-900">{clientChildren[0].nickname}</strong>
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    {(clientChildGender || clientChildren[0]?.gender) && (
+                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
+                                                            (clientChildGender || clientChildren[0]?.gender) === 'L' || (clientChildGender || clientChildren[0]?.gender) === 'Laki-laki'
+                                                                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                                                : 'bg-pink-50 text-pink-700 border-pink-200'
+                                                        }`}>
+                                                            {(clientChildGender || clientChildren[0]?.gender) === 'L' || (clientChildGender || clientChildren[0]?.gender) === 'Laki-laki' ? '♂ Laki-laki' : '♀ Perempuan'}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {(clientChildBirthDate || clientChildren[0]?.birth_date) && (
+                                                    <div className="pt-2 border-t border-amber-100/70 flex items-center gap-1.5 text-xs text-slate-600">
+                                                        <span>🎂</span>
+                                                        <span>Lahir: <strong className="text-slate-800 font-semibold">{formatDateIndo(clientChildBirthDate || clientChildren[0]?.birth_date)}</strong></span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="bg-white/80 rounded-lg p-3 border border-dashed border-amber-200 text-center text-xs text-amber-700 italic">
+                                                Data bayi belum diisi di profil klien
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Col 2: Data Orang Tua */}
+                                <div className="p-4 rounded-xl bg-amber-50/30 border border-amber-200/50 flex flex-col justify-between gap-3">
+                                    <div className="space-y-3">
+                                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700 flex items-center gap-1.5">
+                                            <Users className="w-4 h-4 text-amber-600" /> Orang Tua / Wali
+                                        </span>
+                                        <div className="space-y-2">
+                                            <div className="bg-white rounded-lg p-2.5 border border-slate-200/70 flex items-center gap-2.5 shadow-2xs">
+                                                <span className="text-xl shrink-0">👨</span>
+                                                <div className="min-w-0 flex-1">
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block leading-none">Ayah</span>
+                                                    <span className="font-bold text-xs text-slate-900 truncate block mt-0.5">
+                                                        {clientFatherName || '-'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="bg-white rounded-lg p-2.5 border border-slate-200/70 flex items-center gap-2.5 shadow-2xs">
+                                                <span className="text-xl shrink-0">👩</span>
+                                                <div className="min-w-0 flex-1">
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block leading-none">Ibu</span>
+                                                    <span className="font-bold text-xs text-slate-900 truncate block mt-0.5">
+                                                        {clientMotherName || '-'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {clientName && clientName !== clientFatherName && clientName !== clientMotherName && (
+                                        <div className="pt-2 border-t border-amber-200/60 text-[11px] text-slate-600 flex items-center justify-between">
+                                            <span className="text-slate-500">Nama Pemesan:</span>
+                                            <span className="font-semibold text-slate-900">{clientName}</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Col 3: Kontak & Alamat */}
+                                <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/70 flex flex-col justify-between gap-2.5">
+                                    <div className="space-y-2.5">
+                                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                                            <Phone className="w-3.5 h-3.5 text-slate-400" /> Kontak &amp; Lokasi
+                                        </span>
+                                        <div className="space-y-2 text-xs">
+                                            <div className="flex items-center gap-2 text-slate-800">
+                                                <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                                <span className="font-mono font-medium">{clientPhone}</span>
+                                                {clientSecondaryPhone && (
+                                                    <span className="text-[10px] text-slate-500 font-mono">/ {clientSecondaryPhone}</span>
+                                                )}
+                                            </div>
+                                            {clientEmail && clientEmail !== '-' && (
+                                                <div className="flex items-center gap-2 text-slate-700 truncate">
+                                                    <Mail className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                                    <span className="truncate">{clientEmail}</span>
+                                                </div>
+                                            )}
+                                            {clientInstagram && clientInstagram !== '-' && (
+                                                <div className="flex items-center gap-2 text-slate-700">
+                                                    <Instagram className="w-3.5 h-3.5 text-pink-500 shrink-0" />
+                                                    <span>@{clientInstagram.replace('@', '')}</span>
+                                                </div>
+                                            )}
+                                            {clientAddress && clientAddress !== '-' && (
+                                                <div className="flex items-start gap-2 text-slate-600 pt-1 border-t border-slate-200/60">
+                                                    <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
+                                                    <span className="text-[11px] leading-relaxed line-clamp-2">{clientAddress}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {categoryFormType === 'standard' && (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+                                {/* Col 1: Profil Klien */}
+                                <div className="p-4 rounded-xl bg-indigo-50/40 border border-indigo-200/60 flex flex-col justify-between gap-3">
+                                    <div className="space-y-3">
+                                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-700 flex items-center gap-1.5">
+                                            <User className="w-4 h-4 text-indigo-600" /> Profil Klien
+                                        </span>
+                                        <div className="flex items-center gap-3 bg-white p-3 rounded-lg border border-indigo-100 shadow-2xs">
+                                            <div className="w-12 h-12 rounded-xl bg-indigo-500 text-white font-black text-lg flex items-center justify-center shrink-0 uppercase shadow-2xs">
+                                                {clientName.charAt(0)}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <h4 className="font-bold text-sm text-slate-900 truncate">{clientName}</h4>
+                                                <span className="text-xs text-slate-500 block">{clientCity ? `Kota: ${clientCity}` : 'Klien Terdaftar'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Col 2: Kontak Klien */}
+                                <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/70 flex flex-col justify-between gap-3">
+                                    <div className="space-y-2.5">
+                                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                                            <Phone className="w-3.5 h-3.5 text-slate-400" /> Kontak Utama
+                                        </span>
+                                        <div className="space-y-2 text-xs">
+                                            <div className="flex items-center gap-2 text-slate-800">
+                                                <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                                <span className="font-mono font-medium">{clientPhone}</span>
+                                                {clientSecondaryPhone && (
+                                                    <span className="text-[10px] text-slate-500 font-mono">/ {clientSecondaryPhone}</span>
+                                                )}
+                                            </div>
+                                            {clientEmail && clientEmail !== '-' && (
+                                                <div className="flex items-center gap-2 text-slate-700 truncate">
+                                                    <Mail className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                                    <span className="truncate">{clientEmail}</span>
+                                                </div>
+                                            )}
+                                            {clientInstagram && clientInstagram !== '-' && (
+                                                <div className="flex items-center gap-2 text-slate-700">
+                                                    <Instagram className="w-3.5 h-3.5 text-pink-500 shrink-0" />
+                                                    <span>@{clientInstagram.replace('@', '')}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Col 3: Alamat Lengkap */}
+                                <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/70 flex flex-col justify-between gap-3">
+                                    <div className="space-y-2.5">
+                                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                                            <MapPin className="w-3.5 h-3.5 text-slate-400" /> Alamat Lengkap
+                                        </span>
+                                        <div className="text-xs text-slate-600 leading-relaxed">
+                                            {clientAddress && clientAddress !== '-' ? (
+                                                <div className="flex items-start gap-2">
+                                                    <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
+                                                    <span className="line-clamp-3">{clientAddress}</span>
+                                                </div>
+                                            ) : (
+                                                <span className="text-slate-400 italic">Alamat belum dicatat</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {woName && (
+                                        <div className="pt-2 border-t border-slate-200/60 flex items-center gap-2 text-purple-600 text-xs">
+                                            <span>🎀</span>
+                                            <span className="font-semibold">Mitra WO: {woName}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ── ROW 3: 3 FINANCIAL CARDS ─────────────────────────────────────── */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
+                        {/* 1. Informasi Keuangan & Status Pembayaran */}
+                        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between h-full">
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                        <Wallet className="w-4 h-4" />
+                                    </div>
+                                    <h3 className="font-bold text-xs text-slate-900">
+                                        Ringkasan Tagihan
+                                    </h3>
+                                </div>
                                 <div>
-                                    <span className="text-[10px] font-bold text-slate-500 block uppercase">
+                                    <span className="text-[10px] font-bold text-slate-500 block uppercase tracking-tight">
                                         Total Kesepakatan Project
                                     </span>
                                     <span className="text-lg font-black text-[#3B46F1] font-mono block">
@@ -1040,7 +1563,7 @@ export default function ProjectDetail({
                                     </span>
                                 </div>
                                 <div>
-                                    <span className="text-[10px] font-bold text-slate-500 block uppercase">
+                                    <span className="text-[10px] font-bold text-slate-500 block uppercase tracking-tight">
                                         Nominal DP ({dpPercent}%)
                                     </span>
                                     <span className="text-base font-extrabold text-emerald-600 font-mono block">
@@ -1064,48 +1587,58 @@ export default function ProjectDetail({
                             </div>
                         </div>
 
-                        {/* 3. Rincian Biaya Project (Sesuai Form Create/Edit) */}
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-3">
-                            <h3 className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                                <Receipt className="w-3.5 h-3.5 text-indigo-600" />
-                                <span>Rincian Biaya &amp; Diskon</span>
-                            </h3>
-                            <div className="space-y-1.5 text-xs">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-600">Harga Paket</span>
-                                    <span className="font-semibold text-slate-900">{formatRupiah(packagePrice)}</span>
+                        {/* 3. Rincian Biaya Project */}
+                        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between h-full">
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                        <Receipt className="w-4 h-4" />
+                                    </div>
+                                    <h3 className="font-bold text-xs text-slate-900">
+                                        Rincian Biaya &amp; Diskon
+                                    </h3>
                                 </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-600">Total Add-on</span>
-                                    <span className="font-semibold text-slate-900">{formatRupiah(totalAddon)}</span>
+                                <div className="space-y-1.5 text-xs">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-slate-600">Harga Paket</span>
+                                        <span className="font-semibold text-slate-900 font-mono">{formatRupiah(packagePrice)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-slate-600">Total Add-on</span>
+                                        <span className="font-semibold text-slate-900 font-mono">{formatRupiah(totalAddon)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-slate-600">Biaya Operasional</span>
+                                        <span className="font-semibold text-slate-900 font-mono">{formatRupiah(totalBiayaOperasional)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-rose-600">
+                                        <span>Diskon Paket</span>
+                                        <span className="font-semibold font-mono">- {formatRupiah(diskonPaket)}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-slate-600">
+                                        <span>Pajak (PPN/PPh)</span>
+                                        <span className="font-semibold">{taxAmount > 0 ? `+ ${formatRupiah(taxAmount)}` : 'Non-aktif'}</span>
+                                    </div>
                                 </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-slate-600">Biaya Operasional</span>
-                                    <span className="font-semibold text-slate-900">{formatRupiah(totalBiayaOperasional)}</span>
-                                </div>
-                                <div className="flex justify-between items-center text-rose-600">
-                                    <span>Diskon Paket</span>
-                                    <span className="font-semibold">- {formatRupiah(diskonPaket)}</span>
-                                </div>
-                                <div className="flex justify-between items-center text-slate-600">
-                                    <span>Pajak (PPN/PPh)</span>
-                                    <span className="font-semibold">{taxAmount > 0 ? `+ ${formatRupiah(taxAmount)}` : 'Non-aktif'}</span>
-                                </div>
-                                <div className="pt-2 border-t border-slate-200 flex justify-between items-center">
-                                    <span className="font-black text-xs text-slate-900 uppercase">TOTAL KESEPAKATAN</span>
-                                    <span className="font-black text-sm text-[#3B46F1] font-mono">{formatRupiah(totalProject)}</span>
-                                </div>
+                            </div>
+                            <div className="pt-2.5 mt-2.5 border-t border-slate-200 flex justify-between items-center">
+                                <span className="font-black text-[11px] text-slate-900 uppercase">TOTAL KESEPAKATAN</span>
+                                <span className="font-black text-sm text-[#3B46F1] font-mono">{formatRupiah(totalProject)}</span>
                             </div>
                         </div>
 
                         {/* 4. Informasi Pembayaran & Rekening */}
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-3 flex flex-col justify-between">
+                        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between h-full">
                             <div className="space-y-2.5 text-xs">
-                                <h3 className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                                    <CreditCard className="w-3.5 h-3.5 text-indigo-600" />
-                                    <span>Rekening Pembayaran</span>
-                                </h3>
-                                <div className="space-y-2 pt-1 text-slate-700">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                        <CreditCard className="w-4 h-4" />
+                                    </div>
+                                    <h3 className="font-bold text-xs text-slate-900">
+                                        Rekening Pembayaran
+                                    </h3>
+                                </div>
+                                <div className="space-y-1.5 pt-1 text-slate-700">
                                     <div className="flex justify-between items-center gap-2">
                                         <span className="text-slate-500 shrink-0">Metode</span>
                                         <span className="font-semibold text-slate-800 text-right">{paymentMethodName}</span>
@@ -1130,23 +1663,23 @@ export default function ProjectDetail({
                             </div>
 
                             {/* Checklist & Status DP Terintegrasi Finance */}
-                            <div className={`p-3 rounded-xl border transition-all ${
+                            <div className={`p-2.5 rounded-xl border transition-all mt-auto ${
                                 isDpPaid
                                     ? 'bg-emerald-50/90 border-emerald-200 text-emerald-950'
                                     : 'bg-amber-50/90 border-amber-200 text-amber-950'
                             }`}>
                                 <div className="flex items-center justify-between gap-2">
                                     <div className="flex items-center gap-2 min-w-0">
-                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
+                                        <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
                                             isDpPaid ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
                                         }`}>
-                                            {isDpPaid ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : <Clock className="w-3.5 h-3.5" />}
+                                            {isDpPaid ? <Check className="w-3 h-3 stroke-[3]" /> : <Clock className="w-3 h-3" />}
                                         </div>
                                         <div className="min-w-0">
-                                            <div className="font-bold text-[11px] truncate">
+                                            <div className="font-bold text-[10px] truncate">
                                                 {isDpPaid ? 'DP Terbayar & Tercatat' : 'Belum Membayar DP'}
                                             </div>
-                                            <div className="text-[10px] opacity-80 truncate">
+                                            <div className="text-[9px] opacity-80 truncate">
                                                 {isDpPaid
                                                     ? `Lunas DP: ${formatRupiah(project.paid_amount || nominalDP)}`
                                                     : `Tagihan DP: ${formatRupiah(nominalDP)} (${dpPercent}%)`}
@@ -1166,14 +1699,14 @@ export default function ProjectDetail({
                                                 });
                                                 setIsPaymentModalOpen(true);
                                             }}
-                                            className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded-lg shadow-2xs transition-all cursor-pointer flex items-center gap-1 shrink-0 whitespace-nowrap"
+                                            className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-bold rounded-lg shadow-2xs transition-all cursor-pointer flex items-center gap-1 shrink-0 whitespace-nowrap"
                                         >
                                             <CheckCircle2 className="w-3 h-3" />
-                                            <span>Konfirmasi Terima DP</span>
+                                            <span>Terima DP</span>
                                         </button>
                                     ) : (
-                                        <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-md bg-emerald-100/80 text-emerald-800 border border-emerald-300/60 shrink-0">
-                                            TERCATAT DI KEUANGAN
+                                        <span className="text-[8.5px] font-bold uppercase px-1.5 py-0.5 rounded-md bg-emerald-100/80 text-emerald-800 border border-emerald-300/60 shrink-0">
+                                            TERCATAT
                                         </span>
                                     )}
                                 </div>
@@ -1181,255 +1714,303 @@ export default function ProjectDetail({
                         </div>
                     </div>
 
-                    {/* ── ROW 3: DYNAMIC SERVICES, DELIVERABLES & WORKFLOW TIMELINE ─── */}
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-                        {/* 1. Card Kiri: Layanan Termasuk & Output Deliverables Paket (Span 5) */}
-                        <div className="lg:col-span-5 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-4">
-                            <div className="border-b border-slate-100 pb-2.5 flex items-center justify-between gap-2">
-                                <div className="min-w-0">
-                                    <h4 className="font-bold text-sm text-slate-900 truncate">
-                                        Layanan &amp; Deliverables Paket
-                                    </h4>
-                                    <span className="text-[11px] text-slate-400 block truncate">
-                                        Hasil &amp; produk akhir yang diserahkan ke klien
-                                    </span>
-                                </div>
-                                <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100 shrink-0">
-                                    {project?.package?.name || 'Paket Standar'}
-                                </span>
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                                {/* Layanan Termasuk */}
-                                <div className="space-y-2">
-                                    <span className="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">
-                                        Layanan Termasuk
-                                    </span>
-                                    {servicesList.length === 0 ? (
-                                        <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-center">
-                                            <p className="text-xs text-slate-400 italic">Tidak ada layanan spesifik pada database paket</p>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-1.5">
-                                            {servicesList.map((item: string, i: number) => (
-                                                <div key={i} className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-50/70 border border-slate-100/80 text-slate-700 font-medium text-[11px]">
-                                                    <div className="w-4 h-4 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-200/60">
-                                                        <Check className="w-2.5 h-2.5 stroke-[3]" />
-                                                    </div>
-                                                    <span className="break-words whitespace-normal">{item}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Output Deliverables */}
-                                <div className="space-y-2">
-                                    <span className="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">
-                                        Item Deliverables (Hasil Akhir)
-                                    </span>
-                                    {deliverablesList.length === 0 ? (
-                                        <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-center">
-                                            <p className="text-xs text-slate-400 italic">Tidak ada item deliverables pada database paket</p>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-2">
-                                            {deliverablesList.map((item: any) => {
-                                                const badgeClass =
-                                                    item.type === 'Video'
-                                                        ? 'bg-cyan-50 text-cyan-700 border-cyan-200'
-                                                        : item.type === 'Album'
-                                                        ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                                        : item.type === 'Special'
-                                                        ? 'bg-purple-50 text-purple-700 border-purple-200'
-                                                        : 'bg-sky-50 text-sky-700 border-sky-200';
-
-                                                return (
-                                                    <div key={item.id} className="p-2.5 rounded-xl bg-slate-50/80 border border-slate-200/70 space-y-1.5 transition-all hover:bg-slate-50">
-                                                        <div className="flex items-center justify-between gap-1.5">
-                                                            <span className="font-bold text-slate-800 text-[11px] leading-tight break-words whitespace-normal">
-                                                                {item.name}
-                                                            </span>
-                                                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-mono shrink-0 border border-indigo-100">
-                                                                {item.deadline}
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex items-center justify-between gap-2">
-                                                            <span className="text-[10px] text-slate-400 truncate">
-                                                                {item.description || 'Item hasil serah terima'}
-                                                            </span>
-                                                            <span className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded border ${badgeClass} shrink-0`}>
-                                                                {item.type}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 2. Card Kanan: Alur Kerja & Tahapan Operasional Tim (Span 7) */}
-                        <div className="lg:col-span-7 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-4">
-                            <div className="border-b border-slate-100 pb-2.5 flex items-center justify-between gap-2 flex-wrap">
-                                <div>
-                                    <h4 className="font-bold text-sm text-slate-900">
-                                        Alur Kerja &amp; Tahapan Operasional Tim
-                                    </h4>
-                                    <span className="text-[11px] text-slate-400">
-                                        Tahap {currentStepIndex} dari {activeWorkflow.steps_count}: {project?.workflow_step || 'Booking'} ({project?.progress || 0}%)
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                    {currentStepIndex < activeWorkflow.steps_count ? (
-                                        <button
-                                            type="button"
-                                            onClick={() => handleUpdateWorkflowStep(currentStepIndex + 1)}
-                                            className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#3B46F1] hover:bg-[#323BD8] text-white text-[11px] font-bold rounded-lg shadow-2xs transition-all cursor-pointer shrink-0"
-                                        >
-                                            <span>Lanjut Tahap Berikutnya</span>
-                                            <ArrowRight className="w-3 h-3" />
-                                        </button>
-                                    ) : (
-                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
-                                            Semua Tahap Selesai
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="space-y-2 text-xs">
-                                {timelineSteps.map((step) => (
-                                    <div
-                                        key={step.id}
-                                        className={`p-2.5 rounded-xl border transition-all flex items-center justify-between gap-3 ${
-                                            step.done
-                                                ? 'bg-emerald-50/40 border-emerald-100'
-                                                : step.current
-                                                ? 'bg-indigo-50/60 border-indigo-200 shadow-2xs'
-                                                : 'bg-white border-slate-100'
-                                        }`}
-                                    >
-                                        <div className="flex items-center gap-3 min-w-0">
-                                            <div
-                                                className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${
-                                                    step.done
-                                                        ? 'bg-emerald-600 text-white'
-                                                        : step.current
-                                                        ? 'bg-[#3B46F1] text-white ring-2 ring-indigo-200'
-                                                        : 'bg-slate-100 text-slate-500'
-                                                }`}
-                                            >
-                                                {step.done ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : step.id}
+                    {/* ── ROW 3: WORKFLOW & SERVICES (BALANCED 2-COLUMN DASHBOARD) ─── */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                        {/* ── LEFT COLUMN (Span 6): Layanan & Deliverables + Riwayat Transaksi ─ */}
+                        <div className="lg:col-span-6 flex flex-col gap-5">
+                            {/* Card 1: Layanan & Deliverables Paket */}
+                            <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all space-y-4 flex-1 flex flex-col justify-between">
+                                <div className="space-y-3">
+                                    <div className="border-b border-slate-100 pb-3 flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                                <PackageIcon className="w-4 h-4" />
                                             </div>
                                             <div className="min-w-0">
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="font-bold text-slate-900 text-xs">{step.name}</span>
-                                                    <span className="text-[9px] font-bold uppercase px-1.5 py-0.2 rounded bg-slate-100 text-slate-500">
-                                                        {step.phase}
-                                                    </span>
-                                                </div>
-                                                {step.activity && (
-                                                    <p className="text-[10.5px] text-slate-500 break-words whitespace-normal leading-snug">
-                                                        {step.activity}
-                                                    </p>
-                                                )}
+                                                <h4 className="font-bold text-xs text-slate-900 truncate">
+                                                    Layanan &amp; Deliverables Paket
+                                                </h4>
+                                                <span className="text-[10px] text-slate-400 block truncate">
+                                                    Hasil &amp; produk akhir yang diserahkan ke klien
+                                                </span>
                                             </div>
                                         </div>
+                                        <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100 shrink-0">
+                                            {project?.package?.name || 'Paket Standar'}
+                                        </span>
+                                    </div>
 
-                                        <div className="text-right shrink-0 flex flex-col items-end gap-1">
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 block">
-                                                    {step.duration}
-                                                </span>
-                                                <span className={`text-[10px] font-bold block ${step.statusColor}`}>
-                                                    {step.status}
-                                                </span>
-                                            </div>
-                                            {step.current && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleUpdateWorkflowStep(step.id + 1)}
-                                                    className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold shadow-2xs transition-all cursor-pointer flex items-center gap-1"
-                                                >
-                                                    <Check className="w-2.5 h-2.5" />
-                                                    <span>Selesaikan Tahap</span>
-                                                </button>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                                        {/* Layanan Termasuk */}
+                                        <div className="space-y-2">
+                                            <span className="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">
+                                                Layanan Termasuk
+                                            </span>
+                                            {servicesList.length === 0 ? (
+                                                <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-100 text-center space-y-1">
+                                                    <Camera className="w-5 h-5 text-slate-300 mx-auto" />
+                                                    <p className="text-[11px] font-semibold text-slate-600">Dokumentasi Standar</p>
+                                                    <p className="text-[10px] text-slate-400">Sesuai paket yang disepakati bersama klien</p>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-1.5">
+                                                    {servicesList.map((item: string, i: number) => (
+                                                        <div key={i} className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-50/70 border border-slate-100/80 text-slate-700 font-medium text-[11px]">
+                                                            <div className="w-4 h-4 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-200/60">
+                                                                <Check className="w-2.5 h-2.5 stroke-[3]" />
+                                                            </div>
+                                                            <span className="break-words whitespace-normal">{item}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             )}
-                                            {!step.done && !step.current && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleUpdateWorkflowStep(step.id)}
-                                                    className="px-2 py-0.5 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-600 rounded text-[10px] font-semibold border border-slate-200 transition-all cursor-pointer"
-                                                >
-                                                    Pilih Tahap
-                                                </button>
+                                        </div>
+
+                                        {/* Output Deliverables */}
+                                        <div className="space-y-2">
+                                            <span className="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">
+                                                Item Deliverables (Hasil Akhir)
+                                            </span>
+                                            {deliverablesList.length === 0 ? (
+                                                <div className="p-3.5 rounded-xl bg-slate-50/80 border border-slate-100 text-center space-y-1">
+                                                    <HardDrive className="w-5 h-5 text-slate-300 mx-auto" />
+                                                    <p className="text-[11px] font-semibold text-slate-600">File Foto &amp; Google Drive</p>
+                                                    <p className="text-[10px] text-slate-400">Target penyerahan file via cloud link</p>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-2">
+                                                    {deliverablesList.map((item: any) => {
+                                                        const badgeClass =
+                                                            item.type === 'Video'
+                                                                ? 'bg-cyan-50 text-cyan-700 border-cyan-200'
+                                                                : item.type === 'Album'
+                                                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                                                : item.type === 'Special'
+                                                                ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                                                : 'bg-sky-50 text-sky-700 border-sky-200';
+
+                                                        return (
+                                                            <div key={item.id} className="p-2.5 rounded-xl bg-slate-50/80 border border-slate-200/70 space-y-1.5 transition-all hover:bg-slate-50">
+                                                                <div className="flex items-center justify-between gap-1.5">
+                                                                    <span className="font-bold text-slate-800 text-[11px] leading-tight break-words whitespace-normal">
+                                                                        {item.name}
+                                                                    </span>
+                                                                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-mono shrink-0 border border-indigo-100">
+                                                                        {item.deadline}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex items-center justify-between gap-2">
+                                                                    <span className="text-[10px] text-slate-400 truncate">
+                                                                        {item.description || 'Item hasil serah terima'}
+                                                                    </span>
+                                                                    <span className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded border ${badgeClass} shrink-0`}>
+                                                                        {item.type}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
                                             )}
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
+                                </div>
 
-                    {/* ── ROW 4: RIWAYAT PEMBAYARAN PROJECT ────────────────────────────── */}
-                    <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-3">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h3 className="font-bold text-xs text-slate-900">Riwayat Transaksi Pembayaran</h3>
-                                <p className="text-[11px] text-slate-400">Semua catatan cicilan dan pelunasan yang telah tervalidasi</p>
+                                {addonsList.length > 0 && (
+                                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                                        <span>Add-on Tambahan:</span>
+                                        <span className="font-bold text-slate-800">{addonsList.length} Item Tambahan</span>
+                                    </div>
+                                )}
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => openPaymentModal()}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition-colors cursor-pointer"
-                            >
-                                <Plus className="w-3.5 h-3.5" />
-                                <span>Catat Pembayaran Baru</span>
-                            </button>
-                        </div>
 
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-xs">
-                                <thead>
-                                    <tr className="text-[10px] uppercase font-bold text-slate-400 border-b border-slate-100">
-                                        <th className="py-2.5 px-3">TANGGAL</th>
-                                        <th className="py-2.5 px-3">DESKRIPSI / KETERANGAN</th>
-                                        <th className="py-2.5 px-3">METODE PEMBAYARAN</th>
-                                        <th className="py-2.5 px-3 text-right">JUMLAH (RP)</th>
-                                        <th className="py-2.5 px-3 text-center">STATUS</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 text-slate-700">
-                                    {project?.payments && project.payments.length > 0 ? (
-                                        project.payments.map((pm: any, pIdx: number) => (
-                                            <tr key={pm.id || pIdx} className="hover:bg-slate-50/60">
-                                                <td className="py-3 px-3 font-mono">{formatDateIndo(pm.payment_date || pm.created_at)}</td>
-                                                <td className="py-3 px-3 font-medium text-slate-900">{pm.notes || 'Pembayaran Project'}</td>
-                                                <td className="py-3 px-3">{pm.payment_method?.name || pm.paymentMethod?.name || 'Transfer Bank'}</td>
-                                                <td className="py-3 px-3 text-right font-mono font-bold text-emerald-600">
-                                                    {formatRupiah(Number(pm.amount || 0))}
-                                                </td>
-                                                <td className="py-3 px-3 text-center">
-                                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                        BERHASIL
-                                                    </span>
-                                                </td>
+                            {/* Card 2: Riwayat Transaksi Pembayaran */}
+                            <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all space-y-3 flex-1 flex flex-col justify-between">
+                                <div className="flex items-center justify-between gap-2 flex-wrap">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                                            <Receipt className="w-4 h-4" />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-xs text-slate-900">Riwayat Transaksi</h3>
+                                            <p className="text-[10px] text-slate-400">Catatan pembayaran yang tervalidasi</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => openPaymentModal()}
+                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[11px] font-bold transition-colors cursor-pointer"
+                                    >
+                                        <Plus className="w-3 h-3" />
+                                        <span>Catat Pembayaran</span>
+                                    </button>
+                                </div>
+
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left text-xs">
+                                        <thead>
+                                            <tr className="text-[9.5px] uppercase font-bold text-slate-400 border-b border-slate-100">
+                                                <th className="py-2 px-2">TANGGAL</th>
+                                                <th className="py-2 px-2">KETERANGAN</th>
+                                                <th className="py-2 px-2 text-right">JUMLAH</th>
+                                                <th className="py-2 px-2 text-center">STATUS</th>
                                             </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={5} className="py-8 text-center text-slate-400">
-                                                <CreditCard className="w-6 h-6 text-slate-300 mx-auto mb-1.5" />
-                                                <p className="font-semibold text-slate-600 text-xs">Belum ada riwayat pembayaran yang dicatat.</p>
-                                                <p className="text-[11px] text-slate-400">Klik &quot;Catat Pembayaran Baru&quot; untuk menambahkan transfer DP/pelunasan.</p>
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 text-slate-700">
+                                            {project?.payments && project.payments.length > 0 ? (
+                                                project.payments.map((pm: any, pIdx: number) => (
+                                                    <tr key={pm.id || pIdx} className="hover:bg-slate-50/60 transition-colors">
+                                                        <td className="py-2.5 px-2 font-mono text-[11px]">{formatDateIndo(pm.payment_date || pm.created_at)}</td>
+                                                        <td className="py-2.5 px-2 font-medium text-slate-900 text-[11px]">{pm.notes || 'Pembayaran Project'}</td>
+                                                        <td className="py-2.5 px-2 text-right font-mono font-bold text-emerald-600 text-[11px]">
+                                                            {formatRupiah(Number(pm.amount || 0))}
+                                                        </td>
+                                                        <td className="py-2.5 px-2 text-center">
+                                                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                                BERHASIL
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            ) : (
+                                                <tr>
+                                                    <td colSpan={4} className="py-6 text-center text-slate-400">
+                                                        <CreditCard className="w-5 h-5 text-slate-300 mx-auto mb-1" />
+                                                        <p className="font-semibold text-slate-600 text-[11px]">Belum ada riwayat transaksi</p>
+                                                        <p className="text-[10px] text-slate-400">Klik &quot;Catat Pembayaran&quot; untuk input cicilan/DP</p>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* ── RIGHT COLUMN (Span 6): Alur Kerja & Tahapan Operasional Tim ─ */}
+                        <div className="lg:col-span-6 flex flex-col">
+                            <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all space-y-4 flex-1 flex flex-col justify-between h-full">
+                                <div className="space-y-3">
+                                    <div className="border-b border-slate-100 pb-3 flex items-center justify-between gap-2 flex-wrap">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                                <Layers className="w-4 h-4" />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-xs text-slate-900">
+                                                    Alur Kerja &amp; Tahapan Operasional Tim
+                                                </h4>
+                                                <span className="text-[10px] text-slate-400">
+                                                    Tahap {currentStepIndex} dari {activeWorkflow.steps_count}: {project?.workflow_step || 'Booking'} ({project?.progress || 0}%)
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            {currentStepIndex < activeWorkflow.steps_count ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleUpdateWorkflowStep(currentStepIndex + 1)}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#3B46F1] hover:bg-[#323BD8] text-white text-[11px] font-bold rounded-lg shadow-2xs transition-all cursor-pointer shrink-0"
+                                                >
+                                                    <span>Lanjut Tahap Berikutnya</span>
+                                                    <ArrowRight className="w-3 h-3" />
+                                                </button>
+                                            ) : (
+                                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                                                    Semua Tahap Selesai
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Workflow Progress Bar */}
+                                    <div className="space-y-1">
+                                        <div className="flex justify-between items-center text-[10px]">
+                                            <span className="font-bold text-slate-600">Progress Pengerjaan</span>
+                                            <span className="font-bold text-indigo-600 font-mono">{project?.progress || 0}%</span>
+                                        </div>
+                                        <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                            <div
+                                                className="bg-[#3B46F1] h-full rounded-full transition-all duration-500"
+                                                style={{ width: `${project?.progress || 0}%` }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Steps List */}
+                                    <div className="space-y-2 text-xs pt-1">
+                                        {timelineSteps.map((step) => (
+                                            <div
+                                                key={step.id}
+                                                className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 ${
+                                                    step.done
+                                                        ? 'bg-emerald-50/40 border-emerald-100'
+                                                        : step.current
+                                                        ? 'bg-indigo-50/60 border-indigo-200 ring-1 ring-indigo-200/80 shadow-2xs'
+                                                        : 'bg-white border-slate-100'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div
+                                                        className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${
+                                                            step.done
+                                                                ? 'bg-emerald-600 text-white'
+                                                                : step.current
+                                                                ? 'bg-[#3B46F1] text-white ring-2 ring-indigo-200'
+                                                                : 'bg-slate-100 text-slate-500'
+                                                        }`}
+                                                    >
+                                                        {step.done ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : step.id}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <span className="font-bold text-slate-900 text-xs">{step.name}</span>
+                                                            <span className="text-[9px] font-bold uppercase px-1.5 py-0.2 rounded bg-slate-100 text-slate-500">
+                                                                {step.phase}
+                                                            </span>
+                                                        </div>
+                                                        {step.activity && (
+                                                            <p className="text-[10.5px] text-slate-500 break-words whitespace-normal leading-snug mt-0.5">
+                                                                {step.activity}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="text-right shrink-0 flex flex-col items-end gap-1">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 block">
+                                                            {step.duration}
+                                                        </span>
+                                                        <span className={`text-[10px] font-bold block ${step.statusColor}`}>
+                                                            {step.status}
+                                                        </span>
+                                                    </div>
+                                                    {step.current && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleUpdateWorkflowStep(step.id + 1)}
+                                                            className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold shadow-2xs transition-all cursor-pointer flex items-center gap-1"
+                                                        >
+                                                            <Check className="w-3 h-3" />
+                                                            <span>Selesaikan Tahap</span>
+                                                        </button>
+                                                    )}
+                                                    {!step.done && !step.current && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleUpdateWorkflowStep(step.id)}
+                                                            className="px-2 py-0.5 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 text-slate-600 rounded-lg text-[10px] font-semibold border border-slate-200 transition-all cursor-pointer"
+                                                        >
+                                                            Pilih Tahap
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1747,6 +2328,296 @@ export default function ProjectDetail({
                             >
                                 <Plus className="w-4 h-4" />
                                 <span>Unggah Foto Pertama</span>
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* ── SLIDE PROJECT TAB ─────────────────────────────────────────────── */}
+            {activeTab === 'slide' && (
+                <div className="space-y-6">
+                    {/* Header Bar */}
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                    <Layers className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                                        <span>Slide Banner Promo &amp; Sambutan Project</span>
+                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-700">
+                                            {project?.promo_slides?.length || 0} Slide
+                                        </span>
+                                    </h2>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        Slide khusus project ini akan otomatis digabungkan dan diprioritaskan di Hero Banner Portal Klien (/client/dashboard).
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                            <Link
+                                href="/client/dashboard"
+                                target="_blank"
+                                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                                title="Lihat tampilan Portal Klien"
+                            >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                <span>Buka Portal Klien</span>
+                            </Link>
+                            <button
+                                type="button"
+                                onClick={openCreateSlideModal}
+                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#3B46F1] text-white rounded-xl text-xs font-bold shadow-xs hover:bg-[#323BD8] transition-colors cursor-pointer"
+                            >
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>Tambah Slide Baru</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* LIVE HERO BANNER SIMULATION PREVIEW */}
+                    {(() => {
+                        const slidesList = project?.promo_slides || [];
+                        const activeSlide = slidesList.length > 0
+                            ? slidesList[slidePreviewIndex % slidesList.length]
+                            : {
+                                  title: `Eksklusif: ${project?.name || 'Dokumentasi Project'}`,
+                                  tag: 'EXCLUSIVE PROJECT',
+                                  description: 'Momen berharga dan karya visual eksklusif Anda telah siap. Klik tombol di bawah untuk meninjau dokumentasi lengkap.',
+                                  button_text: 'Lihat Detail Project',
+                                  button_url: `/client/projects/${project?.id || ''}`,
+                                  image: project?.thumbnail || '/images/wedding-couple.jpg',
+                                  is_active: true,
+                              };
+
+                        return (
+                            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                                            Simulasi Live: Tampilan Hero Banner Portal Klien
+                                        </h3>
+                                    </div>
+                                    {slidesList.length > 1 && (
+                                        <div className="flex items-center gap-1.5">
+                                            <button
+                                                type="button"
+                                                onClick={() => setSlidePreviewIndex((prev) => (prev === 0 ? slidesList.length - 1 : prev - 1))}
+                                                className="p-1 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer"
+                                                title="Slide sebelumnya"
+                                            >
+                                                <ChevronLeft className="w-4 h-4" />
+                                            </button>
+                                            <span className="text-[11px] font-bold text-slate-500 font-mono">
+                                                {(slidePreviewIndex % slidesList.length) + 1} / {slidesList.length}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setSlidePreviewIndex((prev) => (prev + 1) % slidesList.length)}
+                                                className="p-1 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer"
+                                                title="Slide berikutnya"
+                                            >
+                                                <ChevronRight className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Banner Stage */}
+                                <div className="relative rounded-xl overflow-hidden min-h-[220px] sm:min-h-[280px] flex items-center bg-slate-950 border border-slate-800 shadow-inner group">
+                                    <img
+                                        src={activeSlide.image || project?.thumbnail || '/images/wedding-couple.jpg'}
+                                        alt={activeSlide.title}
+                                        className="absolute inset-0 w-full h-full object-cover object-center filter brightness-90 contrast-[1.05]"
+                                    />
+                                    {/* Gradient Overlay mirroring Client Portal */}
+                                    <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/80 to-transparent sm:w-2/3" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent pointer-events-none" />
+
+                                    {/* Live Content */}
+                                    <div className="relative z-10 px-6 sm:px-10 py-6 max-w-xl space-y-2.5 drop-shadow-md">
+                                        <div className="flex items-center gap-2">
+                                            <span className="px-2.5 py-0.5 rounded-md bg-amber-500 text-slate-950 font-black text-[9px] uppercase tracking-wider shadow-xs">
+                                                {activeSlide.tag || 'EXCLUSIVE PROJECT'}
+                                            </span>
+                                            {activeSlide.is_active ? (
+                                                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                                    ● Aktif di Portal
+                                                </span>
+                                            ) : (
+                                                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                                                    ● Nonaktif
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <h2 className="text-lg sm:text-2xl font-serif font-black text-white tracking-tight leading-tight">
+                                            {activeSlide.title}
+                                        </h2>
+
+                                        <p className="text-xs text-slate-200/90 leading-relaxed line-clamp-2">
+                                            {activeSlide.description || 'Tidak ada deskripsi tambahan untuk slide ini.'}
+                                        </p>
+
+                                        <div className="pt-2 flex items-center gap-3">
+                                            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-white text-slate-950 shadow-md">
+                                                <span>{activeSlide.button_text || 'Lihat Detail'}</span>
+                                                <ArrowRight className="w-3.5 h-3.5 text-slate-700" />
+                                            </span>
+                                            <span className="text-[11px] text-slate-400 truncate max-w-xs font-mono">
+                                                Target: {activeSlide.button_url || `/client/projects/${project?.id}`}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Project watermark */}
+                                    <div className="absolute bottom-3 right-4 hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/40 backdrop-blur-xs text-[10px] text-slate-300 border border-white/10 font-mono">
+                                        <span>Project #{project?.project_number || project?.id?.substring(0, 8)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
+
+                    {/* SLIDES CARD GRID */}
+                    {project?.promo_slides && project.promo_slides.length > 0 ? (
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                                    Daftar Slide Project Ini ({project.promo_slides.length})
+                                </h3>
+                                <span className="text-xs text-slate-400">
+                                    Diurutkan berdasarkan kolom Urutan (Sort Order)
+                                </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {project.promo_slides.map((slide: any, idx: number) => (
+                                    <div
+                                        key={slide.id}
+                                        className={`bg-white rounded-2xl border overflow-hidden shadow-2xs hover:shadow-md transition-all flex flex-col justify-between ${
+                                            slide.is_active ? 'border-slate-200/80' : 'border-slate-200 opacity-60'
+                                        }`}
+                                    >
+                                        <div className="space-y-3">
+                                            {/* Thumbnail & Badges */}
+                                            <div className="aspect-[16/9] bg-slate-900 relative overflow-hidden group">
+                                                <img
+                                                    src={slide.image || '/images/wedding-couple.jpg'}
+                                                    alt={slide.title}
+                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                                />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                                                <div className="absolute top-2.5 left-2.5">
+                                                    <span className="px-2.5 py-1 rounded-md bg-amber-500 text-slate-950 font-black text-[9px] uppercase tracking-wider shadow-xs">
+                                                        {slide.tag || 'EXCLUSIVE PROJECT'}
+                                                    </span>
+                                                </div>
+                                                <div className="absolute top-2.5 right-2.5 flex items-center gap-1">
+                                                    <span
+                                                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                                            slide.is_active
+                                                                ? 'bg-emerald-500 text-white'
+                                                                : 'bg-slate-500 text-white'
+                                                        }`}
+                                                    >
+                                                        {slide.is_active ? 'Aktif' : 'Nonaktif'}
+                                                    </span>
+                                                </div>
+                                                <div className="absolute bottom-2.5 left-3 right-3">
+                                                    <p className="text-white text-xs font-bold truncate">
+                                                        {slide.title}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {/* Body info */}
+                                            <div className="p-4 pt-1 space-y-2">
+                                                <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                                                    {slide.description || 'Tidak ada deskripsi tambahan.'}
+                                                </p>
+
+                                                <div className="pt-2 border-t border-slate-100 flex flex-col gap-1 text-[11px] text-slate-500">
+                                                    <div className="flex items-center justify-between">
+                                                        <span>Tombol: <strong>{slide.button_text}</strong></span>
+                                                        <span className="font-mono">Urutan #{slide.sort_order}</span>
+                                                    </div>
+                                                    <div className="truncate text-slate-400 font-mono text-[10px]">
+                                                        URL: {slide.button_url}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Actions Footer */}
+                                        <div className="p-3 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between">
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleToggleSlideActive(slide)}
+                                                    className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
+                                                        slide.is_active
+                                                            ? 'text-amber-700 bg-amber-50 hover:bg-amber-100'
+                                                            : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
+                                                    }`}
+                                                >
+                                                    {slide.is_active ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                                    <span>{slide.is_active ? 'Nonaktifkan' : 'Aktifkan'}</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSlidePreviewIndex(idx)}
+                                                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 px-2 py-1 rounded-lg hover:bg-indigo-50 transition-colors cursor-pointer"
+                                                    title="Lihat slide ini pada simulasi di atas"
+                                                >
+                                                    <Eye className="w-3.5 h-3.5" />
+                                                    <span>Pratinjau</span>
+                                                </button>
+                                            </div>
+
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openEditSlideModal(slide)}
+                                                    className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-200 transition-colors cursor-pointer"
+                                                    title="Edit Slide Banner"
+                                                >
+                                                    <Edit3 className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDeleteSlide(slide)}
+                                                    className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                                    title="Hapus Slide Banner"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="bg-white rounded-2xl border-2 border-dashed border-slate-200 p-12 text-center space-y-3">
+                            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
+                                <Layers className="w-6 h-6" />
+                            </div>
+                            <h3 className="font-bold text-sm text-slate-800">Belum Ada Slide Khusus Project Ini</h3>
+                            <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                                Tambahkan slide banner khusus untuk project ini. Saat klien membuka Dashboard Portal Klien (/client/dashboard), slide ini akan langsung tampil di Hero Banner carousel utama bersama slide umum studio.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={openCreateSlideModal}
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-[#3B46F1] text-white rounded-xl text-xs font-bold hover:bg-[#323BD8] transition-colors cursor-pointer"
+                            >
+                                <Plus className="w-4 h-4" />
+                                <span>Buat Slide Pertama Project Ini</span>
                             </button>
                         </div>
                     )}
@@ -2149,6 +3020,185 @@ export default function ProjectDetail({
                                     className="px-4 py-2 bg-[#3B46F1] text-white rounded-xl font-bold hover:bg-[#323BD8] disabled:opacity-50 cursor-pointer"
                                 >
                                     {highlightSubmitting ? 'Menyimpan...' : 'Simpan Foto Highlight'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* ── MODAL: TAMBAH / EDIT SLIDE PROJECT ────────────────────────────── */}
+            {isSlideModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in">
+                    <div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                                <Layers className="w-4 h-4 text-indigo-600" />
+                                <span>{editingSlide ? 'Edit Slide Banner Project' : 'Tambah Slide Banner Project'}</span>
+                            </h3>
+                            <button
+                                type="button"
+                                onClick={() => setIsSlideModalOpen(false)}
+                                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 cursor-pointer"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSlideSubmit} className="space-y-3.5 text-xs">
+                            <div className="space-y-1">
+                                <label className="font-bold text-slate-700 uppercase text-[10px]">
+                                    Judul Slide Banner <span className="text-rose-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={slideFormData.title}
+                                    onChange={(e) => setSlideFormData({ ...slideFormData, title: e.target.value })}
+                                    placeholder={`Contoh: Eksklusif: ${project?.name || 'Pernikahan Anda'}`}
+                                    className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden text-xs"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <label className="font-bold text-slate-700 uppercase text-[10px]">
+                                        Tag / Kategori Label <span className="text-rose-500">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={slideFormData.tag}
+                                        onChange={(e) => setSlideFormData({ ...slideFormData, tag: e.target.value.toUpperCase() })}
+                                        placeholder="EXCLUSIVE PROJECT"
+                                        className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden text-xs font-mono"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="font-bold text-slate-700 uppercase text-[10px]">
+                                        Urutan Tampil (Sort Order)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={slideFormData.sort_order}
+                                        onChange={(e) => setSlideFormData({ ...slideFormData, sort_order: parseInt(e.target.value) || 0 })}
+                                        className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden text-xs"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="font-bold text-slate-700 uppercase text-[10px]">
+                                    Deskripsi Banner
+                                </label>
+                                <textarea
+                                    rows={2}
+                                    value={slideFormData.description}
+                                    onChange={(e) => setSlideFormData({ ...slideFormData, description: e.target.value })}
+                                    placeholder="Tuliskan ucapan atau pesan singkat untuk klien..."
+                                    className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden text-xs resize-none"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <label className="font-bold text-slate-700 uppercase text-[10px]">
+                                        Teks Tombol CTA <span className="text-rose-500">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={slideFormData.button_text}
+                                        onChange={(e) => setSlideFormData({ ...slideFormData, button_text: e.target.value })}
+                                        placeholder="Lihat Detail Project"
+                                        className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden text-xs"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="font-bold text-slate-700 uppercase text-[10px]">
+                                        URL Tujuan Tombol
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={slideFormData.button_url}
+                                        onChange={(e) => setSlideFormData({ ...slideFormData, button_url: e.target.value })}
+                                        placeholder={`/client/projects/${project?.id}`}
+                                        className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden text-xs font-mono"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Foto Banner */}
+                            <div className="space-y-2 pt-1 border-t border-slate-100">
+                                <label className="font-bold text-slate-700 uppercase text-[10px] block">
+                                    Foto Background Banner (Otomatis Kompresi WebP)
+                                </label>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            setSlideFormData({ ...slideFormData, image_file: file });
+                                            setSlideFilePreview(URL.createObjectURL(file));
+                                        }
+                                    }}
+                                    className="w-full text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
+                                />
+
+                                <div className="space-y-1">
+                                    <span className="text-[10px] text-slate-500">Atau Gunakan URL Gambar:</span>
+                                    <input
+                                        type="text"
+                                        value={slideFormData.image_url}
+                                        onChange={(e) => {
+                                            setSlideFormData({ ...slideFormData, image_url: e.target.value });
+                                            setSlideFilePreview(e.target.value);
+                                        }}
+                                        placeholder="https://... atau /images/..."
+                                        className="w-full p-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden text-xs"
+                                    />
+                                </div>
+
+                                {slideFilePreview && (
+                                    <div className="aspect-[16/9] rounded-xl overflow-hidden bg-slate-900 border relative shadow-inner">
+                                        <img src={slideFilePreview} alt="Preview" className="w-full h-full object-cover" />
+                                        <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/60 text-white text-[10px]">
+                                            Pratinjau Foto
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex items-center justify-between pt-1">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={slideFormData.is_active}
+                                        onChange={(e) => setSlideFormData({ ...slideFormData, is_active: e.target.checked })}
+                                        className="w-4 h-4 rounded text-[#3B46F1] focus:ring-[#3B46F1]"
+                                    />
+                                    <span className="font-bold text-slate-800 text-xs">
+                                        Aktifkan slide banner ini di Portal Klien
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsSlideModalOpen(false)}
+                                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold cursor-pointer"
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={slideSubmitting}
+                                    className="px-4 py-2 bg-[#3B46F1] text-white rounded-xl font-bold hover:bg-[#323BD8] disabled:opacity-50 cursor-pointer"
+                                >
+                                    {slideSubmitting ? 'Menyimpan...' : (editingSlide ? 'Simpan Perubahan' : 'Buat Slide Banner')}
                                 </button>
                             </div>
                         </form>

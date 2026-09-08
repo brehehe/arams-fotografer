@@ -7,6 +7,7 @@ enum ClientStatus: string
     case ACTIVE = 'active';
     case COMPLETED = 'completed';
     case LEAD = 'lead';
+    case BLOCKED = 'blocked';
 
     public function label(): string
     {
@@ -14,6 +15,7 @@ enum ClientStatus: string
             self::ACTIVE => 'Aktif',
             self::COMPLETED => 'Selesai',
             self::LEAD => 'Prospek / Lead',
+            self::BLOCKED => 'Diblokir',
         };
     }
 

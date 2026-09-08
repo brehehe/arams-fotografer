@@ -247,18 +247,11 @@ export default function ServicesIndex({
         <div className="w-full max-w-full space-y-6 pb-20">
             <Head title="Jenis Layanan - Master Data" />
 
-            {/* ── 1. BREADCRUMB & HEADER ── */}
+            {/* ── 1. HEADER TITLE & ACTIONS ── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1">
-                    <nav className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
-                        <Link href="/master-data/categories" className="hover:text-primary-accent transition-colors">
-                            Master Data
-                        </Link>
-                        <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="text-primary-accent font-semibold">Jenis Layanan</span>
-                    </nav>
-                    <h1 className="text-2xl font-black text-slate-900 tracking-tight">Jenis Layanan</h1>
-                    <p className="text-xs text-slate-500">
+                <div>
+                    <h1 className="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">Jenis Layanan</h1>
+                    <p className="text-slate-500 text-xs sm:text-sm mt-1">
                         Kelola master jenis layanan fotografi & videografi yang digunakan pada paket dan rincian project.
                     </p>
                 </div>

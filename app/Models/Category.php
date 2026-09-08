@@ -21,6 +21,7 @@ class Category extends Model
         'icon',
         'color',
         'workflow_type',
+        'form_type',
         'status',
         'sort_order',
     ];

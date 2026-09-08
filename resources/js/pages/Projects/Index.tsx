@@ -34,8 +34,25 @@ interface ProjectItem {
     project_number: string;
     name: string;
     thumbnail?: string;
-    client?: { id: string | number; name: string; email?: string; phone?: string };
-    category?: { id: string | number; name: string; color?: string };
+    client?: {
+        id: string | number;
+        name: string;
+        email?: string;
+        phone?: string;
+        child_name?: string | null;
+        father_name?: string | null;
+        mother_name?: string | null;
+        bride_name?: string | null;
+        groom_name?: string | null;
+        children?: Array<{
+            name: string;
+            nickname?: string;
+            birth_date?: string;
+            gender?: string;
+            [key: string]: any;
+        }> | null;
+    };
+    category?: { id: string | number; name: string; color?: string; form_type?: string | null };
     package?: { id: string | number; name: string; base_price?: number };
     supervisor?: { id: string | number; name: string; avatar?: string };
     photographer?: { id: string | number; name: string; avatar?: string };
@@ -71,8 +88,8 @@ interface ProjectsIndexProps {
         date?: string;
         per_page?: number;
     };
-    categories: Array<{ id: string | number; name: string; color?: string }>;
-    clients: Array<{ id: string | number; name: string; email?: string; phone?: string }>;
+    categories: Array<{ id: string | number; name: string; color?: string; form_type?: string | null }>;
+    clients: Array<{ id: string | number; name: string; email?: string; phone?: string; child_name?: string | null; father_name?: string | null; mother_name?: string | null; bride_name?: string | null; groom_name?: string | null; children?: Array<any> | null }>;
     packages: Array<{ id: string | number; name: string; base_price: number }>;
     team_members: Array<{ id: string | number; name: string }>;
     supervisors: Array<{ id: string | number; name: string; avatar?: string }>;
@@ -358,16 +375,12 @@ export default function ProjectsIndex({
             {/* ── 1. TOP HEADER & ACTION BUTTONS ─────────────────────────────────── */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-xl lg:text-2xl font-bold text-slate-900 tracking-tight">
+                    <h1 className="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">
                         Projects &amp; Orders
                     </h1>
-                    <nav className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5">
-                        <Link href="/dashboard" className="hover:text-slate-900 transition-colors">
-                            Dashboard
-                        </Link>
-                        <span>›</span>
-                        <span className="text-slate-900 font-medium">Projects &amp; Orders</span>
-                    </nav>
+                    <p className="text-slate-500 text-xs sm:text-sm mt-1">
+                        Kelola semua daftar project, order klien, status pengerjaan, dan invoice.
+                    </p>
                 </div>
 
                 <div className="flex items-center gap-2.5">
@@ -548,10 +561,10 @@ export default function ProjectsIndex({
             </div>
 
             {/* ── 3. MAIN 2-COLUMN GRID (Table Left 75% + Widgets Right 25%) ─────────────── */}
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 xl:items-stretch items-start">
                 {/* ── LEFT COLUMN (TABLE + PAGINATION) ─────────────────────────────── */}
-                <div className="xl:col-span-8 2xl:col-span-9 space-y-4">
-                    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
+                <div className="xl:col-span-8 2xl:col-span-9 flex flex-col">
+                    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden flex-1 flex flex-col justify-between">
                         {/* Table for Desktop & Tablet */}
                         <div className="overflow-x-auto scrollbar-thin">
                             <table className="w-full text-left border-collapse text-xs">
@@ -631,16 +644,39 @@ export default function ProjectsIndex({
                                                         <span className="font-bold text-slate-900 block truncate max-w-[150px]">
                                                             {p.client?.name || '-'}
                                                         </span>
-                                                        <span className="text-[10px] text-slate-400 font-mono block mt-0.5">
-                                                            {p.client?.phone || '-'}
-                                                        </span>
+                                                        {p.client?.children && p.client.children.length > 1 ? (
+                                                            <span className="inline-flex items-center gap-1 text-[10px] text-amber-800 font-medium mt-0.5 truncate max-w-[160px]">
+                                                                <span className="px-1 py-0.2 bg-amber-100 text-amber-900 rounded font-bold text-[9px]">Kembar</span>
+                                                                <span>👶 {p.client.child_name || p.client.children.map((c) => c.name).filter(Boolean).join(', ')}</span>
+                                                            </span>
+                                                        ) : p.client?.child_name ? (
+                                                            <span className="text-[10px] text-amber-700 font-medium block mt-0.5 truncate max-w-[150px]">
+                                                                👶 {p.client.child_name}
+                                                            </span>
+                                                        ) : p.client?.bride_name && p.client?.groom_name ? (
+                                                            <span className="text-[10px] text-rose-700 font-medium block mt-0.5 truncate max-w-[150px]">
+                                                                👰🤵 {p.client.groom_name} &amp; {p.client.bride_name}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-[10px] text-slate-400 font-mono block mt-0.5">
+                                                                {p.client?.phone || '-'}
+                                                            </span>
+                                                        )}
                                                     </td>
 
                                                     {/* Kategori */}
                                                     <td className="py-3.5 px-3 whitespace-nowrap">
-                                                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${catBadge.bg}`}>
-                                                            {catBadge.label}
-                                                        </span>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${catBadge.bg}`}>
+                                                                {catBadge.label}
+                                                            </span>
+                                                            {p.category?.form_type === 'newborn' && (
+                                                                <span className="text-xs" title="Form Tipe: Newborn (Data Bayi & Anak)">👶</span>
+                                                            )}
+                                                            {p.category?.form_type === 'wedding' && (
+                                                                <span className="text-xs" title="Form Tipe: Wedding (CPP & CPW)">👰🤵</span>
+                                                            )}
+                                                        </div>
                                                     </td>
 
                                                     {/* Nilai Project */}
@@ -864,10 +900,10 @@ export default function ProjectsIndex({
                     </div>
                 </div>
 
-                {/* ── RIGHT COLUMN (4 SUMMARY WIDGETS) ─────────────────────────────── */}
-                <div className="xl:col-span-4 2xl:col-span-3 space-y-4">
+                {/* ── RIGHT COLUMN (SUMMARY WIDGETS) ─────────────────────────────── */}
+                <div className="xl:col-span-4 2xl:col-span-3 flex flex-col gap-4">
                     {/* ── WIDGET 1: RINGKASAN PROJECT (2x2 GRID) ─────────────────── */}
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-3">
+                    <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-3 shrink-0">
                         <h3 className="font-bold text-slate-900 text-xs tracking-tight">Ringkasan Project</h3>
                         <div className="grid grid-cols-2 gap-2.5">
                             {/* Berlangsung */}
@@ -925,7 +961,7 @@ export default function ProjectsIndex({
                     </div>
 
                     {/* ── WIDGET 2: PROGRESS KESELURUHAN (DONUT CHART) ────────────── */}
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-3">
+                    <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-3 shrink-0">
                         <h3 className="font-bold text-slate-900 text-xs tracking-tight">Progress Keseluruhan</h3>
                         <div className="flex items-center gap-4">
                             {/* Circular Radial Donut Gauge */}
@@ -1011,106 +1047,66 @@ export default function ProjectsIndex({
                     </div>
 
                     {/* ── WIDGET 3: PROJECT TERDEKAT DEADLINE ──────────────────────── */}
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-3">
-                        <h3 className="font-bold text-slate-900 text-xs tracking-tight">
-                            Project Terdekat Deadline
-                        </h3>
-                        <div className="space-y-2.5">
-                            {displayUpcomingDeadlines.length === 0 ? (
-                                <div className="py-6 text-center text-slate-400 text-xs">
-                                    <CheckCircle2 className="w-6 h-6 mx-auto mb-1.5 text-emerald-500 opacity-80" />
-                                    <p className="font-semibold text-slate-600">Semua deadline terkontrol</p>
-                                    <p className="text-[10px] text-slate-400">Tidak ada project mendesak saat ini.</p>
-                                </div>
-                            ) : (
-                                displayUpcomingDeadlines.slice(0, 3).map((item) => (
-                                    <Link
-                                        key={item.id}
-                                        href={`/projects/${item.id}`}
-                                        className="p-2 rounded-xl hover:bg-slate-50 transition-colors flex items-center justify-between gap-2 block group"
-                                    >
-                                        <div className="flex items-start gap-2 min-w-0">
-                                            <div className="w-6 h-6 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 mt-0.5">
-                                                <Calendar className="w-3.5 h-3.5" />
+                    <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs flex-1 flex flex-col justify-between">
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <h3 className="font-bold text-slate-900 text-xs tracking-tight">
+                                    Project Terdekat Deadline
+                                </h3>
+                                {displayUpcomingDeadlines.length > 0 && (
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-50 text-[#E02424] border border-rose-100">
+                                        {displayUpcomingDeadlines.length} Urgent
+                                    </span>
+                                )}
+                            </div>
+                            <div className="space-y-2">
+                                {displayUpcomingDeadlines.length === 0 ? (
+                                    <div className="py-8 text-center text-slate-400 text-xs flex flex-col items-center justify-center">
+                                        <CheckCircle2 className="w-6 h-6 mb-1.5 text-emerald-500 opacity-80" />
+                                        <p className="font-semibold text-slate-600">Semua deadline terkontrol</p>
+                                        <p className="text-[10px] text-slate-400">Tidak ada project mendesak saat ini.</p>
+                                    </div>
+                                ) : (
+                                    displayUpcomingDeadlines.slice(0, 4).map((item) => (
+                                        <Link
+                                            key={item.id}
+                                            href={`/projects/${item.id}`}
+                                            className="p-2 rounded-xl hover:bg-slate-50 transition-colors flex items-center justify-between gap-2 block group"
+                                        >
+                                            <div className="flex items-start gap-2 min-w-0">
+                                                <div className="w-6 h-6 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 mt-0.5">
+                                                    <Calendar className="w-3.5 h-3.5" />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <span className="text-[11px] font-bold text-slate-900 group-hover:text-primary-accent transition-colors block truncate">
+                                                        {item.project_number || `#${item.id}`}
+                                                    </span>
+                                                    <span className="text-[10px] text-slate-500 block truncate">
+                                                        {item.name}
+                                                    </span>
+                                                    <span className="text-[9px] text-slate-400 block font-mono">
+                                                        {item.formatted_deadline || (item.deadline ? formatDate(item.deadline) : '-')}
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <div className="min-w-0">
-                                                <span className="text-[11px] font-bold text-slate-900 group-hover:text-primary-accent transition-colors block truncate">
-                                                    {item.project_number || `#${item.id}`}
-                                                </span>
-                                                <span className="text-[10px] text-slate-500 block truncate">
-                                                    {item.name}
-                                                </span>
-                                                <span className="text-[9px] text-slate-400 block font-mono">
-                                                    {item.formatted_deadline || (item.deadline ? formatDate(item.deadline) : '-')}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <span className="text-[10px] font-bold text-[#E02424] shrink-0">
-                                            {item.days_remaining !== undefined
-                                                ? (item.days_remaining <= 0
-                                                    ? 'Hari ini / Lewat'
-                                                    : `${item.days_remaining} hari lagi`)
-                                                : '-'}
-                                        </span>
-                                    </Link>
-                                ))
-                            )}
+                                            <span className="text-[10px] font-bold text-[#E02424] shrink-0">
+                                                {item.days_remaining !== undefined
+                                                    ? (item.days_remaining <= 0
+                                                        ? 'Hari ini / Lewat'
+                                                        : `${item.days_remaining} hari lagi`)
+                                                    : '-'}
+                                            </span>
+                                        </Link>
+                                    ))
+                                )}
+                            </div>
                         </div>
-                        <div className="pt-2 border-t border-slate-100 text-center">
+                        <div className="pt-2.5 mt-3 border-t border-slate-100 text-center">
                             <Link
                                 href="/projects?tab=berlangsung"
                                 className="text-[11px] font-bold text-slate-700 hover:text-primary-accent inline-flex items-center gap-1 transition-colors"
                             >
                                 <span>Lihat Semua Deadline</span>
-                                <ArrowRight className="w-3 h-3" />
-                            </Link>
-                        </div>
-                    </div>
-
-                    {/* ── WIDGET 4: AKTIVITAS TERBARU ─────────────────────────────── */}
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-3">
-                        <h3 className="font-bold text-slate-900 text-xs tracking-tight">Aktivitas Terbaru</h3>
-                        <div className="space-y-3">
-                            {displayActivities.length === 0 ? (
-                                <div className="py-6 text-center text-slate-400 text-xs">
-                                    <Clock className="w-6 h-6 mx-auto mb-1.5 text-slate-300" />
-                                    <p className="font-semibold text-slate-600">Belum ada aktivitas</p>
-                                    <p className="text-[10px] text-slate-400">Log aktivitas terbaru akan muncul di sini.</p>
-                                </div>
-                            ) : (
-                                displayActivities.slice(0, 3).map((act, idx) => (
-                                    <div key={act.id} className="flex items-start gap-2.5">
-                                        <div
-                                            className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
-                                                idx === 0
-                                                    ? 'bg-emerald-100 text-emerald-600'
-                                                    : idx === 1
-                                                    ? 'badge-primary-accent'
-                                                    : 'bg-purple-100 text-purple-600'
-                                            }`}
-                                        >
-                                            {idx === 0 && <CheckCircle2 className="w-3.5 h-3.5" />}
-                                            {idx === 1 && <Edit3 className="w-3.5 h-3.5" />}
-                                            {idx === 2 && <FileText className="w-3.5 h-3.5" />}
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <p className="text-[11px] font-bold text-slate-900 leading-snug">
-                                                {act.description}
-                                            </p>
-                                            <p className="text-[10px] text-slate-400 leading-tight mt-0.5">
-                                                oleh {act.causer_name} • {act.created_at}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                        <div className="pt-2 border-t border-slate-100 text-center">
-                            <Link
-                                href="/activity-log"
-                                className="text-[11px] font-bold text-slate-700 hover:text-primary-accent inline-flex items-center gap-1 transition-colors"
-                            >
-                                <span>Lihat Semua Aktivitas</span>
                                 <ArrowRight className="w-3 h-3" />
                             </Link>
                         </div>

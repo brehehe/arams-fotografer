@@ -1,4 +1,3 @@
-import React, { useState, useMemo } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import {
     Calendar as CalendarIcon,
@@ -8,26 +7,15 @@ import {
     Plus,
     MapPin,
     Clock,
-    Camera,
     Users,
-    Sparkles,
-    AlertCircle,
-    CheckCircle2,
     Check,
     X,
-    Bell,
-    Share2,
     CalendarDays,
     Briefcase,
-    Tag,
     Layers,
-    FileText,
     ExternalLink,
-    Trash2,
-    Phone,
-    Mail,
-    MessageCircle,
 } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
 import { formatDate } from '@/lib/formatters';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -51,8 +39,6 @@ interface CalendarItem {
     notes: string | null;
     source?: string;
     color?: string;
-    reminder_active?: boolean;
-    reminder_time?: string;
 }
 
 interface ProjectOption {
@@ -108,8 +94,6 @@ const TIME_SLOTS = [
 
 export default function CalendarIndex({
     events = [],
-    grouped = [],
-    upcoming = [],
     projects_list = [],
     clients_list = [],
     schedule_summary = { total_week: 12, project: 8, meeting: 3, deadline: 1, other: 0 },
@@ -125,19 +109,8 @@ export default function CalendarIndex({
     const [listSearch, setListSearch] = useState('');
     const [listTypeFilter, setListTypeFilter] = useState('Semua');
 
-    // Modal & Drawer State
+    // Modal State
     const [addModalOpen, setAddModalOpen] = useState(false);
-    const [reminderDrawerOpen, setReminderDrawerOpen] = useState(false);
-    const [activeReminderItem, setActiveReminderItem] = useState<CalendarItem | null>(null);
-
-    // Reminder Form in Drawer
-    const [reminderActive, setReminderActive] = useState(true);
-    const [reminderTime, setReminderTime] = useState('30 menit sebelumnya');
-    const [reminderSystem, setReminderSystem] = useState(true);
-    const [reminderEmail, setReminderEmail] = useState(true);
-    const [reminderWhatsapp, setReminderWhatsapp] = useState(true);
-    const [whatsappNumber, setWhatsappNumber] = useState('+62 812-3456-7890');
-    const [reminderRepeat, setReminderRepeat] = useState('Tidak diulang');
 
     // Add Schedule Form State
     const [addForm, setAddForm] = useState({
@@ -152,7 +125,6 @@ export default function CalendarIndex({
         end_time: '12:00',
         location: '',
         color: '#6366F1',
-        reminder: '30 menit sebelumnya',
     });
 
     const monthNames = [
@@ -171,6 +143,7 @@ export default function CalendarIndex({
         const monday = new Date(d.setDate(diff));
 
         const days = [];
+
         for (let i = 0; i < 7; i++) {
             const cur = new Date(monday);
             cur.setDate(monday.getDate() + i);
@@ -190,6 +163,7 @@ export default function CalendarIndex({
                 fullDate: cur,
             });
         }
+
         return days;
     }, [currentDate, selectedDate]);
 
@@ -206,6 +180,7 @@ export default function CalendarIndex({
 
         const days = [];
         const prevMonthLastDay = new Date(year, month, 0).getDate();
+
         for (let i = startDayOfWeek - 1; i >= 0; i--) {
             const d = new Date(year, month - 1, prevMonthLastDay - i);
             const dateStr = d.toISOString().split('T')[0];
@@ -233,6 +208,7 @@ export default function CalendarIndex({
         }
 
         const remaining = (7 - (days.length % 7)) % 7;
+
         for (let i = 1; i <= remaining; i++) {
             const d = new Date(year, month + 1, i);
             const dateStr = d.toISOString().split('T')[0];
@@ -252,6 +228,7 @@ export default function CalendarIndex({
     // 3. Navigation Controls
     const handlePrev = () => {
         const d = new Date(currentDate);
+
         if (viewMode === 'minggu') {
             d.setDate(d.getDate() - 7);
         } else if (viewMode === 'bulan' || viewMode === 'daftar') {
@@ -260,11 +237,13 @@ export default function CalendarIndex({
             d.setDate(d.getDate() - 1);
             setSelectedDate(d.toISOString().split('T')[0]);
         }
+
         setCurrentDate(d);
     };
 
     const handleNext = () => {
         const d = new Date(currentDate);
+
         if (viewMode === 'minggu') {
             d.setDate(d.getDate() + 7);
         } else if (viewMode === 'bulan' || viewMode === 'daftar') {
@@ -273,6 +252,7 @@ export default function CalendarIndex({
             d.setDate(d.getDate() + 1);
             setSelectedDate(d.toISOString().split('T')[0]);
         }
+
         setCurrentDate(d);
     };
 
@@ -287,19 +267,25 @@ export default function CalendarIndex({
         if (viewMode === 'bulan' || viewMode === 'daftar') {
             return `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
         }
+
         if (viewMode === 'hari') {
             const parts = selectedDate.split('-');
+
             if (parts.length === 3) {
                 const selD = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
                 let dow = selD.getDay();
                 dow = dow === 0 ? 6 : dow - 1;
+
                 return `${dayNamesFull[dow]}, ${selD.getDate()} ${monthNames[selD.getMonth()]} ${selD.getFullYear()}`;
             }
+
             return selectedDate;
         }
+
         if (weekDays.length === 7) {
             return `${weekDays[0].dayNum} – ${weekDays[6].dayNum} ${weekDays[6].monthName} ${weekDays[6].year}`;
         }
+
         return `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
     }, [viewMode, currentDate, selectedDate, weekDays]);
 
@@ -322,7 +308,6 @@ export default function CalendarIndex({
                 status: 'Confirmed',
                 notes: 'Wedding ceremony and reception coverage.',
                 color: 'purple',
-                reminder_active: true,
             },
             {
                 id: 'evt-2',
@@ -374,7 +359,6 @@ export default function CalendarIndex({
                 status: 'Confirmed',
                 notes: 'Outdoor family photoshoot with props.',
                 color: 'blue',
-                reminder_active: true,
             },
             {
                 id: 'evt-5',
@@ -392,7 +376,6 @@ export default function CalendarIndex({
                 status: 'Pending',
                 notes: 'Final teaser & 50 edited master photos delivery.',
                 color: 'red',
-                reminder_active: true,
             },
             {
                 id: 'evt-6',
@@ -505,14 +488,23 @@ export default function CalendarIndex({
             return events.map(e => {
                 const lower = (e.type || e.category_name || '').toLowerCase();
                 let cName = 'purple';
-                if (lower.includes('meet')) cName = 'yellow';
-                else if (lower.includes('prewed') || lower.includes('matern')) cName = 'green';
-                else if (lower.includes('family') || lower.includes('review')) cName = 'blue';
-                else if (lower.includes('dead') || lower.includes('edit')) cName = 'red';
-                else if (lower.includes('event') || lower.includes('corp')) cName = 'orange';
+
+                if (lower.includes('meet')) {
+cName = 'yellow';
+} else if (lower.includes('prewed') || lower.includes('matern')) {
+cName = 'green';
+} else if (lower.includes('family') || lower.includes('review')) {
+cName = 'blue';
+} else if (lower.includes('dead') || lower.includes('edit')) {
+cName = 'red';
+} else if (lower.includes('event') || lower.includes('corp')) {
+cName = 'orange';
+}
+
                 return { ...e, color: cName };
             });
         }
+
         return defaultWeekEvents;
     }, [events, defaultWeekEvents]);
 
@@ -543,17 +535,9 @@ export default function CalendarIndex({
                     end_time: '12:00',
                     location: '',
                     color: '#6366F1',
-                    reminder: '30 menit sebelumnya',
                 });
             }
         });
-    };
-
-    // Open reminder settings for an event
-    const handleOpenReminder = (item: CalendarItem, e?: React.MouseEvent) => {
-        if (e) e.stopPropagation();
-        setActiveReminderItem(item);
-        setReminderDrawerOpen(true);
     };
 
     // Helper to find color styles
@@ -565,21 +549,14 @@ export default function CalendarIndex({
         <div className="w-full max-w-full space-y-6 pb-20">
             <Head title="Calendar & Schedule - Arams Pictures" />
 
-            {/* ── 1. BREADCRUMBS & PAGE HEADER ── */}
-            <div className="space-y-1">
-                <nav className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
-                    <Link href="/calendar" className="hover:text-primary-accent transition-colors">
-                        Calendar / Schedule
-                    </Link>
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
-                    <span className="text-primary-accent font-semibold">Calendar</span>
-                </nav>
-                <div>
-                    <h1 className="text-2xl font-black text-slate-900 tracking-tight">Calendar / Schedule</h1>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                        Kelola dan lihat semua jadwal kegiatan, meeting, deadline, dan event penting.
-                    </p>
-                </div>
+            {/* ── 1. PAGE HEADER ── */}
+            <div>
+                <h1 className="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">
+                    Calendar / Schedule
+                </h1>
+                <p className="text-slate-500 text-xs sm:text-sm mt-1">
+                    Kelola dan lihat semua jadwal kegiatan, meeting, deadline, dan event penting.
+                </p>
             </div>
 
             {/* ── 2. CALENDAR MAIN CONTAINER ── */}
@@ -648,6 +625,7 @@ export default function CalendarIndex({
                                             value={selectedDate}
                                             onChange={(e) => {
                                                 const val = e.target.value;
+
                                                 if (val) {
                                                     setSelectedDate(val);
                                                     const parts = val.split('-');
@@ -764,6 +742,7 @@ export default function CalendarIndex({
                         <div className="grid grid-cols-7 gap-1.5">
                             {monthDays.map((cell, idx) => {
                                 const dayEvents = displayEvents.filter(e => e.date === cell.dateStr);
+
                                 return (
                                     <div
                                         key={idx}
@@ -817,6 +796,7 @@ export default function CalendarIndex({
                                         <div className="space-y-1 mt-1 flex-1 overflow-hidden">
                                             {dayEvents.slice(0, 2).map(evt => {
                                                 const colorStyle = getColorStyle(evt.color);
+
                                                 return (
                                                     <div
                                                         key={evt.id}
@@ -916,9 +896,16 @@ export default function CalendarIndex({
                                         {weekDays.map((day, dayIdx) => {
                                             const slotHour = parseInt(time.split(':')[0], 10);
                                             const cellEvents = displayEvents.filter(e => {
-                                                if (e.date !== day.dateStr) return false;
-                                                if (!e.start_time) return slotIdx === 0;
+                                                if (e.date !== day.dateStr) {
+return false;
+}
+
+                                                if (!e.start_time) {
+return slotIdx === 0;
+}
+
                                                 const eventHour = parseInt(e.start_time.split(':')[0], 10);
+
                                                 return eventHour === slotHour;
                                             });
 
@@ -948,6 +935,7 @@ export default function CalendarIndex({
                                                 >
                                                     {cellEvents.map(evt => {
                                                         const colorStyle = getColorStyle(evt.color);
+
                                                         return (
                                                             <div
                                                                 key={evt.id}
@@ -963,27 +951,14 @@ export default function CalendarIndex({
                                                                 }}
                                                             >
                                                                 {/* Title + Dot */}
-                                                                <div className="flex items-center justify-between gap-1">
-                                                                    <div className="flex items-center gap-1.5 min-w-0">
-                                                                        <div
-                                                                            className="w-2 h-2 rounded-full shrink-0"
-                                                                            style={{ backgroundColor: colorStyle.dot }}
-                                                                        />
-                                                                        <span className="font-bold truncate text-[11px]" style={{ color: colorStyle.text }}>
-                                                                            {evt.title}
-                                                                        </span>
-                                                                    </div>
-
-                                                                    {evt.reminder_active && (
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={(e) => handleOpenReminder(evt, e)}
-                                                                            className="w-4 h-4 rounded text-rose-500 hover:text-rose-700 flex items-center justify-center shrink-0"
-                                                                            title="Pengingat Aktif"
-                                                                        >
-                                                                            <Bell className="w-3 h-3" />
-                                                                        </button>
-                                                                    )}
+                                                                <div className="flex items-center gap-1.5 min-w-0">
+                                                                    <div
+                                                                        className="w-2 h-2 rounded-full shrink-0"
+                                                                        style={{ backgroundColor: colorStyle.dot }}
+                                                                    />
+                                                                    <span className="font-bold truncate text-[11px]" style={{ color: colorStyle.text }}>
+                                                                        {evt.title}
+                                                                    </span>
                                                                 </div>
 
                                                                 <p className="text-[10.5px] font-semibold opacity-90 truncate">
@@ -1058,9 +1033,16 @@ export default function CalendarIndex({
                             {TIME_SLOTS.map(time => {
                                 const slotHour = parseInt(time.split(':')[0], 10);
                                 const hourEvents = displayEvents.filter(e => {
-                                    if (e.date !== selectedDate) return false;
-                                    if (!e.start_time) return false;
+                                    if (e.date !== selectedDate) {
+return false;
+}
+
+                                    if (!e.start_time) {
+return false;
+}
+
                                     const eventHour = parseInt(e.start_time.split(':')[0], 10);
+
                                     return eventHour === slotHour;
                                 });
 
@@ -1074,6 +1056,7 @@ export default function CalendarIndex({
                                             {hourEvents.length > 0 ? (
                                                 hourEvents.map(evt => {
                                                     const colorStyle = getColorStyle(evt.color);
+
                                                     return (
                                                         <div
                                                             key={evt.id}
@@ -1100,15 +1083,6 @@ export default function CalendarIndex({
                                                                     <span>🕒 {evt.start_time} - {evt.end_time}</span>
                                                                     {evt.location && <span>📍 {evt.location}</span>}
                                                                 </div>
-                                                            </div>
-
-                                                            <div className="flex items-center gap-2">
-                                                                {evt.reminder_active && (
-                                                                    <span className="p-1.5 bg-rose-50 border border-rose-200 text-rose-600 rounded-lg text-xs font-bold flex items-center gap-1">
-                                                                        <Bell className="w-3.5 h-3.5" />
-                                                                        <span>Reminder</span>
-                                                                    </span>
-                                                                )}
                                                             </div>
                                                         </div>
                                                     );
@@ -1186,10 +1160,12 @@ export default function CalendarIndex({
                                         listTypeFilter === 'Semua' ||
                                         e.type.toLowerCase() === listTypeFilter.toLowerCase() ||
                                         e.category_name.toLowerCase() === listTypeFilter.toLowerCase();
+
                                     return matchSearch && matchType;
                                 })
                                 .map(evt => {
                                     const colorStyle = getColorStyle(evt.color);
+
                                     return (
                                         <div
                                             key={evt.id}
@@ -1270,13 +1246,6 @@ export default function CalendarIndex({
                                 <span className="px-2 py-0.5 rounded text-[9.5px] font-bold bg-[#EFF6FF] text-[#2563EB] border border-blue-100">
                                     Berlangsung
                                 </span>
-                                <button
-                                    type="button"
-                                    onClick={() => handleOpenReminder(displayEvents[3])}
-                                    className="p-1 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
-                                >
-                                    <Bell className="w-3.5 h-3.5 text-indigo-600" />
-                                </button>
                             </div>
                         </div>
 
@@ -1297,13 +1266,6 @@ export default function CalendarIndex({
                                 <span className="px-2 py-0.5 rounded text-[9.5px] font-bold bg-[#FEF2F2] text-[#DC2626] border border-rose-100">
                                     Mendatang
                                 </span>
-                                <button
-                                    type="button"
-                                    onClick={() => handleOpenReminder(displayEvents[4])}
-                                    className="p-1 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
-                                >
-                                    <Bell className="w-3.5 h-3.5 text-indigo-600" />
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -1340,13 +1302,6 @@ export default function CalendarIndex({
                                 <span className="px-2 py-0.5 rounded text-[9.5px] font-bold bg-[#EEF2FF] text-[#4F46E5] border border-indigo-100">
                                     Mendatang
                                 </span>
-                                <button
-                                    type="button"
-                                    onClick={() => handleOpenReminder(displayEvents[5])}
-                                    className="p-1 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
-                                >
-                                    <Bell className="w-3.5 h-3.5 text-indigo-600" />
-                                </button>
                             </div>
                         </div>
 
@@ -1367,13 +1322,6 @@ export default function CalendarIndex({
                                 <span className="px-2 py-0.5 rounded text-[9.5px] font-bold bg-[#ECFDF5] text-[#059669] border border-emerald-100">
                                     Mendatang
                                 </span>
-                                <button
-                                    type="button"
-                                    onClick={() => handleOpenReminder(displayEvents[7])}
-                                    className="p-1 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
-                                >
-                                    <Bell className="w-3.5 h-3.5 text-indigo-600" />
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -1437,103 +1385,8 @@ export default function CalendarIndex({
                 </div>
             </div>
 
-            {/* ── 4. EXPLANATORY GUIDE BANNER (Where Reminder Appears) ── */}
-            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6">
-                <div className="text-center space-y-1">
-                    <h3 className="text-base sm:text-lg font-black text-slate-900">
-                        Di mana saja reminder muncul selain di notifikasi?
-                    </h3>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-                    {/* Item 1 */}
-                    <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/40 space-y-3 flex flex-col justify-between">
-                        <div className="space-y-1.5">
-                            <div className="flex items-center gap-2">
-                                <span className="w-5 h-5 rounded-full bg-indigo-600 text-white font-black text-[11px] flex items-center justify-center">1</span>
-                                <h4 className="text-xs font-bold text-slate-900">Badge Reminder di Menu Calendar</h4>
-                            </div>
-                            <p className="text-[11px] text-slate-500">
-                                Event yang memiliki reminder akan menampilkan ikon lonceng kecil di dalam event.
-                            </p>
-                        </div>
-                        <div className="p-3 bg-white rounded-xl border border-slate-200/80 flex items-center justify-between shadow-2xs">
-                            <div>
-                                <span className="font-bold text-xs text-slate-900 block">Project Family</span>
-                                <span className="text-[10px] text-slate-500">Budi Santoso · 09:00 - 12:00</span>
-                            </div>
-                            <div className="w-7 h-7 rounded-lg border border-rose-200 bg-rose-50 flex items-center justify-center">
-                                <Bell className="w-3.5 h-3.5 text-rose-500" />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Item 2 */}
-                    <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/40 space-y-3 flex flex-col justify-between">
-                        <div className="space-y-1.5">
-                            <div className="flex items-center gap-2">
-                                <span className="w-5 h-5 rounded-full bg-indigo-600 text-white font-black text-[11px] flex items-center justify-center">2</span>
-                                <h4 className="text-xs font-bold text-slate-900">Daftar Jadwal Hari Ini</h4>
-                            </div>
-                            <p className="text-[11px] text-slate-500">
-                                Event dengan reminder akan muncul di bagian "Jadwal Hari Ini" dengan ikon lonceng.
-                            </p>
-                        </div>
-                        <div className="p-3 bg-white rounded-xl border border-slate-200/80 flex items-center justify-between shadow-2xs">
-                            <div className="space-y-0.5">
-                                <span className="text-[10px] font-bold text-blue-600 block">09:00 - 12:00</span>
-                                <span className="font-bold text-xs text-slate-900 block">Project Family - Budi Santoso</span>
-                            </div>
-                            <Bell className="w-4 h-4 text-indigo-600" />
-                        </div>
-                    </div>
-
-                    {/* Item 3 */}
-                    <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/40 space-y-3 flex flex-col justify-between">
-                        <div className="space-y-1.5">
-                            <div className="flex items-center gap-2">
-                                <span className="w-5 h-5 rounded-full bg-indigo-600 text-white font-black text-[11px] flex items-center justify-center">3</span>
-                                <h4 className="text-xs font-bold text-slate-900">Widget Upcoming Jadwal</h4>
-                            </div>
-                            <p className="text-[11px] text-slate-500">
-                                Event dengan reminder akan ditandai dengan ikon lonceng di widget Upcoming dashboard.
-                            </p>
-                        </div>
-                        <div className="p-3 bg-white rounded-xl border border-slate-200/80 flex items-center justify-between shadow-2xs">
-                            <div className="space-y-0.5">
-                                <span className="text-[10px] font-bold text-purple-600 block">Rabu, 27 Mei 2026 · 09:00</span>
-                                <span className="font-bold text-xs text-slate-900 block">Project Family - Budi Santoso</span>
-                            </div>
-                            <Bell className="w-4 h-4 text-indigo-600" />
-                        </div>
-                    </div>
-
-                    {/* Item 4 */}
-                    <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/40 space-y-3 flex flex-col justify-between">
-                        <div className="space-y-1.5">
-                            <div className="flex items-center gap-2">
-                                <span className="w-5 h-5 rounded-full bg-indigo-600 text-white font-black text-[11px] flex items-center justify-center">4</span>
-                                <h4 className="text-xs font-bold text-slate-900">Detail Project / Order</h4>
-                            </div>
-                            <p className="text-[11px] text-slate-500">
-                                Reminder event juga akan tampil di tab timeline atau detail project terkait.
-                            </p>
-                        </div>
-                        <div className="p-3 bg-white rounded-xl border border-slate-200/80 flex items-center justify-between shadow-2xs">
-                            <div className="space-y-0.5">
-                                <span className="text-[10px] font-bold text-slate-500 block">Rabu, 27 Mei 2026 · 09:00 - 12:00</span>
-                                <span className="font-bold text-xs text-slate-900 block">Project Family</span>
-                            </div>
-                            <div className="w-6 h-6 rounded-lg border border-rose-200 bg-rose-50 flex items-center justify-center">
-                                <Bell className="w-3 h-3 text-rose-500" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             {/* ════════════════════════════════════════════════════════════════ */}
-            {/* ── 5. MODAL: TAMBAH JADWAL (Screenshot 2) ── */}
+            {/* ── 4. MODAL: TAMBAH JADWAL ── */}
             {addModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
                     <div className="bg-white rounded-2xl max-w-xl w-full p-6 sm:p-7 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto">
@@ -1719,20 +1572,6 @@ export default function CalendarIndex({
                                         ))}
                                     </div>
                                 </div>
-
-                                <div>
-                                    <label className="block font-bold text-slate-700 mb-1">Pengingat / Reminder</label>
-                                    <select
-                                        value={addForm.reminder}
-                                        onChange={(e) => setAddForm({ ...addForm, reminder: e.target.value })}
-                                        className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
-                                    >
-                                        <option value="30 menit sebelumnya">30 menit sebelumnya</option>
-                                        <option value="1 jam sebelumnya">1 jam sebelumnya</option>
-                                        <option value="1 hari sebelumnya">1 hari sebelumnya</option>
-                                        <option value="Tidak ada">Tidak ada</option>
-                                    </select>
-                                </div>
                             </div>
 
                             {/* Buttons */}
@@ -1757,172 +1596,7 @@ export default function CalendarIndex({
             )}
 
             {/* ════════════════════════════════════════════════════════════════ */}
-            {/* ── 6. SLIDE-OVER DRAWER: PENGINGAT / REMINDER (Screenshot 3) ── */}
-            {reminderDrawerOpen && (
-                <div
-                    className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-xs animate-in fade-in duration-150"
-                    onClick={() => setReminderDrawerOpen(false)}
-                >
-                    <div
-                        className="bg-white w-full max-w-sm h-full p-6 shadow-2xl overflow-y-auto space-y-6 flex flex-col justify-between"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="space-y-6">
-                            {/* Drawer Header */}
-                            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                                <h3 className="text-base font-black text-slate-900">Pengingat / Reminder</h3>
-                                <button
-                                    type="button"
-                                    onClick={() => setReminderDrawerOpen(false)}
-                                    className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-
-                            {/* Toggle Aktifkan Pengingat */}
-                            <div className="space-y-2">
-                                <span className="text-xs font-bold text-slate-700 block">Atur Pengingat</span>
-                                <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100">
-                                    <span className="text-xs font-semibold text-slate-800">Aktifkan Pengingat</span>
-                                    <button
-                                        type="button"
-                                        onClick={() => setReminderActive(!reminderActive)}
-                                        className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer ${
-                                            reminderActive ? 'bg-[#4F46E5]' : 'bg-slate-300'
-                                        }`}
-                                    >
-                                        <div
-                                            className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                                                reminderActive ? 'translate-x-5' : 'translate-x-0'
-                                            }`}
-                                        />
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Waktu Pengingat */}
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-700 block">Waktu Pengingat</label>
-                                <select
-                                    value={reminderTime}
-                                    onChange={(e) => setReminderTime(e.target.value)}
-                                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
-                                >
-                                    <option value="15 menit sebelumnya">15 menit sebelumnya</option>
-                                    <option value="30 menit sebelumnya">30 menit sebelumnya</option>
-                                    <option value="1 jam sebelumnya">1 jam sebelumnya</option>
-                                    <option value="1 hari sebelumnya">1 hari sebelumnya</option>
-                                </select>
-                            </div>
-
-                            {/* Metode Pengingat */}
-                            <div className="space-y-3">
-                                <label className="text-xs font-bold text-slate-700 block">Metode Pengingat</label>
-
-                                {/* Notifikasi Sistem */}
-                                <label className="flex items-start gap-2.5 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={reminderSystem}
-                                        onChange={(e) => setReminderSystem(e.target.checked)}
-                                        className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
-                                    />
-                                    <div>
-                                        <span className="text-xs font-bold text-slate-900 block">Notifikasi Sistem</span>
-                                        <span className="text-[11px] text-slate-400 block">Notifikasi akan muncul di bell icon</span>
-                                    </div>
-                                </label>
-
-                                {/* Email */}
-                                <label className="flex items-start gap-2.5 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={reminderEmail}
-                                        onChange={(e) => setReminderEmail(e.target.checked)}
-                                        className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
-                                    />
-                                    <div>
-                                        <span className="text-xs font-bold text-slate-900 block">Email</span>
-                                        <span className="text-[11px] text-slate-400 block">Pengingat akan dikirim ke email terkait</span>
-                                    </div>
-                                </label>
-
-                                {/* WhatsApp */}
-                                <div className="space-y-2">
-                                    <label className="flex items-start gap-2.5 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={reminderWhatsapp}
-                                            onChange={(e) => setReminderWhatsapp(e.target.checked)}
-                                            className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
-                                        />
-                                        <div>
-                                            <span className="text-xs font-bold text-slate-900 block">WhatsApp (Opsional)</span>
-                                            <span className="text-[11px] text-slate-400 block">Pengingat akan dikirim via WhatsApp</span>
-                                        </div>
-                                    </label>
-                                    {reminderWhatsapp && (
-                                        <input
-                                            type="text"
-                                            value={whatsappNumber}
-                                            onChange={(e) => setWhatsappNumber(e.target.value)}
-                                            className="w-full pl-3.5 pr-3 py-2 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono"
-                                        />
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Ulangi Pengingat */}
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-bold text-slate-700 block">
-                                    Ulangi Pengingat (Jika belum ditandai selesai)
-                                </label>
-                                <select
-                                    value={reminderRepeat}
-                                    onChange={(e) => setReminderRepeat(e.target.value)}
-                                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
-                                >
-                                    <option value="Tidak diulang">Tidak diulang</option>
-                                    <option value="Setiap 15 menit">Setiap 15 menit</option>
-                                    <option value="Setiap 1 jam">Setiap 1 jam</option>
-                                </select>
-                            </div>
-
-                            {/* Preview Pengingat Box */}
-                            <div className="space-y-1.5">
-                                <span className="text-xs font-bold text-slate-700 block">Preview Pengingat</span>
-                                <div className="p-3.5 bg-slate-50 border border-slate-100 rounded-xl space-y-1 text-xs">
-                                    <span className="font-bold text-slate-900 block">
-                                        {activeReminderItem?.title || 'Project Family - Budi Santoso'}
-                                    </span>
-                                    <span className="text-[11px] text-slate-500 block">
-                                        Rabu, 27 Mei 2026 · {activeReminderItem?.start_time || '09:00'} - {activeReminderItem?.end_time || '12:00'}
-                                    </span>
-                                    <div className="flex items-center gap-1.5 pt-1.5 text-[11px] font-bold text-indigo-600">
-                                        <Bell className="w-3.5 h-3.5" />
-                                        <span>Pengingat akan dikirim 30 menit sebelumnya (08:30)</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Save Button */}
-                        <div className="pt-4 border-t border-slate-100 flex items-center gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setReminderDrawerOpen(false)}
-                                className="flex-1 py-2.5 bg-[#4F46E5] hover:bg-[#4338CA] text-white rounded-xl text-xs font-bold transition-colors cursor-pointer text-center"
-                            >
-                                Simpan Pengaturan
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* ════════════════════════════════════════════════════════════════ */}
-            {/* ── 7. MODAL: DETAIL EVENT POPUP ── */}
+            {/* ── 5. MODAL: DETAIL EVENT POPUP ── */}
             {selectedItem && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150"
@@ -1970,27 +1644,23 @@ export default function CalendarIndex({
                             )}
                         </div>
 
-                        <div className="flex items-center gap-2 pt-2">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    const it = selectedItem;
-                                    setSelectedItem(null);
-                                    handleOpenReminder(it);
-                                }}
-                                className="flex-1 py-2 border border-indigo-200 hover:bg-indigo-50 text-indigo-600 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                            >
-                                <Bell className="w-3.5 h-3.5" />
-                                Atur Reminder
-                            </button>
-                            {selectedItem.project_id && (
+                        <div className="pt-2">
+                            {selectedItem.project_id ? (
                                 <Link
                                     href={`/projects/${String(selectedItem.project_id).replace('p-', '')}`}
-                                    className="flex-1 py-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+                                    className="w-full py-2.5 bg-[#4F46E5] hover:bg-[#4338CA] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
                                 >
                                     <ExternalLink className="w-3.5 h-3.5" />
-                                    Buka Project
+                                    Buka Detail Project
                                 </Link>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedItem(null)}
+                                    className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                                >
+                                    Tutup
+                                </button>
                             )}
                         </div>
                     </div>

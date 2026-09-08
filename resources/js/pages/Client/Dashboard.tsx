@@ -45,7 +45,11 @@ interface FileLinkItem {
     name: string;
     drive_url?: string | null;
     file_type?: string | null;
+    created_at_formatted?: string;
     created_at?: string;
+    expires_at?: string;
+    is_expired?: boolean;
+    days_remaining?: number;
 }
 
 interface TimelineStep {
@@ -119,6 +123,13 @@ interface ClientDashboardProps {
         phone?: string | null;
         avatar?: string | null;
     } | null;
+    metrics?: {
+        total_projects: number;
+        total_invoices: number;
+        total_payments: number;
+        event_date?: string;
+        event_category?: string;
+    };
     active_project?: {
         id: string;
         project_number: string;
@@ -126,12 +137,20 @@ interface ClientDashboardProps {
         category_name: string;
         package_name: string;
         status: string;
+        status_label?: string;
+        last_updated?: string;
         workflow_step: string;
         progress: number;
         event_date?: string;
+        event_date_short?: string;
+        event_date_raw?: string;
         location?: string;
+        thumbnail?: string;
         total_amount: number;
         paid_amount: number;
+        payment_status?: string;
+        invoices_count?: number;
+        payments_count?: number;
         file_links?: FileLinkItem[];
         highlights?: Array<{
             id: string;
@@ -164,6 +183,13 @@ interface ClientDashboardProps {
 
 export default function ClientDashboard({
     client = null,
+    metrics = {
+        total_projects: 1,
+        total_invoices: 1,
+        total_payments: 0,
+        event_date: '12 Des 2026',
+        event_category: 'Wedding Day',
+    },
     active_project = null,
     timeline = {
         current_step: 1,
@@ -196,6 +222,25 @@ export default function ClientDashboard({
     const portalHeadingColor = appSettings.portal_heading_color || '#240B10';
     const portalFontHeading = appSettings.portal_font_heading || 'Plus Jakarta Sans';
     const portalFooterText = appSettings.portal_footer_text || '#FDA4AF';
+
+    // Safe hex to rgba converter for smooth transparent gradients
+    const hexToRgba = (hex: string, alpha: number) => {
+        if (!hex || !hex.startsWith('#')) return hex;
+        const clean = hex.replace('#', '');
+        if (clean.length === 3) {
+            const r = parseInt(clean[0] + clean[0], 16);
+            const g = parseInt(clean[1] + clean[1], 16);
+            const b = parseInt(clean[2] + clean[2], 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+        if (clean.length >= 6) {
+            const r = parseInt(clean.substring(0, 2), 16);
+            const g = parseInt(clean.substring(2, 4), 16);
+            const b = parseInt(clean.substring(4, 6), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+        return hex;
+    };
 
     const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
     const [currentTestimonialIndex, setCurrentTestimonialIndex] = useState(0);
@@ -242,87 +287,103 @@ export default function ClientDashboard({
             <Head title="Dashboard Client Portal - Arams Pictures" />
 
             <div className="space-y-8">
-                {/* ── 1. HERO CAROUSEL BANNER (Screenshot 1) ───────────────── */}
+                {/* ── 1. HERO CAROUSEL BANNER (Nyambung ke Header Navbar) ── */}
                 <section
                     style={{
                         background: portalHeroGradient || portalHeroBg,
                         color: portalHeroText,
-                        borderColor: portalCardBorder,
                     }}
-                    className="relative rounded-3xl overflow-hidden shadow-md min-h-[300px] sm:min-h-[340px] flex items-center border transition-colors"
+                    className="relative -mt-6 sm:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 overflow-hidden shadow-lg min-h-[320px] sm:min-h-[440px] lg:min-h-[480px] flex items-center transition-colors"
                 >
                     <div className="absolute inset-0 z-0">
                         <img
                             src={activePromo.image}
                             alt={activePromo.title}
-                            className="w-full h-full object-cover object-right opacity-30 filter brightness-90"
+                            className="w-full h-full object-cover object-center sm:object-right opacity-80 sm:opacity-95 filter brightness-95 contrast-[1.05] transition-opacity duration-700"
                         />
+                        {/* Mobile Gradient Overlay */}
                         <div
                             style={{
-                                background: `linear-gradient(to right, ${portalHeroBg} 0%, ${portalHeroBg}dd 65%, transparent 100%)`,
+                                background: `linear-gradient(to bottom, ${hexToRgba(portalHeroBg, 0.95)} 0%, ${hexToRgba(portalHeroBg, 0.70)} 50%, ${hexToRgba(portalHeroBg, 0.95)} 100%)`,
                             }}
-                            className="absolute inset-0"
+                            className="absolute inset-0 sm:hidden"
+                        />
+                        {/* Desktop Gradient Overlay */}
+                        <div
+                            style={{
+                                background: `linear-gradient(to right, ${hexToRgba(portalHeroBg, 0.96)} 0%, ${hexToRgba(portalHeroBg, 0.88)} 28%, ${hexToRgba(portalHeroBg, 0.50)} 55%, ${hexToRgba(portalHeroBg, 0.10)} 80%, transparent 100%)`,
+                            }}
+                            className="absolute inset-0 hidden sm:block"
+                        />
+                        {/* Subtle bottom vignette to ensure smooth transition with carousel dots */}
+                        <div
+                            style={{
+                                background: `linear-gradient(to top, ${hexToRgba(portalHeroBg, 0.5)} 0%, transparent 30%)`,
+                            }}
+                            className="absolute inset-0 pointer-events-none"
                         />
                     </div>
 
-                    <div className="relative z-10 p-6 sm:p-10 lg:p-12 max-w-2xl space-y-3">
-                        <span
-                            style={{ color: portalFooterText || '#FDA4AF' }}
-                            className="text-[10px] font-extrabold tracking-[0.25em] uppercase block"
-                        >
-                            {activePromo.tag}
-                        </span>
-                        <h1
-                            style={{
-                                fontFamily: `'${portalFontHeading}', serif`,
-                                color: portalHeroText,
-                            }}
-                            className="text-2xl sm:text-3xl lg:text-4xl font-serif font-black tracking-tight leading-tight"
-                        >
-                            {activePromo.title}
-                        </h1>
-                        <p className="text-xs sm:text-sm opacity-90 leading-relaxed max-w-lg">
-                            {activePromo.description}
-                        </p>
-                        <div className="pt-2">
-                            <Link
-                                href={activePromo.button_url || '/form-klien'}
-                                style={{
-                                    backgroundColor: '#FFFFFF',
-                                    color: portalHeroBg,
-                                }}
-                                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold shadow-md hover:opacity-90 transition-all cursor-pointer"
+                    <div className="relative z-10 w-full max-w-full px-4 sm:px-10 lg:px-12 py-10 sm:py-20 lg:py-24">
+                        <div className="max-w-2xl space-y-3 sm:space-y-4 drop-shadow-xs">
+                            <span
+                                style={{ color: portalFooterText || '#FDA4AF' }}
+                                className="text-[10px] font-extrabold tracking-[0.25em] uppercase block"
                             >
-                                <span>{activePromo.button_text}</span>
-                                <ArrowRight className="w-3.5 h-3.5" />
-                            </Link>
+                                {activePromo.tag}
+                            </span>
+                            <h1
+                                style={{
+                                    fontFamily: `'${portalFontHeading}', serif`,
+                                    color: portalHeroText,
+                                }}
+                                className="text-xl sm:text-3xl lg:text-4xl font-serif font-black tracking-tight leading-tight"
+                            >
+                                {activePromo.title}
+                            </h1>
+                            <p className="text-xs sm:text-sm opacity-90 leading-relaxed max-w-lg">
+                                {activePromo.description}
+                            </p>
+                            <div className="pt-2">
+                                <Link
+                                    href={activePromo.button_url || '/form-klien'}
+                                    style={{
+                                        backgroundColor: '#FFFFFF',
+                                        color: portalHeroBg,
+                                    }}
+                                    className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-bold shadow-md hover:opacity-90 transition-all cursor-pointer"
+                                >
+                                    <span>{activePromo.button_text}</span>
+                                    <ArrowRight className="w-3.5 h-3.5" />
+                                </Link>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Left & Right Circular Arrows */}
+                    {/* Left & Right Circular Arrows (Hidden on mobile) */}
                     <button
                         type="button"
                         onClick={() => setCurrentPromoIndex((prev) => (prev === 0 ? promoSlides.length - 1 : prev - 1))}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 text-white flex items-center justify-center cursor-pointer transition-colors z-10"
+                        className="absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 text-white flex items-center justify-center cursor-pointer transition-colors z-10 hidden sm:flex"
                     >
                         <ChevronLeft className="w-4 h-4" />
                     </button>
                     <button
                         type="button"
                         onClick={() => setCurrentPromoIndex((prev) => (prev + 1) % promoSlides.length)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 text-white flex items-center justify-center cursor-pointer transition-colors z-10"
+                        className="absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 text-white flex items-center justify-center cursor-pointer transition-colors z-10 hidden sm:flex"
                     >
                         <ChevronRight className="w-4 h-4" />
                     </button>
 
                     {/* Pagination Dots */}
-                    <div className="absolute bottom-3.5 inset-x-0 flex justify-center items-center gap-1.5 z-10">
+                    <div className="absolute bottom-4 inset-x-0 flex justify-center items-center gap-1.5 z-10">
                         {promoSlides.map((_, idx) => (
                             <button
                                 key={idx}
                                 onClick={() => setCurrentPromoIndex(idx)}
                                 className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                                    currentPromoIndex === idx ? 'w-5 bg-white' : 'w-1.5 bg-white/40'
+                                    currentPromoIndex === idx ? 'w-6 bg-white' : 'w-1.5 bg-white/40 hover:bg-white/60'
                                 }`}
                             />
                         ))}
@@ -340,7 +401,7 @@ export default function ClientDashboard({
                                 }}
                                 className="text-xl sm:text-2xl font-serif font-black flex items-center gap-2"
                             >
-                                <span>Selamat datang, {client?.name || 'Andi Pratama'}</span>
+                                <span>Selamat datang, {client?.name || 'Klien Arams Pictures'}</span>
                                 <Heart
                                     style={{
                                         color: portalPrimaryAccent,
@@ -383,7 +444,9 @@ export default function ClientDashboard({
                                     <Folder className="w-5 h-5" />
                                 </div>
                                 <div>
-                                    <span className="text-2xl font-black text-slate-900 block leading-tight">1</span>
+                                    <span className="text-2xl font-black text-slate-900 block leading-tight">
+                                        {metrics?.total_projects ?? 1}
+                                    </span>
                                     <span className="text-[11px] text-slate-500 font-medium">Total Project</span>
                                 </div>
                             </div>
@@ -417,11 +480,15 @@ export default function ClientDashboard({
                                     <Calendar className="w-5 h-5" />
                                 </div>
                                 <div>
-                                    <span className="text-lg sm:text-xl font-black text-slate-900 block leading-tight">12 Des 2026</span>
+                                    <span className="text-lg sm:text-xl font-black text-slate-900 block leading-tight truncate max-w-[140px]">
+                                        {active_project?.event_date_short || metrics?.event_date || 'Belum Dijadwalkan'}
+                                    </span>
                                     <span className="text-[11px] text-slate-500 font-medium">Tanggal Acara</span>
                                 </div>
                             </div>
-                            <span className="text-[11px] text-slate-400 font-medium">Wedding Day</span>
+                            <span className="text-[11px] text-slate-400 font-medium truncate block">
+                                {active_project?.category_name || metrics?.event_category || 'Dokumentasi'}
+                            </span>
                         </div>
 
                         {/* Stat 3: Invoice */}
@@ -444,7 +511,9 @@ export default function ClientDashboard({
                                     <FileText className="w-5 h-5" />
                                 </div>
                                 <div>
-                                    <span className="text-2xl font-black text-slate-900 block leading-tight">1</span>
+                                    <span className="text-2xl font-black text-slate-900 block leading-tight">
+                                        {metrics?.total_invoices ?? active_project?.invoices_count ?? 1}
+                                    </span>
                                     <span className="text-[11px] text-slate-500 font-medium">Invoice</span>
                                 </div>
                             </div>
@@ -478,7 +547,9 @@ export default function ClientDashboard({
                                     <CreditCard className="w-5 h-5" />
                                 </div>
                                 <div>
-                                    <span className="text-2xl font-black text-slate-900 block leading-tight">0</span>
+                                    <span className="text-2xl font-black text-slate-900 block leading-tight">
+                                        {metrics?.total_payments ?? active_project?.payments_count ?? 0}
+                                    </span>
                                     <span className="text-[11px] text-slate-500 font-medium">Pembayaran</span>
                                 </div>
                             </div>
@@ -513,7 +584,7 @@ export default function ClientDashboard({
                             Status Project Anda
                         </h3>
                         <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
-                            <span>Terakhir diperbarui: 27 Agustus 2026</span>
+                            <span>Terakhir diperbarui: {active_project?.last_updated || 'Hari ini'}</span>
                             <RefreshCw className="w-3 h-3" />
                         </div>
                     </div>
@@ -522,8 +593,8 @@ export default function ClientDashboard({
                         {/* Left Portrait Photo */}
                         <div className="w-full sm:w-44 h-48 sm:h-52 rounded-2xl overflow-hidden bg-slate-100 shrink-0 shadow-2xs">
                             <img
-                                src="/images/wedding-couple.jpg"
-                                alt="Wedding Couple"
+                                src={active_project?.thumbnail || '/images/wedding-couple.jpg'}
+                                alt={active_project?.name || 'Wedding Couple'}
                                 className="w-full h-full object-cover"
                             />
                         </div>
@@ -539,7 +610,7 @@ export default function ClientDashboard({
                                         }}
                                         className="text-lg sm:text-xl font-serif font-black"
                                     >
-                                        Wedding Andi &amp; Sari
+                                        {active_project?.name || (client ? `Project ${client.name}` : 'Wedding Andi & Sari')}
                                     </h4>
                                     <span
                                         style={{
@@ -549,18 +620,18 @@ export default function ClientDashboard({
                                         }}
                                         className="px-2.5 py-0.5 rounded-md text-[10px] font-bold border"
                                     >
-                                        Dalam Proses
+                                        {active_project?.status_label || (active_project?.status === 'completed' ? 'Selesai' : 'Dalam Proses')}
                                     </span>
                                 </div>
-                                <div className="flex items-center gap-3 text-xs text-slate-500">
+                                <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
                                     <div className="flex items-center gap-1">
                                         <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                                        <span>12 Desember 2026</span>
+                                        <span>{active_project?.event_date || 'Tanggal belum dijadwalkan'}</span>
                                     </div>
                                     <span>•</span>
                                     <div className="flex items-center gap-1">
                                         <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                                        <span>Gedung Graha Arams, Tangerang Selatan</span>
+                                        <span>{active_project?.location || 'Studio Arams Pictures'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -691,7 +762,7 @@ export default function ClientDashboard({
                                     </div>
                                 </div>
                                 <Link
-                                    href={`/client/projects/${active_project?.id || '01a0473f-8eed-730c-a81b-3973c3d66eb3'}`}
+                                    href={active_project?.id ? `/client/projects/${active_project.id}` : '/client/projects'}
                                     style={{ color: portalPrimaryAccent }}
                                     className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-bold hover:bg-slate-50 transition-colors shrink-0 shadow-2xs hover:scale-[1.02]"
                                 >
@@ -707,73 +778,85 @@ export default function ClientDashboard({
                     </div>
                 </section>
 
-                {/* ── 4. FOUR COLUMN GRID (Screenshot 1) ────────────────────── */}
-                <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* ── 4. TWO-BY-TWO GRID (2x2) ─────────────────────────────── */}
+                <section className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
                     {/* Card 1: Highlight Pembayaran */}
                     <div
                         style={{
                             backgroundColor: portalCardBg,
                             borderColor: portalCardBorder,
                         }}
-                        className="rounded-3xl border p-5 shadow-2xs space-y-4 flex flex-col justify-between transition-colors"
+                        className="rounded-3xl border p-5 sm:p-6 shadow-2xs flex flex-col justify-between transition-colors h-full"
                     >
-                        <div className="space-y-3">
-                            <div className="border-b border-slate-100 pb-2">
+                        <div className="space-y-4">
+                            <div className="border-b border-slate-100 pb-3 min-h-[50px] flex flex-col justify-center">
                                 <h4
                                     style={{ color: portalHeadingColor }}
                                     className="text-xs font-black uppercase tracking-wider"
                                 >
                                     Highlight Pembayaran
                                 </h4>
-                                <p className="text-[10px] text-slate-400">Ringkasan pembayaran project Anda.</p>
+                                <p className="text-[11px] text-slate-400 mt-0.5">Ringkasan pembayaran project Anda.</p>
                             </div>
 
-                            <div className="space-y-1.5 text-xs">
-                                <div className="flex justify-between">
-                                    <span className="text-slate-500">Total Project</span>
-                                    <span className="font-bold text-slate-900">Rp50.000.000</span>
+                            <div className="space-y-2 text-xs">
+                                <div className="flex justify-between items-center py-0.5">
+                                    <span className="text-slate-500 font-medium">Total Project</span>
+                                    <span className="font-bold text-slate-900 text-sm">
+                                        {payment_summary?.total_amount ? `Rp${payment_summary.total_amount.toLocaleString('id-ID')}` : 'Rp50.000.000'}
+                                    </span>
                                 </div>
-                                <div className="flex justify-between">
-                                    <span className="text-slate-500">Total Dibayar</span>
-                                    <span className="font-bold text-emerald-600">Rp25.000.000</span>
+                                <div className="flex justify-between items-center py-0.5">
+                                    <span className="text-slate-500 font-medium">Total Dibayar</span>
+                                    <span className="font-bold text-emerald-600 text-sm">
+                                        {payment_summary?.paid_amount ? `Rp${payment_summary.paid_amount.toLocaleString('id-ID')}` : 'Rp25.000.000'}
+                                    </span>
                                 </div>
-                                <div className="flex justify-between">
-                                    <span className="text-slate-500">Sisa Tagihan</span>
-                                    <span className="font-bold text-rose-600">Rp25.000.000</span>
+                                <div className="flex justify-between items-center py-0.5">
+                                    <span className="text-slate-500 font-medium">Sisa Tagihan</span>
+                                    <span className="font-bold text-rose-600 text-sm">
+                                        {payment_summary?.remaining_amount ? `Rp${payment_summary.remaining_amount.toLocaleString('id-ID')}` : 'Rp25.000.000'}
+                                    </span>
                                 </div>
                             </div>
 
                             {/* Progress bar */}
-                            <div className="space-y-1">
+                            <div className="space-y-1.5 pt-1">
                                 <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
                                     <div
                                         className="h-full rounded-full transition-all"
                                         style={{
                                             backgroundColor: portalPrimaryAccent,
-                                            width: '50%',
+                                            width: `${payment_summary?.paid_percentage || 50}%`,
                                         }}
                                     />
                                 </div>
-                                <div className="text-right text-[10px] font-bold text-slate-500">50%</div>
+                                <div className="text-right text-[10px] font-bold text-slate-500">
+                                    {payment_summary?.paid_percentage ? `${payment_summary.paid_percentage}%` : '50%'}
+                                </div>
                             </div>
 
                             {/* Info Box */}
-                            <div className="p-2.5 rounded-xl bg-slate-50 text-[11px] text-slate-600 flex items-center justify-between">
-                                <div className="flex items-center gap-1.5">
-                                    <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
-                                    <span>Pembayaran Terakhir</span>
+                            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs text-slate-600 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                    <span className="font-medium">Pembayaran Terakhir</span>
                                 </div>
-                                <span className="font-bold text-slate-800">26 Mei 2026</span>
+                                <span className="font-bold text-slate-800">
+                                    {payment_summary?.last_payment_date || '-'}
+                                </span>
                             </div>
                         </div>
 
-                        <Link
-                            href={`/client/projects/${active_project?.id || '01a0473f-8eed-730c-a81b-3973c3d66eb3'}`}
-                            style={{ color: portalPrimaryAccent }}
-                            className="w-full py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-center transition-colors block"
-                        >
-                            Lihat Detail Pembayaran →
-                        </Link>
+                        <div className="pt-4 mt-auto">
+                            <Link
+                                href={active_project?.id ? `/client/projects/${active_project.id}` : '/client/projects'}
+                                style={{ color: portalPrimaryAccent }}
+                                className="w-full py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-center transition-colors block shadow-2xs hover:shadow-xs"
+                            >
+                                Lihat Detail Pembayaran →
+                            </Link>
+                        </div>
                     </div>
 
                     {/* Card 2: File Terbaru */}
@@ -782,53 +865,59 @@ export default function ClientDashboard({
                             backgroundColor: portalCardBg,
                             borderColor: portalCardBorder,
                         }}
-                        className="rounded-3xl border p-5 shadow-2xs space-y-4 flex flex-col justify-between transition-colors"
+                        className="rounded-3xl border p-5 sm:p-6 shadow-2xs flex flex-col justify-between transition-colors h-full"
                     >
-                        <div className="space-y-3">
-                            <div className="border-b border-slate-100 pb-2">
+                        <div className="space-y-4">
+                            <div className="border-b border-slate-100 pb-3 min-h-[50px] flex flex-col justify-center">
                                 <h4
                                     style={{ color: portalHeadingColor }}
                                     className="text-xs font-black uppercase tracking-wider"
                                 >
                                     File Terbaru
                                 </h4>
-                                <p className="text-[10px] text-slate-400">File atau link terbaru yang dibagikan.</p>
+                                <p className="text-[11px] text-slate-400 mt-0.5">File atau link terbaru yang dibagikan.</p>
                             </div>
 
-                            <div className="space-y-2 text-xs">
-                                <div className="p-2 rounded-xl bg-slate-50 flex items-center justify-between">
-                                    <div className="space-y-0.5">
-                                        <p className="font-bold text-slate-900 text-[11px]">Preview Foto (Low Resolution)</p>
-                                        <span className="text-[10px] text-slate-400">Dibagikan pada 05 Jun 2026</span>
+                            <div className="space-y-2.5 text-xs">
+                                {active_project?.file_links && active_project.file_links.length > 0 ? (
+                                    active_project.file_links.slice(0, 3).map((file, idx) => (
+                                        <a
+                                            key={file.id || idx}
+                                            href={file.drive_url || '#'}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="p-2.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between hover:bg-slate-100/80 transition-colors group block"
+                                        >
+                                            <div className="space-y-0.5 min-w-0 pr-2">
+                                                <p className="font-bold text-slate-900 text-xs truncate group-hover:text-[#4A151B] transition-colors">
+                                                    {file.name}
+                                                </p>
+                                                <span className="text-[10px] text-slate-400 block">
+                                                    Dibagikan pada {file.created_at_formatted || file.created_at || 'Baru saja'}
+                                                </span>
+                                            </div>
+                                            <div className="w-7 h-7 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-500 group-hover:text-[#4A151B] group-hover:border-[#4A151B]/30 shadow-2xs shrink-0 transition-colors">
+                                                <Download className="w-3.5 h-3.5" />
+                                            </div>
+                                        </a>
+                                    ))
+                                ) : (
+                                    <div className="py-8 text-center text-slate-400 text-xs">
+                                        Belum ada file yang dibagikan untuk proyek ini.
                                     </div>
-                                    <Download className="w-3.5 h-3.5 text-slate-400" />
-                                </div>
-
-                                <div className="p-2 rounded-xl bg-slate-50 flex items-center justify-between">
-                                    <div className="space-y-0.5">
-                                        <p className="font-bold text-slate-900 text-[11px]">Behind The Scene</p>
-                                        <span className="text-[10px] text-slate-400">Dibagikan pada 23 Mei 2026</span>
-                                    </div>
-                                    <Download className="w-3.5 h-3.5 text-slate-400" />
-                                </div>
-
-                                <div className="p-2 rounded-xl bg-slate-50 flex items-center justify-between">
-                                    <div className="space-y-0.5">
-                                        <p className="font-bold text-slate-900 text-[11px]">Foto Hari H (RAW)</p>
-                                        <span className="text-[10px] text-slate-400">Dibagikan pada 23 Mei 2026</span>
-                                    </div>
-                                    <Download className="w-3.5 h-3.5 text-slate-400" />
-                                </div>
+                                )}
                             </div>
                         </div>
 
-                        <Link
-                            href={`/client/projects/${active_project?.id || '01a0473f-8eed-730c-a81b-3973c3d66eb3'}`}
-                            style={{ color: portalPrimaryAccent }}
-                            className="w-full py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-center transition-colors block"
-                        >
-                            Lihat Semua File &amp; Drive Link →
-                        </Link>
+                        <div className="pt-4 mt-auto">
+                            <Link
+                                href={active_project?.id ? `/client/projects/${active_project.id}` : '/client/projects'}
+                                style={{ color: portalPrimaryAccent }}
+                                className="w-full py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-center transition-colors block shadow-2xs hover:shadow-xs"
+                            >
+                                Lihat Semua File &amp; Drive Link →
+                            </Link>
+                        </div>
                     </div>
 
                     {/* Card 3: Highlight Project */}
@@ -837,45 +926,49 @@ export default function ClientDashboard({
                             backgroundColor: portalCardBg,
                             borderColor: portalCardBorder,
                         }}
-                        className="rounded-3xl border p-5 shadow-2xs space-y-4 flex flex-col justify-between transition-colors"
+                        className="rounded-3xl border p-5 sm:p-6 shadow-2xs flex flex-col justify-between transition-colors h-full"
                     >
-                        <div className="space-y-3">
-                            <div className="border-b border-slate-100 pb-2">
+                        <div className="space-y-4">
+                            <div className="border-b border-slate-100 pb-3 min-h-[50px] flex flex-col justify-center">
                                 <h4
                                     style={{ color: portalHeadingColor }}
                                     className="text-xs font-black uppercase tracking-wider"
                                 >
                                     Highlight Project
                                 </h4>
-                                <p className="text-[10px] text-slate-400">Beberapa momen terbaik dari project Anda.</p>
+                                <p className="text-[11px] text-slate-400 mt-0.5">Beberapa momen terbaik dari project Anda.</p>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-2">
-                                {active_project?.highlights && active_project.highlights.length > 0 ? (
-                                    active_project.highlights.slice(0, 4).map((hl: any, idx: number) => (
-                                        <div key={hl.id || idx} className="aspect-square rounded-xl overflow-hidden bg-slate-100 relative group">
-                                            <img
-                                                src={hl.image_url}
-                                                alt={hl.title || `Highlight ${idx + 1}`}
-                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                            />
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="col-span-2 py-6 text-center text-slate-400 text-xs">
-                                        Belum ada foto highlight
+                            <div className="grid grid-cols-2 gap-2.5">
+                                {((active_project?.highlights && active_project.highlights.length > 0)
+                                    ? active_project.highlights.slice(0, 4)
+                                    : [
+                                        { id: '1', title: 'Highlight 1', image_url: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=500&auto=format&fit=crop&q=80' },
+                                        { id: '2', title: 'Highlight 2', image_url: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=500&auto=format&fit=crop&q=80' },
+                                        { id: '3', title: 'Highlight 3', image_url: 'https://images.unsplash.com/photo-1520854221256-17451cc331bf?w=500&auto=format&fit=crop&q=80' },
+                                        { id: '4', title: 'Highlight 4', image_url: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?w=500&auto=format&fit=crop&q=80' },
+                                    ]
+                                ).map((hl: any, idx: number) => (
+                                    <div key={hl.id || idx} className="h-24 sm:h-28 rounded-2xl overflow-hidden bg-slate-100 relative group border border-slate-200/60 shadow-2xs">
+                                        <img
+                                            src={hl.image_url}
+                                            alt={hl.title || `Highlight ${idx + 1}`}
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                        />
                                     </div>
-                                )}
+                                ))}
                             </div>
                         </div>
 
-                        <Link
-                            href={active_project?.id ? `/client/projects/${active_project.id}#section-highlight` : '/client/projects'}
-                            style={{ color: portalPrimaryAccent }}
-                            className="w-full py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-center transition-colors block"
-                        >
-                            Lihat Semua Highlight →
-                        </Link>
+                        <div className="pt-4 mt-auto">
+                            <Link
+                                href={active_project?.id ? `/client/projects/${active_project.id}#section-highlight` : '/client/projects'}
+                                style={{ color: portalPrimaryAccent }}
+                                className="w-full py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-center transition-colors block shadow-2xs hover:shadow-xs"
+                            >
+                                Lihat Semua Highlight →
+                            </Link>
+                        </div>
                     </div>
 
                     {/* Card 4: Ulasan Client */}
@@ -884,44 +977,71 @@ export default function ClientDashboard({
                             backgroundColor: portalCardBg,
                             borderColor: portalCardBorder,
                         }}
-                        className="rounded-3xl border p-5 shadow-2xs space-y-4 flex flex-col justify-between transition-colors"
+                        className="rounded-3xl border p-5 sm:p-6 shadow-2xs flex flex-col justify-between transition-colors h-full"
                     >
-                        <div className="space-y-3">
-                            <div className="border-b border-slate-100 pb-2">
+                        <div className="space-y-4">
+                            <div className="border-b border-slate-100 pb-3 min-h-[50px] flex flex-col justify-center">
                                 <h4
                                     style={{ color: portalHeadingColor }}
                                     className="text-xs font-black uppercase tracking-wider"
                                 >
                                     Ulasan Client
                                 </h4>
-                                <p className="text-[10px] text-slate-400">Terima kasih atas kepercayaan Anda.</p>
+                                <p className="text-[11px] text-slate-400 mt-0.5">Terima kasih atas kepercayaan Anda.</p>
                             </div>
 
                             {activeTestimonial ? (
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-1 text-amber-500">
-                                        {Array.from({ length: 5 }).map((_, i) => (
-                                            <Star
-                                                key={i}
-                                                className={`w-3.5 h-3.5 ${
-                                                    i < activeTestimonial.rating
-                                                        ? 'text-amber-500 fill-amber-500'
-                                                        : 'text-slate-200'
-                                                }`}
-                                            />
-                                        ))}
-                                        <span className="text-xs font-bold text-slate-900 ml-1">
-                                            {Number(activeTestimonial.rating).toFixed(1)}
-                                        </span>
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1.5 text-amber-500">
+                                            <div className="flex items-center">
+                                                {Array.from({ length: 5 }).map((_, i) => (
+                                                    <Star
+                                                        key={i}
+                                                        className={`w-3.5 h-3.5 ${
+                                                            i < activeTestimonial.rating
+                                                                ? 'text-amber-500 fill-amber-500'
+                                                                : 'text-slate-200'
+                                                        }`}
+                                                    />
+                                                ))}
+                                            </div>
+                                            <span className="text-xs font-bold text-slate-900 ml-1">
+                                                {Number(activeTestimonial.rating).toFixed(1)}
+                                            </span>
+                                        </div>
+
+                                        {testimonialList.length > 1 && (
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setCurrentTestimonialIndex((prev) => (prev === 0 ? testimonialList.length - 1 : prev - 1))}
+                                                    className="w-6 h-6 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 cursor-pointer transition-colors shadow-2xs"
+                                                    title="Ulasan sebelumnya"
+                                                >
+                                                    <ChevronLeft className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setCurrentTestimonialIndex((prev) => (prev + 1) % testimonialList.length)}
+                                                    className="w-6 h-6 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 cursor-pointer transition-colors shadow-2xs"
+                                                    title="Ulasan selanjutnya"
+                                                >
+                                                    <ChevronRight className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
 
-                                    <p className="text-xs text-slate-600 leading-relaxed italic line-clamp-3">
-                                        "{activeTestimonial.comment}"
-                                    </p>
+                                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
+                                        <p className="text-xs text-slate-700 leading-relaxed italic line-clamp-3">
+                                            "{activeTestimonial.comment}"
+                                        </p>
+                                    </div>
 
-                                    <div className="flex items-center justify-between pt-1">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-7 h-7 rounded-full bg-slate-200 overflow-hidden shrink-0">
+                                    <div className="flex items-center justify-between pt-0.5">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="w-8 h-8 rounded-full bg-slate-200 overflow-hidden shrink-0 border border-slate-200 shadow-2xs">
                                                 <img
                                                     src={activeTestimonial.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
                                                     alt={activeTestimonial.client_name}
@@ -929,35 +1049,14 @@ export default function ClientDashboard({
                                                 />
                                             </div>
                                             <div className="min-w-0">
-                                                <p className="text-[11px] font-bold text-slate-900 leading-none truncate">
+                                                <p className="text-xs font-bold text-slate-900 leading-none truncate">
                                                     {activeTestimonial.client_name}
                                                 </p>
-                                                <span className="text-[10px] text-slate-400 truncate block">
+                                                <span className="text-[10px] text-slate-400 truncate block mt-0.5">
                                                     {activeTestimonial.package_name || 'Dokumentasi'}
                                                 </span>
                                             </div>
                                         </div>
-
-                                        {testimonialList.length > 1 && (
-                                            <div className="flex items-center gap-1 shrink-0">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setCurrentTestimonialIndex((prev) => (prev === 0 ? testimonialList.length - 1 : prev - 1))}
-                                                    className="w-6 h-6 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 cursor-pointer transition-colors"
-                                                    title="Ulasan sebelumnya"
-                                                >
-                                                    <ChevronLeft className="w-3 h-3" />
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setCurrentTestimonialIndex((prev) => (prev + 1) % testimonialList.length)}
-                                                    className="w-6 h-6 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 cursor-pointer transition-colors"
-                                                    title="Ulasan selanjutnya"
-                                                >
-                                                    <ChevronRight className="w-3 h-3" />
-                                                </button>
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
                             ) : (
@@ -967,13 +1066,15 @@ export default function ClientDashboard({
                             )}
                         </div>
 
-                        <Link
-                            href="/client/projects"
-                            style={{ color: portalPrimaryAccent }}
-                            className="w-full py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-center transition-colors block cursor-pointer"
-                        >
-                            Lihat Semua Ulasan →
-                        </Link>
+                        <div className="pt-4 mt-auto">
+                            <Link
+                                href="/client/projects"
+                                style={{ color: portalPrimaryAccent }}
+                                className="w-full py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-center transition-colors block cursor-pointer shadow-2xs hover:shadow-xs"
+                            >
+                                Lihat Semua Ulasan →
+                            </Link>
+                        </div>
                     </div>
                 </section>
 

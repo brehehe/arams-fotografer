@@ -20,6 +20,17 @@ import {
 } from 'lucide-react';
 import { formatRupiah } from '@/lib/formatters';
 
+interface TimelineStepItem {
+    step: number;
+    key?: string;
+    name: string;
+    title?: string;
+    desc?: string;
+    status?: 'completed' | 'active' | 'pending';
+    status_label?: string;
+    date?: string | null;
+}
+
 interface ProjectItem {
     id: string;
     project_number: string;
@@ -39,6 +50,9 @@ interface ProjectItem {
     current_step?: number;
     total_steps?: number;
     step_label?: string;
+    active_step_desc?: string;
+    progress_percentage?: number;
+    timeline_steps?: TimelineStepItem[];
     completed_date?: string;
     estimated_done?: string;
 }
@@ -62,8 +76,29 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
     const portalFontHeading = appSettings.portal_font_heading || 'Plus Jakarta Sans';
     const portalFooterText = appSettings.portal_footer_text || '#FDA4AF';
 
+    // Safe hex to rgba converter for smooth transparent gradients
+    const hexToRgba = (hex: string, alpha: number) => {
+        if (!hex || !hex.startsWith('#')) return hex;
+        const clean = hex.replace('#', '');
+        if (clean.length === 3) {
+            const r = parseInt(clean[0] + clean[0], 16);
+            const g = parseInt(clean[1] + clean[1], 16);
+            const b = parseInt(clean[2] + clean[2], 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+        if (clean.length >= 6) {
+            const r = parseInt(clean.substring(0, 2), 16);
+            const g = parseInt(clean.substring(2, 4), 16);
+            const b = parseInt(clean.substring(4, 6), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+        return hex;
+    };
+
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 6;
 
     const displayProjects = projects || [];
 
@@ -86,55 +121,90 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
         return matchesSearch && matchesStatus;
     });
 
+    const totalPages = Math.max(1, Math.ceil(filteredProjects.length / ITEMS_PER_PAGE));
+    const safeCurrentPage = Math.min(currentPage, totalPages);
+    const startIndex = filteredProjects.length > 0 ? (safeCurrentPage - 1) * ITEMS_PER_PAGE : 0;
+    const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filteredProjects.length);
+    const paginatedProjects = filteredProjects.slice(startIndex, endIndex);
+
+    const handleSearchChange = (value: string) => {
+        setSearch(value);
+        setCurrentPage(1);
+    };
+
+    const handleStatusFilterChange = (status: string) => {
+        setStatusFilter(status);
+        setCurrentPage(1);
+    };
+
     return (
         <ClientLayout>
             <Head title="Project Saya - Arams Pictures" />
 
             <div className="space-y-6">
-                {/* ── 1. HERO BANNER (MATCHING SCREENSHOT 3) ────────────────── */}
+                {/* ── 1. HERO BANNER (Nyambung Langsung ke Header Navbar - Sama Tinggi dengan Dashboard) ────── */}
                 <div
                     style={{
                         background: portalHeroGradient || portalHeroBg,
                         color: portalHeroText,
-                        borderColor: portalCardBorder,
                     }}
-                    className="relative rounded-3xl p-6 sm:p-8 lg:p-10 shadow-lg overflow-hidden border flex flex-col md:flex-row items-center justify-between gap-6 transition-colors"
+                    className="relative -mt-6 sm:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 overflow-hidden shadow-lg min-h-[300px] sm:min-h-[440px] lg:min-h-[480px] flex flex-col md:flex-row items-center justify-between gap-6 px-4 sm:px-10 lg:px-12 py-10 sm:py-20 lg:py-24 transition-colors"
                 >
                     {/* Background Overlay */}
                     <div className="absolute inset-0 z-0">
                         <img
-                            src="/images/wedding-couple.jpg"
+                            src={displayProjects[0]?.thumbnail || "/images/wedding-couple.jpg"}
                             alt="Arams Pictures"
-                            className="w-full h-full object-cover opacity-20 filter brightness-90"
+                            className="w-full h-full object-cover object-center sm:object-right opacity-80 sm:opacity-95 filter brightness-95 contrast-[1.05] transition-opacity duration-700"
+                        />
+                        {/* Mobile Gradient Overlay */}
+                        <div
+                            style={{
+                                background: `linear-gradient(to bottom, ${hexToRgba(portalHeroBg, 0.95)} 0%, ${hexToRgba(portalHeroBg, 0.70)} 50%, ${hexToRgba(portalHeroBg, 0.95)} 100%)`,
+                            }}
+                            className="absolute inset-0 sm:hidden"
+                        />
+                        {/* Desktop Gradient Overlay */}
+                        <div
+                            style={{
+                                background: `linear-gradient(to right, ${hexToRgba(portalHeroBg, 0.96)} 0%, ${hexToRgba(portalHeroBg, 0.88)} 28%, ${hexToRgba(portalHeroBg, 0.50)} 55%, ${hexToRgba(portalHeroBg, 0.10)} 80%, transparent 100%)`,
+                            }}
+                            className="absolute inset-0 hidden sm:block"
                         />
                         <div
                             style={{
-                                background: `linear-gradient(to right, ${portalHeroBg} 0%, ${portalHeroBg}e6 60%, transparent 100%)`,
+                                background: `linear-gradient(to top, ${hexToRgba(portalHeroBg, 0.5)} 0%, transparent 30%)`,
                             }}
-                            className="absolute inset-0"
+                            className="absolute inset-0 pointer-events-none"
                         />
                     </div>
 
                     {/* Left Title */}
-                    <div className="relative z-10 space-y-2 max-w-xl">
+                    <div className="relative z-10 space-y-2 sm:space-y-3 max-w-xl drop-shadow-xs">
+                        <span
+                            style={{ color: portalFooterText || '#FDA4AF' }}
+                            className="text-[10px] font-extrabold tracking-[0.25em] uppercase block"
+                        >
+                            CLIENT AREA
+                        </span>
                         <h1
                             style={{
                                 fontFamily: `'${portalFontHeading}', serif`,
                                 color: portalHeroText,
                             }}
-                            className="text-2xl sm:text-3xl lg:text-4xl font-serif font-black tracking-tight leading-tight"
+                            className="text-xl sm:text-3xl lg:text-4xl font-serif font-black tracking-tight leading-tight"
                         >
                             Project Saya
                         </h1>
-                        <p className="text-xs sm:text-sm opacity-85 leading-relaxed max-w-md">
+                        <p className="text-xs sm:text-sm opacity-90 leading-relaxed max-w-md">
                             Berikut adalah daftar project yang telah dan sedang Anda kerjakan bersama Arams Pictures.
                         </p>
                     </div>
 
                     {/* Right Illustration Thumbnail */}
-                    <div className="relative z-10 hidden md:block w-48 lg:w-56 h-32 rounded-2xl overflow-hidden shadow-md border border-white/20 shrink-0">
+                    <div className="relative z-10 hidden md:block w-56 lg:w-64 h-36 lg:h-44 rounded-2xl overflow-hidden shadow-2xl border border-white/20 shrink-0">
                         <img
-                            src="/images/wedding-couple.jpg"
+                            src={displayProjects[0]?.thumbnail || "/images/wedding-couple.jpg"}
                             alt="Wedding Couple"
                             className="w-full h-full object-cover"
                         />
@@ -142,9 +212,9 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                 </div>
 
                 {/* ── 2. FILTER & SEARCH TOOLBAR (MATCHING SCREENSHOT 3) ─────── */}
-                <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+                <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 w-full">
                     {/* Filter Tabs */}
-                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 w-full max-w-full no-scrollbar">
                         {[
                             { id: 'all', label: 'Semua Project', icon: FolderKanban },
                             { id: 'in_progress', label: 'Dalam Proses', icon: Clock },
@@ -157,7 +227,7 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                                 <button
                                     key={tab.id}
                                     type="button"
-                                    onClick={() => setStatusFilter(tab.id)}
+                                    onClick={() => handleStatusFilterChange(tab.id)}
                                     style={
                                         isActive
                                             ? {
@@ -186,7 +256,7 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                             <input
                                 type="text"
                                 value={search}
-                                onChange={(e) => setSearch(e.target.value)}
+                                onChange={(e) => handleSearchChange(e.target.value)}
                                 placeholder="Cari project..."
                                 className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-hidden text-slate-900 placeholder:text-slate-400 transition-colors shadow-2xs"
                             />
@@ -233,198 +303,304 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                             </div>
                         </div>
                     ) : (
-                        filteredProjects.map((p) => {
+                        paginatedProjects.map((p) => {
                             const isWedding = (p.total_steps || 5) === 8 || p.category_name.toLowerCase().includes('wedding');
-                            const totalSteps = isWedding ? 8 : 5;
-                            const activeStep = p.current_step || (p.status === 'completed' ? totalSteps : 3);
-                            const isCompleted = p.status === 'completed' || p.workflow_step === 'selesai';
-                            const sisaTagihan = (p.total_amount || 0) - (p.paid_amount || 0);
+                            const totalSteps = p.total_steps || (isWedding ? 8 : 5);
+                            const isCompleted = p.status === 'completed' || p.workflow_step === 'selesai' || p.status === 'delivered';
+                            const activeStep = p.current_step || (isCompleted ? totalSteps : 1);
+                            const sisaTagihan = Math.max(0, (p.total_amount || 0) - (p.paid_amount || 0));
+
+                            const stepsList: TimelineStepItem[] = (p.timeline_steps && p.timeline_steps.length > 0)
+                                ? p.timeline_steps
+                                : (totalSteps === 8 ? [
+                                    { step: 1, name: 'Booking & DP', desc: 'Tanda jadi & kunci jadwal acara' },
+                                    { step: 2, name: 'Briefing', desc: 'Konsep, rundown & moodboard' },
+                                    { step: 3, name: 'Hari Pemotretan', desc: 'Liputan sesi foto & video Hari-H' },
+                                    { step: 4, name: 'Preview Foto', desc: 'Seleksi foto online' },
+                                    { step: 5, name: 'Editing Seleksi', desc: 'Color grading & retouching' },
+                                    { step: 6, name: 'Review Revisi', desc: 'Pengecekan hasil karya klien' },
+                                    { step: 7, name: 'Cetak Album', desc: 'Produksi cetak lab album kolase' },
+                                    { step: 8, name: 'Selesai & Kirim', desc: 'Serah terima album & cloud drive' },
+                                ] : [
+                                    { step: 1, name: 'Booking & DP', desc: 'Tanda jadi & kunci jadwal pemotretan' },
+                                    { step: 2, name: 'Briefing Konsep', desc: 'Penentuan tema, kostum & properti' },
+                                    { step: 3, name: 'Hari Sesi Foto', desc: 'Sesi pemotretan studio / outdoor' },
+                                    { step: 4, name: 'Editing & Retouch', desc: 'Color grading & retouching' },
+                                    { step: 5, name: 'Selesai & Kirim', desc: 'Pengiriman file resolusi tinggi' },
+                                ]);
 
                             return (
                                 <div
                                     key={p.id}
-                                style={{
-                                    backgroundColor: portalCardBg,
-                                    borderColor: portalCardBorder,
-                                }}
-                                className="rounded-3xl border p-5 sm:p-6 shadow-2xs hover:shadow-md transition-all flex flex-col lg:flex-row gap-6 items-stretch"
-                            >
-                                {/* Left Thumbnail with Badge */}
-                                <div className="relative w-full lg:w-56 h-44 sm:h-48 lg:h-auto rounded-2xl overflow-hidden bg-slate-100 shrink-0 shadow-2xs">
-                                    <img
-                                        src={p.thumbnail || '/images/wedding-couple.jpg'}
-                                        alt={p.name}
-                                        className="w-full h-full object-cover"
-                                    />
-                                    <div className="absolute bottom-2.5 left-2.5">
-                                        <span
-                                            style={
-                                                !isCompleted
-                                                    ? {
-                                                          backgroundColor: `${portalPrimaryAccent}15`,
-                                                          color: portalPrimaryAccent,
-                                                          borderColor: `${portalPrimaryAccent}35`,
-                                                      }
-                                                    : {}
-                                            }
-                                            className={`px-3 py-1 rounded-lg text-[10px] font-bold shadow-xs border ${
-                                                isCompleted
-                                                    ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                                                    : ''
-                                            }`}
-                                        >
-                                            {isCompleted ? 'Selesai' : 'Dalam Proses'}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Center: Title, Stepper, Status */}
-                                <div className="flex-1 flex flex-col justify-between space-y-4">
-                                    <div className="space-y-1">
-                                        <h3
-                                            style={{
-                                                color: portalHeadingColor,
-                                                fontFamily: `'${portalFontHeading}', serif`,
-                                            }}
-                                            className="font-serif font-black text-xl leading-tight"
-                                        >
-                                            {p.name}
-                                        </h3>
-                                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 font-medium">
-                                            <div className="flex items-center gap-1.5">
-                                                <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                                                <span>{p.event_date || '12 Desember 2026'}</span>
-                                            </div>
-                                            <span>•</span>
-                                            <div className="flex items-center gap-1.5">
-                                                <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                                                <span>{p.location || 'Studio Arams Pictures'}</span>
-                                            </div>
+                                    style={{
+                                        backgroundColor: portalCardBg,
+                                        borderColor: portalCardBorder,
+                                    }}
+                                    className="rounded-2xl border p-4 sm:p-5 shadow-2xs hover:shadow-md transition-all flex flex-col lg:flex-row gap-4 sm:gap-5 items-stretch"
+                                >
+                                    {/* Left Thumbnail with Badge */}
+                                    <div className="relative w-full sm:w-44 md:w-48 lg:w-44 xl:w-48 h-36 sm:h-auto min-h-[135px] max-h-[170px] rounded-xl overflow-hidden bg-slate-100 shrink-0 shadow-2xs">
+                                        <img
+                                            src={p.thumbnail || '/images/wedding-couple.jpg'}
+                                            alt={p.name}
+                                            className="w-full h-full object-cover"
+                                        />
+                                        <div className="absolute bottom-2 left-2">
+                                            <span
+                                                style={
+                                                    p.status === 'cancelled'
+                                                        ? { backgroundColor: '#FEE2E2', color: '#991B1B', borderColor: '#FECACA' }
+                                                        : isCompleted
+                                                        ? { backgroundColor: '#D1FAE5', color: '#065F46', borderColor: '#A7F3D0' }
+                                                        : {
+                                                              backgroundColor: `${portalPrimaryAccent}15`,
+                                                              color: portalPrimaryAccent,
+                                                              borderColor: `${portalPrimaryAccent}35`,
+                                                          }
+                                                }
+                                                className="px-2.5 py-0.5 rounded-md text-[10px] font-bold shadow-xs border backdrop-blur-xs"
+                                            >
+                                                {p.status === 'cancelled' ? 'Dibatalkan' : isCompleted ? 'Selesai' : 'Dalam Proses'}
+                                            </span>
                                         </div>
                                     </div>
 
-                                    {/* Horizontal Stepper Line */}
-                                    <div className="pt-2 pb-2">
-                                        <div className="flex items-center justify-between relative">
-                                            {/* Background Line */}
-                                            <div className="absolute left-3 right-3 top-1/2 -translate-y-1/2 h-0.5 bg-slate-200 -z-0" />
-                                            {Array.from({ length: totalSteps }, (_, i) => i + 1).map((stepNum) => {
-                                                const isStepDone = isCompleted || stepNum < activeStep;
-                                                const isCurrent = !isCompleted && stepNum === activeStep;
-                                                return (
-                                                    <div
-                                                        key={stepNum}
-                                                        style={
-                                                            isCurrent
-                                                                ? {
-                                                                      backgroundColor: portalPrimaryAccent,
-                                                                      color: '#FFFFFF',
-                                                                      boxShadow: `0 0 0 3px ${portalPrimaryAccent}25`,
-                                                                  }
-                                                                : isStepDone
-                                                                ? {
-                                                                      backgroundColor: '#059669',
-                                                                      color: '#FFFFFF',
-                                                                  }
-                                                                : {}
-                                                        }
-                                                        className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold relative z-10 transition-all ${
-                                                            isCurrent ? 'scale-110 ring-2 ring-rose-400 z-20' : ''
-                                                        } ${
-                                                            !isStepDone && !isCurrent
-                                                                ? 'bg-slate-100 text-slate-400 border border-slate-200'
-                                                                : 'shadow-2xs'
-                                                        }`}
-                                                    >
-                                                        {isStepDone ? <Check className="w-3 h-3 stroke-[3]" /> : stepNum}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-
-                                    {/* Step Label Info Footer */}
-                                    <div className="text-xs">
-                                        {isCompleted ? (
-                                            <p className="text-slate-500">
-                                                Selesai pada <strong className="text-slate-900 font-bold">{p.completed_date || '30 Mei 2025'}</strong>
-                                            </p>
-                                        ) : (
-                                            <div className="flex flex-wrap items-center justify-between gap-2">
-                                                <div>
-                                                    <span className="text-slate-400 block text-[10px]">Tahapan Saat Ini</span>
-                                                    <strong className="text-slate-900 font-bold text-xs">{p.step_label || 'Preview Foto'}</strong>
+                                    {/* Center: Title, Stepper with Timeline Information, Status Strip */}
+                                    <div className="flex-1 flex flex-col justify-between min-w-0 space-y-3">
+                                        {/* Title & Metadata */}
+                                        <div className="space-y-1">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <h3
+                                                    style={{
+                                                        color: portalHeadingColor,
+                                                        fontFamily: `'${portalFontHeading}', serif`,
+                                                    }}
+                                                    className="font-serif font-black text-base sm:text-lg leading-snug line-clamp-1"
+                                                >
+                                                    {p.name}
+                                                </h3>
+                                                {p.category_name && (
+                                                    <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-semibold shrink-0 hidden sm:inline-block">
+                                                        {p.category_name}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 font-medium">
+                                                <div className="flex items-center gap-1.5">
+                                                    <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                                    <span>{p.event_date || 'Belum dijadwalkan'}</span>
                                                 </div>
-                                                <div className="text-right">
-                                                    <span className="text-slate-400 block text-[10px]">Estimasi Selesai</span>
-                                                    <strong className="text-slate-900 font-bold text-xs">{p.estimated_done || '05 Juni 2026'}</strong>
+                                                <span>•</span>
+                                                <div className="flex items-center gap-1.5 truncate">
+                                                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                                    <span className="truncate max-w-[220px]">{p.location || 'Studio Arams Pictures'}</span>
                                                 </div>
                                             </div>
-                                        )}
-                                    </div>
-                                </div>
+                                        </div>
 
-                                {/* Right: Payment Breakdown & Action Button */}
-                                <div className="w-full lg:w-64 flex flex-col justify-between pt-4 lg:pt-0 lg:pl-6 border-t lg:border-t-0 lg:border-l border-slate-100 space-y-3">
-                                    <div className="space-y-1.5 text-xs">
-                                        <div className="flex justify-between">
-                                            <span className="text-slate-400 text-[11px]">Total Pembayaran</span>
-                                            <span className="font-bold text-slate-900">{formatRupiah(p.total_amount)}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-slate-400 text-[11px]">Dibayar</span>
-                                            <span className="font-bold text-emerald-600">{formatRupiah(p.paid_amount)}</span>
-                                        </div>
-                                        {sisaTagihan > 0 && (
-                                            <div className="flex justify-between">
-                                                <span className="text-slate-400 text-[11px]">Sisa Tagihan</span>
-                                                <span className="font-bold text-rose-600">{formatRupiah(sisaTagihan)}</span>
+                                        {/* Horizontal Stepper with Complete Step Information */}
+                                        <div className="pt-1 pb-1">
+                                            <div className="relative flex items-start justify-between">
+                                                {/* Connecting Background Line */}
+                                                <div className="absolute left-4 right-4 top-3 -translate-y-1/2 h-0.5 bg-slate-200 -z-0" />
+
+                                                {stepsList.map((st, idx) => {
+                                                    const stepNum = st.step || idx + 1;
+                                                    const isStepDone = isCompleted || st.status === 'completed' || stepNum < activeStep;
+                                                    const isCurrent = !isCompleted && (st.status === 'active' || stepNum === activeStep);
+
+                                                    return (
+                                                        <div
+                                                            key={stepNum}
+                                                            className="flex flex-col items-center relative z-10 flex-1 px-0.5 text-center group cursor-default"
+                                                        >
+                                                            {/* Step Circle */}
+                                                            <div
+                                                                style={
+                                                                    isCurrent
+                                                                        ? {
+                                                                              backgroundColor: portalPrimaryAccent,
+                                                                              color: '#FFFFFF',
+                                                                              boxShadow: `0 0 0 3px ${portalPrimaryAccent}25`,
+                                                                          }
+                                                                        : isStepDone
+                                                                        ? {
+                                                                              backgroundColor: '#059669',
+                                                                              color: '#FFFFFF',
+                                                                          }
+                                                                        : {}
+                                                                }
+                                                                className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all shrink-0 ${
+                                                                    isCurrent ? 'scale-110 ring-2 ring-rose-400 z-20 shadow-xs' : ''
+                                                                } ${
+                                                                    !isStepDone && !isCurrent
+                                                                        ? 'bg-slate-100 text-slate-400 border border-slate-200'
+                                                                        : 'shadow-2xs'
+                                                                }`}
+                                                            >
+                                                                {isStepDone ? <Check className="w-3 h-3 stroke-[3]" /> : stepNum}
+                                                            </div>
+
+                                                            {/* Step Name / Info Text */}
+                                                            <span
+                                                                title={st.desc ? `${st.name}: ${st.desc}` : st.name}
+                                                                style={
+                                                                    isCurrent
+                                                                        ? { color: portalPrimaryAccent, fontWeight: 700 }
+                                                                        : isStepDone
+                                                                        ? { color: '#047857', fontWeight: 600 }
+                                                                        : {}
+                                                                }
+                                                                className={`text-[9px] sm:text-[10px] mt-1.5 leading-tight block text-center truncate max-w-[48px] sm:max-w-[70px] md:max-w-none transition-colors ${
+                                                                    !isStepDone && !isCurrent ? 'text-slate-400' : ''
+                                                                }`}
+                                                            >
+                                                                {st.name}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
-                                        )}
+                                        </div>
+
+                                        {/* Step Info Summary Footer */}
+                                        <div className="bg-slate-50/90 rounded-xl px-3 py-2 border border-slate-100/90 flex flex-wrap items-center justify-between gap-2 text-xs">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <span
+                                                    className={`w-2 h-2 rounded-full shrink-0 ${
+                                                        isCompleted ? 'bg-emerald-500' : 'bg-rose-500 animate-pulse'
+                                                    }`}
+                                                />
+                                                <div className="truncate text-xs">
+                                                    <span className="text-slate-400 text-[10px] mr-1.5 uppercase tracking-wider font-bold">
+                                                        {isCompleted ? 'Status:' : 'Tahapan Saat Ini:'}
+                                                    </span>
+                                                    <strong className="text-slate-900 font-bold text-xs">
+                                                        {isCompleted ? 'Project Selesai' : (p.step_label || 'Dalam Proses')}
+                                                    </strong>
+                                                    {!isCompleted && p.active_step_desc && (
+                                                        <span className="text-slate-500 text-[11px] hidden sm:inline ml-1.5">
+                                                            — {p.active_step_desc}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="text-right shrink-0 text-xs">
+                                                <span className="text-slate-400 text-[10px] mr-1.5 uppercase tracking-wider font-bold">
+                                                    {isCompleted ? 'Selesai Pada:' : 'Estimasi Selesai:'}
+                                                </span>
+                                                <strong className="text-slate-900 font-bold text-xs">
+                                                    {isCompleted
+                                                        ? (p.completed_date || '-')
+                                                        : (p.estimated_done || (p.deadline ? p.deadline : '-'))}
+                                                </strong>
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <Link
-                                        href={`/client/projects/${p.id}`}
-                                        style={{ color: portalPrimaryAccent }}
-                                        className="w-full py-2.5 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 font-bold text-xs shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center"
-                                    >
-                                        <span>Lihat Detail</span>
-                                        <ArrowRight className="w-3.5 h-3.5" />
-                                    </Link>
+                                    {/* Right: Payment Breakdown & Action Button */}
+                                    <div className="w-full lg:w-52 xl:w-56 flex flex-col justify-between pt-3.5 lg:pt-0 lg:pl-5 border-t lg:border-t-0 lg:border-l border-slate-100 space-y-2.5 shrink-0">
+                                        <div className="space-y-1.5 text-xs bg-slate-50/60 p-2.5 rounded-xl border border-slate-100/90">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-slate-400 text-[11px]">Total Tagihan</span>
+                                                <span className="font-bold text-slate-900 text-xs">{formatRupiah(p.total_amount)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-slate-400 text-[11px]">Dibayar</span>
+                                                <span className="font-bold text-emerald-600 text-xs">{formatRupiah(p.paid_amount)}</span>
+                                            </div>
+                                            {sisaTagihan > 0 ? (
+                                                <div className="flex justify-between items-center pt-1 border-t border-slate-200/50">
+                                                    <span className="text-slate-400 text-[11px]">Sisa Tagihan</span>
+                                                    <span className="font-bold text-rose-600 text-xs">{formatRupiah(sisaTagihan)}</span>
+                                                </div>
+                                            ) : (
+                                                <div className="flex justify-between items-center pt-1 border-t border-slate-200/50">
+                                                    <span className="text-slate-400 text-[11px]">Status</span>
+                                                    <span className="font-bold text-emerald-600 text-[11px]">Lunas</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <Link
+                                            href={`/client/projects/${p.id}`}
+                                            style={{ color: portalPrimaryAccent }}
+                                            className="w-full py-2 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 font-bold text-xs shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center hover:scale-[1.01]"
+                                        >
+                                            <span>Lihat Detail</span>
+                                            <ArrowRight className="w-3.5 h-3.5" />
+                                        </Link>
+                                    </div>
                                 </div>
-                            </div>
-                        );
-                    }))}
+                            );
+                        })
+                    )}
                 </div>
 
                 {/* ── 4. PAGINATION (MATCHING SCREENSHOT 3) ──────────────────── */}
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 text-xs text-slate-500">
                     <span>
-                        Menampilkan {filteredProjects.length > 0 ? 1 : 0} - {filteredProjects.length} dari {projects.length} project
+                        Menampilkan {filteredProjects.length > 0 ? startIndex + 1 : 0} - {endIndex} dari {filteredProjects.length} project
                     </span>
-                    <div className="flex items-center gap-1">
-                        <button className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center hover:bg-slate-50 cursor-pointer text-slate-400">
-                            <ChevronsLeft className="w-4 h-4" />
-                        </button>
-                        <button className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center hover:bg-slate-50 cursor-pointer text-slate-400">
-                            <ChevronLeft className="w-4 h-4" />
-                        </button>
-                        <button
-                            style={{
-                                backgroundColor: portalPrimaryAccent,
-                                color: '#FFFFFF',
-                            }}
-                            className="w-8 h-8 rounded-lg font-bold flex items-center justify-center shadow-xs cursor-pointer"
-                        >
-                            1
-                        </button>
-                        <button className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center hover:bg-slate-50 cursor-pointer text-slate-400">
-                            <ChevronRight className="w-4 h-4" />
-                        </button>
-                        <button className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center hover:bg-slate-50 cursor-pointer text-slate-400">
-                            <ChevronsRight className="w-4 h-4" />
-                        </button>
-                    </div>
+                    {totalPages > 1 && (
+                        <div className="flex items-center gap-1">
+                            <button
+                                type="button"
+                                onClick={() => setCurrentPage(1)}
+                                disabled={safeCurrentPage === 1}
+                                className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center hover:bg-slate-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-slate-500"
+                            >
+                                <ChevronsLeft className="w-4 h-4" />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                                disabled={safeCurrentPage === 1}
+                                className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center hover:bg-slate-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-slate-500"
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                            </button>
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => {
+                                const isActive = pageNum === safeCurrentPage;
+                                return (
+                                    <button
+                                        key={pageNum}
+                                        type="button"
+                                        onClick={() => setCurrentPage(pageNum)}
+                                        style={
+                                            isActive
+                                                ? {
+                                                      backgroundColor: portalPrimaryAccent,
+                                                      color: '#FFFFFF',
+                                                  }
+                                                : {}
+                                        }
+                                        className={`w-8 h-8 rounded-lg font-bold flex items-center justify-center transition-all cursor-pointer ${
+                                            isActive ? 'shadow-xs' : 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                                        }`}
+                                    >
+                                        {pageNum}
+                                    </button>
+                                );
+                            })}
+                            <button
+                                type="button"
+                                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                                disabled={safeCurrentPage === totalPages}
+                                className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center hover:bg-slate-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-slate-500"
+                            >
+                                <ChevronRight className="w-4 h-4" />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setCurrentPage(totalPages)}
+                                disabled={safeCurrentPage === totalPages}
+                                className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center hover:bg-slate-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-slate-500"
+                            >
+                                <ChevronsRight className="w-4 h-4" />
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </ClientLayout>
