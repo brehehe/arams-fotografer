@@ -42,6 +42,7 @@ class Project extends Model
         'notes',
         'workflow_step',
         'custom_timeline',
+        'category_data',
     ];
 
     protected $casts = [
@@ -55,6 +56,7 @@ class Project extends Model
         'total_amount' => 'decimal:2',
         'paid_amount' => 'decimal:2',
         'custom_timeline' => 'array',
+        'category_data' => 'array',
     ];
 
     public function getActivitylogOptions(): LogOptions

@@ -22,7 +22,7 @@ class PortalContentSeeder extends Seeder
                 'description' => 'Promo spesial untuk setiap momen berharga Anda. Dapatkan penawaran terbaik untuk paket wedding, prewedding & portrait pilihan Anda.',
                 'button_text' => 'Lihat Promo Selengkapnya',
                 'button_url' => '/form-klien',
-                'image' => '/images/wedding-couple.jpg',
+                'image' => 'https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=1920&auto=format&fit=crop&q=85',
                 'is_active' => true,
                 'sort_order' => 1,
             ]);
@@ -33,7 +33,7 @@ class PortalContentSeeder extends Seeder
                 'description' => 'Bonus video drone 4K dan album kanvas eksklusif untuk booking sesi pernikahan tahun ini. Slot terbatas untuk setiap musim.',
                 'button_text' => 'Booking Jadwal Sekarang',
                 'button_url' => '/form-klien',
-                'image' => 'https://images.unsplash.com/photo-1519741497674-611481863552?w=1200&auto=format&fit=crop&q=85',
+                'image' => 'https://images.unsplash.com/photo-1519741497674-611481863552?w=1920&auto=format&fit=crop&q=85',
                 'is_active' => true,
                 'sort_order' => 2,
             ]);
@@ -44,7 +44,7 @@ class PortalContentSeeder extends Seeder
                 'description' => 'Ciptakan warisan kenangan hangat bersama keluarga tercinta di studio eksklusif dengan pencahayaan sinematik premium.',
                 'button_text' => 'Konsultasi Paket',
                 'button_url' => '/form-klien',
-                'image' => 'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=1200&auto=format&fit=crop&q=85',
+                'image' => 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=1920&auto=format&fit=crop&q=85',
                 'is_active' => true,
                 'sort_order' => 3,
             ]);

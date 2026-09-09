@@ -45,6 +45,16 @@ class ClientPortalController extends Controller
     }
 
     /**
+     * Display client studio portfolio gallery & Instagram feed.
+     */
+    public function portfolio(Request $request): Response
+    {
+        $data = $this->clientPortalService->getPortfolioData($request);
+
+        return Inertia::render('Client/Portfolio', $data);
+    }
+
+    /**
      * Store client review for the project.
      */
     public function submitReview(Request $request, Project $project): \Illuminate\Http\RedirectResponse

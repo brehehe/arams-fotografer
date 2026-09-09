@@ -884,6 +884,7 @@ class DatabaseSeeder extends Seeder
         $usedPaid  = 0;
         $projIdx = 9;
         $clientList = Client::pluck('id')->toArray();
+        $extraProjectsList = [];
 
         for ($ei = 0; $ei < $extraCount; $ei++) {
             $status   = $extraStatuses[$ei];
@@ -927,6 +928,7 @@ class DatabaseSeeder extends Seeder
                 'workflow_step'  => $status === 'completed' ? 'completed' : ($status === 'draft' ? 'booking' : 'editing'),
             ]);
 
+            $extraProjectsList[] = $proj;
             $projIdx++;
         }
 
@@ -949,10 +951,11 @@ class DatabaseSeeder extends Seeder
         $payIdx = 3;
         foreach ($monthlyRemaining as $monthNum => $amount) {
             if ($amount > 0) {
+                $targetProj = $extraProjectsList[$monthNum - 1] ?? $p2;
                 Payment::create([
                     'payment_number'   => sprintf('PAY-26%02d-%04d', $monthNum, $payIdx),
-                    'project_id'       => $p1->id,
-                    'client_id'        => $clientAndi->id,
+                    'project_id'       => $targetProj->id,
+                    'client_id'        => $targetProj->client_id,
                     'amount'           => $amount,
                     'payment_date'     => Carbon::create(2026, $monthNum, 15),
                     'payment_method_id' => $bca->id,

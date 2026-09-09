@@ -19,6 +19,9 @@ import {
     HeartHandshake,
     Workflow,
     Facebook,
+    Star,
+    MessageCircle,
+    Clock,
 } from 'lucide-react';
 
 interface ClientLayoutProps {
@@ -34,32 +37,33 @@ export function ClientLayout({ children }: ClientLayoutProps) {
     const [notificationsOpen, setNotificationsOpen] = useState(false);
 
     // Dynamic Theme Tokens from Settings
-    const portalBg = appSettings.portal_bg_color || '#FAF8F5';
+    const portalBg = appSettings.portal_bg_color || '#FBF6F0';
     const portalBgGradient = appSettings.portal_bg_gradient || '';
-    const portalNavBg = appSettings.portal_nav_bg || '#240B10';
+    const portalNavBg = appSettings.portal_nav_bg || '#3C0E0E';
     const portalNavGradient = appSettings.portal_nav_gradient || '';
     const portalNavText = appSettings.portal_nav_text_color || '#FFFFFF';
-    const portalNavBorder = appSettings.portal_nav_border_color || '#3D141C';
-    const portalPrimaryAccent = appSettings.portal_primary_accent || '#4A151B';
+    const portalNavBorder = appSettings.portal_nav_border_color || '#4D1212';
+    const portalPrimaryAccent = appSettings.portal_primary_accent || '#3C0E0E';
     const portalAccentGradient = appSettings.portal_accent_gradient || '';
     const portalCardBg = appSettings.portal_card_bg || '#FFFFFF';
-    const portalCardBorder = appSettings.portal_card_border || 'rgba(226, 232, 240, 0.8)';
-    const portalHeadingColor = appSettings.portal_heading_color || '#240B10';
+    const portalCardBorder = appSettings.portal_card_border || '#F4EBE4';
+    const portalHeadingColor = appSettings.portal_heading_color || '#3C0E0E';
     const portalTextColor = appSettings.portal_text_color || '#334155';
-    const portalMutedColor = appSettings.portal_muted_color || '#64748B';
+    const portalMutedColor = appSettings.portal_muted_color || '#7A6666';
     const portalFontHeading = appSettings.portal_font_heading || 'Plus Jakarta Sans';
     const portalFontBody = appSettings.portal_font_body || 'Plus Jakarta Sans';
-    const portalHeroBg = appSettings.portal_hero_bg || '#240B10';
+    const portalHeroBg = appSettings.portal_hero_bg || '#3C0E0E';
     const portalHeroGradient = appSettings.portal_hero_gradient || '';
     const portalHeroText = appSettings.portal_hero_text_color || '#FFFFFF';
-    const portalFooterBg = appSettings.portal_footer_bg || '#1A070B';
-    const portalFooterText = appSettings.portal_footer_text || '#FDA4AF';
+    const portalFooterBg = appSettings.portal_footer_bg || '#3C0E0E';
+    const portalFooterText = appSettings.portal_footer_text || '#F4EBE4';
 
     const isCurrent = (path: string) => {
         const rawUrl = url || (typeof window !== 'undefined' ? window.location.pathname : '') || '';
         const currentUrl = rawUrl.split('?')[0].split('#')[0];
         if (path === '/client/dashboard' && (currentUrl === '/client/dashboard' || currentUrl === '/client' || currentUrl === '/portal')) return true;
         if (path === '/client/projects' && currentUrl.startsWith('/client/projects')) return true;
+        if (path === '/client/portfolio' && (currentUrl.startsWith('/client/portfolio') || currentUrl.startsWith('/client/portfolios'))) return true;
         return false;
     };
 
@@ -135,7 +139,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                             </span>
                             <span
                                 style={{
-                                    color: portalFooterText || '#FDA4AF',
+                                    color: portalFooterText || '#F4EBE4',
                                 }}
                                 className="text-[8px] sm:text-[9px] tracking-[0.25em] sm:tracking-[0.3em] uppercase font-bold -mt-0.5 whitespace-nowrap"
                             >
@@ -151,7 +155,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                             style={
                                 isCurrent('/client/dashboard')
                                     ? {
-                                          backgroundColor: portalNavText,
+                                          backgroundColor: '#FFFFFF',
                                           color: portalNavBg,
                                       }
                                     : {
@@ -171,7 +175,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                             style={
                                 isCurrent('/client/projects')
                                     ? {
-                                          backgroundColor: portalNavText,
+                                          backgroundColor: '#FFFFFF',
                                           color: portalNavBg,
                                       }
                                     : {
@@ -183,7 +187,27 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                             }`}
                         >
                             <FolderKanban className="w-4 h-4 shrink-0" />
-                            <span className="hidden min-[460px]:inline">Project Saya</span>
+                            <span className="hidden min-[460px]:inline">Project</span>
+                        </Link>
+
+                        <Link
+                            href="/client/portfolio"
+                            style={
+                                isCurrent('/client/portfolio')
+                                    ? {
+                                          backgroundColor: '#FFFFFF',
+                                          color: portalNavBg,
+                                      }
+                                    : {
+                                          color: `${portalNavText}cc`,
+                                      }
+                            }
+                            className={`px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 sm:gap-2 ${
+                                !isCurrent('/client/portfolio') ? 'hover:bg-white/10 hover:text-white' : 'shadow-sm'
+                            }`}
+                        >
+                            <Camera className="w-4 h-4 shrink-0" />
+                            <span className="hidden min-[460px]:inline">Portofolio</span>
                         </Link>
                     </nav>
 
@@ -200,13 +224,11 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                                 <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 <span
                                     style={{
-                                        backgroundColor: portalPrimaryAccent,
+                                        backgroundColor: '#E11D48',
                                         borderColor: portalNavBg,
                                     }}
-                                    className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 sm:w-4 sm:h-4 text-white rounded-full text-[8px] sm:text-[9px] font-bold flex items-center justify-center border-2"
-                                >
-                                    2
-                                </span>
+                                    className="absolute top-1 right-1 w-2 h-2 rounded-full border border-[#3C0E0E]"
+                                />
                             </button>
 
                             {/* Notifications Dropdown */}
@@ -216,10 +238,10 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                                     <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-100 p-3 z-50 text-xs animate-in fade-in zoom-in-95">
                                         <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2">
                                             <span className="font-bold text-slate-900">Notifikasi</span>
-                                            <span className="text-[10px] text-[#4A151B] font-semibold">Tandai sudah dibaca</span>
+                                            <span className="text-[10px] text-[#3C0E0E] font-semibold">Tandai sudah dibaca</span>
                                         </div>
                                         <div className="space-y-2">
-                                            <div className="p-2.5 rounded-xl bg-rose-50/60 border border-rose-100">
+                                            <div className="p-2.5 rounded-xl bg-[#F4EBE4]/60 border border-[#F4EBE4]">
                                                 <p className="font-bold text-slate-900 text-[11px]">Preview Foto Siap Dilihat</p>
                                                 <p className="text-[10px] text-slate-500 mt-0.5">Editor telah mengunggah preview foto untuk Wedding Anda.</p>
                                                 <span className="text-[9px] text-slate-400 mt-1 block">5 menit yang lalu</span>
@@ -263,7 +285,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                                         <div className="px-3 py-2">
                                             <p className="font-bold text-slate-900 truncate">{user?.name || 'Andi Pratama'}</p>
                                             <p className="text-[11px] text-slate-500 truncate">{user?.email || 'andi.pratama@gmail.com'}</p>
-                                            <span className="inline-block px-2 py-0.5 mt-1 rounded-full text-[9px] font-bold bg-rose-100 text-[#4A151B]">
+                                            <span className="inline-block px-2 py-0.5 mt-1 rounded-full text-[9px] font-bold bg-[#F4EBE4] text-[#3C0E0E]">
                                                 Akun Klien
                                             </span>
                                         </div>
@@ -289,7 +311,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                                                 <Link
                                                     href="/dashboard"
                                                     onClick={() => setDropdownOpen(false)}
-                                                    className="w-full px-3 py-2 rounded-xl flex items-center gap-2 font-bold text-[#4A151B] hover:bg-rose-50 transition-colors"
+                                                    className="w-full px-3 py-2 rounded-xl flex items-center gap-2 font-bold text-[#3C0E0E] hover:bg-[#F4EBE4] transition-colors"
                                                 >
                                                     <Camera className="w-3.5 h-3.5" />
                                                     <span>Studio Admin Dashboard</span>
@@ -320,152 +342,241 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                 {children}
             </main>
 
-            {/* ── FOOTER ── */}
-            <footer
-                style={{
-                    backgroundColor: portalFooterBg,
-                    color: portalFooterText,
-                    borderColor: portalNavBorder,
-                }}
-                className="mt-auto border-t pt-10 sm:pt-12 pb-0 transition-colors"
-            >
-                <div className="w-full max-w-full px-4 sm:px-6 lg:px-8 space-y-8">
-                    {/* Top 4 Value Badges (Kenapa Memilih Arams Pictures?) */}
-                    <div
-                        style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}
-                        className="space-y-4 pb-8 border-b"
-                    >
+            {/* ── FOOTER (Matching Screenshot 100%) ── */}
+            <footer className="mt-auto transition-colors">
+                {/* 1. Value Badges Dark Bar: KENAPA MEMILIH ARAMS PICTURES? */}
+                <div
+                    style={{
+                        backgroundColor: '#3C0E0E',
+                        color: '#FFFFFF',
+                    }}
+                    className="py-8 sm:py-10 px-4 sm:px-6 lg:px-8"
+                >
+                    <div className="w-full max-w-full space-y-6">
                         <h4
-                            style={{ color: '#FFFFFF' }}
-                            className="text-xs font-black uppercase tracking-wider"
+                            style={{
+                                color: '#FFFFFF',
+                                fontFamily: `'${portalFontHeading}', serif`,
+                            }}
+                            className="text-xs font-black uppercase tracking-widest"
                         >
                             Kenapa Memilih Arams Pictures?
                         </h4>
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-                            <div className="space-y-2">
-                                <div
-                                    style={{
-                                        backgroundColor: `${portalPrimaryAccent}25`,
-                                        color: portalFooterText || '#FDA4AF',
-                                    }}
-                                    className="w-9 h-9 rounded-xl flex items-center justify-center"
-                                >
-                                    <Award className="w-4 h-4" />
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-6 sm:gap-6">
+                            {/* 1. Berpengalaman */}
+                            <div className="flex items-start gap-3">
+                                <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-[#F4EBE4] shrink-0 mt-0.5">
+                                    <Star className="w-4 h-4 text-[#F4EBE4]" />
                                 </div>
-                                <h5 style={{ color: '#FFFFFF' }} className="font-bold text-xs">Berpengalaman</h5>
-                                <p className="text-[11px] opacity-80 leading-snug">
-                                    Lebih dari 7 tahun mengabadikan momen berharga.
-                                </p>
+                                <div className="space-y-0.5">
+                                    <h5 className="font-bold text-xs text-white">Berpengalaman</h5>
+                                    <p className="text-[11px] text-[#F4EBE4]/80 leading-snug">
+                                        Lebih dari 7 tahun mengabadikan momen berharga.
+                                    </p>
+                                </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <div
-                                    style={{
-                                        backgroundColor: `${portalPrimaryAccent}25`,
-                                        color: portalFooterText || '#FDA4AF',
-                                    }}
-                                    className="w-9 h-9 rounded-xl flex items-center justify-center"
-                                >
-                                    <Camera className="w-4 h-4" />
+                            {/* 2. Kualitas Terbaik */}
+                            <div className="flex items-start gap-3">
+                                <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-[#F4EBE4] shrink-0 mt-0.5">
+                                    <CheckCircle2 className="w-4 h-4 text-[#F4EBE4]" />
                                 </div>
-                                <h5 style={{ color: '#FFFFFF' }} className="font-bold text-xs">Kualitas Terbaik</h5>
-                                <p className="text-[11px] opacity-80 leading-snug">
-                                    Peralatan profesional &amp; editing berkualitas tinggi.
-                                </p>
+                                <div className="space-y-0.5">
+                                    <h5 className="font-bold text-xs text-white">Kualitas Terbaik</h5>
+                                    <p className="text-[11px] text-[#F4EBE4]/80 leading-snug">
+                                        Peralatan profesional & editing berkualitas tinggi.
+                                    </p>
+                                </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <div
-                                    style={{
-                                        backgroundColor: `${portalPrimaryAccent}25`,
-                                        color: portalFooterText || '#FDA4AF',
-                                    }}
-                                    className="w-9 h-9 rounded-xl flex items-center justify-center"
-                                >
-                                    <HeartHandshake className="w-4 h-4" />
+                            {/* 3. Pelayanan Personal */}
+                            <div className="flex items-start gap-3">
+                                <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-[#F4EBE4] shrink-0 mt-0.5">
+                                    <User className="w-4 h-4 text-[#F4EBE4]" />
                                 </div>
-                                <h5 style={{ color: '#FFFFFF' }} className="font-bold text-xs">Pelayanan Personal</h5>
-                                <p className="text-[11px] opacity-80 leading-snug">
-                                    Pendekatan ramah &amp; perhatian detail untuk setiap klien.
-                                </p>
+                                <div className="space-y-0.5">
+                                    <h5 className="font-bold text-xs text-white">Pelayanan Personal</h5>
+                                    <p className="text-[11px] text-[#F4EBE4]/80 leading-snug">
+                                        Kami mendengar & mewujudkan visi Anda.
+                                    </p>
+                                </div>
                             </div>
 
-                            <div className="space-y-2">
-                                <div
-                                    style={{
-                                        backgroundColor: `${portalPrimaryAccent}25`,
-                                        color: portalFooterText || '#FDA4AF',
-                                    }}
-                                    className="w-9 h-9 rounded-xl flex items-center justify-center"
-                                >
-                                    <Workflow className="w-4 h-4" />
+                            {/* 4. Proses Terorganisir */}
+                            <div className="flex items-start gap-3">
+                                <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-[#F4EBE4] shrink-0 mt-0.5">
+                                    <Workflow className="w-4 h-4 text-[#F4EBE4]" />
                                 </div>
-                                <h5 style={{ color: '#FFFFFF' }} className="font-bold text-xs">Proses Terorganisir</h5>
-                                <p className="text-[11px] opacity-80 leading-snug">
-                                    Alur kerja jelas, update rutin, dan tepat waktu.
-                                </p>
+                                <div className="space-y-0.5">
+                                    <h5 className="font-bold text-xs text-white">Proses Terorganisir</h5>
+                                    <p className="text-[11px] text-[#F4EBE4]/80 leading-snug">
+                                        Alur kerja jelas, update rutin, dan tepat waktu.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* 5. 100% Aman */}
+                            <div className="flex items-start gap-3 col-span-2 md:col-span-1">
+                                <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-[#F4EBE4] shrink-0 mt-0.5">
+                                    <Shield className="w-4 h-4 text-[#F4EBE4]" />
+                                </div>
+                                <div className="space-y-0.5">
+                                    <h5 className="font-bold text-xs text-white">100% Aman</h5>
+                                    <p className="text-[11px] text-[#F4EBE4]/80 leading-snug">
+                                        Data & file Anda aman bersama kami.
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Bottom Dark Copyright Bar */}
+                {/* 2. Main Footer Body with Warm Cream / Off-White Theme */}
                 <div
                     style={{
-                        backgroundColor: 'rgba(0, 0, 0, 0.25)',
+                        backgroundColor: '#FBF6F0',
+                        color: '#334155',
+                        borderColor: '#F4EBE4',
                     }}
-                    className="py-6 mt-6"
+                    className="pt-10 pb-8 px-4 sm:px-6 lg:px-8 border-t"
                 >
-                    <div className="w-full max-w-full px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
-                        {/* Brand & Tagline */}
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center text-white font-serif italic font-bold text-xs">
-                                ap
-                            </div>
-                            <div>
-                                <h4
-                                    style={{
-                                        fontFamily: `'${portalFontHeading}', serif`,
-                                    }}
-                                    className="font-black tracking-widest text-white text-xs uppercase"
-                                >
-                                    Arams Pictures
-                                </h4>
-                                <p
-                                    style={{ color: portalFooterText || '#FDA4AF' }}
-                                    className="text-[10px] font-medium"
-                                >
-                                    Capture Your Moments, Tell Your Story
-                                </p>
+                    <div className="w-full max-w-full grid grid-cols-1 md:grid-cols-2 gap-8 pb-8 border-b border-[#F4EBE4]">
+                        {/* Left: HUBUNGI KAMI */}
+                        <div className="space-y-3">
+                            <h4
+                                style={{
+                                    color: '#3C0E0E',
+                                    fontFamily: `'${portalFontHeading}', serif`,
+                                }}
+                                className="text-xs font-black uppercase tracking-wider"
+                            >
+                                Hubungi Kami
+                            </h4>
+                            <p className="text-xs text-slate-500">
+                                Kami siap membantu Anda kapan saja.
+                            </p>
+                            <div className="flex flex-wrap items-center gap-6 pt-1 text-xs text-slate-700">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-full bg-[#F4EBE4] flex items-center justify-center text-[#3C0E0E]">
+                                        <MessageCircle className="w-3.5 h-3.5 text-[#3C0E0E]" />
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 block font-semibold uppercase">WhatsApp</span>
+                                        <span className="font-bold text-xs text-slate-800">+62 812-3456-7890</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-full bg-[#F4EBE4] flex items-center justify-center text-[#3C0E0E]">
+                                        <FileText className="w-3.5 h-3.5 text-[#3C0E0E]" />
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 block font-semibold uppercase">Email</span>
+                                        <span className="font-bold text-xs text-slate-800">hello@aramspictures.com</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-full bg-[#F4EBE4] flex items-center justify-center text-[#3C0E0E]">
+                                        <Clock className="w-3.5 h-3.5 text-[#3C0E0E]" />
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] text-slate-400 block font-semibold uppercase">Jam Operasional</span>
+                                        <span className="font-bold text-xs text-slate-800">Senin - Minggu, 09.00 - 18.00 WIB</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Social Icons */}
-                        <div className="flex flex-col items-center gap-1.5">
-                            <span className="text-[10px] text-white/60 uppercase tracking-widest font-bold">
+                        {/* Right: IKUTI KAMI */}
+                        <div className="space-y-3 md:text-right">
+                            <h4
+                                style={{
+                                    color: '#3C0E0E',
+                                    fontFamily: `'${portalFontHeading}', serif`,
+                                }}
+                                className="text-xs font-black uppercase tracking-wider"
+                            >
                                 Ikuti Kami
-                            </span>
-                            <div className="flex items-center gap-3 text-white/80">
-                                <a href="https://instagram.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors" aria-label="Instagram">
+                            </h4>
+                            <p className="text-xs text-slate-500">
+                                Ikuti sosial media kami untuk update terbaru.
+                            </p>
+                            <div className="flex items-center gap-3 pt-1 md:justify-end">
+                                <a
+                                    href="https://instagram.com"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="w-8 h-8 rounded-full border border-slate-300 flex items-center justify-center text-slate-600 hover:text-[#3C0E0E] hover:border-[#3C0E0E] transition-colors"
+                                    aria-label="Instagram"
+                                >
                                     <Instagram className="w-4 h-4" />
                                 </a>
-                                <a href="https://youtube.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors" aria-label="YouTube">
+                                <a
+                                    href="https://youtube.com"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="w-8 h-8 rounded-full border border-slate-300 flex items-center justify-center text-slate-600 hover:text-[#3C0E0E] hover:border-[#3C0E0E] transition-colors"
+                                    aria-label="YouTube"
+                                >
                                     <Youtube className="w-4 h-4" />
                                 </a>
-                                <a href="https://facebook.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors" aria-label="Facebook">
+                                <a
+                                    href="https://tiktok.com"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="w-8 h-8 rounded-full border border-slate-300 flex items-center justify-center text-slate-600 hover:text-[#3C0E0E] hover:border-[#3C0E0E] transition-colors"
+                                    aria-label="TikTok"
+                                >
+                                    <span className="text-xs font-bold">♪</span>
+                                </a>
+                                <a
+                                    href="https://facebook.com"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="w-8 h-8 rounded-full border border-slate-300 flex items-center justify-center text-slate-600 hover:text-[#3C0E0E] hover:border-[#3C0E0E] transition-colors"
+                                    aria-label="Facebook"
+                                >
                                     <Facebook className="w-4 h-4" />
+                                </a>
+                                <a
+                                    href="https://pinterest.com"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="w-8 h-8 rounded-full border border-slate-300 flex items-center justify-center text-slate-600 hover:text-[#3C0E0E] hover:border-[#3C0E0E] transition-colors"
+                                    aria-label="Pinterest"
+                                >
+                                    <span className="text-xs font-serif font-bold">P</span>
                                 </a>
                             </div>
                         </div>
+                    </div>
 
-                        {/* Copyright & Links */}
-                        <div className="flex flex-col md:items-end gap-1 text-[11px] text-white/70">
-                            <span>© 2026 Arams Pictures. All rights reserved.</span>
-                            <div className="flex items-center gap-3 text-[10px]">
-                                <Link href="#" className="hover:text-white transition-colors">Kebijakan Privasi</Link>
-                                <span>|</span>
-                                <Link href="#" className="hover:text-white transition-colors">Syarat &amp; Ketentuan</Link>
+                    {/* 3. Bottom Copyright Row */}
+                    <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+                        <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-lg border border-slate-300 flex items-center justify-center text-[#3C0E0E] font-serif italic font-bold text-[10px]">
+                                ap
                             </div>
+                            <span
+                                style={{
+                                    fontFamily: `'${portalFontHeading}', serif`,
+                                    color: '#3C0E0E',
+                                }}
+                                className="font-black tracking-widest text-xs uppercase"
+                            >
+                                Arams
+                            </span>
+                        </div>
+
+                        <div>
+                            <span>© 2026 Arams Pictures. All rights reserved.</span>
+                        </div>
+
+                        <div className="flex items-center gap-3 text-xs text-slate-500">
+                            <Link href="#" className="hover:text-[#3C0E0E] transition-colors">Kebijakan Privasi</Link>
+                            <span>|</span>
+                            <Link href="#" className="hover:text-[#3C0E0E] transition-colors">Syarat &amp; Ketentuan</Link>
                         </div>
                     </div>
                 </div>

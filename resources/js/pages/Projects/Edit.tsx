@@ -47,6 +47,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { FormattedNumberInput } from '@/components/ui/formatted-number-input';
 import { formatRupiah } from '@/lib/formatters';
 import { resolveWorkflow } from '@/lib/workflows';
+import { CategorySpecificForm } from '@/components/projects/CategorySpecificForm';
+import {
+    CategoryFormKey,
+    resolveCategoryKey,
+    AnyCategorySpecificData,
+} from '@/types/category-forms';
 
 interface ClientItem {
     id: string;
@@ -220,6 +226,7 @@ export default function ProjectsEdit({
 
     // ── STEP 1: FORM STATES ──────────────────────────────────────────────
     const [projectDate, setProjectDate] = useState<string>(initialProjectDate);
+    const [projectDeadline, setProjectDeadline] = useState<string>(initialDueDate);
     const [projectName, setProjectName] = useState<string>(project.name || '');
     const [clientId, setClientId] = useState<string>(project.client_id || '');
     const [categoryId, setCategoryId] = useState<string>(project.category_id || '');
@@ -229,6 +236,76 @@ export default function ProjectsEdit({
     const [referralSource, setReferralSource] = useState<string>(project.referral_source || client_sources[0]?.name || '');
     const [referralName, setReferralName] = useState<string>('');
     const [referralLink, setReferralLink] = useState<string>('');
+
+    const [categoryData, setCategoryData] = useState<AnyCategorySpecificData>(() => {
+        const existing = (project.category_data && typeof project.category_data === 'object') ? project.category_data : {};
+        const cl = project.client || clients.find((c) => String(c.id) === String(project.client_id));
+        return {
+            bride_name: existing.bride_name || cl?.bride_name || '',
+            groom_name: existing.groom_name || cl?.groom_name || '',
+            partner_1: existing.partner_1 || cl?.bride_name || '',
+            partner_2: existing.partner_2 || cl?.groom_name || '',
+            father_name: existing.father_name || cl?.father_name || '',
+            mother_name: existing.mother_name || cl?.mother_name || '',
+            family_name: existing.family_name || (cl?.name ? `Keluarga ${cl.name}` : ''),
+            baby_name: existing.baby_name || cl?.child_name || '',
+            contact_person: existing.contact_person || cl?.name || '',
+            pic_name: existing.pic_name || cl?.name || '',
+            pic_phone: existing.pic_phone || cl?.phone || '',
+            pic_email: existing.pic_email || cl?.email || '',
+            children: existing.children && Array.isArray(existing.children)
+                ? existing.children
+                : (cl?.children && cl.children.length > 0
+                    ? cl.children.map((k: any) => ({ name: k.name || '', age: '' }))
+                    : (cl?.child_name ? [{ name: cl.child_name, age: '' }] : [])),
+            ...existing,
+        };
+    });
+
+    const handleCategoryDataChange = (field: string, value: any) => {
+        setCategoryData((prev) => {
+            const next = { ...prev, [field]: value };
+            if (field === 'session_location' || field === 'location' || field === 'akad_location' || field === 'event_location') {
+                if (!projectLocation || projectLocation === prev[field]) {
+                    setProjectLocation(value);
+                }
+            }
+            if (field === 'session_date' || field === 'akad_date' || field === 'event_date' || field === 'departure_date') {
+                if (!projectDate || projectDate === prev[field]) {
+                    setProjectDate(value);
+                    setShootingEventDate(value);
+                }
+            }
+            return next;
+        });
+    };
+
+    const handleClientChange = (newClientId: string) => {
+        setClientId(newClientId);
+        const cl = clients.find((c) => String(c.id) === String(newClientId));
+        if (cl) {
+            setCategoryData((prev) => ({
+                ...prev,
+                bride_name: prev.bride_name || cl.bride_name || '',
+                groom_name: prev.groom_name || cl.groom_name || '',
+                partner_1: prev.partner_1 || cl.bride_name || '',
+                partner_2: prev.partner_2 || cl.groom_name || '',
+                father_name: prev.father_name || cl.father_name || '',
+                mother_name: prev.mother_name || cl.mother_name || '',
+                family_name: prev.family_name || (cl.name ? `Keluarga ${cl.name}` : ''),
+                baby_name: prev.baby_name || cl.child_name || '',
+                contact_person: prev.contact_person || cl.name || '',
+                pic_name: prev.pic_name || cl.name || '',
+                pic_phone: prev.pic_phone || cl.phone || '',
+                pic_email: prev.pic_email || cl.email || '',
+                children: prev.children && prev.children.length > 0
+                    ? prev.children
+                    : (cl.children && cl.children.length > 0
+                        ? cl.children.map((k: any) => ({ name: k.name || '', age: '' }))
+                        : (cl.child_name ? [{ name: cl.child_name, age: '' }] : [])),
+            }));
+        }
+    };
 
     // Optional Project Cover Image / Thumbnail
     const [projectThumbnail, setProjectThumbnail] = useState<string>(project.thumbnail || '');
@@ -392,6 +469,10 @@ export default function ProjectsEdit({
     const selectedCategory = useMemo(() => {
         return categories.find((c) => String(c.id) === String(categoryId)) || categories[0];
     }, [categories, categoryId]);
+
+    const activeCategoryKey: CategoryFormKey = useMemo(() => {
+        return resolveCategoryKey(selectedCategory);
+    }, [selectedCategory]);
 
     const activeFormType = useMemo(() => {
         const cat = selectedCategory;
@@ -857,16 +938,24 @@ export default function ProjectsEdit({
 
     // Step Validation
     const validateStep1 = () => {
-        if (!projectName.trim()) {
-            toast.error('Nama Project wajib diisi');
-            return false;
-        }
         if (!clientId) {
             toast.error('Silakan pilih Klien');
             return false;
         }
         if (!categoryId) {
             toast.error('Silakan pilih Kategori Project');
+            return false;
+        }
+        if (!projectName.trim()) {
+            toast.error('Nama Project wajib diisi');
+            return false;
+        }
+        if (!projectDate) {
+            toast.error('Tanggal Project / Sesi / Acara wajib diisi');
+            return false;
+        }
+        if (!projectLocation.trim()) {
+            toast.error('Lokasi Project / Sesi wajib diisi');
             return false;
         }
         return true;
@@ -956,7 +1045,7 @@ export default function ProjectsEdit({
             status: effectiveStatus,
             event_date: shootingEventDate || projectDate || null,
             created_at_date: projectDate || null,
-            deadline: dpDueDate || null,
+            deadline: projectDeadline || dpDueDate || null,
             location: projectLocation || null,
             supervisor_id: supervisorId || null,
             photographer_name: photographerName || null,
@@ -977,6 +1066,40 @@ export default function ProjectsEdit({
                 .filter(Boolean)
                 .join('\n\n'),
             selected_addons: selectedAddonsPayload,
+            category_data: categoryData,
+            client_overrides: {
+                ...(activeCategoryKey === 'wedding' || activeFormType === 'wedding' ? {
+                    bride_name: categoryData.bride_name || null,
+                    groom_name: categoryData.groom_name || null,
+                } : {}),
+                ...(activeCategoryKey === 'prewedding' ? {
+                    bride_name: categoryData.partner_1 || null,
+                    groom_name: categoryData.partner_2 || null,
+                } : {}),
+                ...(activeCategoryKey === 'engagement' ? {
+                    groom_name: categoryData.groom_name || null,
+                    bride_name: categoryData.bride_name || null,
+                } : {}),
+                ...(activeCategoryKey === 'maternity' ? {
+                    mother_name: categoryData.mother_name || null,
+                    father_name: categoryData.father_name || null,
+                } : {}),
+                ...(activeCategoryKey === 'family' ? {
+                    father_name: categoryData.father_name || null,
+                    mother_name: categoryData.mother_name || null,
+                    children: Array.isArray(categoryData.children) ? categoryData.children.map((c: any) => ({
+                        name: c.name,
+                        age: c.age,
+                    })) : [],
+                } : {}),
+                ...(activeCategoryKey === 'newborn' || activeFormType === 'newborn' ? {
+                    father_name: categoryData.father_name || null,
+                    mother_name: categoryData.mother_name || null,
+                    child_name: categoryData.baby_name || null,
+                    child_birth_date: categoryData.birth_date || null,
+                    child_gender: categoryData.gender || null,
+                } : {}),
+            },
         };
 
         router.put(`/projects/${project.id}`, payload as any, {
@@ -1192,61 +1315,149 @@ export default function ProjectsEdit({
             {/* ═════════════════════════════════════════════════════════════════ */}
             {currentStep === 1 && (
                 <div className="space-y-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start text-slate-900">
-                        {/* Card 1: Detail Utama Project (col-span-12 lg:col-span-7) */}
-                        <div className="lg:col-span-7 bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs space-y-4">
-                            <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
-                                <h3 className="font-bold text-base text-slate-900">Detail Project &amp; Klien</h3>
-                                <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100">
-                                    Langkah 1 dari 4
-                                </span>
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 min-w-0">
-                                <div className="space-y-1 min-w-0">
-                                    <label className="text-[11px] font-bold text-slate-600 block">
-                                        Tanggal Project <span className="text-rose-500">*</span>
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={projectDate}
-                                        onChange={(e) => {
-                                            setProjectDate(e.target.value);
-                                            if (!shootingEventDate || shootingEventDate === projectDate) {
-                                                setShootingEventDate(e.target.value);
-                                            }
-                                        }}
-                                        className="w-full h-[42px] px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:border-[#4F46E5] focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
-                                    />
+                    {/* ── CARD 1: INFORMASI PROJECT (FORM UMUM — SEMUA PROJECT) ───────── */}
+                    <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs space-y-4">
+                        <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-[#4F46E5] flex items-center justify-center shrink-0">
+                                    <CalendarIcon className="w-4 h-4" />
                                 </div>
-
-                                <div className="space-y-1 min-w-0">
-                                    <label className="text-[11px] font-bold text-slate-600 block">
-                                        Estimasi Durasi Standby
-                                    </label>
-                                    <SelectSearch
-                                        options={shootingDurationOptions}
-                                        value={shootingDuration}
-                                        onChange={setShootingDuration}
-                                        clearable={false}
-                                    />
+                                <div>
+                                    <h3 className="font-bold text-base text-slate-900">1. Informasi Project</h3>
+                                    <p className="text-[11px] text-slate-400">Data umum project dan jadwal pelaksanaan</p>
                                 </div>
                             </div>
+                            <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100 shrink-0">
+                                Form Umum
+                            </span>
+                        </div>
 
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0">
+                            {/* Client (Select / Client Picker) - WAJIB */}
+                            <div className="space-y-1.5 min-w-0 sm:col-span-2">
+                                <label className="text-[11px] font-bold text-slate-600 block">
+                                    Client <span className="text-rose-500">*</span>
+                                </label>
+                                <SelectSearch
+                                    options={clientOptions}
+                                    value={clientId}
+                                    onChange={handleClientChange}
+                                    placeholder="Cari atau pilih Client..."
+                                    searchPlaceholder="Ketik nama klien atau telepon..."
+                                    clearable={false}
+                                />
+                                {selectedClient && (
+                                    <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80 text-xs flex flex-wrap items-center gap-x-4 gap-y-1 text-slate-600">
+                                        <span className="font-semibold text-slate-800">👤 {selectedClient.name}</span>
+                                        {selectedClient.phone && <span>📞 {selectedClient.phone}</span>}
+                                        {selectedClient.email && <span>✉️ {selectedClient.email}</span>}
+                                        {selectedClient.city && <span>📍 {selectedClient.city}</span>}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Kategori Project - WAJIB */}
                             <div className="space-y-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-[11px] font-bold text-slate-600 block">
+                                        Kategori Project <span className="text-rose-500">*</span>
+                                    </label>
+                                    <span className="text-[10px] text-slate-400">Pilih kategori project</span>
+                                </div>
+                                <SelectSearch
+                                    options={categoryOptions}
+                                    value={categoryId}
+                                    onChange={handleCategoryChange}
+                                    placeholder="Pilih Kategori Project..."
+                                    searchPlaceholder="Cari kategori..."
+                                    clearable={false}
+                                />
+                            </div>
+
+                            {/* Kode Project - AUTO */}
+                            <div className="space-y-1 min-w-0">
+                                <label className="text-[11px] font-bold text-slate-600 block">
+                                    Kode Project <span className="text-slate-400 font-normal">(Auto)</span>
+                                </label>
+                                <div className="h-[42px] px-3 bg-slate-100/80 border border-slate-200 rounded-xl text-xs font-mono font-semibold text-slate-700 flex items-center justify-between">
+                                    <span>{project.project_number || 'PRJ-AUTO'}</span>
+                                    <span className="text-[10px] uppercase tracking-wider font-bold bg-slate-200 text-slate-600 px-2 py-0.5 rounded">Otomatis</span>
+                                </div>
+                            </div>
+
+                            {/* Nama Project - WAJIB */}
+                            <div className="space-y-1 min-w-0 sm:col-span-2">
                                 <label className="text-[11px] font-bold text-slate-600 block">
                                     Nama Project <span className="text-rose-500">*</span>
                                 </label>
                                 <Input
                                     value={projectName}
                                     onChange={(e) => setProjectName(e.target.value)}
-                                    placeholder="Contoh: Wedding Kevin &amp; Jessica"
+                                    placeholder="Contoh: Maternity Shoot Sarah & Andrew"
                                     className="h-[42px]"
                                 />
                             </div>
 
+                            {/* Tanggal Project / Sesi / Acara - WAJIB */}
+                            <div className="space-y-1 min-w-0">
+                                <label className="text-[11px] font-bold text-slate-600 block">
+                                    Tanggal Project / Sesi / Acara <span className="text-rose-500">*</span>
+                                </label>
+                                <input
+                                    type="date"
+                                    value={projectDate}
+                                    onChange={(e) => {
+                                        setProjectDate(e.target.value);
+                                        if (!shootingEventDate || shootingEventDate === projectDate) {
+                                            setShootingEventDate(e.target.value);
+                                        }
+                                    }}
+                                    className="w-full h-[42px] px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:border-[#4F46E5] focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                                />
+                            </div>
+
+                            {/* Deadline Hasil Foto - OPSIONAL */}
+                            <div className="space-y-1 min-w-0">
+                                <label className="text-[11px] font-bold text-slate-600 block">
+                                    Deadline Hasil Foto <span className="text-slate-400 font-normal">(Opsional)</span>
+                                </label>
+                                <input
+                                    type="date"
+                                    value={projectDeadline}
+                                    onChange={(e) => setProjectDeadline(e.target.value)}
+                                    className="w-full h-[42px] px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:border-[#4F46E5] focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                                />
+                            </div>
+
+                            {/* Lokasi Project / Sesi - WAJIB */}
+                            <div className="space-y-1 min-w-0 sm:col-span-2">
+                                <label className="text-[11px] font-bold text-slate-600 block">
+                                    Lokasi Project / Sesi <span className="text-rose-500">*</span>
+                                </label>
+                                <Input
+                                    icon={<MapPin className="w-4 h-4 text-slate-400" />}
+                                    value={projectLocation}
+                                    onChange={(e) => setProjectLocation(e.target.value)}
+                                    placeholder="Contoh: Studio Arams, Jakarta Selatan atau Alamat Lengkap Venue"
+                                    className="h-[42px]"
+                                />
+                            </div>
+
+                            {/* Estimasi Durasi Standby */}
+                            <div className="space-y-1 min-w-0 sm:col-span-2">
+                                <label className="text-[11px] font-bold text-slate-600 block">
+                                    Estimasi Durasi Standby
+                                </label>
+                                <SelectSearch
+                                    options={shootingDurationOptions}
+                                    value={shootingDuration}
+                                    onChange={setShootingDuration}
+                                    clearable={false}
+                                />
+                            </div>
+
                             {/* Foto / Cover Project (Opsional) */}
-                            <div className="space-y-1.5 min-w-0">
+                            <div className="space-y-1.5 min-w-0 sm:col-span-2 pt-2 border-t border-slate-100">
                                 <div className="flex items-center justify-between">
                                     <label className="text-[11px] font-bold text-slate-600">
                                         Foto / Cover Project <span className="text-slate-400 font-normal">(Opsional)</span>
@@ -1313,242 +1524,200 @@ export default function ProjectsEdit({
                                     </div>
                                 )}
                             </div>
+                        </div>
+                    </div>
 
-                            {/* Category Selection */}
-                            <div className="space-y-1 min-w-0">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-[11px] font-bold text-slate-600 block">
-                                        Kategori Project <span className="text-rose-500">*</span>
-                                    </label>
-                                    <span className="text-[10px] text-slate-400">Tipe alur & formulir</span>
+                    {/* ── CARD 2: INFORMASI KATEGORI KHUSUS ───────────── */}
+                    <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs space-y-4">
+                        <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-[#4F46E5] flex items-center justify-center shrink-0">
+                                    <Sparkles className="w-4 h-4" />
                                 </div>
-                                <SelectSearch
-                                    options={categoryOptions}
-                                    value={categoryId}
-                                    onChange={handleCategoryChange}
-                                    placeholder="Pilih Kategori Project..."
-                                    searchPlaceholder="Cari kategori..."
-                                    clearable={false}
-                                />
-                            </div>
-
-                            {/* Client Selection */}
-                            <div className="space-y-1 min-w-0">
-                                <label className="text-[11px] font-bold text-slate-600 block">
-                                    Client <span className="text-rose-500">*</span>
-                                </label>
-                                <SelectSearch
-                                    options={clientOptions}
-                                    value={clientId}
-                                    onChange={setClientId}
-                                    placeholder="Cari atau pilih Client..."
-                                    searchPlaceholder="Ketik nama klien atau telepon..."
-                                    clearable={false}
-                                />
-                                {selectedClient && (
-                                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 text-xs mt-1.5 space-y-1">
-                                        {activeFormType === 'newborn' && (selectedClient.child_name || (selectedClient.children && selectedClient.children.length > 0)) ? (
-                                            <div className="space-y-1">
-                                                {selectedClient.children && selectedClient.children.length > 1 ? (
-                                                    <div className="space-y-1">
-                                                        <div className="flex items-center gap-1.5 text-amber-900 font-bold text-[11px]">
-                                                            <Baby className="w-3.5 h-3.5 text-amber-600" />
-                                                            <span>Bayi Kembar ({selectedClient.children.length} Anak):</span>
-                                                        </div>
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pl-2 border-l-2 border-amber-300">
-                                                            {selectedClient.children.map((c, idx) => (
-                                                                <div key={idx} className="text-amber-800 text-[11px] bg-amber-50/80 px-2 py-1 rounded border border-amber-200/60">
-                                                                    <span className="font-semibold">#{idx + 1} {c.name || 'Tanpa Nama'}</span>
-                                                                    {c.nickname && <span className="text-[10px] text-slate-500 ml-1">({c.nickname})</span>}
-                                                                    <span className="text-[10px] text-amber-600 ml-1">({c.gender === 'P' || c.gender === 'Perempuan' ? 'Perempuan' : 'Laki-laki'})</span>
-                                                                    {c.birth_date && <span className="text-[10px] text-slate-500 block">🎂 {c.birth_date}</span>}
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex items-center justify-between text-amber-800 font-semibold text-[11px]">
-                                                        <span>👶 Bayi: {selectedClient.child_name || selectedClient.children?.[0]?.name || '-'} {(selectedClient.child_gender || selectedClient.children?.[0]?.gender) ? `(${selectedClient.child_gender === 'L' || selectedClient.children?.[0]?.gender === 'L' ? 'Laki-laki' : 'Perempuan'})` : ''}</span>
-                                                        {(selectedClient.child_birth_date || selectedClient.children?.[0]?.birth_date) && <span>🎂 {selectedClient.child_birth_date || selectedClient.children?.[0]?.birth_date}</span>}
-                                                    </div>
-                                                )}
-                                                {(selectedClient.father_name || selectedClient.mother_name) && (
-                                                    <div className="text-[10px] text-slate-600 flex flex-wrap items-center gap-2 pt-0.5 border-t border-slate-200/60">
-                                                        {selectedClient.father_name && <span>👨 Ayah: <strong className="text-slate-800">{selectedClient.father_name}</strong></span>}
-                                                        {selectedClient.father_name && selectedClient.mother_name && <span>•</span>}
-                                                        {selectedClient.mother_name && <span>👩 Ibu: <strong className="text-slate-800">{selectedClient.mother_name}</strong></span>}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ) : activeFormType === 'wedding' && (selectedClient.bride_name || selectedClient.groom_name) ? (
-                                            <div className="text-rose-800 font-semibold text-[11px]">
-                                                👰 {selectedClient.bride_name || '-'} & 🤵 {selectedClient.groom_name || '-'}
-                                            </div>
-                                        ) : null}
-                                        <div className="text-slate-500 text-[10px] flex items-center gap-3">
-                                            {selectedClient.phone && <span>📞 {selectedClient.phone}</span>}
-                                            {selectedClient.email && <span>✉️ {selectedClient.email}</span>}
-                                            {selectedClient.city && <span>📍 {selectedClient.city}</span>}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Package Selection */}
-                            <div className="space-y-1.5 min-w-0">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-[11px] font-bold text-slate-600">
-                                        Paket Layanan <span className="text-rose-500">*</span>
-                                    </label>
-                                    {selectedPackage && (
-                                        <span className="text-xs font-black text-indigo-700 font-sans">
-                                            {formatRupiah(packagePrice)}
-                                        </span>
-                                    )}
+                                <div>
+                                    <h3 className="font-bold text-base text-slate-900">
+                                        2. Informasi {selectedCategory?.name || 'Kategori'}
+                                    </h3>
+                                    <p className="text-[11px] text-slate-400">
+                                        Form data spesifik untuk kebutuhan kategori {selectedCategory?.name || 'project'}
+                                    </p>
                                 </div>
-                                <SelectSearch
-                                    options={packageOptions}
-                                    value={packageId || selectedPackage?.id}
-                                    onChange={setPackageId}
-                                    placeholder="Pilih Paket Layanan..."
-                                    searchPlaceholder="Cari paket..."
-                                    clearable={false}
-                                />
-                                {selectedPackage && (
-                                    <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-100 flex items-center justify-between text-xs mt-1.5">
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            <Briefcase className="w-4 h-4 text-indigo-600 shrink-0" />
-                                            <div className="min-w-0">
-                                                <span className="font-bold text-indigo-950 block truncate">
-                                                    {selectedCategory?.name} - {selectedPackage.name}
-                                                </span>
-                                                <span className="text-[10px] text-slate-500">
-                                                    Standby {selectedPackage.duration_hours || 12} Jam | Termasuk Tim Foto &amp; Video
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <span className="text-xs font-black text-indigo-700 shrink-0 font-sans ml-2">
-                                            {formatRupiah(packagePrice)}
-                                        </span>
-                                    </div>
-                                )}
                             </div>
+                            <span className="text-[11px] font-bold px-2.5 py-1 rounded-full border bg-indigo-50 text-indigo-700 border-indigo-200">
+                                {selectedCategory?.name || 'Kategori'}
+                            </span>
+                        </div>
 
-                            {/* Location */}
-                            <div className="space-y-1 min-w-0">
-                                <label className="text-[11px] font-bold text-slate-600 block">
-                                    Lokasi Project / Event <span className="text-rose-500">*</span>
-                                </label>
-                                <Input
-                                    icon={<MapPin className="w-4 h-4 text-slate-400" />}
-                                    value={projectLocation}
-                                    onChange={(e) => setProjectLocation(e.target.value)}
-                                    placeholder="Contoh: Grand Ballroom, Hotel Indonesia Kempinski"
-                                    className="h-[42px]"
-                                />
+                        <CategorySpecificForm
+                            categoryKey={activeCategoryKey}
+                            categoryName={selectedCategory?.name}
+                            data={categoryData}
+                            onChange={handleCategoryDataChange}
+                            mode="admin"
+                        />
+                    </div>
+
+                    {/* ── CARD 3: PAKET LAYANAN & DELIVERABLES ─────────── */}
+                    <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs space-y-4">
+                        <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-[#4F46E5] flex items-center justify-center shrink-0">
+                                    <Briefcase className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-base text-slate-900">3. Paket Layanan &amp; Deliverables</h3>
+                                    <p className="text-[11px] text-slate-400">Pilih paket dokumentasi dan deliverables project</p>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Card 2: Catatan & Referensi (col-span-12 lg:col-span-5) */}
-                        <div className="lg:col-span-5 space-y-5">
-                            <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs space-y-4">
-                                <div className="border-b border-slate-100 pb-3">
-                                    <h3 className="font-bold text-base text-slate-900">Catatan &amp; Referensi</h3>
-                                </div>
-
-                                <div className="space-y-1 min-w-0">
-                                    <label className="text-[11px] font-bold text-slate-600 block">Catatan Project</label>
-                                    <Textarea
-                                        minRows={2}
-                                        value={projectNotes}
-                                        onChange={(e) => setProjectNotes(e.target.value)}
-                                        placeholder="Tambahkan catatan umum project..."
-                                    />
-                                </div>
-
-                                <div className="space-y-2 pt-1 border-t border-slate-100 min-w-0">
-                                    <label className="text-[11px] font-bold text-slate-600 block">Referensi / Sumber Klien</label>
-                                    <SelectSearch
-                                        options={referralSourceOptions}
-                                        value={referralSource}
-                                        onChange={setReferralSource}
-                                        placeholder="Pilih Sumber Referensi..."
-                                        clearable={false}
-                                    />
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                        <Input
-                                            value={referralName}
-                                            onChange={(e) => setReferralName(e.target.value)}
-                                            placeholder="Nama perujuk"
-                                            className="h-[38px] text-[11px]"
-                                        />
-                                        <Input
-                                            value={referralLink}
-                                            onChange={(e) => setReferralLink(e.target.value)}
-                                            placeholder="Link referensi"
-                                            className="h-[38px] text-[11px]"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1 pt-1 border-t border-slate-100 min-w-0">
-                                    <label className="text-[11px] font-bold text-slate-600 block">Requirement Khusus / Briefing</label>
-                                    <Textarea
-                                        minRows={2}
-                                        value={specialRequirement}
-                                        onChange={(e) => setSpecialRequirement(e.target.value)}
-                                        placeholder="Contoh: Tone warna warm &amp; bright, durasi teaser 1 menit..."
-                                    />
-                                </div>
-
-                                <div className="space-y-1 pt-1 border-t border-slate-100 min-w-0">
-                                    <label className="text-[11px] font-bold text-slate-600 block">Notes Tambahan</label>
-                                    <Textarea
-                                        minRows={2}
-                                        value={additionalNotes}
-                                        onChange={(e) => setAdditionalNotes(e.target.value)}
-                                        placeholder="Catatan tambahan untuk tim..."
-                                    />
-                                    <div className="pt-1">
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1.5">Visible untuk</span>
-                                        <div className="flex items-center gap-3 text-xs flex-wrap">
-                                            <label className="flex items-center gap-1.5 cursor-pointer text-slate-700">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={visibleFor.supervisor}
-                                                    onChange={(e) => setVisibleFor({ ...visibleFor, supervisor: e.target.checked })}
-                                                    className="rounded text-[#4F46E5]"
-                                                />
-                                                <span>Supervisor</span>
-                                            </label>
-                                            <label className="flex items-center gap-1.5 cursor-pointer text-slate-700">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={visibleFor.photographer}
-                                                    onChange={(e) => setVisibleFor({ ...visibleFor, photographer: e.target.checked })}
-                                                    className="rounded text-[#4F46E5]"
-                                                />
-                                                <span>Photographer</span>
-                                            </label>
-                                            <label className="flex items-center gap-1.5 cursor-pointer text-slate-700">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={visibleFor.editor}
-                                                    onChange={(e) => setVisibleFor({ ...visibleFor, editor: e.target.checked })}
-                                                    className="rounded text-[#4F46E5]"
-                                                />
-                                                <span>Editor</span>
-                                            </label>
-                                            <label className="flex items-center gap-1.5 cursor-pointer text-slate-700">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={visibleFor.client}
-                                                    onChange={(e) => setVisibleFor({ ...visibleFor, client: e.target.checked })}
-                                                    className="rounded text-[#4F46E5]"
-                                                />
-                                                <span>Client</span>
-                                            </label>
+                        <div className="space-y-3 min-w-0">
+                            <div className="flex items-center justify-between">
+                                <label className="text-[11px] font-bold text-slate-600">
+                                    Paket Layanan <span className="text-rose-500">*</span>
+                                </label>
+                                {selectedPackage && (
+                                    <span className="text-xs font-black text-indigo-700 font-sans">
+                                        {formatRupiah(packagePrice)}
+                                    </span>
+                                )}
+                            </div>
+                            <SelectSearch
+                                options={packageOptions}
+                                value={packageId || selectedPackage?.id}
+                                onChange={setPackageId}
+                                placeholder="Pilih Paket Layanan..."
+                                searchPlaceholder="Cari paket..."
+                                clearable={false}
+                            />
+                            {selectedPackage && (
+                                <div className="p-3.5 rounded-xl bg-indigo-50/70 border border-indigo-100 flex items-center justify-between text-xs mt-1.5">
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                        <Briefcase className="w-4 h-4 text-indigo-600 shrink-0" />
+                                        <div className="min-w-0">
+                                            <span className="font-bold text-indigo-950 block truncate">
+                                                {selectedCategory?.name} - {selectedPackage.name}
+                                            </span>
+                                            <span className="text-[10px] text-slate-500">
+                                                Standby {selectedPackage.duration_hours || 12} Jam | Termasuk Tim Foto &amp; Video
+                                            </span>
                                         </div>
+                                    </div>
+                                    <span className="text-xs font-black text-indigo-700 shrink-0 font-sans ml-2">
+                                        {formatRupiah(packagePrice)}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* ── CARD 4: CATATAN & REFERENSI ─────────────────── */}
+                    <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs space-y-4">
+                        <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-[#4F46E5] flex items-center justify-center shrink-0">
+                                    <FileText className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-base text-slate-900">4. Catatan &amp; Referensi</h3>
+                                    <p className="text-[11px] text-slate-400">Catatan khusus, sumber rujukan, dan catatan tim</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-1 min-w-0 sm:col-span-2">
+                                <label className="text-[11px] font-bold text-slate-600 block">Catatan Project</label>
+                                <Textarea
+                                    minRows={2}
+                                    value={projectNotes}
+                                    onChange={(e) => setProjectNotes(e.target.value)}
+                                    placeholder="Tambahkan catatan umum project..."
+                                />
+                            </div>
+
+                            <div className="space-y-2 sm:col-span-2 pt-1 border-t border-slate-100 min-w-0">
+                                <label className="text-[11px] font-bold text-slate-600 block">Referensi / Sumber Klien</label>
+                                <SelectSearch
+                                    options={referralSourceOptions}
+                                    value={referralSource}
+                                    onChange={setReferralSource}
+                                    placeholder="Pilih Sumber Referensi..."
+                                    clearable={false}
+                                />
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <Input
+                                        value={referralName}
+                                        onChange={(e) => setReferralName(e.target.value)}
+                                        placeholder="Nama perujuk"
+                                        className="h-[38px] text-[11px]"
+                                    />
+                                    <Input
+                                        value={referralLink}
+                                        onChange={(e) => setReferralLink(e.target.value)}
+                                        placeholder="Link referensi"
+                                        className="h-[38px] text-[11px]"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-1 sm:col-span-2 pt-1 border-t border-slate-100 min-w-0">
+                                <label className="text-[11px] font-bold text-slate-600 block">Requirement Khusus / Briefing</label>
+                                <Textarea
+                                    minRows={2}
+                                    value={specialRequirement}
+                                    onChange={(e) => setSpecialRequirement(e.target.value)}
+                                    placeholder="Contoh: Tone warna warm &amp; bright, durasi teaser 1 menit..."
+                                />
+                            </div>
+
+                            <div className="space-y-1 sm:col-span-2 pt-1 border-t border-slate-100 min-w-0">
+                                <label className="text-[11px] font-bold text-slate-600 block">Notes Tambahan</label>
+                                <Textarea
+                                    minRows={2}
+                                    value={additionalNotes}
+                                    onChange={(e) => setAdditionalNotes(e.target.value)}
+                                    placeholder="Catatan tambahan untuk tim..."
+                                />
+                                <div className="pt-1">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1.5">Visible untuk</span>
+                                    <div className="flex items-center gap-3 text-xs flex-wrap">
+                                        <label className="flex items-center gap-1.5 cursor-pointer text-slate-700">
+                                            <input
+                                                type="checkbox"
+                                                checked={visibleFor.supervisor}
+                                                onChange={(e) => setVisibleFor({ ...visibleFor, supervisor: e.target.checked })}
+                                                className="rounded text-[#4F46E5]"
+                                            />
+                                            <span>Supervisor</span>
+                                        </label>
+                                        <label className="flex items-center gap-1.5 cursor-pointer text-slate-700">
+                                            <input
+                                                type="checkbox"
+                                                checked={visibleFor.photographer}
+                                                onChange={(e) => setVisibleFor({ ...visibleFor, photographer: e.target.checked })}
+                                                className="rounded text-[#4F46E5]"
+                                            />
+                                            <span>Photographer</span>
+                                        </label>
+                                        <label className="flex items-center gap-1.5 cursor-pointer text-slate-700">
+                                            <input
+                                                type="checkbox"
+                                                checked={visibleFor.editor}
+                                                onChange={(e) => setVisibleFor({ ...visibleFor, editor: e.target.checked })}
+                                                className="rounded text-[#4F46E5]"
+                                            />
+                                            <span>Editor</span>
+                                        </label>
+                                        <label className="flex items-center gap-1.5 cursor-pointer text-slate-700">
+                                            <input
+                                                type="checkbox"
+                                                checked={visibleFor.client}
+                                                onChange={(e) => setVisibleFor({ ...visibleFor, client: e.target.checked })}
+                                                className="rounded text-[#4F46E5]"
+                                            />
+                                            <span>Client</span>
+                                        </label>
                                     </div>
                                 </div>
                             </div>

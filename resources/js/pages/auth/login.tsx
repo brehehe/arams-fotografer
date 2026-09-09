@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Toaster } from 'sonner';
 import { Spinner } from '@/components/ui/spinner';
+import { isDarkColor } from '@/lib/utils';
 
 interface LoginProps {
     status?: string;
@@ -22,13 +23,16 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
     const { props: pageProps } = usePage<any>();
     const appSettings = pageProps?.appSettings || {};
 
-    const companyName     = appSettings.company_name        || 'Arams Pictures';
-    const loginBg         = appSettings.login_bg_color      || '#2E0F15';
-    const loginBgGradient = appSettings.login_bg_gradient   || 'linear-gradient(180deg, #2E0F15 0%, #200A0E 100%)';
-    const loginCardBg     = appSettings.login_card_bg       || '#380E13';
-    const loginAccent     = appSettings.login_accent_color  || '#4A151B';
-    const loginTagline    = appSettings.login_tagline       || 'Capture Your Moments';
-    const fontHeading     = appSettings.font_family_heading || 'Plus Jakarta Sans';
+    const companyName          = appSettings.company_name             || 'Arams Photography';
+    const loginBg              = appSettings.login_bg_color           || '#2E0F15';
+    const loginBgGradient      = appSettings.login_bg_gradient        || 'linear-gradient(180deg, #2E0F15 0%, #200A0E 100%)';
+    const loginCardBg          = appSettings.login_card_bg            || '#FFFFFF';
+    const loginCardBgGradient  = appSettings.login_card_bg_gradient   || '';
+    const loginAccent          = appSettings.login_accent_color       || '#2563EB';
+    const loginTagline         = appSettings.login_tagline            || 'STUDIO & CINEMA PHOTOGRAPHY SYSTEM';
+    const fontHeading          = appSettings.font_family_heading      || 'Plus Jakarta Sans';
+
+    const isDarkCard = isDarkColor(loginCardBg);
 
     const [showPassword, setShowPassword] = useState(false);
 
@@ -130,14 +134,26 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
                 </div>
             </div>
 
-            {/* ── RIGHT COLUMN: Clean White Form ───────────────────────── */}
-            <div className="flex-1 flex flex-col justify-center bg-white px-8 sm:px-12 lg:px-16 xl:px-20 py-12">
+            {/* ── RIGHT COLUMN: Dynamic Themed Form Panel ──────────────── */}
+            <div
+                style={{
+                    background: loginCardBgGradient || loginCardBg,
+                }}
+                className={`flex-1 flex flex-col justify-center px-8 sm:px-12 lg:px-16 xl:px-20 py-12 transition-colors ${
+                    isDarkCard ? 'text-slate-100' : 'text-slate-800'
+                }`}
+            >
                 {/* Mobile logo (only on small screens) */}
                 <div className="flex items-center gap-3 mb-8 lg:hidden">
-                    <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-base tracking-tight">
+                    <div
+                        style={{ backgroundColor: loginAccent }}
+                        className="w-10 h-10 rounded-xl text-white flex items-center justify-center font-black text-base tracking-tight shadow-sm"
+                    >
                         {initials}
                     </div>
-                    <span className="font-extrabold text-sm tracking-widest text-slate-800 uppercase">{companyName}</span>
+                    <span className={`font-extrabold text-sm tracking-widest uppercase ${isDarkCard ? 'text-white' : 'text-slate-800'}`}>
+                        {companyName}
+                    </span>
                 </div>
 
                 <div className="w-full max-w-md mx-auto space-y-7">
@@ -146,21 +162,21 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
                     <div className="space-y-1.5">
                         <h2
                             style={{
-                                color: loginCardBg,
+                                color: isDarkCard ? '#FFFFFF' : '#0F172A',
                                 fontFamily: `'${fontHeading}', serif`,
                             }}
                             className="text-3xl xl:text-4xl font-black tracking-tight"
                         >
                             Welcome Back!
                         </h2>
-                        <p className="text-sm text-slate-400">
+                        <p className={`text-sm ${isDarkCard ? 'text-slate-300' : 'text-slate-500'}`}>
                             Masuk ke sistem {companyName}
                         </p>
                     </div>
 
                     {/* Status */}
                     {status && (
-                        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold text-center">
+                        <div className="p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold text-center">
                             {status}
                         </div>
                     )}
@@ -170,11 +186,11 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
 
                         {/* Email */}
                         <div className="space-y-1.5">
-                            <label className="block text-sm font-semibold text-slate-700">
+                            <label className={`block text-sm font-semibold ${isDarkCard ? 'text-slate-200' : 'text-slate-700'}`}>
                                 Email
                             </label>
                             <div className="relative">
-                                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                                <Mail className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${isDarkCard ? 'text-slate-400' : 'text-slate-400'}`} />
                                 <input
                                     id="login-email"
                                     type="email"
@@ -183,7 +199,11 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
                                     value={data.email}
                                     onChange={(e) => setData('email', e.target.value)}
                                     placeholder="admin@arams.com"
-                                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 focus:bg-white focus:border-slate-400 rounded-xl text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400"
+                                    className={`w-full pl-10 pr-4 py-3 rounded-xl text-sm outline-none transition-all placeholder:text-slate-400 ${
+                                        isDarkCard
+                                            ? 'bg-white/10 border border-white/20 text-white focus:bg-white/15 focus:border-white/40 focus:ring-2 focus:ring-white/10'
+                                            : 'bg-slate-50 border border-slate-200 focus:bg-white focus:border-slate-400 text-slate-900 focus:ring-2 focus:ring-slate-200'
+                                    }`}
                                 />
                             </div>
                             {errors.email && (
@@ -193,11 +213,11 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
 
                         {/* Password */}
                         <div className="space-y-1.5">
-                            <label className="block text-sm font-semibold text-slate-700">
+                            <label className={`block text-sm font-semibold ${isDarkCard ? 'text-slate-200' : 'text-slate-700'}`}>
                                 Password
                             </label>
                             <div className="relative">
-                                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                                <Lock className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${isDarkCard ? 'text-slate-400' : 'text-slate-400'}`} />
                                 <input
                                     id="login-password"
                                     type={showPassword ? 'text' : 'password'}
@@ -206,12 +226,18 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
                                     value={data.password}
                                     onChange={(e) => setData('password', e.target.value)}
                                     placeholder="••••••••"
-                                    className="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-200 focus:bg-white focus:border-slate-400 rounded-xl text-sm text-slate-900 outline-none transition-all placeholder:text-slate-400"
+                                    className={`w-full pl-10 pr-10 py-3 rounded-xl text-sm outline-none transition-all placeholder:text-slate-400 ${
+                                        isDarkCard
+                                            ? 'bg-white/10 border border-white/20 text-white focus:bg-white/15 focus:border-white/40 focus:ring-2 focus:ring-white/10'
+                                            : 'bg-slate-50 border border-slate-200 focus:bg-white focus:border-slate-400 text-slate-900 focus:ring-2 focus:ring-slate-200'
+                                    }`}
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                                    className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 transition-colors cursor-pointer ${
+                                        isDarkCard ? 'text-slate-400 hover:text-white' : 'text-slate-400 hover:text-slate-700'
+                                    }`}
                                 >
                                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 </button>
@@ -226,8 +252,12 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
                             id="login-submit"
                             type="submit"
                             disabled={processing}
-                            style={{ backgroundColor: loginAccent, color: '#fff' }}
-                            className="w-full py-3.5 rounded-xl font-bold text-sm tracking-wide transition-all shadow-md cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.99]"
+                            style={{
+                                backgroundColor: loginAccent,
+                                color: '#FFFFFF',
+                                boxShadow: `0 4px 14px 0 ${loginAccent}60`,
+                            }}
+                            className="w-full py-3.5 rounded-xl font-bold text-sm tracking-wide transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 hover:opacity-95 hover:shadow-lg active:scale-[0.99]"
                         >
                             {processing ? (
                                 <>
@@ -244,7 +274,7 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
                             <div className="text-center">
                                 <Link
                                     href="/forgot-password"
-                                    style={{ color: loginAccent }}
+                                    style={{ color: isDarkCard ? '#93C5FD' : loginAccent }}
                                     className="text-sm font-semibold hover:underline"
                                 >
                                     Lupa password?
@@ -256,30 +286,32 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
                     {/* Belum punya akun */}
                     <div
                         style={{
-                            backgroundColor: `${loginAccent}0d`,
-                            borderColor: `${loginAccent}26`,
+                            backgroundColor: isDarkCard ? 'rgba(255, 255, 255, 0.06)' : `${loginAccent}0d`,
+                            borderColor: isDarkCard ? 'rgba(255, 255, 255, 0.15)' : `${loginAccent}26`,
                         }}
-                        className="border rounded-2xl p-4 flex items-start gap-3.5"
+                        className="border rounded-2xl p-4 flex items-start gap-3.5 backdrop-blur-xs"
                     >
                         <div
                             style={{
-                                backgroundColor: `${loginAccent}1a`,
-                                color: loginAccent,
+                                backgroundColor: isDarkCard ? 'rgba(255, 255, 255, 0.12)' : `${loginAccent}1a`,
+                                color: isDarkCard ? '#FFFFFF' : loginAccent,
                             }}
                             className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
                         >
                             <Gift className="w-4 h-4" />
                         </div>
                         <div className="text-sm">
-                            <h4 className="font-bold text-slate-900">Belum memiliki akun?</h4>
-                            <p className="text-xs text-slate-500 mt-0.5 leading-snug">
+                            <h4 className={`font-bold ${isDarkCard ? 'text-white' : 'text-slate-900'}`}>
+                                Belum memiliki akun?
+                            </h4>
+                            <p className={`text-xs mt-0.5 leading-snug ${isDarkCard ? 'text-slate-300' : 'text-slate-500'}`}>
                                 Hubungi admin {companyName} untuk mendapatkan akses ke portal ini.
                             </p>
                         </div>
                     </div>
 
                     {/* Footer */}
-                    <p className="text-center text-xs text-slate-400">
+                    <p className={`text-center text-xs ${isDarkCard ? 'text-slate-400' : 'text-slate-400'}`}>
                         © 2026 {companyName} Management System.
                     </p>
                 </div>

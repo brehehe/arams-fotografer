@@ -63,6 +63,7 @@ import {
 } from 'lucide-react';
 import { formatRupiah, formatDate } from '@/lib/formatters';
 import { FormattedNumberInput } from '@/components/ui/formatted-number-input';
+import { CategorySpecificView } from '@/components/projects/CategorySpecificView';
 
 interface FileLinkItem {
     id: string;
@@ -111,12 +112,21 @@ export default function ProjectDetail({
     // Modals
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [paymentSubmitting, setPaymentSubmitting] = useState(false);
-    const [paymentFormData, setPaymentFormData] = useState({
+    const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
+    const [paymentFormData, setPaymentFormData] = useState<{
+        amount: string;
+        payment_date: string;
+        payment_method_id: string;
+        reference_number: string;
+        notes: string;
+        proof_file: File | null;
+    }>({
         amount: '',
         payment_date: new Date().toISOString().split('T')[0],
         payment_method_id: payment_methods[0]?.id || '',
         reference_number: '',
         notes: 'Pembayaran Project',
+        proof_file: null,
     });
 
     const openPaymentModal = (defaultAmount?: number, defaultNotes?: string) => {
@@ -126,6 +136,7 @@ export default function ProjectDetail({
             payment_method_id: payment_methods[0]?.id || '',
             reference_number: '',
             notes: defaultNotes || `Pembayaran untuk project ${project?.name || ''}`,
+            proof_file: null,
         });
         setIsPaymentModalOpen(true);
     };
@@ -710,23 +721,31 @@ export default function ProjectDetail({
         }
 
         setPaymentSubmitting(true);
+
+        const payload: Record<string, any> = {
+            project_id: project.id,
+            amount: paymentFormData.amount,
+            payment_date: paymentFormData.payment_date,
+            payment_method_id: methodId,
+            reference_number: paymentFormData.reference_number,
+            notes: paymentFormData.notes,
+            invoice_id: project.invoices?.[0]?.id,
+        };
+
+        if (paymentFormData.proof_file) {
+            payload.proof_file = paymentFormData.proof_file;
+        }
+
         router.post(
             '/finance/payments',
+            payload,
             {
-                project_id: project.id,
-                amount: paymentFormData.amount,
-                payment_date: paymentFormData.payment_date,
-                payment_method_id: methodId,
-                reference_number: paymentFormData.reference_number,
-                notes: paymentFormData.notes,
-                invoice_id: project.invoices?.[0]?.id,
-            },
-            {
+                forceFormData: true,
                 preserveScroll: true,
                 onSuccess: () => {
                     setPaymentSubmitting(false);
                     setIsPaymentModalOpen(false);
-                    toast.success('Pembayaran DP berhasil dicatat dan masuk ke modul Keuangan!');
+                    toast.success('Pembayaran dan bukti transfer berhasil dicatat dan masuk ke modul Keuangan!');
                 },
                 onError: (errors: any) => {
                     setPaymentSubmitting(false);
@@ -1149,58 +1168,24 @@ export default function ProjectDetail({
                         </div>
                     </div>
 
-                    {/* ── ROW 2: INFORMASI KLIEN / PENGANTIN / BAYI & ORANG TUA (FULL-WIDTH CARD) ─── */}
-                    <div className={`bg-white p-5 sm:p-6 rounded-2xl border shadow-2xs hover:shadow-xs transition-all w-full ${
-                        categoryFormType === 'wedding'
-                            ? 'border-rose-200/90'
-                            : categoryFormType === 'newborn'
-                            ? 'border-amber-200/90'
-                            : 'border-slate-200/90'
-                    }`}>
-                        {/* Header Full Width */}
+                    {/* ── ROW 2A: INFORMASI SPESIFIK KATEGORI PROJECT ─── */}
+                    <CategorySpecificView project={project} />
+
+                    {/* ── ROW 2B: INFORMASI KONTAK KLIEN & ALAMAT ─── */}
+                    <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all w-full">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
                             <div className="flex items-center gap-3">
-                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                                    categoryFormType === 'wedding'
-                                        ? 'bg-rose-50 text-rose-600 border border-rose-200/60'
-                                        : categoryFormType === 'newborn'
-                                        ? 'bg-amber-50 text-amber-600 border border-amber-200/60'
-                                        : 'bg-indigo-50 text-indigo-600 border border-indigo-200/60'
-                                }`}>
-                                    {categoryFormType === 'wedding' ? (
-                                        <HeartHandshake className="w-5 h-5" />
-                                    ) : categoryFormType === 'newborn' ? (
-                                        <Baby className="w-5 h-5" />
-                                    ) : (
-                                        <User className="w-5 h-5" />
-                                    )}
+                                <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200/60 flex items-center justify-center shrink-0">
+                                    <User className="w-5 h-5" />
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-2">
-                                        <h3 className="font-bold text-sm text-slate-900">
-                                            {categoryFormType === 'wedding'
-                                                ? 'Informasi Pengantin & Acara'
-                                                : categoryFormType === 'newborn'
-                                                ? 'Informasi Bayi & Orang Tua'
-                                                : 'Informasi Klien & Kontak'}
-                                        </h3>
-                                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                                            categoryFormType === 'wedding'
-                                                ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                                : categoryFormType === 'newborn'
-                                                ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                                : 'bg-slate-50 text-slate-600 border-slate-200'
-                                        }`}>
-                                            {categoryFormType === 'wedding' ? '👰🤵 Wedding' : categoryFormType === 'newborn' ? '👶 Newborn' : '👤 Standar'}
+                                        <h3 className="font-bold text-sm text-slate-900">Informasi Klien &amp; Kontak Pemesan</h3>
+                                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold border bg-indigo-50 text-indigo-700 border-indigo-200">
+                                            {clientName}
                                         </span>
                                     </div>
-                                    <p className="text-xs text-slate-500 mt-0.5">
-                                        {categoryFormType === 'wedding'
-                                            ? 'Data lengkap calon mempelai wanita, pria, serta kontak acara & wedding organizer'
-                                            : categoryFormType === 'newborn'
-                                            ? 'Identitas data bayi yang difoto beserta informasi orang tua dan kontak'
-                                            : 'Identitas pemesan project, kontak utama, dan alamat pelaksanaan'}
-                                    </p>
+                                    <p className="text-xs text-slate-500 mt-0.5">Kontak utama pemesan, alamat pelaksanaan, dan catatan referensi</p>
                                 </div>
                             </div>
                             {project?.client?.id && (
@@ -1215,330 +1200,64 @@ export default function ProjectDetail({
                             )}
                         </div>
 
-                        {/* ── 3-COLUMN CONTENT GRID ── */}
-                        {categoryFormType === 'wedding' && (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
-                                {/* Col 1: CPW */}
-                                <div className="p-4 rounded-xl bg-rose-50/50 border border-rose-200/60 flex flex-col justify-between gap-3">
-                                    <div className="space-y-2">
-                                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-600 flex items-center gap-1.5">
-                                            👰 Calon Pengantin Wanita (CPW)
-                                        </span>
-                                        <div className="bg-white rounded-lg p-3 border border-rose-200/60 space-y-1 shadow-2xs">
-                                            <span className="font-bold text-sm text-slate-900 block">
-                                                {clientBrideName || clientName || '-'}
-                                            </span>
-                                            {clientBrideNickname && (
-                                                <span className="text-xs text-rose-600 font-medium block">
-                                                    Nama Panggilan: <strong className="text-slate-900">{clientBrideNickname}</strong>
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
+                            <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/70 space-y-2">
+                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                                    <User className="w-3.5 h-3.5 text-slate-400" /> Identitas Pemesan
+                                </span>
+                                <div className="text-xs space-y-1">
+                                    <div className="font-bold text-slate-900">{clientName}</div>
+                                    {clientCity && <div className="text-slate-500">Kota: {clientCity}</div>}
+                                    <div className="text-[11px] text-slate-500">Ref: {formattedReferral}</div>
                                 </div>
+                            </div>
 
-                                {/* Col 2: CPP */}
-                                <div className="p-4 rounded-xl bg-rose-50/40 border border-rose-200/50 flex flex-col justify-between gap-3">
-                                    <div className="space-y-2">
-                                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-600 flex items-center gap-1.5">
-                                            🤵 Calon Pengantin Pria (CPP)
-                                        </span>
-                                        <div className="bg-white rounded-lg p-3 border border-rose-200/60 space-y-1 shadow-2xs">
-                                            <span className="font-bold text-sm text-slate-900 block">
-                                                {clientGroomName || '-'}
-                                            </span>
-                                            {clientGroomNickname && (
-                                                <span className="text-xs text-rose-600 font-medium block">
-                                                    Nama Panggilan: <strong className="text-slate-900">{clientGroomNickname}</strong>
-                                                </span>
-                                            )}
-                                        </div>
+                            <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/70 space-y-2">
+                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                                    <Phone className="w-3.5 h-3.5 text-slate-400" /> Kontak Utama
+                                </span>
+                                <div className="space-y-1.5 text-xs">
+                                    <div className="flex items-center gap-2 text-slate-800">
+                                        <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                        <span className="font-mono font-medium">{clientPhone}</span>
                                     </div>
-                                    {clientName && clientName !== clientBrideName && clientName !== clientGroomName && (
-                                        <div className="pt-2 border-t border-rose-200/60 text-[11px] text-slate-600 flex items-center justify-between">
-                                            <span className="text-slate-500">Pemesan:</span>
-                                            <span className="font-semibold text-slate-900">{clientName}</span>
+                                    {clientEmail && clientEmail !== '-' && (
+                                        <div className="flex items-center gap-2 text-slate-700 truncate">
+                                            <Mail className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                            <span className="truncate">{clientEmail}</span>
                                         </div>
                                     )}
-                                </div>
-
-                                {/* Col 3: Kontak & WO */}
-                                <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/70 flex flex-col justify-between gap-3">
-                                    <div className="space-y-2.5">
-                                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                                            <Phone className="w-3.5 h-3.5 text-slate-400" /> Kontak &amp; Lokasi Acara
-                                        </span>
-                                        <div className="space-y-1.5 text-xs">
-                                            <div className="flex items-center gap-2 text-slate-800">
-                                                <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                                <span className="font-mono font-medium">{clientPhone}</span>
-                                                {clientSecondaryPhone && (
-                                                    <span className="text-[10px] text-slate-500 font-mono">/ {clientSecondaryPhone}</span>
-                                                )}
-                                            </div>
-                                            {clientEmail && clientEmail !== '-' && (
-                                                <div className="flex items-center gap-2 text-slate-700 truncate">
-                                                    <Mail className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                                                    <span className="truncate">{clientEmail}</span>
-                                                </div>
-                                            )}
-                                            {clientAddress && clientAddress !== '-' && (
-                                                <div className="flex items-start gap-2 text-slate-600 pt-1 border-t border-slate-200/60">
-                                                    <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
-                                                    <span className="text-[11px] leading-relaxed line-clamp-2">{clientAddress}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                    {woName && (
-                                        <div className="p-2.5 rounded-lg bg-purple-50/70 border border-purple-200/60 text-xs space-y-1">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-[9px] font-extrabold uppercase tracking-wider text-purple-600">Wedding Organizer</span>
-                                                <span className="text-[10px]">🎀</span>
-                                            </div>
-                                            <span className="font-bold text-slate-900 block">{woName}</span>
-                                            <div className="flex items-center justify-between text-[11px] text-slate-500">
-                                                {woPic && <span>PIC: <strong className="text-slate-700">{woPic}</strong></span>}
-                                                {woPhone && <span className="font-mono">📞 {woPhone}</span>}
-                                            </div>
+                                    {clientInstagram && clientInstagram !== '-' && (
+                                        <div className="flex items-center gap-2 text-slate-700">
+                                            <Instagram className="w-3.5 h-3.5 text-pink-500 shrink-0" />
+                                            <span>@{clientInstagram.replace('@', '')}</span>
                                         </div>
                                     )}
                                 </div>
                             </div>
-                        )}
 
-                        {categoryFormType === 'newborn' && (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
-                                {/* Col 1: Data Bayi */}
-                                <div className="p-4 rounded-xl bg-amber-50/50 border border-amber-200/60 flex flex-col justify-between gap-3">
-                                    <div>
-                                        <div className="flex items-center justify-between mb-2.5">
-                                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700 flex items-center gap-1.5">
-                                                <Baby className="w-4 h-4 text-amber-600" />
-                                                {clientChildren.length > 1 ? `Data Bayi Kembar (${clientChildren.length} Anak)` : 'Data Bayi'}
-                                            </span>
-                                            {clientChildren.length > 1 && (
-                                                <span className="px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 text-[10px] font-bold">
-                                                    Kembar
-                                                </span>
-                                            )}
+                            <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/70 space-y-2">
+                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                                    <MapPin className="w-3.5 h-3.5 text-slate-400" /> Alamat / Lokasi
+                                </span>
+                                <div className="text-xs text-slate-600 leading-relaxed">
+                                    {clientAddress && clientAddress !== '-' ? (
+                                        <div className="flex items-start gap-2">
+                                            <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
+                                            <span className="line-clamp-3">{clientAddress}</span>
                                         </div>
-
-                                        {clientChildren.length > 1 ? (
-                                            <div className="space-y-2">
-                                                {clientChildren.map((child, idx) => (
-                                                    <div key={idx} className="bg-white rounded-lg p-2.5 border border-amber-200/60 space-y-1 shadow-2xs">
-                                                        <div className="flex items-center justify-between gap-2">
-                                                            <span className="font-bold text-xs text-slate-900">
-                                                                👶 {child.name || `Bayi #${idx + 1}`}
-                                                                {child.nickname && <span className="text-amber-700 font-normal ml-1">({child.nickname})</span>}
-                                                            </span>
-                                                            {child.gender && (
-                                                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${
-                                                                    child.gender === 'L' || child.gender === 'Laki-laki'
-                                                                        ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                                                        : 'bg-pink-50 text-pink-700 border-pink-200'
-                                                                }`}>
-                                                                    {child.gender === 'L' || child.gender === 'Laki-laki' ? '♂ Laki-laki' : '♀ Perempuan'}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        {child.birth_date && (
-                                                            <span className="text-[11px] text-slate-600 block">
-                                                                🎂 {formatDateIndo(child.birth_date)}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (clientChildName || clientChildren[0]?.name) ? (
-                                            <div className="bg-white rounded-lg p-3 border border-amber-200/60 space-y-2 shadow-2xs">
-                                                <div className="flex items-start justify-between gap-2">
-                                                    <div>
-                                                        <div className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
-                                                            <span className="text-lg leading-none">👶</span>
-                                                            <span>{clientChildName || clientChildren[0]?.name}</span>
-                                                        </div>
-                                                        {(clientChildren[0]?.nickname) && (
-                                                            <span className="text-xs text-amber-800 font-medium ml-6 block">
-                                                                Panggilan: <strong className="text-slate-900">{clientChildren[0].nickname}</strong>
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    {(clientChildGender || clientChildren[0]?.gender) && (
-                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
-                                                            (clientChildGender || clientChildren[0]?.gender) === 'L' || (clientChildGender || clientChildren[0]?.gender) === 'Laki-laki'
-                                                                ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                                                : 'bg-pink-50 text-pink-700 border-pink-200'
-                                                        }`}>
-                                                            {(clientChildGender || clientChildren[0]?.gender) === 'L' || (clientChildGender || clientChildren[0]?.gender) === 'Laki-laki' ? '♂ Laki-laki' : '♀ Perempuan'}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                {(clientChildBirthDate || clientChildren[0]?.birth_date) && (
-                                                    <div className="pt-2 border-t border-amber-100/70 flex items-center gap-1.5 text-xs text-slate-600">
-                                                        <span>🎂</span>
-                                                        <span>Lahir: <strong className="text-slate-800 font-semibold">{formatDateIndo(clientChildBirthDate || clientChildren[0]?.birth_date)}</strong></span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <div className="bg-white/80 rounded-lg p-3 border border-dashed border-amber-200 text-center text-xs text-amber-700 italic">
-                                                Data bayi belum diisi di profil klien
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Col 2: Data Orang Tua */}
-                                <div className="p-4 rounded-xl bg-amber-50/30 border border-amber-200/50 flex flex-col justify-between gap-3">
-                                    <div className="space-y-3">
-                                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700 flex items-center gap-1.5">
-                                            <Users className="w-4 h-4 text-amber-600" /> Orang Tua / Wali
-                                        </span>
-                                        <div className="space-y-2">
-                                            <div className="bg-white rounded-lg p-2.5 border border-slate-200/70 flex items-center gap-2.5 shadow-2xs">
-                                                <span className="text-xl shrink-0">👨</span>
-                                                <div className="min-w-0 flex-1">
-                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block leading-none">Ayah</span>
-                                                    <span className="font-bold text-xs text-slate-900 truncate block mt-0.5">
-                                                        {clientFatherName || '-'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className="bg-white rounded-lg p-2.5 border border-slate-200/70 flex items-center gap-2.5 shadow-2xs">
-                                                <span className="text-xl shrink-0">👩</span>
-                                                <div className="min-w-0 flex-1">
-                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block leading-none">Ibu</span>
-                                                    <span className="font-bold text-xs text-slate-900 truncate block mt-0.5">
-                                                        {clientMotherName || '-'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {clientName && clientName !== clientFatherName && clientName !== clientMotherName && (
-                                        <div className="pt-2 border-t border-amber-200/60 text-[11px] text-slate-600 flex items-center justify-between">
-                                            <span className="text-slate-500">Nama Pemesan:</span>
-                                            <span className="font-semibold text-slate-900">{clientName}</span>
-                                        </div>
+                                    ) : (
+                                        <span className="text-slate-400 italic">Alamat belum dicatat</span>
                                     )}
                                 </div>
-
-                                {/* Col 3: Kontak & Alamat */}
-                                <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/70 flex flex-col justify-between gap-2.5">
-                                    <div className="space-y-2.5">
-                                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                                            <Phone className="w-3.5 h-3.5 text-slate-400" /> Kontak &amp; Lokasi
-                                        </span>
-                                        <div className="space-y-2 text-xs">
-                                            <div className="flex items-center gap-2 text-slate-800">
-                                                <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                                <span className="font-mono font-medium">{clientPhone}</span>
-                                                {clientSecondaryPhone && (
-                                                    <span className="text-[10px] text-slate-500 font-mono">/ {clientSecondaryPhone}</span>
-                                                )}
-                                            </div>
-                                            {clientEmail && clientEmail !== '-' && (
-                                                <div className="flex items-center gap-2 text-slate-700 truncate">
-                                                    <Mail className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                                                    <span className="truncate">{clientEmail}</span>
-                                                </div>
-                                            )}
-                                            {clientInstagram && clientInstagram !== '-' && (
-                                                <div className="flex items-center gap-2 text-slate-700">
-                                                    <Instagram className="w-3.5 h-3.5 text-pink-500 shrink-0" />
-                                                    <span>@{clientInstagram.replace('@', '')}</span>
-                                                </div>
-                                            )}
-                                            {clientAddress && clientAddress !== '-' && (
-                                                <div className="flex items-start gap-2 text-slate-600 pt-1 border-t border-slate-200/60">
-                                                    <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
-                                                    <span className="text-[11px] leading-relaxed line-clamp-2">{clientAddress}</span>
-                                                </div>
-                                            )}
-                                        </div>
+                                {woName && (
+                                    <div className="pt-2 border-t border-slate-200/60 flex items-center gap-2 text-purple-600 text-xs">
+                                        <span>🎀</span>
+                                        <span className="font-semibold">Mitra WO: {woName}</span>
                                     </div>
-                                </div>
+                                )}
                             </div>
-                        )}
-
-                        {categoryFormType === 'standard' && (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
-                                {/* Col 1: Profil Klien */}
-                                <div className="p-4 rounded-xl bg-indigo-50/40 border border-indigo-200/60 flex flex-col justify-between gap-3">
-                                    <div className="space-y-3">
-                                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-700 flex items-center gap-1.5">
-                                            <User className="w-4 h-4 text-indigo-600" /> Profil Klien
-                                        </span>
-                                        <div className="flex items-center gap-3 bg-white p-3 rounded-lg border border-indigo-100 shadow-2xs">
-                                            <div className="w-12 h-12 rounded-xl bg-indigo-500 text-white font-black text-lg flex items-center justify-center shrink-0 uppercase shadow-2xs">
-                                                {clientName.charAt(0)}
-                                            </div>
-                                            <div className="min-w-0">
-                                                <h4 className="font-bold text-sm text-slate-900 truncate">{clientName}</h4>
-                                                <span className="text-xs text-slate-500 block">{clientCity ? `Kota: ${clientCity}` : 'Klien Terdaftar'}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Col 2: Kontak Klien */}
-                                <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/70 flex flex-col justify-between gap-3">
-                                    <div className="space-y-2.5">
-                                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                                            <Phone className="w-3.5 h-3.5 text-slate-400" /> Kontak Utama
-                                        </span>
-                                        <div className="space-y-2 text-xs">
-                                            <div className="flex items-center gap-2 text-slate-800">
-                                                <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                                <span className="font-mono font-medium">{clientPhone}</span>
-                                                {clientSecondaryPhone && (
-                                                    <span className="text-[10px] text-slate-500 font-mono">/ {clientSecondaryPhone}</span>
-                                                )}
-                                            </div>
-                                            {clientEmail && clientEmail !== '-' && (
-                                                <div className="flex items-center gap-2 text-slate-700 truncate">
-                                                    <Mail className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                                                    <span className="truncate">{clientEmail}</span>
-                                                </div>
-                                            )}
-                                            {clientInstagram && clientInstagram !== '-' && (
-                                                <div className="flex items-center gap-2 text-slate-700">
-                                                    <Instagram className="w-3.5 h-3.5 text-pink-500 shrink-0" />
-                                                    <span>@{clientInstagram.replace('@', '')}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Col 3: Alamat Lengkap */}
-                                <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/70 flex flex-col justify-between gap-3">
-                                    <div className="space-y-2.5">
-                                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                                            <MapPin className="w-3.5 h-3.5 text-slate-400" /> Alamat Lengkap
-                                        </span>
-                                        <div className="text-xs text-slate-600 leading-relaxed">
-                                            {clientAddress && clientAddress !== '-' ? (
-                                                <div className="flex items-start gap-2">
-                                                    <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
-                                                    <span className="line-clamp-3">{clientAddress}</span>
-                                                </div>
-                                            ) : (
-                                                <span className="text-slate-400 italic">Alamat belum dicatat</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    {woName && (
-                                        <div className="pt-2 border-t border-slate-200/60 flex items-center gap-2 text-purple-600 text-xs">
-                                            <span>🎀</span>
-                                            <span className="font-semibold">Mitra WO: {woName}</span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
+                        </div>
                     </div>
 
                     {/* ── ROW 3: 3 FINANCIAL CARDS ─────────────────────────────────────── */}
@@ -1696,6 +1415,7 @@ export default function ProjectDetail({
                                                     payment_method_id: payment_methods[0]?.id || '',
                                                     reference_number: '',
                                                     notes: `Pembayaran DP (${dpPercent}%) project ${project.name}`,
+                                                    proof_file: null,
                                                 });
                                                 setIsPaymentModalOpen(true);
                                             }}
@@ -1854,13 +1574,14 @@ export default function ProjectDetail({
                                                 <th className="py-2 px-2">KETERANGAN</th>
                                                 <th className="py-2 px-2 text-right">JUMLAH</th>
                                                 <th className="py-2 px-2 text-center">STATUS</th>
+                                                <th className="py-2 px-2 text-center">BUKTI</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100 text-slate-700">
                                             {project?.payments && project.payments.length > 0 ? (
                                                 project.payments.map((pm: any, pIdx: number) => (
                                                     <tr key={pm.id || pIdx} className="hover:bg-slate-50/60 transition-colors">
-                                                        <td className="py-2.5 px-2 font-mono text-[11px]">{formatDateIndo(pm.payment_date || pm.created_at)}</td>
+                                                        <td className="py-2.5 px-2 font-mono text-[11px]">{formatDate(pm.payment_date || pm.created_at)}</td>
                                                         <td className="py-2.5 px-2 font-medium text-slate-900 text-[11px]">{pm.notes || 'Pembayaran Project'}</td>
                                                         <td className="py-2.5 px-2 text-right font-mono font-bold text-emerald-600 text-[11px]">
                                                             {formatRupiah(Number(pm.amount || 0))}
@@ -1870,11 +1591,26 @@ export default function ProjectDetail({
                                                                 BERHASIL
                                                             </span>
                                                         </td>
+                                                        <td className="py-2.5 px-2 text-center">
+                                                            {pm.proof_file ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setSelectedProofUrl(pm.proof_file)}
+                                                                    className="px-2 py-1 rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-[10px] inline-flex items-center gap-1 transition-colors cursor-pointer border border-indigo-200"
+                                                                    title="Lihat Bukti Transfer"
+                                                                >
+                                                                    <Eye className="w-3 h-3" />
+                                                                    <span>Bukti</span>
+                                                                </button>
+                                                            ) : (
+                                                                <span className="text-[10px] text-slate-300">-</span>
+                                                            )}
+                                                        </td>
                                                     </tr>
                                                 ))
                                             ) : (
                                                 <tr>
-                                                    <td colSpan={4} className="py-6 text-center text-slate-400">
+                                                    <td colSpan={5} className="py-6 text-center text-slate-400">
                                                         <CreditCard className="w-5 h-5 text-slate-300 mx-auto mb-1" />
                                                         <p className="font-semibold text-slate-600 text-[11px]">Belum ada riwayat transaksi</p>
                                                         <p className="text-[10px] text-slate-400">Klik &quot;Catat Pembayaran&quot; untuk input cicilan/DP</p>
@@ -2789,6 +2525,53 @@ export default function ProjectDetail({
                                     className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden"
                                 />
                             </div>
+
+                            {/* Upload Bukti Transfer */}
+                            <div className="space-y-1">
+                                <label className="font-bold text-slate-700">Upload Bukti Transfer / Pembayaran (Opsional)</label>
+                                {paymentFormData.proof_file ? (
+                                    <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-between">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <Receipt className="w-4 h-4 text-indigo-600 shrink-0" />
+                                            <div className="min-w-0">
+                                                <p className="font-bold text-slate-900 truncate text-xs">
+                                                    {paymentFormData.proof_file.name}
+                                                </p>
+                                                <span className="text-[10px] text-slate-500">
+                                                    {(paymentFormData.proof_file.size / 1024).toFixed(1)} KB
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setPaymentFormData({ ...paymentFormData, proof_file: null })}
+                                            className="p-1 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-red-500 cursor-pointer"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <label className="border-2 border-dashed border-slate-200 hover:border-[#3B46F1] rounded-xl p-3 flex flex-col items-center justify-center text-center bg-slate-50/60 hover:bg-slate-50 transition-all cursor-pointer group">
+                                        <Upload className="w-4 h-4 text-slate-400 group-hover:text-[#3B46F1] mb-1" />
+                                        <span className="text-xs font-bold text-slate-700 group-hover:text-[#3B46F1]">
+                                            Pilih Foto atau Dokumen Bukti Transfer
+                                        </span>
+                                        <span className="text-[10px] text-slate-400">
+                                            JPG, PNG, WEBP, atau PDF (Maks. 10MB)
+                                        </span>
+                                        <input
+                                            type="file"
+                                            accept="image/jpeg,image/png,image/webp,application/pdf"
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0] || null;
+                                                setPaymentFormData({ ...paymentFormData, proof_file: file });
+                                            }}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                )}
+                            </div>
+
                             <div className="pt-2 flex justify-end gap-2">
                                 <button
                                     type="button"
@@ -2806,6 +2589,60 @@ export default function ProjectDetail({
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* ── MODAL: LIHAT BUKTI PEMBAYARAN ─────────────────────────────────── */}
+            {selectedProofUrl && (
+                <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Receipt className="w-4 h-4 text-[#3B46F1]" />
+                                <h3 className="font-bold text-sm text-slate-900">Bukti Pembayaran / Transfer</h3>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedProofUrl(null)}
+                                className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                        <div className="p-4 overflow-y-auto flex items-center justify-center bg-slate-900/5 min-h-[300px]">
+                            {selectedProofUrl.toLowerCase().endsWith('.pdf') ? (
+                                <iframe
+                                    src={selectedProofUrl}
+                                    title="Bukti Pembayaran PDF"
+                                    className="w-full h-[400px] rounded-xl border border-slate-200 bg-white"
+                                />
+                            ) : (
+                                <img
+                                    src={selectedProofUrl}
+                                    alt="Bukti Transfer"
+                                    className="max-h-[500px] w-auto max-w-full rounded-xl object-contain shadow-md"
+                                />
+                            )}
+                        </div>
+                        <div className="p-3.5 px-5 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+                            <a
+                                href={selectedProofUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:underline"
+                            >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                <span>Buka File Asli di Tab Baru</span>
+                            </a>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedProofUrl(null)}
+                                className="px-4 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-xl cursor-pointer hover:bg-slate-800"
+                            >
+                                Tutup
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

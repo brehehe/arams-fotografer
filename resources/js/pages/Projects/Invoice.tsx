@@ -27,6 +27,8 @@ import {
     Settings2,
     RotateCcw,
     X,
+    Upload,
+    ExternalLink,
 } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
 import { toast } from 'sonner';
@@ -276,12 +278,20 @@ return '27 Agustus 2026';
 
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [paymentSubmitting, setPaymentSubmitting] = useState(false);
-    const [paymentFormData, setPaymentFormData] = useState({
+    const [paymentFormData, setPaymentFormData] = useState<{
+        amount: string;
+        payment_date: string;
+        payment_method_id: string;
+        reference_number: string;
+        notes: string;
+        proof_file: File | null;
+    }>({
         amount: String(Math.round(dpAmount)),
         payment_date: new Date().toISOString().split('T')[0],
         payment_method_id: defaultPaymentMethod?.id || payment_methods[0]?.id || '',
         reference_number: '',
         notes: `Pembayaran ${inv.notes || `Invoice ${inv.invoice_number}`}`,
+        proof_file: null,
     });
 
     const handlePaymentSubmit = (e: React.FormEvent) => {
@@ -302,23 +312,31 @@ return '27 Agustus 2026';
         }
 
         setPaymentSubmitting(true);
+
+        const payload: Record<string, any> = {
+            project_id: project.id,
+            amount: paymentFormData.amount,
+            payment_date: paymentFormData.payment_date,
+            payment_method_id: methodId,
+            reference_number: paymentFormData.reference_number,
+            notes: paymentFormData.notes,
+            invoice_id: inv.id,
+        };
+
+        if (paymentFormData.proof_file) {
+            payload.proof_file = paymentFormData.proof_file;
+        }
+
         router.post(
             '/finance/payments',
+            payload,
             {
-                project_id: project.id,
-                amount: paymentFormData.amount,
-                payment_date: paymentFormData.payment_date,
-                payment_method_id: methodId,
-                reference_number: paymentFormData.reference_number,
-                notes: paymentFormData.notes,
-                invoice_id: inv.id,
-            },
-            {
+                forceFormData: true,
                 preserveScroll: true,
                 onSuccess: () => {
                     setPaymentSubmitting(false);
                     setIsPaymentModalOpen(false);
-                    toast.success('Pembayaran berhasil dikonfirmasi dan dicatat ke Finance!');
+                    toast.success('Pembayaran dan bukti transfer berhasil dikonfirmasi dan dicatat ke Finance!');
                 },
                 onError: (errors: any) => {
                     setPaymentSubmitting(false);
@@ -1522,6 +1540,7 @@ return '27 Agustus 2026';
                                         payment_method_id: defaultPaymentMethod?.id || payment_methods[0]?.id || '',
                                         reference_number: '',
                                         notes: `Pembayaran ${inv.notes || `Invoice ${inv.invoice_number}`}`,
+                                        proof_file: null,
                                     });
                                     setIsPaymentModalOpen(true);
                                 }}
@@ -2121,6 +2140,53 @@ return '27 Agustus 2026';
                                     className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden"
                                 />
                             </div>
+
+                            {/* Upload Bukti Transfer */}
+                            <div className="space-y-1">
+                                <label className="font-bold text-slate-700">Upload Bukti Transfer / Pembayaran (Opsional)</label>
+                                {paymentFormData.proof_file ? (
+                                    <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-between">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <Receipt className="w-4 h-4 text-indigo-600 shrink-0" />
+                                            <div className="min-w-0">
+                                                <p className="font-bold text-slate-900 truncate text-xs">
+                                                    {paymentFormData.proof_file.name}
+                                                </p>
+                                                <span className="text-[10px] text-slate-500">
+                                                    {(paymentFormData.proof_file.size / 1024).toFixed(1)} KB
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setPaymentFormData({ ...paymentFormData, proof_file: null })}
+                                            className="p-1 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-red-500 cursor-pointer"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <label className="border-2 border-dashed border-slate-200 hover:border-[#3B46F1] rounded-xl p-3 flex flex-col items-center justify-center text-center bg-slate-50/60 hover:bg-slate-50 transition-all cursor-pointer group">
+                                        <Upload className="w-4 h-4 text-slate-400 group-hover:text-[#3B46F1] mb-1" />
+                                        <span className="text-xs font-bold text-slate-700 group-hover:text-[#3B46F1]">
+                                            Pilih Foto atau Dokumen Bukti Transfer
+                                        </span>
+                                        <span className="text-[10px] text-slate-400">
+                                            JPG, PNG, WEBP, atau PDF (Maks. 10MB)
+                                        </span>
+                                        <input
+                                            type="file"
+                                            accept="image/jpeg,image/png,image/webp,application/pdf"
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0] || null;
+                                                setPaymentFormData({ ...paymentFormData, proof_file: file });
+                                            }}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                )}
+                            </div>
+
                             <div className="pt-2 flex justify-end gap-2">
                                 <button
                                     type="button"

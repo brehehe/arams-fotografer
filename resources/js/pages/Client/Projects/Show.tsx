@@ -51,6 +51,7 @@ import {
     Receipt,
     Maximize2,
     Building2,
+    Eye,
 } from 'lucide-react';
 import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
@@ -78,6 +79,7 @@ interface PaymentItem {
     account_number?: string;
     account_holder?: string;
     reference_number?: string;
+    proof_file?: string | null;
     status: string;
     notes?: string;
 }
@@ -219,13 +221,39 @@ export default function ClientProjectDetail({
     const { props: pageProps } = usePage<any>();
     const appSettings = pageProps?.appSettings || {};
 
-    // Dynamic portal tokens
-    const portalPrimaryAccent = appSettings.portal_primary_accent || '#4A151B';
-    const portalHeroBg = appSettings.portal_hero_bg || '#240B10';
+    // Exact color palette tokens matching Dashboard
+    const COLOR_BURGUNDY = '#3C0E0E';
+    const COLOR_WARM_CREAM = '#F4EBE4';
+    const COLOR_OFF_WHITE = '#FBF6F0';
+
+    const portalPrimaryAccent = appSettings.portal_primary_accent || COLOR_BURGUNDY;
+    const portalHeroBg = appSettings.portal_hero_bg || COLOR_BURGUNDY;
+    const portalHeroGradient = appSettings.portal_hero_gradient || '';
+    const portalHeroText = appSettings.portal_hero_text_color || '#FFFFFF';
     const portalCardBg = appSettings.portal_card_bg || '#FFFFFF';
-    const portalCardBorder = appSettings.portal_card_border || 'rgba(226, 232, 240, 0.8)';
-    const portalHeadingColor = appSettings.portal_heading_color || '#240B10';
+    const portalCardBorder = appSettings.portal_card_border || COLOR_WARM_CREAM;
+    const portalHeadingColor = appSettings.portal_heading_color || COLOR_BURGUNDY;
     const portalFontHeading = appSettings.portal_font_heading || 'Plus Jakarta Sans';
+    const portalFooterText = appSettings.portal_footer_text || COLOR_WARM_CREAM;
+
+    // Safe hex to rgba converter for smooth transparent gradients
+    const hexToRgba = (hex: string, alpha: number) => {
+        if (!hex || !hex.startsWith('#')) return hex;
+        const clean = hex.replace('#', '');
+        if (clean.length === 3) {
+            const r = parseInt(clean[0] + clean[0], 16);
+            const g = parseInt(clean[1] + clean[1], 16);
+            const b = parseInt(clean[2] + clean[2], 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+        if (clean.length >= 6) {
+            const r = parseInt(clean.substring(0, 2), 16);
+            const g = parseInt(clean.substring(2, 4), 16);
+            const b = parseInt(clean.substring(4, 6), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+        return hex;
+    };
 
     const [activeTab, setActiveTab] = useState<string>(() => {
         if (typeof window !== 'undefined') {
@@ -292,6 +320,7 @@ export default function ClientProjectDetail({
     const [newNoteContent, setNewNoteContent] = useState('');
     const [isSubmittingNote, setIsSubmittingNote] = useState(false);
     const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+    const [viewingProof, setViewingProof] = useState<any | null>(null);
 
     // Dynamic database props without dummy data
     const fileList: FileLinkItem[] = project?.file_links || [];
@@ -319,7 +348,7 @@ export default function ClientProjectDetail({
     const paymentPercentage = totalAmount > 0 ? Math.min(100, Math.round((paidAmount / totalAmount) * 100)) : 0;
     const isLunas = sisaTagihan === 0 && totalAmount > 0;
 
-    const photographerName = useMemo(() => {
+    const getPhotographerName = () => {
         if (typeof project?.photographer === 'object' && project?.photographer?.name) {
             return project.photographer.name;
         }
@@ -337,9 +366,10 @@ export default function ClientProjectDetail({
         }
 
         return 'Tim Fotografer Arams';
-    }, [project?.photographer, project?.notes]);
+    };
+    const photographerName = getPhotographerName();
 
-    const supervisorName = useMemo(() => {
+    const getSupervisorName = () => {
         const rawSup = typeof project?.supervisor === 'object' && project?.supervisor?.name
             ? project.supervisor.name
             : (typeof project?.supervisor === 'string' ? project.supervisor : null);
@@ -349,11 +379,13 @@ export default function ClientProjectDetail({
         }
 
         return rawSup;
-    }, [project?.supervisor, project?.client]);
+    };
+    const supervisorName = getSupervisorName();
 
-    const projectEditor = project?.editor;
-    const projectNotes = project?.notes;
-    const editorName = useMemo(() => {
+    const getEditorName = () => {
+        const projectEditor = project?.editor;
+        const projectNotes = project?.notes;
+
         if (typeof projectEditor === 'object' && projectEditor?.name) {
             return projectEditor.name;
         }
@@ -371,7 +403,8 @@ export default function ClientProjectDetail({
         }
 
         return 'Tim Editor Arams';
-    }, [projectEditor, projectNotes]);
+    };
+    const editorName = getEditorName();
 
     const rawPhone = company?.phone || appSettings?.company_phone || '081234567890';
     const cleanPhone = String(rawPhone).replace(/[^0-9]/g, '');
@@ -620,24 +653,7 @@ export default function ClientProjectDetail({
         return [...highlightPhotos, ...fallbacks.slice(highlightPhotos.length)];
     }, [highlightPhotos, projectThumbnail]);
 
-    const clientName = project?.client?.name;
-    const projectName = project?.name;
-    const displayTestimonial = useMemo(() => {
-        if (testimonialList.length > 0) {
-            return testimonialList[currentTestimonialIdx % testimonialList.length];
-        }
 
-        return {
-            id: 't-1',
-            client_name: clientName || 'Andi & Sari',
-            package_name: packageDisplayName || 'Wedding Day',
-            project_name: projectName,
-            rating: 5,
-            comment: 'Pelayanan sangat profesional, hasil foto luar biasa, dan timnya ramah banget. Momen kami jadi sangat berkesan!',
-            created_at_formatted: '27 Agustus 2026',
-            avatar: '/images/wedding-couple.jpg',
-        };
-    }, [testimonialList, currentTestimonialIdx, clientName, packageDisplayName, projectName]);
 
     const projectStatus = project.status;
     const projectWorkflowStep = project.workflow_step;
@@ -679,49 +695,53 @@ export default function ClientProjectDetail({
             <Head title={`${project.name} - Detail Project - Arams Pictures`} />
 
             <div className="space-y-6">
-                {/* ── 1. HERO BANNER (FORMATTED TO MATCH EXACT SCREENSHOT: Warm ivory background, Playfair Display typography, soft seamless photo fade) ── */}
-                <div className="relative -mt-6 sm:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 overflow-hidden bg-[#FAF7F2] border-b border-[#E8E1D7] shadow-2xs min-h-[260px] sm:min-h-[330px] lg:min-h-[360px] flex flex-col justify-center transition-colors">
-                    {/* Background Wedding Photo on the Right (Fading seamlessly to warm ivory on the left) */}
-                    <div className="absolute top-0 right-0 bottom-0 w-full sm:w-[50%] lg:w-[53%] overflow-hidden pointer-events-none z-0 opacity-40 sm:opacity-100">
+                {/* ── 1. HERO BANNER (Matching Dashboard Hero with Inner Box Frame) ── */}
+                <div
+                    style={{
+                        background: portalHeroGradient || portalHeroBg,
+                        color: portalHeroText,
+                    }}
+                    className="relative -mt-6 sm:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 overflow-hidden shadow-md min-h-[260px] sm:min-h-[320px] lg:min-h-[350px] flex flex-col justify-center transition-colors select-none"
+                >
+                    {/* Inner Decorative Box Frame (Kotak Bingkai) */}
+                    <div className="absolute inset-2.5 sm:inset-3.5 lg:inset-4 border border-white/20 rounded-xl pointer-events-none z-20" />
+
+                    {/* Background Wedding Photo on the Right */}
+                    <div className="absolute inset-0 z-0">
                         <img
-                            src={project?.thumbnail || highlightPhotos.find(h => h.is_cover)?.image_url || highlightPhotos[0]?.image_url || '/images/wedding-couple.jpg'}
+                            src={project?.thumbnail || highlightPhotos.find(h => h.is_cover)?.image_url || highlightPhotos[0]?.image_url || 'https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=1920&auto=format&fit=crop&q=85'}
                             alt={project.name}
-                            className="w-full h-full object-cover object-center sm:object-right filter brightness-[1.02] contrast-[1.04]"
+                            className="w-full h-full object-cover object-center sm:object-right opacity-85 sm:opacity-95 filter brightness-95 contrast-[1.05]"
                         />
                         {/* Mobile Gradient Overlay */}
                         <div
                             style={{
-                                background: 'linear-gradient(to bottom, rgba(250, 247, 242, 0.96) 0%, rgba(250, 247, 242, 0.75) 50%, rgba(250, 247, 242, 0.96) 100%)',
+                                background: `linear-gradient(to bottom, ${hexToRgba(portalHeroBg, 0.95)} 0%, ${hexToRgba(portalHeroBg, 0.70)} 50%, ${hexToRgba(portalHeroBg, 0.95)} 100%)`,
                             }}
-                            className="absolute inset-0 sm:hidden"
+                            className="absolute inset-0 sm:hidden z-10 pointer-events-none"
                         />
-                        {/* Desktop Soft Gradient Overlay fading from warm ivory to transparent */}
+                        {/* Desktop Gradient Overlay */}
                         <div
                             style={{
-                                background: 'linear-gradient(to right, #FAF7F2 0%, #FAF7F2 15%, rgba(250, 247, 242, 0.94) 32%, rgba(250, 247, 242, 0.42) 65%, transparent 100%)',
+                                background: `linear-gradient(to right, ${hexToRgba(portalHeroBg, 0.97)} 0%, ${hexToRgba(portalHeroBg, 0.90)} 35%, ${hexToRgba(portalHeroBg, 0.55)} 60%, ${hexToRgba(portalHeroBg, 0.15)} 80%, transparent 100%)`,
                             }}
-                            className="absolute inset-0 hidden sm:block"
-                        />
-                        <div
-                            style={{
-                                background: 'linear-gradient(to top, rgba(250, 247, 242, 0.40) 0%, transparent 25%)',
-                            }}
-                            className="absolute inset-0"
+                            className="absolute inset-0 hidden sm:block z-10 pointer-events-none"
                         />
                     </div>
 
                     {/* Left Meta Content */}
-                    <div className="relative z-10 px-4 sm:px-10 lg:px-12 py-7 sm:py-9 lg:py-11 max-w-2xl xl:max-w-3xl space-y-3 sm:space-y-4">
+                    <div className="relative z-10 px-6 sm:px-12 lg:px-16 py-8 sm:py-10 lg:py-12 max-w-2xl xl:max-w-3xl space-y-3 sm:space-y-4">
                         {/* Breadcrumb inside hero banner */}
-                        <div className="flex items-center gap-2 text-xs font-medium text-[#8A7971]">
+                        <div className="flex items-center gap-2 text-xs font-medium">
                             <Link
                                 href="/client/projects"
-                                className="hover:text-[#4A151B] transition-colors"
+                                style={{ color: COLOR_WARM_CREAM }}
+                                className="hover:text-white transition-colors opacity-85 hover:opacity-100"
                             >
                                 Project Saya
                             </Link>
-                            <span className="text-[#C2B5AC] font-light">&gt;</span>
-                            <span className="font-bold text-[#2A1619]">{project.name}</span>
+                            <span className="text-white/40 font-light">&gt;</span>
+                            <span className="font-bold text-white">{project.name}</span>
                         </div>
 
                         {/* Title & Status Badge */}
@@ -729,136 +749,93 @@ export default function ClientProjectDetail({
                             <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
                                 <h1
                                     style={{
-                                        fontFamily: `'Playfair Display', '${portalFontHeading}', Georgia, serif`,
-                                        color: '#3E1015',
+                                        fontFamily: `'${portalFontHeading}', serif`,
+                                        color: portalHeroText,
                                     }}
-                                    className="text-2xl sm:text-3xl lg:text-[38px] font-serif font-semibold tracking-normal leading-tight text-[#3E1015]"
+                                    className="text-2xl sm:text-3xl lg:text-4xl font-serif font-normal tracking-tight leading-tight"
                                 >
                                     {project.name}
                                 </h1>
                                 <span
-                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] sm:text-xs font-semibold ${project.status === 'completed' || project.workflow_step === 'selesai'
-                                        ? 'bg-[#EAF4EB] text-[#2E7A36]'
-                                        : 'bg-[#FEF5E7] text-[#A05E17]'
-                                        }`}
+                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] sm:text-xs font-semibold backdrop-blur-xs ${
+                                        project.status === 'completed' || project.workflow_step === 'selesai'
+                                            ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/30'
+                                            : 'bg-amber-500/20 text-amber-200 border border-amber-400/30'
+                                    }`}
                                 >
                                     {project.status === 'completed' || project.workflow_step === 'selesai' ? 'Selesai' : 'Dalam Proses'}
                                 </span>
                             </div>
 
-                            {/* Date & Location with Maroon Icons */}
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs sm:text-sm text-[#4A3F3A] font-medium pt-0.5">
+                            {/* Date & Location */}
+                            <div
+                                style={{ color: COLOR_WARM_CREAM }}
+                                className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs sm:text-sm font-medium pt-0.5 opacity-90"
+                            >
                                 <div className="flex items-center gap-2">
-                                    <Calendar className="w-4 h-4 text-[#4A151B] shrink-0" />
+                                    <Calendar className="w-4 h-4 text-white/80 shrink-0" />
                                     <span>{project.event_date || 'Belum dijadwalkan'}</span>
                                 </div>
-                                <span className="text-[#C4B7AC]">•</span>
+                                <span className="text-white/40">•</span>
                                 <div className="flex items-center gap-2">
-                                    <MapPin className="w-4 h-4 text-[#4A151B] shrink-0" />
+                                    <MapPin className="w-4 h-4 text-white/80 shrink-0" />
                                     <span>{project.location || 'Studio Arams Pictures'}</span>
                                 </div>
                             </div>
                         </div>
 
-                        {/* 4 Metadata Columns with Vertical Dividers (Clean whitespace, no top border) */}
+                        {/* 4 Metadata Columns with Vertical Dividers */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-0 pt-3 sm:pt-4 text-xs">
-                            <div className="sm:pr-6 sm:border-r border-[#E5DDD4]">
-                                <span className="text-[11px] sm:text-xs text-[#7D7068] block font-normal mb-1">Kategori Project</span>
-                                <strong className="text-sm sm:text-base font-bold text-[#4A151B] block">{categoryDisplayName}</strong>
+                            <div className="sm:pr-6 sm:border-r border-white/15">
+                                <span
+                                    style={{ color: COLOR_WARM_CREAM }}
+                                    className="text-[11px] sm:text-xs block font-normal mb-1 opacity-80"
+                                >
+                                    Kategori Project
+                                </span>
+                                <strong className="text-sm sm:text-base font-bold text-white block">
+                                    {categoryDisplayName}
+                                </strong>
                             </div>
-                            <div className="sm:px-6 sm:border-r border-[#E5DDD4]">
-                                <span className="text-[11px] sm:text-xs text-[#7D7068] block font-normal mb-1">Tipe Project</span>
-                                <strong className="text-sm sm:text-base font-bold text-[#4A151B] block">{packageDisplayName}</strong>
+                            <div className="sm:px-6 sm:border-r border-white/15">
+                                <span
+                                    style={{ color: COLOR_WARM_CREAM }}
+                                    className="text-[11px] sm:text-xs block font-normal mb-1 opacity-80"
+                                >
+                                    Tipe Project
+                                </span>
+                                <strong className="text-sm sm:text-base font-bold text-white block">
+                                    {packageDisplayName}
+                                </strong>
                             </div>
-                            <div className="sm:px-6 sm:border-r border-[#E5DDD4]">
-                                <span className="text-[11px] sm:text-xs text-[#7D7068] block font-normal mb-1">Photographer</span>
-                                <strong className="text-sm sm:text-base font-bold text-[#4A151B] block">{photographerName}</strong>
+                            <div className="sm:px-6 sm:border-r border-white/15">
+                                <span
+                                    style={{ color: COLOR_WARM_CREAM }}
+                                    className="text-[11px] sm:text-xs block font-normal mb-1 opacity-80"
+                                >
+                                    Photographer
+                                </span>
+                                <strong className="text-sm sm:text-base font-bold text-white block">
+                                    {photographerName}
+                                </strong>
                             </div>
                             <div className="sm:pl-6">
-                                <span className="text-[11px] sm:text-xs text-[#7D7068] block font-normal mb-1">Supervisor</span>
-                                <strong className="text-sm sm:text-base font-bold text-[#4A151B] block">{supervisorName}</strong>
+                                <span
+                                    style={{ color: COLOR_WARM_CREAM }}
+                                    className="text-[11px] sm:text-xs block font-normal mb-1 opacity-80"
+                                >
+                                    Supervisor
+                                </span>
+                                <strong className="text-sm sm:text-base font-bold text-white block">
+                                    {supervisorName}
+                                </strong>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* ── 2-COLUMN MAIN CONTENT: LEFT (MENU & BUTUH BANTUAN) + RIGHT (PANEL INFORMASI) ── */}
-                <div id="project-detail-panel" className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start pt-1">
-                    {/* ── LEFT COLUMN: VERTICAL MENU & HELP CARD (Sticky on Desktop) ── */}
-                    <aside className="lg:col-span-3 xl:col-span-3 space-y-4 lg:sticky lg:top-24">
-                        {/* Mobile Tab Navigation (< lg) */}
-                        <div className="lg:hidden flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1.5 bg-[#FAF7F2] rounded-2xl border border-[#E8E1D7] p-1.5">
-                            {navItems.map((item) => {
-                                const Icon = item.icon;
-                                const isActive = activeTab === item.id;
-
-                                return (
-                                    <button
-                                        key={item.id}
-                                        type="button"
-                                        onClick={() => switchTab(item.id)}
-                                        className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all shrink-0 cursor-pointer ${isActive
-                                                ? 'bg-[#3E1015] text-white shadow-2xs'
-                                                : 'text-stone-700 bg-white hover:bg-stone-50 border border-stone-200'
-                                            }`}
-                                    >
-                                        <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-[#4A151B]'}`} />
-                                        <span>{item.label}</span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-
-                        {/* Desktop Sidebar (>= lg) */}
-                        <div className="hidden lg:block space-y-4">
-                            {/* Navigation Card */}
-                            <div className="bg-white rounded-2xl border border-[#E8E1D7] p-2 space-y-1 shadow-2xs">
-                                {navItems.map((item) => {
-                                    const Icon = item.icon;
-                                    const isActive = activeTab === item.id;
-
-                                    return (
-                                        <button
-                                            key={item.id}
-                                            type="button"
-                                            onClick={() => switchTab(item.id)}
-                                            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer select-none ${isActive
-                                                    ? 'bg-[#3E1015] text-white shadow-xs font-bold'
-                                                    : 'text-stone-700 hover:text-stone-900 hover:bg-[#FAF7F2]'
-                                                }`}
-                                        >
-                                            <div className="flex items-center gap-2.5">
-                                                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-[#4A151B]'}`} />
-                                                <span>{item.label}</span>
-                                            </div>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-
-                            {/* Butuh Bantuan Card */}
-                                {/* <div className="bg-white rounded-2xl border border-[#E8E1D7] p-4 shadow-2xs space-y-2.5">
-                                    <div>
-                                        <h5 className="font-serif font-bold text-stone-900 text-sm">Butuh Bantuan?</h5>
-                                        <p className="text-[11px] text-stone-500 leading-relaxed mt-1">
-                                            Hubungi admin kami jika Anda memiliki pertanyaan terkait project ini.
-                                        </p>
-                                    </div>
-                                    <a
-                                        href={whatsappLink}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#3E1015] hover:bg-[#2e0b10] text-white text-xs font-bold transition-all shadow-xs"
-                                    >
-                                        <MessageCircle className="w-3.5 h-3.5 fill-white" />
-                                        <span>Hubungi Admin</span>
-                                    </a>
-                                </div> */}
-                        </div>
-                    </aside>
-
-                    {/* ── RIGHT COLUMN: INFORMATION PANEL (lg:col-span-9 xl:col-span-9) ── */}
-                    <main className="lg:col-span-9 xl:col-span-9 space-y-6 min-w-0">
+                {/* ── MAIN CONTENT: CONTINUOUS FULL-WIDTH SECTIONS ── */}
+                <main className="w-full space-y-6 sm:space-y-8 min-w-0">
                         {/* 1. TIMELINE PROJECT */}
                         <div id="section-timeline" className="scroll-mt-24 space-y-6">
                             <section
@@ -866,7 +843,7 @@ export default function ClientProjectDetail({
                                     backgroundColor: portalCardBg,
                                     borderColor: portalCardBorder,
                                 }}
-                                className="rounded-3xl border p-6 sm:p-7 shadow-xs hover:shadow-sm space-y-5 transition-all"
+                                className="rounded-xl border p-6 sm:p-7 shadow-xs hover:shadow-xl hover:shadow-[#3C0E0E]/8 hover:-translate-y-1 hover:border-[#3C0E0E]/25 space-y-5 transition-all duration-300"
                             >
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-stone-100 gap-2">
                                     <div>
@@ -893,7 +870,13 @@ export default function ClientProjectDetail({
                                 <div className="pt-2 overflow-x-auto no-scrollbar py-2">
                                     <div className="min-w-[620px] flex items-start justify-between relative pb-2 px-2">
                                         {/* Connecting Line */}
-                                        <div className="absolute left-6 right-6 top-4 h-0.5 bg-stone-200 -z-0">
+                                        <div
+                                            className="absolute top-4 h-0.5 bg-stone-200 -z-0"
+                                            style={{
+                                                left: `calc(100% / (${displaySteps.length} * 2))`,
+                                                right: `calc(100% / (${displaySteps.length} * 2))`,
+                                            }}
+                                        >
                                             <div
                                                 className="h-full bg-[#3E1015] transition-all duration-700"
                                                 style={{
@@ -907,20 +890,20 @@ export default function ClientProjectDetail({
                                             const isSelected = selectedStepNumber === step.step;
 
                                             return (
-                                                <div key={step.step} className="flex flex-col items-center text-center relative z-10 flex-1 px-1">
+                                                <div key={step.step} className="flex flex-col items-center text-center relative z-10 flex-1 px-1 group cursor-pointer">
                                                     <button
                                                         type="button"
                                                         onClick={() => setSelectedStepNumber(step.step)}
                                                         title={`Tahap ${step.step}: ${step.title}`}
-                                                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all cursor-pointer select-none ${isDone || isActive || isSelected
+                                                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all group-hover:scale-110 cursor-pointer select-none ${isDone || isActive || isSelected
                                                                 ? 'bg-[#3E1015] text-white shadow-2xs'
-                                                                : 'bg-white text-stone-400 border border-stone-200'
+                                                                : 'bg-white text-stone-400 border border-stone-200 hover:border-stone-400'
                                                             }`}
                                                     >
                                                         {step.step}
                                                     </button>
                                                     <div className="mt-2.5 space-y-0.5 max-w-[95px]">
-                                                        <h5 className="font-bold text-[11px] text-stone-900 leading-tight">
+                                                        <h5 className="font-bold text-[11px] text-stone-900 group-hover:text-[#3E1015] leading-tight transition-colors">
                                                             {step.title}
                                                         </h5>
                                                         <span className="text-[10px] text-stone-400 block font-medium">
@@ -937,7 +920,7 @@ export default function ClientProjectDetail({
                                 </div>
 
                                 {/* Green Status Alert Banner */}
-                                <div className="bg-[#EAF5EC] border border-[#C5E8CA] rounded-2xl p-3.5 sm:p-4 flex items-center gap-3 text-xs">
+                                <div className="bg-[#EAF5EC] border border-[#C5E8CA] rounded-2xl p-3.5 sm:p-4 flex items-center gap-3 text-xs hover:shadow-2xs transition-shadow">
                                     <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
                                         <Check className="w-3.5 h-3.5 stroke-[3]" />
                                     </div>
@@ -956,7 +939,7 @@ export default function ClientProjectDetail({
                                     backgroundColor: portalCardBg,
                                     borderColor: portalCardBorder,
                                 }}
-                                className="rounded-3xl border p-6 sm:p-8 shadow-xs hover:shadow-sm space-y-6 transition-all"
+                                className="rounded-xl border p-6 sm:p-8 shadow-xs hover:shadow-xl hover:shadow-[#3C0E0E]/8 hover:-translate-y-1 hover:border-[#3C0E0E]/25 space-y-6 transition-all duration-300"
                             >
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-stone-100 gap-3">
                                     <div>
@@ -979,7 +962,7 @@ export default function ClientProjectDetail({
                                 </div>
 
                                 {displayFiles.length === 0 ? (
-                                    <div className="py-12 text-center text-stone-500 text-xs bg-[#FAF7F2] rounded-3xl border border-[#E8E1D7] space-y-3 p-6">
+                                    <div className="py-12 text-center text-stone-500 text-xs bg-[#FAF7F2] rounded-xl border border-[#E8E1D7] space-y-3 p-6">
                                         <div className="w-12 h-12 rounded-2xl bg-white border border-stone-200 flex items-center justify-center mx-auto text-stone-400 shadow-2xs">
                                             <Folder className="w-6 h-6" />
                                         </div>
@@ -1000,11 +983,11 @@ export default function ClientProjectDetail({
                                             return (
                                                 <div
                                                     key={file.id}
-                                                    className="bg-[#FAF7F2] border border-[#E8E1D7] rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-4 hover:bg-white hover:border-[#4A151B]/40 hover:shadow-xs transition-all group"
+                                                    className="bg-[#FAF7F2] border border-[#E8E1D7] rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-4 hover:bg-white hover:border-[#3C0E0E]/35 hover:shadow-md hover:-translate-y-1 transition-all duration-300 group"
                                                 >
                                                     <div className="space-y-3">
                                                         <div className="flex items-center justify-between">
-                                                            <div className="w-10 h-10 rounded-xl bg-rose-100 text-[#4A151B] flex items-center justify-center shadow-2xs">
+                                                            <div className="w-10 h-10 rounded-xl bg-rose-100 text-[#4A151B] flex items-center justify-center shadow-2xs group-hover:scale-110 transition-transform duration-300">
                                                                 {file.is_link || file.file_type === 'link' ? (
                                                                     <LinkIcon className="w-5 h-5" />
                                                                 ) : (
@@ -1066,7 +1049,7 @@ export default function ClientProjectDetail({
                                     backgroundColor: portalCardBg,
                                     borderColor: portalCardBorder,
                                 }}
-                                className="rounded-3xl border p-6 sm:p-8 shadow-xs hover:shadow-sm space-y-6 transition-all"
+                                className="rounded-xl border p-6 sm:p-8 shadow-xs hover:shadow-xl hover:shadow-[#3C0E0E]/8 hover:-translate-y-1 hover:border-[#3C0E0E]/25 space-y-6 transition-all duration-300"
                             >
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-stone-100 gap-3">
                                     <div>
@@ -1098,7 +1081,7 @@ export default function ClientProjectDetail({
                                 </div>
 
                                 {displayNotes.length === 0 ? (
-                                    <div className="py-12 text-center text-stone-500 text-xs bg-[#FAF7F2] rounded-3xl border border-[#E8E1D7] space-y-3 p-6">
+                                    <div className="py-12 text-center text-stone-500 text-xs bg-[#FAF7F2] rounded-xl border border-[#E8E1D7] space-y-3 p-6">
                                         <div className="w-12 h-12 rounded-2xl bg-white border border-stone-200 flex items-center justify-center mx-auto text-stone-400 shadow-2xs">
                                             <Edit3 className="w-6 h-6" />
                                         </div>
@@ -1124,10 +1107,10 @@ export default function ClientProjectDetail({
                                         {displayNotes.map((note) => (
                                             <div
                                                 key={note.id}
-                                                className="bg-[#FAF7F2] border border-[#E8E1D7] rounded-2xl p-4 sm:p-5 flex items-start gap-4 hover:bg-white hover:border-stone-300 transition-all shadow-2xs"
+                                                className="bg-[#FAF7F2] border border-[#E8E1D7] rounded-2xl p-4 sm:p-5 flex items-start gap-4 hover:bg-white hover:border-[#3C0E0E]/30 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 group"
                                             >
                                                 {/* Date Badge */}
-                                                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white border border-stone-200 flex flex-col items-center justify-center shrink-0 shadow-2xs text-center">
+                                                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white border border-stone-200 group-hover:border-[#3C0E0E]/25 group-hover:scale-105 flex flex-col items-center justify-center shrink-0 shadow-2xs text-center transition-all duration-300">
                                                     <span className="font-black text-sm sm:text-base text-[#4A151B] leading-none">{note.date}</span>
                                                     <span className="text-[8px] sm:text-[9px] text-stone-400 font-bold uppercase mt-1">{note.monthYear}</span>
                                                 </div>
@@ -1135,7 +1118,7 @@ export default function ClientProjectDetail({
                                                 {/* Note Content */}
                                                 <div className="flex-1 space-y-1.5 min-w-0">
                                                     <div className="flex items-center justify-between gap-2 flex-wrap">
-                                                        <h4 className="font-bold text-xs sm:text-sm text-stone-900">{note.title}</h4>
+                                                        <h4 className="font-bold text-xs sm:text-sm text-stone-900 group-hover:text-[#4A151B] transition-colors">{note.title}</h4>
                                                         <div className="flex items-center gap-1.5">
                                                             <span className="text-[11px] text-stone-500 font-medium">{note.author}</span>
                                                             <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-stone-200/80 text-stone-700">{note.role}</span>
@@ -1159,7 +1142,7 @@ export default function ClientProjectDetail({
                                     backgroundColor: portalCardBg,
                                     borderColor: portalCardBorder,
                                 }}
-                                className="rounded-3xl border p-6 sm:p-8 shadow-xs hover:shadow-sm space-y-6 transition-all"
+                                className="rounded-xl border p-6 sm:p-8 shadow-xs hover:shadow-xl hover:shadow-[#3C0E0E]/8 hover:-translate-y-1 hover:border-[#3C0E0E]/25 space-y-6 transition-all duration-300"
                             >
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-stone-100 gap-2">
                                     <div>
@@ -1183,7 +1166,7 @@ export default function ClientProjectDetail({
 
                                 {/* 3 Metrics Grid */}
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                                    <div className="bg-[#FAF7F2] rounded-2xl p-4 sm:p-5 border border-[#E8E1D7] space-y-1">
+                                    <div className="bg-[#FAF7F2] hover:bg-white hover:border-[#3C0E0E]/30 hover:shadow-md hover:-translate-y-0.5 rounded-2xl p-4 sm:p-5 border border-[#E8E1D7] space-y-1 transition-all duration-300">
                                         <div className="flex items-center justify-between text-stone-500 text-xs font-medium">
                                             <span>Total Biaya Project</span>
                                             <Receipt className="w-4 h-4 text-stone-400" />
@@ -1194,7 +1177,7 @@ export default function ClientProjectDetail({
                                         <span className="text-[10.5px] text-stone-400 block truncate">Paket {packageDisplayName}</span>
                                     </div>
 
-                                    <div className="bg-emerald-50/80 rounded-2xl p-4 sm:p-5 border border-emerald-200/70 space-y-1">
+                                    <div className="bg-emerald-50/80 hover:bg-emerald-50 hover:border-emerald-300 hover:shadow-md hover:-translate-y-0.5 rounded-2xl p-4 sm:p-5 border border-emerald-200/70 space-y-1 transition-all duration-300">
                                         <div className="flex items-center justify-between text-emerald-700 text-xs font-medium">
                                             <span>Sudah Dibayar</span>
                                             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
@@ -1205,7 +1188,7 @@ export default function ClientProjectDetail({
                                         <span className="text-[10.5px] text-emerald-600/80 block">{paymentPercentage}% terbayar</span>
                                     </div>
 
-                                    <div className={`${sisaTagihan > 0 ? 'bg-amber-50/80 border-amber-200/80' : 'bg-stone-50 border-stone-200/80'} rounded-2xl p-4 sm:p-5 border space-y-1`}>
+                                    <div className={`${sisaTagihan > 0 ? 'bg-amber-50/80 border-amber-200/80 hover:bg-amber-50 hover:border-amber-300' : 'bg-stone-50 border-stone-200/80 hover:bg-white hover:border-[#3C0E0E]/30'} hover:shadow-md hover:-translate-y-0.5 rounded-2xl p-4 sm:p-5 border space-y-1 transition-all duration-300`}>
                                         <div className={`flex items-center justify-between ${sisaTagihan > 0 ? 'text-amber-700' : 'text-stone-500'} text-xs font-medium`}>
                                             <span>Sisa Tagihan</span>
                                             <CreditCard className={`w-4 h-4 ${sisaTagihan > 0 ? 'text-amber-600' : 'text-stone-400'}`} />
@@ -1220,7 +1203,7 @@ export default function ClientProjectDetail({
                                 </div>
 
                                 {/* Pelunasan Progress Bar */}
-                                <div className="bg-white rounded-2xl p-4 sm:p-5 border border-stone-200/80 space-y-2 shadow-2xs">
+                                <div className="bg-white rounded-2xl p-4 sm:p-5 border border-stone-200/80 space-y-2 shadow-2xs hover:shadow-xs hover:border-[#3C0E0E]/20 transition-all duration-300">
                                     <div className="flex justify-between items-center text-xs font-bold">
                                         <span className="text-stone-600">Progres Pelunasan Tagihan</span>
                                         <span className="text-[#4A151B] text-sm font-black">{paymentPercentage}% Selesai</span>
@@ -1283,12 +1266,12 @@ export default function ClientProjectDetail({
                                     </div>
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <div className="bg-white rounded-xl p-3.5 border border-stone-200 flex items-center justify-between gap-2 shadow-2xs">
+                                        <div className="bg-white hover:border-[#3C0E0E]/30 hover:shadow-md hover:-translate-y-0.5 rounded-xl p-3.5 border border-stone-200 flex items-center justify-between gap-2 shadow-2xs transition-all duration-300 group">
                                             <div>
                                                 <span className="text-[9.5px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
                                                     Bank BCA
                                                 </span>
-                                                <div className="font-mono font-bold text-xs sm:text-sm text-stone-900 mt-1">8415-0928-11</div>
+                                                <div className="font-mono font-bold text-xs sm:text-sm text-stone-900 group-hover:text-[#3C0E0E] mt-1 transition-colors">8415-0928-11</div>
                                                 <span className="text-[10px] text-stone-500 block">a/n PT Arams Pictures Media</span>
                                             </div>
                                             <button
@@ -1301,12 +1284,12 @@ export default function ClientProjectDetail({
                                             </button>
                                         </div>
 
-                                        <div className="bg-white rounded-xl p-3.5 border border-stone-200 flex items-center justify-between gap-2 shadow-2xs">
+                                        <div className="bg-white hover:border-[#3C0E0E]/30 hover:shadow-md hover:-translate-y-0.5 rounded-xl p-3.5 border border-stone-200 flex items-center justify-between gap-2 shadow-2xs transition-all duration-300 group">
                                             <div>
                                                 <span className="text-[9.5px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
                                                     Bank Mandiri
                                                 </span>
-                                                <div className="font-mono font-bold text-xs sm:text-sm text-stone-900 mt-1">1370-0192-8821</div>
+                                                <div className="font-mono font-bold text-xs sm:text-sm text-stone-900 group-hover:text-[#3C0E0E] mt-1 transition-colors">1370-0192-8821</div>
                                                 <span className="text-[10px] text-stone-500 block">a/n Arams Pictures</span>
                                             </div>
                                             <button
@@ -1356,7 +1339,7 @@ export default function ClientProjectDetail({
                                     backgroundColor: portalCardBg,
                                     borderColor: portalCardBorder,
                                 }}
-                                className="rounded-3xl border p-6 sm:p-8 shadow-xs hover:shadow-sm space-y-6 transition-all"
+                                className="rounded-xl border p-6 sm:p-8 shadow-xs hover:shadow-xl hover:shadow-[#3C0E0E]/8 hover:-translate-y-1 hover:border-[#3C0E0E]/25 space-y-6 transition-all duration-300"
                             >
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-stone-100 gap-2">
                                     <div>
@@ -1384,7 +1367,7 @@ export default function ClientProjectDetail({
                                             type="button"
                                             key={hl.id || i}
                                             onClick={() => setLightboxIndex(i)}
-                                            className="group relative aspect-4/5 rounded-2xl overflow-hidden bg-stone-100 border border-stone-200/80 shadow-2xs hover:shadow-md transition-all cursor-pointer block text-left"
+                                            className="group relative aspect-4/5 rounded-2xl overflow-hidden bg-stone-100 border border-stone-200/80 shadow-2xs hover:shadow-xl hover:shadow-[#3C0E0E]/15 hover:-translate-y-1.5 hover:border-[#3C0E0E]/40 transition-all duration-300 cursor-pointer block text-left"
                                         >
                                             <img
                                                 src={hl.image_url}
@@ -1419,7 +1402,7 @@ export default function ClientProjectDetail({
                                     backgroundColor: portalCardBg,
                                     borderColor: portalCardBorder,
                                 }}
-                                className="rounded-3xl border p-6 sm:p-8 shadow-xs hover:shadow-sm space-y-6 transition-all"
+                                className="rounded-xl border p-6 sm:p-8 shadow-xs hover:shadow-xl hover:shadow-[#3C0E0E]/8 hover:-translate-y-1 hover:border-[#3C0E0E]/25 space-y-6 transition-all duration-300"
                             >
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-stone-100 gap-2">
                                     <div className="flex items-center gap-2.5">
@@ -1457,7 +1440,7 @@ export default function ClientProjectDetail({
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 text-xs">
                                     {/* Left Info Box */}
-                                    <div className="space-y-3.5 bg-[#FAF7F2] p-5 rounded-2xl border border-[#E8E1D7]">
+                                    <div className="space-y-3.5 bg-[#FAF7F2] hover:bg-white hover:border-[#3C0E0E]/30 hover:shadow-md hover:-translate-y-0.5 p-5 rounded-2xl border border-[#E8E1D7] transition-all duration-300">
                                         <h4 className="font-bold text-stone-900 uppercase tracking-wider text-[11px] border-b border-stone-200/60 pb-2">
                                             Informasi Umum
                                         </h4>
@@ -1494,7 +1477,7 @@ export default function ClientProjectDetail({
                                     </div>
 
                                     {/* Right Info Box */}
-                                    <div className="space-y-3.5 bg-[#FAF7F2] p-5 rounded-2xl border border-[#E8E1D7]">
+                                    <div className="space-y-3.5 bg-[#FAF7F2] hover:bg-white hover:border-[#3C0E0E]/30 hover:shadow-md hover:-translate-y-0.5 p-5 rounded-2xl border border-[#E8E1D7] transition-all duration-300">
                                         <h4 className="font-bold text-stone-900 uppercase tracking-wider text-[11px] border-b border-stone-200/60 pb-2">
                                             Tim Bertugas &amp; Catatan
                                         </h4>
@@ -1563,7 +1546,7 @@ export default function ClientProjectDetail({
                                     backgroundColor: portalCardBg,
                                     borderColor: portalCardBorder,
                                 }}
-                                className="rounded-3xl border p-6 sm:p-8 shadow-xs hover:shadow-sm space-y-6 transition-all"
+                                className="rounded-xl border p-6 sm:p-8 shadow-xs hover:shadow-xl hover:shadow-[#3C0E0E]/8 hover:-translate-y-1 hover:border-[#3C0E0E]/25 space-y-6 transition-all duration-300"
                             >
                                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                                     {/* Form Ulasan (Span 7) */}
@@ -1630,7 +1613,7 @@ export default function ClientProjectDetail({
                                     </div>
 
                                     {/* Testimonial / Ulasan Klien Lain (Span 5) */}
-                                    <div className="lg:col-span-5 bg-[#FAF7F2] p-5 sm:p-6 rounded-2xl border border-[#E8E1D7] flex flex-col justify-between space-y-4">
+                                    <div className="lg:col-span-5 bg-[#FAF7F2] hover:bg-white hover:border-[#3C0E0E]/30 hover:shadow-md hover:-translate-y-0.5 p-5 sm:p-6 rounded-2xl border border-[#E8E1D7] flex flex-col justify-between space-y-4 transition-all duration-300">
                                         <div className="space-y-2">
                                             <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
                                                 Pengalaman Klien Arams Pictures
@@ -1685,7 +1668,6 @@ export default function ClientProjectDetail({
                             </section>
                         </div>
                     </main>
-                </div>
 
                 {/* Floating WhatsApp Help Pill */}
                 <a
@@ -1704,7 +1686,7 @@ export default function ClientProjectDetail({
             {isAddNoteOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
                     <div
-                        className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-slate-100 space-y-5 animate-in zoom-in-95 duration-200"
+                        className="bg-white rounded-xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-slate-100 space-y-5 animate-in zoom-in-95 duration-200"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="flex items-start justify-between border-b border-slate-100 pb-4">
@@ -1805,7 +1787,7 @@ export default function ClientProjectDetail({
             {isPaymentModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
                     <div
-                        className="bg-white rounded-3xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100 space-y-6 animate-in zoom-in-95 duration-200"
+                        className="bg-white rounded-xl p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100 space-y-6 animate-in zoom-in-95 duration-200"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="flex items-start justify-between border-b border-slate-100 pb-4">
@@ -1912,24 +1894,43 @@ export default function ClientProjectDetail({
                                 <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                                     {project.payments.map((p, idx) => (
                                         <div key={p.id || idx} className="p-3 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex items-center justify-between gap-3 text-xs">
-                                            <div className="space-y-0.5">
+                                            <div className="space-y-0.5 min-w-0">
                                                 <div className="flex items-center gap-2">
                                                     <span className="font-bold text-slate-900">{p.payment_method || 'Transfer Bank'}</span>
                                                     {p.payment_number && (
                                                         <span className="text-[10px] font-mono text-slate-400">{p.payment_number}</span>
                                                     )}
                                                 </div>
-                                                <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                                                <div className="flex items-center gap-2 text-[11px] text-slate-500 truncate">
                                                     <span>{p.payment_date || '-'}</span>
                                                     {p.reference_number && <span>• Ref: {p.reference_number}</span>}
                                                 </div>
                                             </div>
-                                            <div className="text-right">
-                                                <strong className="font-black text-emerald-700 block font-mono">{formatRupiah(p.amount)}</strong>
-                                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600">
-                                                    <Check className="w-2.5 h-2.5" />
-                                                    <span>Berhasil</span>
-                                                </span>
+                                            <div className="flex items-center gap-2.5 shrink-0">
+                                                {p.proof_file ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setViewingProof({
+                                                            proof_file: p.proof_file,
+                                                            payment_number: p.payment_number,
+                                                            amount: p.amount,
+                                                            date: p.payment_date,
+                                                            method: p.payment_method,
+                                                        })}
+                                                        className="px-2.5 py-1.5 rounded-lg border border-[#E8DDD5] bg-[#FAF8F5] hover:bg-[#3C0E0E] hover:text-white hover:border-[#3C0E0E] text-[10.5px] font-bold text-[#3C0E0E] shadow-2xs flex items-center gap-1 transition-all cursor-pointer"
+                                                        title="Lihat Bukti Transfer"
+                                                    >
+                                                        <Eye className="w-3 h-3" />
+                                                        <span className="hidden sm:inline">Bukti</span>
+                                                    </button>
+                                                ) : null}
+                                                <div className="text-right">
+                                                    <strong className="font-black text-emerald-700 block font-mono">{formatRupiah(p.amount)}</strong>
+                                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600">
+                                                        <Check className="w-2.5 h-2.5" />
+                                                        <span>Berhasil</span>
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
@@ -2085,6 +2086,89 @@ export default function ClientProjectDetail({
                                 )}
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+            {/* ── MODAL: LIHAT BUKTI PEMBAYARAN ── */}
+            {viewingProof && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setViewingProof(null)}>
+                    <div
+                        className="bg-white rounded-2xl p-5 sm:p-7 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100 space-y-4 animate-in zoom-in-95 duration-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <div className="flex items-center gap-2">
+                                <Receipt className="w-4 h-4 text-[#3C0E0E]" />
+                                <div>
+                                    <h4 className="text-sm font-bold text-slate-900">Bukti Pembayaran / Transfer</h4>
+                                    <p className="text-[11px] text-slate-400">
+                                        {viewingProof.payment_number || 'Pembayaran'} • {formatRupiah(viewingProof.amount)}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setViewingProof(null)}
+                                className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        {/* Image Preview / File Link */}
+                        <div className="rounded-xl overflow-hidden bg-slate-50 border border-slate-200 flex items-center justify-center p-2 min-h-[220px]">
+                            {viewingProof.proof_file && (viewingProof.proof_file.endsWith('.pdf') || viewingProof.proof_file.includes('.pdf')) ? (
+                                <div className="text-center p-6 space-y-3">
+                                    <FileText className="w-12 h-12 text-rose-600 mx-auto" />
+                                    <p className="text-xs text-slate-600">Dokumen Bukti Transfer (PDF)</p>
+                                    <a
+                                        href={viewingProof.proof_file}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#3C0E0E] text-white text-xs font-bold shadow-xs hover:opacity-90"
+                                    >
+                                        <Download className="w-3.5 h-3.5" />
+                                        <span>Buka / Unduh Dokumen PDF</span>
+                                    </a>
+                                </div>
+                            ) : viewingProof.proof_file ? (
+                                <img
+                                    src={viewingProof.proof_file}
+                                    alt="Bukti Transfer"
+                                    className="w-full max-h-[60vh] object-contain rounded-lg"
+                                />
+                            ) : (
+                                <div className="text-center p-6 text-xs text-slate-400">
+                                    Tidak ada file lampiran bukti transfer untuk transaksi ini.
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+                            <span>Metode: <strong className="text-slate-800">{viewingProof.method || 'Transfer Bank'}</strong></span>
+                            <span>Tanggal: <strong className="text-slate-800">{viewingProof.date || '-'}</strong></span>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                            {viewingProof.proof_file && (
+                                <a
+                                    href={viewingProof.proof_file}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="px-4 py-2 rounded-xl bg-[#3C0E0E] text-white text-xs font-bold hover:opacity-90 transition-opacity flex items-center gap-1.5"
+                                >
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                    <span>Buka Gambar Asli</span>
+                                </a>
+                            )}
+                            <button
+                                type="button"
+                                onClick={() => setViewingProof(null)}
+                                className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors cursor-pointer"
+                            >
+                                Tutup
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

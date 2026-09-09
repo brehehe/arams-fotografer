@@ -21,6 +21,7 @@ class StorePaymentRequest extends FormRequest
             'invoice_id' => 'nullable|exists:invoices,id',
             'reference_number' => 'nullable|string|max:100',
             'notes' => 'nullable|string',
+            'proof_file' => 'nullable|file|mimes:jpg,jpeg,png,pdf,webp|max:10240',
         ];
     }
 }

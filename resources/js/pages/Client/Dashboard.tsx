@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { ClientLayout } from '@/layouts/ClientLayout';
 import {
@@ -37,8 +38,13 @@ import {
     Compass,
     RefreshCw,
     MapPin,
+    Edit3,
+    Eye,
+    X,
+    Printer,
+    Receipt,
 } from 'lucide-react';
-import { formatRupiah } from '@/lib/formatters';
+import { formatRupiah, formatDate } from '@/lib/formatters';
 
 interface FileLinkItem {
     id: string;
@@ -54,6 +60,7 @@ interface FileLinkItem {
 
 interface TimelineStep {
     step: number;
+    key?: string;
     title?: string;
     name?: string;
     desc?: string;
@@ -62,15 +69,9 @@ interface TimelineStep {
     status_label?: string;
     date?: string;
     target_date?: string;
+    icon?: string;
+    pic?: string;
     tasks?: Array<{ title: string; completed: boolean }>;
-}
-
-interface RecommendedPackage {
-    id: string;
-    name: string;
-    price: string;
-    description: string;
-    image: string;
 }
 
 interface PromoSlideItem {
@@ -90,16 +91,6 @@ interface TestimonialItem {
     rating: number;
     comment: string;
     avatar?: string;
-}
-
-interface InstagramPostItem {
-    id: string;
-    image: string;
-    caption?: string;
-    likes?: number;
-    comments?: number;
-    post_url?: string;
-    type?: string;
 }
 
 interface RecommendedItem {
@@ -141,6 +132,7 @@ interface ClientDashboardProps {
         last_updated?: string;
         workflow_step: string;
         progress: number;
+        progress_percentage?: number;
         event_date?: string;
         event_date_short?: string;
         event_date_raw?: string;
@@ -162,8 +154,11 @@ interface ClientDashboardProps {
     } | null;
     timeline?: {
         current_step: number;
+        total_steps?: number;
+        current_step_name?: string;
         active_step_title: string;
         active_step_desc: string;
+        progress_percentage?: number;
         steps: TimelineStep[];
     };
     payment_summary?: {
@@ -176,8 +171,8 @@ interface ClientDashboardProps {
     };
     promo_slides?: PromoSlideItem[];
     recommended_projects?: RecommendedItem[];
-    instagram_posts?: InstagramPostItem[];
     testimonials?: TestimonialItem[];
+    portfolios?: any[];
     company?: any;
 }
 
@@ -192,36 +187,42 @@ export default function ClientDashboard({
     },
     active_project = null,
     timeline = {
-        current_step: 1,
-        active_step_title: 'Mulai Perjalanan',
-        active_step_desc: 'Proyek Anda sedang kami persiapkan.',
+        current_step: 3,
+        active_step_title: 'Preview Foto',
+        active_step_desc: 'Kami sedang menyiapkan preview foto terbaik untuk Anda. Nantikan update selanjutnya!',
         steps: [],
     },
     payment_summary = {
-        total_amount: 0,
-        paid_amount: 0,
-        remaining_amount: 0,
-        paid_percentage: 0,
+        total_amount: 50000000,
+        paid_amount: 25000000,
+        remaining_amount: 25000000,
+        paid_percentage: 50,
+        last_payment_label: 'DP (50%)',
+        last_payment_date: '26 Mei 2026',
     },
     promo_slides = [],
     recommended_projects = [],
-    instagram_posts = [],
     testimonials = [],
+    portfolios = [],
     company = {},
 }: ClientDashboardProps) {
     const { props: pageProps } = usePage<any>();
     const appSettings = pageProps?.appSettings || {};
 
-    // Dynamic portal tokens
-    const portalPrimaryAccent = appSettings.portal_primary_accent || '#4A151B';
-    const portalHeroBg = appSettings.portal_hero_bg || '#240B10';
+    // Exact color palette tokens requested by user
+    const COLOR_BURGUNDY = '#3C0E0E';
+    const COLOR_WARM_CREAM = '#F4EBE4';
+    const COLOR_OFF_WHITE = '#FBF6F0';
+
+    const portalPrimaryAccent = appSettings.portal_primary_accent || COLOR_BURGUNDY;
+    const portalHeroBg = appSettings.portal_hero_bg || COLOR_BURGUNDY;
     const portalHeroGradient = appSettings.portal_hero_gradient || '';
     const portalHeroText = appSettings.portal_hero_text_color || '#FFFFFF';
     const portalCardBg = appSettings.portal_card_bg || '#FFFFFF';
-    const portalCardBorder = appSettings.portal_card_border || 'rgba(226, 232, 240, 0.8)';
-    const portalHeadingColor = appSettings.portal_heading_color || '#240B10';
+    const portalCardBorder = appSettings.portal_card_border || COLOR_WARM_CREAM;
+    const portalHeadingColor = appSettings.portal_heading_color || COLOR_BURGUNDY;
     const portalFontHeading = appSettings.portal_font_heading || 'Plus Jakarta Sans';
-    const portalFooterText = appSettings.portal_footer_text || '#FDA4AF';
+    const portalFooterText = appSettings.portal_footer_text || COLOR_WARM_CREAM;
 
     // Safe hex to rgba converter for smooth transparent gradients
     const hexToRgba = (hex: string, alpha: number) => {
@@ -242,15 +243,88 @@ export default function ClientDashboard({
         return hex;
     };
 
+    // Safe WhatsApp Link Generator
+    const rawPhone = company?.phone || appSettings?.company_phone || '081234567890';
+    const cleanPhone = String(rawPhone).replace(/[^0-9]/g, '');
+    const waPhone = cleanPhone.startsWith('0') ? '62' + cleanPhone.slice(1) : cleanPhone;
+    const generalWhatsAppUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent('Halo Admin Arams Pictures, saya ingin menanyakan tentang paket layanan dokumentasi.')}`;
+
     const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
+    const [isHoveredPromo, setIsHoveredPromo] = useState(false);
     const [currentTestimonialIndex, setCurrentTestimonialIndex] = useState(0);
-    const [selectedDashboardStepNum, setSelectedDashboardStepNum] = useState<number>(timeline.current_step || 1);
 
-    const selectedDashboardStep = (timeline.steps && timeline.steps.length > 0)
-        ? (timeline.steps.find((s) => s.step === selectedDashboardStepNum) || timeline.steps[0])
-        : null;
+    // Payment History & Lightbox Modal States
+    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
+    const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+    const [activeLightboxIndex, setActiveLightboxIndex] = useState(0);
 
-    // Database content with seamless fallback
+    // Timeline Steps (5 Steps as per client dashboard design)
+    const defaultSteps: TimelineStep[] = [
+        {
+            step: 1,
+            title: '1. Booking & DP',
+            name: 'Booking & DP',
+            desc: 'Pembayaran DP telah terverifikasi dan slot jadwal berhasil dibooking.',
+            status: 'completed',
+            status_label: 'Selesai',
+            date: '10 Jan 2026',
+        },
+        {
+            step: 2,
+            title: '2. Hari H (Shooting)',
+            name: 'Hari H (Shooting)',
+            desc: 'Sesi dokumentasi foto dan video hari H telah selesai dilaksanakan.',
+            status: 'completed',
+            status_label: 'Selesai',
+            date: '22 Mei 2026',
+        },
+        {
+            step: 3,
+            title: '3. Preview Foto',
+            name: 'Preview Foto',
+            desc: 'Kami sedang menyiapkan preview foto terbaik untuk Anda. Nantikan update selanjutnya!',
+            status: 'active',
+            status_label: 'Sedang Dikerjakan',
+            date: 'Estimasi: 05 Jun 2026',
+        },
+        {
+            step: 4,
+            title: '4. Editing & Seleksi',
+            name: 'Editing & Seleksi',
+            desc: 'Proses editing menyeluruh, retouching, dan color grading semua file pilihan.',
+            status: 'upcoming',
+            status_label: 'Menunggu',
+            date: 'Estimasi: 20 Jun 2026',
+        },
+        {
+            step: 5,
+            title: '5. Final Delivery',
+            name: 'Final Delivery',
+            desc: 'Penyerahan seluruh hasil foto/video resolusi tinggi dan cetak album fisik.',
+            status: 'upcoming',
+            status_label: 'Menunggu',
+            date: 'Estimasi: 05 Jul 2026',
+        },
+    ];
+
+    const timelineSteps = (timeline.steps && timeline.steps.length > 0)
+        ? timeline.steps
+        : defaultSteps;
+
+    const [selectedStepNum, setSelectedStepNum] = useState<number>(
+        timeline.current_step || 3
+    );
+
+    const activeStepObj = timelineSteps.find((s) => s.step === selectedStepNum) || timelineSteps[2] || timelineSteps[0];
+    const isProjectCompleted = active_project?.status === 'completed' || active_project?.workflow_step === 'selesai' || active_project?.status === 'delivered';
+    const totalTimelineSteps = timelineSteps.length;
+    const currentStepNum = isProjectCompleted ? totalTimelineSteps : (selectedStepNum || timeline.current_step || 1);
+    const progressPercent = active_project?.progress_percentage ?? active_project?.progress ?? (
+        isProjectCompleted ? 100 : Math.min(100, Math.max(0, Math.round((currentStepNum / totalTimelineSteps) * 100)))
+    );
+
+    // Promo Slides Fallback (Multi-slide support for carousel)
     const promoSlides: PromoSlideItem[] = (promo_slides && promo_slides.length > 0)
         ? promo_slides
         : [
@@ -258,703 +332,583 @@ export default function ClientDashboard({
                 id: '1',
                 tag: 'SPECIAL OFFER',
                 title: 'Abadikan Momen Terbaikmu dengan Arams Pictures',
-                description: 'Promo spesial untuk setiap momen berharga Anda. Dapatkan penawaran terbaik untuk paket pilihan Anda.',
+                description: 'Promo spesial untuk setiap momen berharga Anda. Dapatkan penawaran terbaik untuk paket pernikahan & prewedding pilihan.',
                 button_text: 'Lihat Promo Selengkapnya',
                 button_url: '/form-klien',
-                image: '/images/wedding-couple.jpg',
+                image: 'https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=1920&auto=format&fit=crop&q=85',
+            },
+            {
+                id: '2',
+                tag: 'EXCLUSIVE PREWEDDING',
+                title: 'Dokumentasi Cinta Abadi di Destinasi Impian',
+                description: 'Paket sinematografi prewedding eksklusif ke Bromo, Bali & Yogyakarta dengan arahan pose profesional & gaun premium.',
+                button_text: 'Jelajahi Paket Prewedding',
+                button_url: '/form-klien',
+                image: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=1920&auto=format&fit=crop&q=85',
+            },
+            {
+                id: '3',
+                tag: 'LUXURY WEDDING',
+                title: 'Kisah Hari Bahagia yang Mewah & Tak Lekang Waktu',
+                description: 'Dokumentasi resepsi & akad elegan dengan multi-camera cinematic 4K, album cetak premium, dan drone aerial coverage.',
+                button_text: 'Konsultasi Sekarang',
+                button_url: '/form-klien',
+                image: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=1920&auto=format&fit=crop&q=85',
             },
         ];
 
-    const recommendedProjects: RecommendedItem[] = (recommended_projects && recommended_projects.length > 0)
-        ? recommended_projects
-        : [];
+    // Auto-advance Promo Carousel every 5 seconds (pauses on hover)
+    useEffect(() => {
+        if (promoSlides.length <= 1 || isHoveredPromo) return;
+        const timer = setInterval(() => {
+            setCurrentPromoIndex((prev) => (prev + 1) % promoSlides.length);
+        }, 5000);
+        return () => clearInterval(timer);
+    }, [promoSlides.length, isHoveredPromo]);
 
-    const instagramPhotos: InstagramPostItem[] = (instagram_posts && instagram_posts.length > 0)
-        ? instagram_posts
-        : [];
+    // File Links Fallback
+    const fileList: FileLinkItem[] = (active_project?.file_links && active_project.file_links.length > 0)
+        ? active_project.file_links
+        : [
+            {
+                id: '1',
+                name: 'Preview Foto (Low Resolution)',
+                drive_url: '#',
+                file_type: 'image',
+                created_at_formatted: '05 Jun 2026',
+            },
+            {
+                id: '2',
+                name: 'Behind The Scene',
+                drive_url: '#',
+                file_type: 'video',
+                created_at_formatted: '23 Mei 2026',
+            },
+            {
+                id: '3',
+                name: 'Foto Hari H (RAW)',
+                drive_url: '#',
+                file_type: 'zip',
+                created_at_formatted: '23 Mei 2026',
+            },
+        ];
 
+    // Highlights Fallback (4 photos for 2x2 grid)
+    const highlightPhotos = (active_project?.highlights && active_project.highlights.length > 0)
+        ? active_project.highlights.slice(0, 4)
+        : [
+            { id: '1', title: 'Highlight 1', image_url: 'https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=600&auto=format&fit=crop&q=80' },
+            { id: '2', title: 'Highlight 2', image_url: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&auto=format&fit=crop&q=80' },
+            { id: '3', title: 'Highlight 3', image_url: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=600&auto=format&fit=crop&q=80' },
+            { id: '4', title: 'Highlight 4', image_url: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?w=600&auto=format&fit=crop&q=80' },
+        ];
+
+    // Portfolio Gallery (4 photos from backend or fallback)
+    const portfolioPhotos = (portfolios && portfolios.length > 0)
+        ? portfolios.slice(0, 4).map((item, idx) => ({
+            id: item.id || String(idx + 1),
+            image: item.image || item.image_url || 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&auto=format&fit=crop&q=80',
+            isOverlay: idx === 3,
+            count: '+25',
+        }))
+        : [
+            { id: '1', image: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&auto=format&fit=crop&q=80' },
+            { id: '2', image: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=600&auto=format&fit=crop&q=80' },
+            { id: '3', image: 'https://images.unsplash.com/photo-1537633552985-df8429e8048b?w=600&auto=format&fit=crop&q=80' },
+            { id: '4', image: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?w=600&auto=format&fit=crop&q=80', isOverlay: true, count: '+25' },
+        ];
+
+    // Testimonials Fallback
     const testimonialList: TestimonialItem[] = (testimonials && testimonials.length > 0)
         ? testimonials
-        : [];
+        : [
+            {
+                id: '1',
+                client_name: 'Raka & Dinda',
+                package_name: 'Paket Prewedding',
+                rating: 5,
+                comment: 'Hasil fotonya luar biasa, melebihi ekspektasi! Tim Arams Pictures sangat profesional dan friendly. Prosesnya juga mudah dan terorganisir.',
+                avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+            },
+            {
+                id: '2',
+                client_name: 'Aditya & Sarah',
+                package_name: 'Paket Wedding Royal',
+                rating: 5,
+                comment: 'Video cinematic hari H kami sangat mengharukan dan detail. Semua keluarga memuji hasilnya. Terima kasih banyak tim Arams!',
+                avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+            },
+            {
+                id: '3',
+                client_name: 'Dimas & Clarissa',
+                package_name: 'Paket Maternity & Newborn',
+                rating: 5,
+                comment: 'Sangat sabar saat sesi foto newborn si kecil. Hasil editing warnanya hangat, natural, dan sangat berkesan bagi keluarga kami.',
+                avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&auto=format&fit=crop&q=80',
+            },
+        ];
+
+    // 5 Package Recommendations (Matching Screenshot)
+    const packageRecommendations: RecommendedItem[] = (recommended_projects && recommended_projects.length >= 5)
+        ? recommended_projects.slice(0, 5)
+        : [
+            {
+                id: '1',
+                title: 'Paket Foto Wedding',
+                description: 'Abadikan hari bahagia Anda dengan konsep elegan dan timeless.',
+                price: 'Rp38.000.000',
+                image: 'https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=600&auto=format&fit=crop&q=80',
+            },
+            {
+                id: '2',
+                title: 'Paket Maternity',
+                description: 'Momen kehamilan penuh kehangatan yang tak terlupakan.',
+                price: 'Rp15.000.000',
+                image: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&auto=format&fit=crop&q=80',
+            },
+            {
+                id: '3',
+                title: 'Paket Newborn',
+                description: 'Abadikan momen pertama si kecil dengan penuh cinta dan kelembutan.',
+                price: 'Rp13.500.000',
+                image: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=600&auto=format&fit=crop&q=80',
+            },
+            {
+                id: '4',
+                title: 'Paket Family',
+                description: 'Ciptakan kenangan indah bersama keluarga tercinta untuk selamanya.',
+                price: 'Rp12.700.000',
+                image: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=600&auto=format&fit=crop&q=80',
+            },
+            {
+                id: '5',
+                title: 'Paket Engagement',
+                description: 'Rayakan momen spesial sebelum hari bahagia Anda.',
+                price: 'Rp10.500.000',
+                image: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?w=600&auto=format&fit=crop&q=80',
+            },
+        ];
 
     const activePromo = promoSlides[currentPromoIndex % promoSlides.length] || promoSlides[0];
-    const activeTestimonial = testimonialList.length > 0
-        ? testimonialList[currentTestimonialIndex % testimonialList.length]
-        : null;
+    const activeTestimonial = testimonialList[currentTestimonialIndex % testimonialList.length] || testimonialList[0];
 
     return (
         <ClientLayout>
             <Head title="Dashboard Client Portal - Arams Pictures" />
 
-            <div className="space-y-8">
-                {/* ── 1. HERO CAROUSEL BANNER (Nyambung ke Header Navbar) ── */}
+            <div className="space-y-6 sm:space-y-8">
+                {/* ── 1. HERO CAROUSEL BANNER ─────────────────────────────── */}
                 <section
                     style={{
                         background: portalHeroGradient || portalHeroBg,
                         color: portalHeroText,
                     }}
-                    className="relative -mt-6 sm:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 overflow-hidden shadow-lg min-h-[320px] sm:min-h-[440px] lg:min-h-[480px] flex items-center transition-colors"
+                    onMouseEnter={() => setIsHoveredPromo(true)}
+                    onMouseLeave={() => setIsHoveredPromo(false)}
+                    className="relative -mt-6 sm:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 overflow-hidden shadow-md min-h-[260px] sm:min-h-[340px] lg:min-h-[380px] pb-12 sm:pb-16 lg:pb-18 flex items-center transition-colors select-none"
                 >
+                    {/* Inner Decorative Box Frame (Kotak Bingkai) */}
+                    <div className="absolute inset-2.5 sm:inset-3.5 lg:inset-4 border border-white/20 rounded-xl pointer-events-none z-20" />
+
+                    {/* Pre-rendered Stacked Cross-Fade Background Images */}
                     <div className="absolute inset-0 z-0">
-                        <img
-                            src={activePromo.image}
-                            alt={activePromo.title}
-                            className="w-full h-full object-cover object-center sm:object-right opacity-80 sm:opacity-95 filter brightness-95 contrast-[1.05] transition-opacity duration-700"
-                        />
+                        {promoSlides.map((slide, idx) => (
+                            <img
+                                key={slide.id || idx}
+                                src={slide.image}
+                                alt={slide.title}
+                                className={`absolute inset-0 w-full h-full object-cover object-center sm:object-right filter brightness-95 contrast-[1.05] transition-opacity duration-700 ease-in-out ${
+                                    currentPromoIndex === idx ? 'opacity-85 sm:opacity-95' : 'opacity-0 pointer-events-none'
+                                }`}
+                            />
+                        ))}
                         {/* Mobile Gradient Overlay */}
                         <div
                             style={{
                                 background: `linear-gradient(to bottom, ${hexToRgba(portalHeroBg, 0.95)} 0%, ${hexToRgba(portalHeroBg, 0.70)} 50%, ${hexToRgba(portalHeroBg, 0.95)} 100%)`,
                             }}
-                            className="absolute inset-0 sm:hidden"
+                            className="absolute inset-0 sm:hidden z-10 pointer-events-none"
                         />
                         {/* Desktop Gradient Overlay */}
                         <div
                             style={{
-                                background: `linear-gradient(to right, ${hexToRgba(portalHeroBg, 0.96)} 0%, ${hexToRgba(portalHeroBg, 0.88)} 28%, ${hexToRgba(portalHeroBg, 0.50)} 55%, ${hexToRgba(portalHeroBg, 0.10)} 80%, transparent 100%)`,
+                                background: `linear-gradient(to right, ${hexToRgba(portalHeroBg, 0.97)} 0%, ${hexToRgba(portalHeroBg, 0.90)} 35%, ${hexToRgba(portalHeroBg, 0.55)} 60%, ${hexToRgba(portalHeroBg, 0.15)} 80%, transparent 100%)`,
                             }}
-                            className="absolute inset-0 hidden sm:block"
-                        />
-                        {/* Subtle bottom vignette to ensure smooth transition with carousel dots */}
-                        <div
-                            style={{
-                                background: `linear-gradient(to top, ${hexToRgba(portalHeroBg, 0.5)} 0%, transparent 30%)`,
-                            }}
-                            className="absolute inset-0 pointer-events-none"
+                            className="absolute inset-0 hidden sm:block z-10 pointer-events-none"
                         />
                     </div>
 
-                    <div className="relative z-10 w-full max-w-full px-4 sm:px-10 lg:px-12 py-10 sm:py-20 lg:py-24">
-                        <div className="max-w-2xl space-y-3 sm:space-y-4 drop-shadow-xs">
-                            <span
-                                style={{ color: portalFooterText || '#FDA4AF' }}
-                                className="text-[10px] font-extrabold tracking-[0.25em] uppercase block"
+                    {/* Hero Slide Text Content with Smooth Animated Transition */}
+                    <div className="relative z-10 w-full max-w-full px-6 sm:px-12 lg:px-16 py-8 sm:py-12 lg:py-14">
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={currentPromoIndex}
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -8 }}
+                                transition={{ duration: 0.35, ease: 'easeOut' }}
+                                className="max-w-xl space-y-2.5 sm:space-y-3 drop-shadow-xs"
                             >
-                                {activePromo.tag}
-                            </span>
-                            <h1
-                                style={{
-                                    fontFamily: `'${portalFontHeading}', serif`,
-                                    color: portalHeroText,
-                                }}
-                                className="text-xl sm:text-3xl lg:text-4xl font-serif font-black tracking-tight leading-tight"
-                            >
-                                {activePromo.title}
-                            </h1>
-                            <p className="text-xs sm:text-sm opacity-90 leading-relaxed max-w-lg">
-                                {activePromo.description}
-                            </p>
-                            <div className="pt-2">
-                                <Link
-                                    href={activePromo.button_url || '/form-klien'}
-                                    style={{
-                                        backgroundColor: '#FFFFFF',
-                                        color: portalHeroBg,
-                                    }}
-                                    className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-bold shadow-md hover:opacity-90 transition-all cursor-pointer"
+                                <span
+                                    style={{ color: COLOR_WARM_CREAM }}
+                                    className="text-[10px] font-extrabold tracking-[0.25em] uppercase block opacity-90"
                                 >
-                                    <span>{activePromo.button_text}</span>
-                                    <ArrowRight className="w-3.5 h-3.5" />
-                                </Link>
-                            </div>
-                        </div>
+                                    {activePromo.tag}
+                                </span>
+                                <h1
+                                    style={{
+                                        fontFamily: `'${portalFontHeading}', serif`,
+                                        color: portalHeroText,
+                                    }}
+                                    className="text-xl sm:text-3xl lg:text-4xl font-serif font-normal tracking-tight leading-[1.2]"
+                                >
+                                    {activePromo.title}
+                                </h1>
+                                <p
+                                    style={{ color: COLOR_WARM_CREAM }}
+                                    className="text-xs sm:text-sm leading-relaxed max-w-lg opacity-90"
+                                >
+                                    {activePromo.description}
+                                </p>
+                                <div className="pt-1.5">
+                                    <Link
+                                        href={activePromo.button_url || '/form-klien'}
+                                        style={{
+                                            backgroundColor: '#FFFFFF',
+                                            color: COLOR_BURGUNDY,
+                                        }}
+                                        className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg text-xs font-bold shadow-md hover:bg-slate-50 transition-all cursor-pointer"
+                                    >
+                                        <span>{activePromo.button_text}</span>
+                                        <ArrowRight className="w-3.5 h-3.5" />
+                                    </Link>
+                                </div>
+                            </motion.div>
+                        </AnimatePresence>
                     </div>
 
-                    {/* Left & Right Circular Arrows (Hidden on mobile) */}
-                    <button
-                        type="button"
-                        onClick={() => setCurrentPromoIndex((prev) => (prev === 0 ? promoSlides.length - 1 : prev - 1))}
-                        className="absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 text-white flex items-center justify-center cursor-pointer transition-colors z-10 hidden sm:flex"
-                    >
-                        <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setCurrentPromoIndex((prev) => (prev + 1) % promoSlides.length)}
-                        className="absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/40 hover:bg-black/60 border border-white/20 text-white flex items-center justify-center cursor-pointer transition-colors z-10 hidden sm:flex"
-                    >
-                        <ChevronRight className="w-4 h-4" />
-                    </button>
+                    {/* Left & Right Circular Arrows */}
+                    {promoSlides.length > 1 && (
+                        <>
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setCurrentPromoIndex((prev) => (prev === 0 ? promoSlides.length - 1 : prev - 1));
+                                }}
+                                className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white hover:bg-slate-100 text-[#3C0E0E] shadow-md flex items-center justify-center cursor-pointer transition-all z-30"
+                                aria-label="Previous promo slide"
+                            >
+                                <ChevronLeft className="w-4 h-4 text-[#3C0E0E]" />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setCurrentPromoIndex((prev) => (prev + 1) % promoSlides.length);
+                                }}
+                                className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white hover:bg-slate-100 text-[#3C0E0E] shadow-md flex items-center justify-center cursor-pointer transition-all z-30"
+                                aria-label="Next promo slide"
+                            >
+                                <ChevronRight className="w-4 h-4 text-[#3C0E0E]" />
+                            </button>
+                        </>
+                    )}
 
                     {/* Pagination Dots */}
-                    <div className="absolute bottom-4 inset-x-0 flex justify-center items-center gap-1.5 z-10">
-                        {promoSlides.map((_, idx) => (
-                            <button
-                                key={idx}
-                                onClick={() => setCurrentPromoIndex(idx)}
-                                className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                                    currentPromoIndex === idx ? 'w-6 bg-white' : 'w-1.5 bg-white/40 hover:bg-white/60'
-                                }`}
-                            />
-                        ))}
-                    </div>
+                    {promoSlides.length > 1 && (
+                        <div className="absolute bottom-8 sm:bottom-10 lg:bottom-12 inset-x-0 flex justify-center items-center gap-1.5 z-20">
+                            {promoSlides.map((_, idx) => (
+                                <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setCurrentPromoIndex(idx);
+                                    }}
+                                    className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                                        currentPromoIndex === idx ? 'w-6 bg-white' : 'w-1.5 bg-white/40 hover:bg-white/60'
+                                    }`}
+                                    aria-label={`Slide ${idx + 1}`}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </section>
 
-                {/* ── 2. GREETING & 4 STAT CARDS (Screenshot 1) ─────────────── */}
-                <section className="space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                {/* ── 2. STATUS PROGRESS (Timeline Stepper) ────────────────── */}
+                <section
+                    style={{
+                        backgroundColor: '#FFFFFF',
+                        borderColor: COLOR_WARM_CREAM,
+                    }}
+                    className="relative z-20 !-mt-8 sm:!-mt-10 lg:!-mt-12 rounded-xl border p-5 sm:p-7 shadow-xs hover:shadow-xl hover:shadow-[#3C0E0E]/8 hover:border-[#3C0E0E]/25 transition-all duration-300 space-y-6"
+                >
+                    <div className="flex items-center justify-between">
                         <div>
-                            <h2
+                            <h3
                                 style={{
                                     fontFamily: `'${portalFontHeading}', serif`,
-                                    color: portalHeadingColor,
+                                    color: COLOR_BURGUNDY,
                                 }}
-                                className="text-xl sm:text-2xl font-serif font-black flex items-center gap-2"
+                                className="text-sm sm:text-base font-serif font-black uppercase tracking-wider"
                             >
-                                <span>Selamat datang, {client?.name || 'Klien Arams Pictures'}</span>
-                                <Heart
-                                    style={{
-                                        color: portalPrimaryAccent,
-                                        fill: portalPrimaryAccent,
-                                    }}
-                                    className="w-4 h-4 inline"
-                                />
-                            </h2>
+                                Status Progress
+                            </h3>
                             <p className="text-xs text-slate-500 mt-0.5">
-                                Terima kasih telah mempercayakan momen berharga Anda bersama Arams Pictures.
+                                Berikut adalah tahapan pengerjaan project Anda.
                             </p>
                         </div>
                         <Link
-                            href="/client/projects"
-                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 shadow-2xs transition-colors self-start sm:self-auto"
+                            href={active_project?.id ? `/client/projects/${active_project.id}#timeline` : '/client/projects'}
+                            className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-[#3C0E0E] transition-colors group"
                         >
-                            <span>Lihat Semua Project</span>
-                            <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                            <HelpCircle className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#3C0E0E] transition-colors" />
+                            <span>Tentang Timeline</span>
                         </Link>
                     </div>
 
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        {/* Stat 1: Total Project */}
-                        <div
-                            style={{
-                                backgroundColor: portalCardBg,
-                                borderColor: portalCardBorder,
-                            }}
-                            className="p-4 sm:p-5 rounded-2xl border shadow-2xs space-y-3 flex flex-col justify-between"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div
-                                    style={{
-                                        backgroundColor: `${portalPrimaryAccent}15`,
-                                        color: portalPrimaryAccent,
-                                        borderColor: `${portalPrimaryAccent}25`,
-                                    }}
-                                    className="w-10 h-10 rounded-xl border flex items-center justify-center"
-                                >
-                                    <Folder className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <span className="text-2xl font-black text-slate-900 block leading-tight">
-                                        {metrics?.total_projects ?? 1}
-                                    </span>
-                                    <span className="text-[11px] text-slate-500 font-medium">Total Project</span>
-                                </div>
-                            </div>
-                            <Link
-                                href="/client/projects"
-                                style={{ color: portalPrimaryAccent }}
-                                className="inline-flex items-center gap-1 text-[11px] font-bold hover:underline pt-1"
-                            >
-                                <span>Lihat semua project</span>
-                                <ArrowRight className="w-3 h-3" />
-                            </Link>
-                        </div>
-
-                        {/* Stat 2: Tanggal Acara */}
-                        <div
-                            style={{
-                                backgroundColor: portalCardBg,
-                                borderColor: portalCardBorder,
-                            }}
-                            className="p-4 sm:p-5 rounded-2xl border shadow-2xs space-y-3 flex flex-col justify-between"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div
-                                    style={{
-                                        backgroundColor: `${portalPrimaryAccent}15`,
-                                        color: portalPrimaryAccent,
-                                        borderColor: `${portalPrimaryAccent}25`,
-                                    }}
-                                    className="w-10 h-10 rounded-xl border flex items-center justify-center"
-                                >
-                                    <Calendar className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <span className="text-lg sm:text-xl font-black text-slate-900 block leading-tight truncate max-w-[140px]">
-                                        {active_project?.event_date_short || metrics?.event_date || 'Belum Dijadwalkan'}
-                                    </span>
-                                    <span className="text-[11px] text-slate-500 font-medium">Tanggal Acara</span>
-                                </div>
-                            </div>
-                            <span className="text-[11px] text-slate-400 font-medium truncate block">
-                                {active_project?.category_name || metrics?.event_category || 'Dokumentasi'}
-                            </span>
-                        </div>
-
-                        {/* Stat 3: Invoice */}
-                        <div
-                            style={{
-                                backgroundColor: portalCardBg,
-                                borderColor: portalCardBorder,
-                            }}
-                            className="p-4 sm:p-5 rounded-2xl border shadow-2xs space-y-3 flex flex-col justify-between"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div
-                                    style={{
-                                        backgroundColor: `${portalPrimaryAccent}15`,
-                                        color: portalPrimaryAccent,
-                                        borderColor: `${portalPrimaryAccent}25`,
-                                    }}
-                                    className="w-10 h-10 rounded-xl border flex items-center justify-center"
-                                >
-                                    <FileText className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <span className="text-2xl font-black text-slate-900 block leading-tight">
-                                        {metrics?.total_invoices ?? active_project?.invoices_count ?? 1}
-                                    </span>
-                                    <span className="text-[11px] text-slate-500 font-medium">Invoice</span>
-                                </div>
-                            </div>
-                            <Link
-                                href="/client/projects"
-                                style={{ color: portalPrimaryAccent }}
-                                className="inline-flex items-center gap-1 text-[11px] font-bold hover:underline pt-1"
-                            >
-                                <span>Lihat invoice</span>
-                                <ArrowRight className="w-3 h-3" />
-                            </Link>
-                        </div>
-
-                        {/* Stat 4: Pembayaran */}
-                        <div
-                            style={{
-                                backgroundColor: portalCardBg,
-                                borderColor: portalCardBorder,
-                            }}
-                            className="p-4 sm:p-5 rounded-2xl border shadow-2xs space-y-3 flex flex-col justify-between"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div
-                                    style={{
-                                        backgroundColor: `${portalPrimaryAccent}15`,
-                                        color: portalPrimaryAccent,
-                                        borderColor: `${portalPrimaryAccent}25`,
-                                    }}
-                                    className="w-10 h-10 rounded-xl border flex items-center justify-center"
-                                >
-                                    <CreditCard className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <span className="text-2xl font-black text-slate-900 block leading-tight">
-                                        {metrics?.total_payments ?? active_project?.payments_count ?? 0}
-                                    </span>
-                                    <span className="text-[11px] text-slate-500 font-medium">Pembayaran</span>
-                                </div>
-                            </div>
-                            <Link
-                                href="/client/projects"
-                                style={{ color: portalPrimaryAccent }}
-                                className="inline-flex items-center gap-1 text-[11px] font-bold hover:underline pt-1"
-                            >
-                                <span>Lihat riwayat</span>
-                                <ArrowRight className="w-3 h-3" />
-                            </Link>
-                        </div>
-                    </div>
-                </section>
-
-                {/* ── 3. STATUS PROJECT ANDA (Screenshot 1) ─────────────────── */}
-                <section
-                    style={{
-                        backgroundColor: portalCardBg,
-                        borderColor: portalCardBorder,
-                    }}
-                    className="rounded-3xl border p-6 sm:p-8 shadow-2xs space-y-6 transition-colors"
-                >
-                    <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                        <h3
-                            style={{
-                                fontFamily: `'${portalFontHeading}', serif`,
-                                color: portalHeadingColor,
-                            }}
-                            className="text-base font-serif font-bold"
-                        >
-                            Status Project Anda
-                        </h3>
-                        <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
-                            <span>Terakhir diperbarui: {active_project?.last_updated || 'Hari ini'}</span>
-                            <RefreshCw className="w-3 h-3" />
-                        </div>
-                    </div>
-
-                    <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center">
-                        {/* Left Portrait Photo */}
-                        <div className="w-full sm:w-44 h-48 sm:h-52 rounded-2xl overflow-hidden bg-slate-100 shrink-0 shadow-2xs">
-                            <img
-                                src={active_project?.thumbnail || '/images/wedding-couple.jpg'}
-                                alt={active_project?.name || 'Wedding Couple'}
-                                className="w-full h-full object-cover"
-                            />
-                        </div>
-
-                        {/* Right Content */}
-                        <div className="flex-1 space-y-4 w-full">
-                            <div className="space-y-1">
-                                <div className="flex items-center gap-2">
-                                    <h4
-                                        style={{
-                                            fontFamily: `'${portalFontHeading}', serif`,
-                                            color: portalHeadingColor,
-                                        }}
-                                        className="text-lg sm:text-xl font-serif font-black"
-                                    >
-                                        {active_project?.name || (client ? `Project ${client.name}` : 'Wedding Andi & Sari')}
-                                    </h4>
-                                    <span
-                                        style={{
-                                            backgroundColor: `${portalPrimaryAccent}15`,
-                                            color: portalPrimaryAccent,
-                                            borderColor: `${portalPrimaryAccent}35`,
-                                        }}
-                                        className="px-2.5 py-0.5 rounded-md text-[10px] font-bold border"
-                                    >
-                                        {active_project?.status_label || (active_project?.status === 'completed' ? 'Selesai' : 'Dalam Proses')}
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
-                                    <div className="flex items-center gap-1">
-                                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                                        <span>{active_project?.event_date || 'Tanggal belum dijadwalkan'}</span>
-                                    </div>
-                                    <span>•</span>
-                                    <div className="flex items-center gap-1">
-                                        <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                                        <span>{active_project?.location || 'Studio Arams Pictures'}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* 8-Step Timeline Horizontal Stepper */}
-                            <div className="pt-2">
-                                <div className="flex items-center justify-between relative pb-2">
-                                    <div className="absolute left-4 right-4 top-3.5 h-0.5 bg-slate-200 -z-0" />
-                                    {timeline.steps.map((step) => {
-                                        const isDone = step.status === 'completed';
-                                        const isActive = step.status === 'active';
-                                        const isSelected = selectedDashboardStep?.step === step.step;
-
-                                        return (
-                                            <div key={step.step} className="flex flex-col items-center relative z-10 flex-1">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setSelectedDashboardStepNum(step.step)}
-                                                    title={`Klik untuk melihat info tahap ${step.step}: ${step.title || step.name}`}
-                                                    style={
-                                                        isSelected
-                                                            ? {
-                                                                  backgroundColor: portalPrimaryAccent,
-                                                                  color: '#FFFFFF',
-                                                                  boxShadow: `0 0 0 4px ${portalPrimaryAccent}25`,
-                                                              }
-                                                            : isDone
-                                                            ? {
-                                                                  backgroundColor: '#059669',
-                                                                  color: '#FFFFFF',
-                                                              }
-                                                            : isActive
-                                                            ? {
-                                                                  backgroundColor: portalPrimaryAccent,
-                                                                  color: '#FFFFFF',
-                                                              }
-                                                            : {}
-                                                    }
-                                                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all cursor-pointer transform hover:scale-115 active:scale-95 ${
-                                                        isSelected ? 'scale-120 ring-2 ring-rose-400 z-20' : ''
-                                                    } ${
-                                                        !isDone && !isActive && !isSelected
-                                                            ? 'bg-slate-100 text-slate-400 border border-slate-200 hover:border-slate-300'
-                                                            : 'shadow-xs'
-                                                    }`}
-                                                >
-                                                    {isDone ? (
-                                                        <Check className="w-3.5 h-3.5 stroke-[3]" />
-                                                    ) : (
-                                                        step.step
-                                                    )}
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setSelectedDashboardStepNum(step.step)}
-                                                    className="text-left flex flex-col items-center cursor-pointer mt-1 group"
-                                                >
-                                                    <span
-                                                        style={isSelected || isActive ? { color: portalPrimaryAccent } : {}}
-                                                        className={`text-[10px] font-bold text-center hidden sm:block transition-colors group-hover:underline ${
-                                                            !isSelected && !isActive ? (isDone ? 'text-slate-700' : 'text-slate-400') : ''
-                                                        }`}
-                                                    >
-                                                        {step.title || step.name}
-                                                    </span>
-                                                    <span
-                                                        className={`text-[9px] font-semibold hidden sm:block ${
-                                                            isDone
-                                                                ? 'text-emerald-600'
-                                                                : isActive
-                                                                ? 'text-amber-600'
-                                                                : 'text-slate-400'
-                                                        }`}
-                                                    >
-                                                        {step.status_label || (isDone ? 'Selesai' : isActive ? 'Sedang Diproses' : 'Menunggu')}
-                                                    </span>
-                                                </button>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* Alert Box Under Stepper */}
+                    {/* 5-Step Horizontal Stepper */}
+                    <div className="pt-2 px-1 sm:px-4">
+                        <div className="flex items-start justify-between relative">
+                            {/* Connecting Line behind circles */}
                             <div
+                                className="absolute top-4 sm:top-5 h-0.5 bg-slate-200 -z-0"
                                 style={{
-                                    backgroundColor: `${portalPrimaryAccent}08`,
-                                    borderColor: `${portalPrimaryAccent}25`,
+                                    left: `calc(100% / (${timelineSteps.length} * 2))`,
+                                    right: `calc(100% / (${timelineSteps.length} * 2))`,
                                 }}
-                                className="border rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all"
-                            >
-                                <div className="flex items-start sm:items-center gap-3.5 text-xs text-slate-700">
+                            />
+
+                            {timelineSteps.map((step, idx) => {
+                                const isCompleted = step.status === 'completed';
+                                const isActive = step.status === 'active' || step.step === selectedStepNum;
+
+                                return (
                                     <div
-                                        style={{
-                                            backgroundColor: `${portalPrimaryAccent}20`,
-                                            color: portalPrimaryAccent,
-                                        }}
-                                        className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs mt-0.5 sm:mt-0"
+                                        key={step.step || idx}
+                                        className="flex flex-col items-center relative z-10 flex-1 cursor-pointer group"
+                                        onClick={() => setSelectedStepNum(step.step)}
                                     >
-                                        <Compass className="w-5 h-5" />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            <strong className="text-sm font-bold text-slate-900">
-                                                Tahap {selectedDashboardStep?.step || 1}: {selectedDashboardStep?.title || selectedDashboardStep?.name || timeline.active_step_title || 'Proses Pengerjaan'}
-                                            </strong>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedStepNum(step.step)}
+                                            style={
+                                                isCompleted
+                                                    ? {
+                                                          backgroundColor: COLOR_BURGUNDY,
+                                                          color: '#FFFFFF',
+                                                      }
+                                                    : isActive
+                                                    ? {
+                                                          backgroundColor: '#FFFFFF',
+                                                          color: COLOR_BURGUNDY,
+                                                          borderColor: COLOR_BURGUNDY,
+                                                      }
+                                                    : {
+                                                          backgroundColor: COLOR_WARM_CREAM,
+                                                          color: '#7A6666',
+                                                          borderColor: '#E8DDD5',
+                                                      }
+                                            }
+                                            className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-200 group-hover:scale-110 cursor-pointer ${
+                                                isActive ? 'border-2 shadow-xs' : !isCompleted ? 'border' : ''
+                                            }`}
+                                        >
+                                            {isCompleted ? (
+                                                <Check className="w-4 h-4 stroke-[2.5]" />
+                                            ) : step.step === 3 || (step.name || step.title || '').toLowerCase().includes('preview') ? (
+                                                <ImageIcon className="w-4 h-4" />
+                                            ) : step.step === 4 || (step.name || step.title || '').toLowerCase().includes('edit') ? (
+                                                <Edit3 className="w-4 h-4" />
+                                            ) : step.step === 5 || (step.name || step.title || '').toLowerCase().includes('delivery') || (step.name || step.title || '').toLowerCase().includes('kirim') ? (
+                                                <Download className="w-4 h-4" />
+                                            ) : (
+                                                <span className="text-xs font-bold">{step.step}</span>
+                                            )}
+                                        </button>
+
+                                        <div className="text-center mt-2 space-y-0.5">
+                                            <p
+                                                style={{
+                                                    color: isCompleted || isActive ? COLOR_BURGUNDY : '#64748B',
+                                                }}
+                                                className="text-[11px] sm:text-xs font-bold group-hover:text-[#3C0E0E] transition-colors"
+                                            >
+                                                {step.title || `${step.step}. ${step.name}`}
+                                            </p>
                                             <span
-                                                className={`text-[9.5px] px-2.5 py-0.5 rounded-full font-bold ${
-                                                    selectedDashboardStep?.status === 'completed'
-                                                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                                                        : selectedDashboardStep?.status === 'active'
-                                                        ? 'bg-amber-100 text-amber-900 border border-amber-200'
-                                                        : 'bg-slate-100 text-slate-600 border border-slate-200'
+                                                className={`text-[10px] block font-semibold ${
+                                                    isCompleted
+                                                        ? 'text-slate-500'
+                                                        : isActive
+                                                        ? 'text-[#3C0E0E] font-bold'
+                                                        : 'text-slate-400'
                                                 }`}
                                             >
-                                                {selectedDashboardStep?.status_label || (selectedDashboardStep?.status === 'completed' ? 'Selesai' : selectedDashboardStep?.status === 'active' ? 'Sedang Diproses' : 'Menunggu')}
+                                                {step.status_label || (isCompleted ? 'Selesai' : isActive ? 'Sedang Dikerjakan' : 'Menunggu')}
                                             </span>
-                                            {selectedDashboardStep?.date && (
-                                                <span className="text-[10.5px] text-slate-400 font-medium inline-flex items-center gap-1">
-                                                    <Calendar className="w-3 h-3 text-slate-400" />
-                                                    <span>{selectedDashboardStep.date}</span>
+                                            {step.date && (
+                                                <span className="text-[9.5px] text-slate-400 block">
+                                                    {step.date}
                                                 </span>
                                             )}
                                         </div>
-                                        <p className="text-xs text-slate-600 leading-relaxed max-w-xl">
-                                            {selectedDashboardStep?.desc || selectedDashboardStep?.description || timeline.active_step_desc || 'Tahap pengerjaan saat ini sedang diproses oleh tim kami.'}
-                                        </p>
                                     </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Stepper Progress Bar Banner */}
+                    <div
+                        style={{
+                            backgroundColor: COLOR_WARM_CREAM,
+                            borderColor: '#E8DDD5',
+                        }}
+                        className="rounded-xl border p-4 sm:p-5 space-y-3.5 hover:shadow-md hover:border-[#3C0E0E]/30 hover:-translate-y-0.5 transition-all duration-300 group"
+                    >
+                        {/* Top Info Row */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex items-start sm:items-center gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-white border border-[#E8DDD5] flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+                                    <Sparkles className="w-4 h-4 text-[#3C0E0E]" />
                                 </div>
-                                <Link
-                                    href={active_project?.id ? `/client/projects/${active_project.id}` : '/client/projects'}
-                                    style={{ color: portalPrimaryAccent }}
-                                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-bold hover:bg-slate-50 transition-colors shrink-0 shadow-2xs hover:scale-[1.02]"
-                                >
-                                    <span>Lihat Detail Project</span>
-                                    <ArrowRight className="w-3.5 h-3.5" />
-                                </Link>
+                                <div className="space-y-0.5 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <h4
+                                            style={{ color: COLOR_BURGUNDY }}
+                                            className="text-xs sm:text-sm font-bold truncate"
+                                        >
+                                            {activeStepObj.title?.replace(/^\d+\.\s*/, '') || activeStepObj.name || 'Editing Seleksi'}
+                                        </h4>
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white text-[#3C0E0E] border border-[#E8DDD5] shadow-2xs">
+                                            Tahap {selectedStepNum} dari {totalTimelineSteps}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-slate-600 leading-relaxed line-clamp-1 sm:line-clamp-none">
+                                        {activeStepObj.desc || activeStepObj.description || 'Proses color grading eksklusif & retouching foto pilihan'}
+                                    </p>
+                                </div>
                             </div>
 
-                            <p className="text-[10px] text-slate-400">
-                                * Catatan: Untuk project non-wedding, proses terdiri dari 5 tahapan.
-                            </p>
+                            <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-[#E8DDD5]/60">
+                                <div className="text-left sm:text-right">
+                                    <span className="text-[10px] text-slate-500 font-semibold block uppercase tracking-wider">
+                                        Progres
+                                    </span>
+                                    <span
+                                        style={{ color: COLOR_BURGUNDY }}
+                                        className="text-base sm:text-lg font-black leading-none block"
+                                    >
+                                        {progressPercent}%
+                                    </span>
+                                </div>
+
+                                <Link
+                                    href={active_project?.id ? `/client/projects/${active_project.id}#timeline` : '/client/projects'}
+                                    style={{
+                                        backgroundColor: '#FFFFFF',
+                                        color: COLOR_BURGUNDY,
+                                        borderColor: '#E8DDD5',
+                                    }}
+                                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border text-xs font-bold shadow-2xs hover:bg-[#3C0E0E] hover:text-white hover:border-[#3C0E0E] transition-all duration-300 group/btn"
+                                >
+                                    <span>Lihat Detail</span>
+                                    <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform" />
+                                </Link>
+                            </div>
+                        </div>
+
+                        {/* Progress Bar Track & Fill */}
+                        <div className="space-y-1.5 pt-0.5">
+                            <div className="w-full h-2.5 sm:h-3 rounded-full bg-white/90 border border-[#E8DDD5] p-0.5 overflow-hidden shadow-2xs">
+                                <div
+                                    className="h-full rounded-full transition-all duration-700 ease-out bg-gradient-to-r from-[#3C0E0E] via-[#5C1A1A] to-[#8B2635] shadow-xs"
+                                    style={{ width: `${progressPercent}%` }}
+                                />
+                            </div>
+                            <div className="flex justify-between items-center text-[10px] text-slate-500 font-medium">
+                                <span>
+                                    Status: <strong className="text-slate-800">{activeStepObj.status_label || (isProjectCompleted ? 'Selesai' : 'Sedang Diproses')}</strong>
+                                </span>
+                                {activeStepObj.date && (
+                                    <span>{activeStepObj.date}</span>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </section>
 
-                {/* ── 4. TWO-BY-TWO GRID (2x2) ─────────────────────────────── */}
-                <section className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-                    {/* Card 1: Highlight Pembayaran */}
+                {/* ── 3. THREE-COLUMN ROW (FILE TERBARU, PEMBAYARAN, HIGHLIGHT) ── */}
+                <section className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 items-stretch">
+                    {/* Card 1: File Terbaru */}
                     <div
                         style={{
-                            backgroundColor: portalCardBg,
-                            borderColor: portalCardBorder,
+                            backgroundColor: '#FFFFFF',
+                            borderColor: COLOR_WARM_CREAM,
                         }}
-                        className="rounded-3xl border p-5 sm:p-6 shadow-2xs flex flex-col justify-between transition-colors h-full"
+                        className="rounded-xl border p-5 sm:p-6 shadow-xs flex flex-col justify-between hover:shadow-lg hover:shadow-[#3C0E0E]/5 hover:-translate-y-1 hover:border-[#3C0E0E]/25 transition-all duration-300 group"
                     >
                         <div className="space-y-4">
-                            <div className="border-b border-slate-100 pb-3 min-h-[50px] flex flex-col justify-center">
-                                <h4
-                                    style={{ color: portalHeadingColor }}
-                                    className="text-xs font-black uppercase tracking-wider"
+                            <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
+                                <div>
+                                    <h4
+                                        style={{ color: COLOR_BURGUNDY }}
+                                        className="text-xs font-black uppercase tracking-wider"
+                                    >
+                                        File Terbaru
+                                    </h4>
+                                    <p className="text-[11px] text-slate-400 mt-0.5">
+                                        File atau link terakhir yang dibagikan kepada Anda.
+                                    </p>
+                                </div>
+                                <Link
+                                    href={active_project?.id ? `/client/projects/${active_project.id}#files` : '/client/projects'}
+                                    style={{
+                                        backgroundColor: COLOR_WARM_CREAM,
+                                        color: COLOR_BURGUNDY,
+                                    }}
+                                    className="px-2.5 py-1 rounded-md text-[10px] font-bold hover:opacity-90 transition-opacity shrink-0"
                                 >
-                                    Highlight Pembayaran
-                                </h4>
-                                <p className="text-[11px] text-slate-400 mt-0.5">Ringkasan pembayaran project Anda.</p>
+                                    Lihat Semua
+                                </Link>
                             </div>
 
-                            <div className="space-y-2 text-xs">
-                                <div className="flex justify-between items-center py-0.5">
-                                    <span className="text-slate-500 font-medium">Total Project</span>
-                                    <span className="font-bold text-slate-900 text-sm">
-                                        {payment_summary?.total_amount ? `Rp${payment_summary.total_amount.toLocaleString('id-ID')}` : 'Rp50.000.000'}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between items-center py-0.5">
-                                    <span className="text-slate-500 font-medium">Total Dibayar</span>
-                                    <span className="font-bold text-emerald-600 text-sm">
-                                        {payment_summary?.paid_amount ? `Rp${payment_summary.paid_amount.toLocaleString('id-ID')}` : 'Rp25.000.000'}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between items-center py-0.5">
-                                    <span className="text-slate-500 font-medium">Sisa Tagihan</span>
-                                    <span className="font-bold text-rose-600 text-sm">
-                                        {payment_summary?.remaining_amount ? `Rp${payment_summary.remaining_amount.toLocaleString('id-ID')}` : 'Rp25.000.000'}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Progress bar */}
-                            <div className="space-y-1.5 pt-1">
-                                <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                            <div className="space-y-2.5">
+                                {fileList.slice(0, 3).map((file, idx) => (
                                     <div
-                                        className="h-full rounded-full transition-all"
-                                        style={{
-                                            backgroundColor: portalPrimaryAccent,
-                                            width: `${payment_summary?.paid_percentage || 50}%`,
-                                        }}
-                                    />
-                                </div>
-                                <div className="text-right text-[10px] font-bold text-slate-500">
-                                    {payment_summary?.paid_percentage ? `${payment_summary.paid_percentage}%` : '50%'}
-                                </div>
-                            </div>
-
-                            {/* Info Box */}
-                            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs text-slate-600 flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                                    <span className="font-medium">Pembayaran Terakhir</span>
-                                </div>
-                                <span className="font-bold text-slate-800">
-                                    {payment_summary?.last_payment_date || '-'}
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className="pt-4 mt-auto">
-                            <Link
-                                href={active_project?.id ? `/client/projects/${active_project.id}` : '/client/projects'}
-                                style={{ color: portalPrimaryAccent }}
-                                className="w-full py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-center transition-colors block shadow-2xs hover:shadow-xs"
-                            >
-                                Lihat Detail Pembayaran →
-                            </Link>
-                        </div>
-                    </div>
-
-                    {/* Card 2: File Terbaru */}
-                    <div
-                        style={{
-                            backgroundColor: portalCardBg,
-                            borderColor: portalCardBorder,
-                        }}
-                        className="rounded-3xl border p-5 sm:p-6 shadow-2xs flex flex-col justify-between transition-colors h-full"
-                    >
-                        <div className="space-y-4">
-                            <div className="border-b border-slate-100 pb-3 min-h-[50px] flex flex-col justify-center">
-                                <h4
-                                    style={{ color: portalHeadingColor }}
-                                    className="text-xs font-black uppercase tracking-wider"
-                                >
-                                    File Terbaru
-                                </h4>
-                                <p className="text-[11px] text-slate-400 mt-0.5">File atau link terbaru yang dibagikan.</p>
-                            </div>
-
-                            <div className="space-y-2.5 text-xs">
-                                {active_project?.file_links && active_project.file_links.length > 0 ? (
-                                    active_project.file_links.slice(0, 3).map((file, idx) => (
-                                        <a
-                                            key={file.id || idx}
-                                            href={file.drive_url || '#'}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="p-2.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between hover:bg-slate-100/80 transition-colors group block"
-                                        >
-                                            <div className="space-y-0.5 min-w-0 pr-2">
-                                                <p className="font-bold text-slate-900 text-xs truncate group-hover:text-[#4A151B] transition-colors">
+                                        key={file.id || idx}
+                                        className="p-2.5 rounded-lg bg-[#FBF6F0] border border-[#F4EBE4] flex items-center justify-between hover:bg-white hover:border-[#3C0E0E]/30 hover:shadow-2xs transition-all duration-200"
+                                    >
+                                        <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                                            <Folder className="w-4 h-4 text-slate-400 shrink-0" />
+                                            <div className="min-w-0">
+                                                <p className="text-xs font-bold text-slate-800 truncate">
                                                     {file.name}
                                                 </p>
                                                 <span className="text-[10px] text-slate-400 block">
-                                                    Dibagikan pada {file.created_at_formatted || file.created_at || 'Baru saja'}
+                                                    Dibagikan pada {file.created_at_formatted || '05 Jun 2026'}
                                                 </span>
                                             </div>
-                                            <div className="w-7 h-7 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-500 group-hover:text-[#4A151B] group-hover:border-[#4A151B]/30 shadow-2xs shrink-0 transition-colors">
-                                                <Download className="w-3.5 h-3.5" />
-                                            </div>
+                                        </div>
+                                        <a
+                                            href={file.drive_url || '#'}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            style={{
+                                                backgroundColor: '#FFFFFF',
+                                                borderColor: '#E8DDD5',
+                                                color: COLOR_BURGUNDY,
+                                            }}
+                                            className="px-2.5 py-1 rounded-md border text-[10px] font-bold inline-flex items-center gap-1 hover:bg-slate-50 transition-colors shrink-0 shadow-2xs cursor-pointer"
+                                        >
+                                            <span>Buka</span>
+                                            <ArrowUpRight className="w-3 h-3" />
                                         </a>
-                                    ))
-                                ) : (
-                                    <div className="py-8 text-center text-slate-400 text-xs">
-                                        Belum ada file yang dibagikan untuk proyek ini.
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="pt-4 mt-auto">
-                            <Link
-                                href={active_project?.id ? `/client/projects/${active_project.id}` : '/client/projects'}
-                                style={{ color: portalPrimaryAccent }}
-                                className="w-full py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-center transition-colors block shadow-2xs hover:shadow-xs"
-                            >
-                                Lihat Semua File &amp; Drive Link →
-                            </Link>
-                        </div>
-                    </div>
-
-                    {/* Card 3: Highlight Project */}
-                    <div
-                        style={{
-                            backgroundColor: portalCardBg,
-                            borderColor: portalCardBorder,
-                        }}
-                        className="rounded-3xl border p-5 sm:p-6 shadow-2xs flex flex-col justify-between transition-colors h-full"
-                    >
-                        <div className="space-y-4">
-                            <div className="border-b border-slate-100 pb-3 min-h-[50px] flex flex-col justify-center">
-                                <h4
-                                    style={{ color: portalHeadingColor }}
-                                    className="text-xs font-black uppercase tracking-wider"
-                                >
-                                    Highlight Project
-                                </h4>
-                                <p className="text-[11px] text-slate-400 mt-0.5">Beberapa momen terbaik dari project Anda.</p>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2.5">
-                                {((active_project?.highlights && active_project.highlights.length > 0)
-                                    ? active_project.highlights.slice(0, 4)
-                                    : [
-                                        { id: '1', title: 'Highlight 1', image_url: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=500&auto=format&fit=crop&q=80' },
-                                        { id: '2', title: 'Highlight 2', image_url: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=500&auto=format&fit=crop&q=80' },
-                                        { id: '3', title: 'Highlight 3', image_url: 'https://images.unsplash.com/photo-1520854221256-17451cc331bf?w=500&auto=format&fit=crop&q=80' },
-                                        { id: '4', title: 'Highlight 4', image_url: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?w=500&auto=format&fit=crop&q=80' },
-                                    ]
-                                ).map((hl: any, idx: number) => (
-                                    <div key={hl.id || idx} className="h-24 sm:h-28 rounded-2xl overflow-hidden bg-slate-100 relative group border border-slate-200/60 shadow-2xs">
-                                        <img
-                                            src={hl.image_url}
-                                            alt={hl.title || `Highlight ${idx + 1}`}
-                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                        />
                                     </div>
                                 ))}
                             </div>
@@ -962,240 +916,745 @@ export default function ClientDashboard({
 
                         <div className="pt-4 mt-auto">
                             <Link
-                                href={active_project?.id ? `/client/projects/${active_project.id}#section-highlight` : '/client/projects'}
-                                style={{ color: portalPrimaryAccent }}
-                                className="w-full py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-center transition-colors block shadow-2xs hover:shadow-xs"
+                                href={active_project?.id ? `/client/projects/${active_project.id}#files` : '/client/projects'}
+                                style={{
+                                    backgroundColor: '#FFFFFF',
+                                    color: COLOR_BURGUNDY,
+                                    borderColor: '#E8DDD5',
+                                }}
+                                className="w-full py-2.5 rounded-lg border text-xs font-bold text-center inline-flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors shadow-2xs group/btn"
                             >
-                                Lihat Semua Highlight →
+                                <Folder className="w-3.5 h-3.5" />
+                                <span>Lihat Semua File &amp; Drive Link</span>
+                                <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform" />
                             </Link>
                         </div>
                     </div>
 
-                    {/* Card 4: Ulasan Client */}
+                    {/* Card 2: Pembayaran */}
                     <div
                         style={{
-                            backgroundColor: portalCardBg,
-                            borderColor: portalCardBorder,
+                            backgroundColor: '#FFFFFF',
+                            borderColor: COLOR_WARM_CREAM,
                         }}
-                        className="rounded-3xl border p-5 sm:p-6 shadow-2xs flex flex-col justify-between transition-colors h-full"
+                        className="rounded-xl border p-5 sm:p-6 shadow-xs flex flex-col justify-between hover:shadow-lg hover:shadow-[#3C0E0E]/5 hover:-translate-y-1 hover:border-[#3C0E0E]/25 transition-all duration-300 group"
                     >
                         <div className="space-y-4">
-                            <div className="border-b border-slate-100 pb-3 min-h-[50px] flex flex-col justify-center">
-                                <h4
-                                    style={{ color: portalHeadingColor }}
-                                    className="text-xs font-black uppercase tracking-wider"
+                            <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
+                                <div>
+                                    <h4
+                                        style={{ color: COLOR_BURGUNDY }}
+                                        className="text-xs font-black uppercase tracking-wider"
+                                    >
+                                        Pembayaran
+                                    </h4>
+                                    <p className="text-[11px] text-slate-400 mt-0.5">
+                                        Ringkasan status &amp; riwayat pembayaran project Anda.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsPaymentModalOpen(true)}
+                                    style={{
+                                        backgroundColor: COLOR_WARM_CREAM,
+                                        color: COLOR_BURGUNDY,
+                                    }}
+                                    className="px-2.5 py-1 rounded-md text-[10px] font-bold hover:opacity-90 transition-opacity shrink-0 cursor-pointer"
                                 >
-                                    Ulasan Client
-                                </h4>
-                                <p className="text-[11px] text-slate-400 mt-0.5">Terima kasih atas kepercayaan Anda.</p>
+                                    Lihat Detail
+                                </button>
                             </div>
 
-                            {activeTestimonial ? (
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-1.5 text-amber-500">
-                                            <div className="flex items-center">
-                                                {Array.from({ length: 5 }).map((_, i) => (
-                                                    <Star
-                                                        key={i}
-                                                        className={`w-3.5 h-3.5 ${
-                                                            i < activeTestimonial.rating
-                                                                ? 'text-amber-500 fill-amber-500'
-                                                                : 'text-slate-200'
-                                                        }`}
-                                                    />
-                                                ))}
-                                            </div>
-                                            <span className="text-xs font-bold text-slate-900 ml-1">
-                                                {Number(activeTestimonial.rating).toFixed(1)}
-                                            </span>
-                                        </div>
+                            <div className="space-y-2 text-xs">
+                                <div className="flex justify-between items-center py-0.5">
+                                    <span className="text-slate-500 font-medium">Total Project</span>
+                                    <span className="font-bold text-slate-900">
+                                        {formatRupiah(payment_summary?.total_amount || 50000000)}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center py-0.5">
+                                    <span className="text-slate-500 font-medium">Total Dibayar</span>
+                                    <span className="font-bold text-emerald-600">
+                                        {formatRupiah(payment_summary?.paid_amount || 25000000)}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center py-0.5">
+                                    <span className="text-slate-500 font-medium">Sisa Tagihan</span>
+                                    <span style={{ color: COLOR_BURGUNDY }} className="font-bold">
+                                        {formatRupiah(payment_summary?.remaining_amount || 25000000)}
+                                    </span>
+                                </div>
+                            </div>
 
-                                        {testimonialList.length > 1 && (
-                                            <div className="flex items-center gap-1">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setCurrentTestimonialIndex((prev) => (prev === 0 ? testimonialList.length - 1 : prev - 1))}
-                                                    className="w-6 h-6 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 cursor-pointer transition-colors shadow-2xs"
-                                                    title="Ulasan sebelumnya"
-                                                >
-                                                    <ChevronLeft className="w-3.5 h-3.5" />
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setCurrentTestimonialIndex((prev) => (prev + 1) % testimonialList.length)}
-                                                    className="w-6 h-6 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 cursor-pointer transition-colors shadow-2xs"
-                                                    title="Ulasan selanjutnya"
-                                                >
-                                                    <ChevronRight className="w-3.5 h-3.5" />
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
+                            {/* Progress bar */}
+                            <div className="space-y-1 pt-1">
+                                <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                                    <div
+                                        className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-[#3C0E0E] to-[#8B2635]"
+                                        style={{
+                                            width: `${payment_summary?.paid_percentage || 50}%`,
+                                        }}
+                                    />
+                                </div>
+                                <div className="flex justify-between items-center text-[10px] text-slate-500 font-semibold">
+                                    <span>Status Tagihan</span>
+                                    <span>{payment_summary?.paid_percentage || 50}% Terbayar</span>
+                                </div>
+                            </div>
 
-                                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
-                                        <p className="text-xs text-slate-700 leading-relaxed italic line-clamp-3">
-                                            "{activeTestimonial.comment}"
-                                        </p>
-                                    </div>
-
-                                    <div className="flex items-center justify-between pt-0.5">
-                                        <div className="flex items-center gap-2.5">
-                                            <div className="w-8 h-8 rounded-full bg-slate-200 overflow-hidden shrink-0 border border-slate-200 shadow-2xs">
-                                                <img
-                                                    src={activeTestimonial.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
-                                                    alt={activeTestimonial.client_name}
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            </div>
-                                            <div className="min-w-0">
-                                                <p className="text-xs font-bold text-slate-900 leading-none truncate">
-                                                    {activeTestimonial.client_name}
-                                                </p>
-                                                <span className="text-[10px] text-slate-400 truncate block mt-0.5">
-                                                    {activeTestimonial.package_name || 'Dokumentasi'}
-                                                </span>
-                                            </div>
-                                        </div>
+                            {/* Sub Box: Pembayaran Terakhir */}
+                            <div
+                                style={{
+                                    backgroundColor: COLOR_WARM_CREAM,
+                                    borderColor: '#E8DDD5',
+                                }}
+                                className="p-3 rounded-lg border flex items-center justify-between text-xs hover:shadow-2xs hover:border-[#3C0E0E]/20 transition-all duration-200"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                    <div>
+                                        <span className="font-bold text-slate-800 block text-[11px]">
+                                            Pembayaran Terakhir
+                                        </span>
+                                        <span className="text-[10px] text-slate-500">
+                                            {payment_summary?.last_payment_label || 'DP (50%)'}
+                                        </span>
                                     </div>
                                 </div>
-                            ) : (
-                                <div className="py-6 text-center text-slate-400 text-xs">
-                                    Belum ada ulasan klien.
-                                </div>
-                            )}
+                                <span className="text-[10px] text-slate-500 font-medium">
+                                    {payment_summary?.last_payment_date || '26 Mei 2026'}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Bottom Full-Width Action Button to Fill Card Height symmetrically */}
+                        <div className="pt-4 mt-auto">
+                            <button
+                                type="button"
+                                onClick={() => setIsPaymentModalOpen(true)}
+                                style={{
+                                    backgroundColor: '#FFFFFF',
+                                    color: COLOR_BURGUNDY,
+                                    borderColor: '#E8DDD5',
+                                }}
+                                className="w-full py-2.5 rounded-lg border text-xs font-bold text-center inline-flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors shadow-2xs group/btn cursor-pointer"
+                            >
+                                <CreditCard className="w-3.5 h-3.5" />
+                                <span>Lihat Rincian &amp; Riwayat Pembayaran</span>
+                                <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform" />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Card 3: Highlight Project */}
+                    <div
+                        style={{
+                            backgroundColor: '#FFFFFF',
+                            borderColor: COLOR_WARM_CREAM,
+                        }}
+                        className="rounded-xl border p-5 sm:p-6 shadow-xs flex flex-col justify-between hover:shadow-lg hover:shadow-[#3C0E0E]/5 hover:-translate-y-1 hover:border-[#3C0E0E]/25 transition-all duration-300 group"
+                    >
+                        <div className="space-y-4">
+                            <div className="border-b border-slate-100 pb-3">
+                                <h4
+                                    style={{ color: COLOR_BURGUNDY }}
+                                    className="text-xs font-black uppercase tracking-wider"
+                                >
+                                    Highlight Project
+                                </h4>
+                                <p className="text-[11px] text-slate-400 mt-0.5">
+                                    Beberapa momen terbaik dari project Anda.
+                                </p>
+                            </div>
+
+                            {/* 2x2 Photo Grid */}
+                            <div className="grid grid-cols-2 gap-2">
+                                {highlightPhotos.map((photo, idx) => (
+                                    <div
+                                        key={photo.id || idx}
+                                        onClick={() => {
+                                            setActiveLightboxIndex(idx);
+                                            setIsLightboxOpen(true);
+                                        }}
+                                        className="aspect-[4/3] rounded-lg overflow-hidden bg-slate-100 relative group/photo cursor-pointer"
+                                    >
+                                        <img
+                                            src={photo.image_url}
+                                            alt={photo.title || `Highlight ${idx + 1}`}
+                                            className="w-full h-full object-cover group-hover/photo:scale-108 transition-transform duration-500"
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Dots */}
+                            <div className="flex justify-center items-center gap-1 pt-1">
+                                <div className="w-4 h-1 rounded-full bg-slate-400" />
+                                <div className="w-1 h-1 rounded-full bg-slate-200" />
+                                <div className="w-1 h-1 rounded-full bg-slate-200" />
+                            </div>
                         </div>
 
                         <div className="pt-4 mt-auto">
                             <Link
-                                href="/client/projects"
-                                style={{ color: portalPrimaryAccent }}
-                                className="w-full py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-center transition-colors block cursor-pointer shadow-2xs hover:shadow-xs"
+                                href={active_project?.id ? `/client/projects/${active_project.id}#highlights` : '/client/projects'}
+                                style={{
+                                    backgroundColor: '#FFFFFF',
+                                    color: COLOR_BURGUNDY,
+                                    borderColor: '#E8DDD5',
+                                }}
+                                className="w-full py-2.5 rounded-lg border text-xs font-bold text-center inline-flex items-center justify-center gap-1.5 hover:bg-slate-50 transition-colors shadow-2xs group/btn"
                             >
-                                Lihat Semua Ulasan →
+                                <span>Lihat Semua Highlight</span>
+                                <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform" />
                             </Link>
                         </div>
                     </div>
                 </section>
 
-                {/* ── 5. REKOMENDASI PROJECT UNTUK ANDA (Screenshot 1) ─────── */}
-                <section className="space-y-4">
+                {/* ── 4. TWO-COLUMN ROW (PORTOFOLIO KAMI & TESTIMONI KLIEN) ── */}
+                <section className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6 items-stretch">
+                    {/* Card 1: Portofolio Kami */}
+                    <div
+                        style={{
+                            backgroundColor: '#FFFFFF',
+                            borderColor: COLOR_WARM_CREAM,
+                        }}
+                        className="rounded-xl border p-5 sm:p-6 shadow-xs flex flex-col justify-between hover:shadow-lg hover:shadow-[#3C0E0E]/5 hover:-translate-y-1 hover:border-[#3C0E0E]/25 transition-all duration-300 group"
+                    >
+                        <div className="space-y-4">
+                            <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
+                                <div>
+                                    <h4
+                                        style={{ color: COLOR_BURGUNDY }}
+                                        className="text-xs font-black uppercase tracking-wider"
+                                    >
+                                        Portofolio Kami
+                                    </h4>
+                                    <p className="text-[11px] text-slate-400 mt-0.5">
+                                        Lihat lebih banyak karya terbaik kami.
+                                    </p>
+                                </div>
+                                <Link
+                                    href="/client/portfolio"
+                                    style={{
+                                        backgroundColor: COLOR_WARM_CREAM,
+                                        color: COLOR_BURGUNDY,
+                                    }}
+                                    className="px-2.5 py-1 rounded-md text-[10px] font-bold hover:opacity-90 transition-opacity shrink-0 cursor-pointer"
+                                >
+                                    Lihat Portfolio
+                                </Link>
+                            </div>
+
+                            {/* 4 Image Row (Clickable to view full image in lightbox modal) */}
+                            <div className="grid grid-cols-4 gap-2">
+                                {portfolioPhotos.map((item, idx) => (
+                                    <div
+                                        key={item.id || idx}
+                                        onClick={() => {
+                                            setActiveLightboxIndex(idx);
+                                            setIsLightboxOpen(true);
+                                        }}
+                                        className="aspect-square rounded-lg overflow-hidden bg-slate-100 relative group/pimg cursor-pointer"
+                                        title="Klik untuk melihat foto"
+                                    >
+                                        <img
+                                            src={item.image}
+                                            alt="Portfolio thumbnail"
+                                            className="w-full h-full object-cover group-hover/pimg:scale-110 transition-transform duration-500"
+                                        />
+                                        {item.isOverlay ? (
+                                            <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center text-white text-center p-1 group-hover/pimg:bg-black/60 transition-colors">
+                                                <span className="text-sm font-black">{item.count}</span>
+                                                <span className="text-[8px] opacity-80 leading-none">Karya Lainnya</span>
+                                            </div>
+                                        ) : (
+                                            <div className="absolute inset-0 bg-black/0 group-hover/pimg:bg-black/20 flex items-center justify-center opacity-0 group-hover/pimg:opacity-100 transition-all">
+                                                <Eye className="w-4 h-4 text-white drop-shadow-md" />
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Card 2: Testimoni Klien */}
+                    <div
+                        style={{
+                            backgroundColor: '#FFFFFF',
+                            borderColor: COLOR_WARM_CREAM,
+                        }}
+                        className="rounded-xl border p-5 sm:p-6 shadow-xs flex flex-col justify-between hover:shadow-lg hover:shadow-[#3C0E0E]/5 hover:-translate-y-1 hover:border-[#3C0E0E]/25 transition-all duration-300 group"
+                    >
+                        <div className="space-y-3">
+                            <div className="border-b border-slate-100 pb-3">
+                                <h4
+                                    style={{ color: COLOR_BURGUNDY }}
+                                    className="text-xs font-black uppercase tracking-wider"
+                                >
+                                    Testimoni Klien
+                                </h4>
+                                <p className="text-[11px] text-slate-400 mt-0.5">
+                                    Kata mereka tentang pengalaman bersama kami.
+                                </p>
+                            </div>
+
+                            {/* Stars */}
+                            <div className="flex items-center gap-1 text-rose-600">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                    <Star
+                                        key={i}
+                                        className="w-3.5 h-3.5 text-rose-600 fill-rose-600"
+                                    />
+                                ))}
+                            </div>
+
+                            {/* Quote */}
+                            <p className="text-xs text-slate-700 leading-relaxed italic line-clamp-3">
+                                "{activeTestimonial.comment}"
+                            </p>
+
+                            {/* Client Avatar + Navigation */}
+                            <div className="flex items-center justify-between pt-2">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-200 shrink-0">
+                                        <img
+                                            src={activeTestimonial.avatar}
+                                            alt={activeTestimonial.client_name}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-bold text-slate-900 leading-none">
+                                            {activeTestimonial.client_name}
+                                        </p>
+                                        <span className="text-[10px] text-slate-400 block mt-0.5">
+                                            {activeTestimonial.package_name || 'Paket Prewedding'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => setCurrentTestimonialIndex((prev) => (prev === 0 ? testimonialList.length - 1 : prev - 1))}
+                                        className="w-6 h-6 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors cursor-pointer"
+                                        aria-label="Previous testimonial"
+                                    >
+                                        <ChevronLeft className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setCurrentTestimonialIndex((prev) => (prev + 1) % testimonialList.length)}
+                                        className="w-6 h-6 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors cursor-pointer"
+                                        aria-label="Next testimonial"
+                                    >
+                                        <ChevronRight className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* ── 5. REKOMENDASI PAKET UNTUK ANDA (5 Columns) ─────────── */}
+                <section
+                    style={{
+                        backgroundColor: '#FFFFFF',
+                        borderColor: COLOR_WARM_CREAM,
+                    }}
+                    className="rounded-xl border p-5 sm:p-7 shadow-xs hover:shadow-md transition-all duration-300 space-y-5"
+                >
                     <div className="flex items-center justify-between">
                         <div>
                             <h3
                                 style={{
                                     fontFamily: `'${portalFontHeading}', serif`,
-                                    color: portalHeadingColor,
+                                    color: COLOR_BURGUNDY,
                                 }}
-                                className="text-sm font-black uppercase tracking-wider"
+                                className="text-xs sm:text-sm font-serif font-black uppercase tracking-wider"
                             >
-                                Rekomendasi Project Untuk Anda
+                                Rekomendasi Paket Untuk Anda
                             </h3>
-                            <p className="text-xs text-slate-500">
-                                Project lainnya yang mungkin menarik untuk momen spesial Anda selanjutnya.
+                            <p className="text-xs text-slate-500 mt-0.5">
+                                Pilihan paket menarik lainnya yang mungkin Anda sukai.
                             </p>
                         </div>
                         <Link
-                            href="/client/projects"
-                            style={{ color: portalPrimaryAccent }}
-                            className="text-xs font-bold hover:underline flex items-center gap-1"
+                            href="/form-klien"
+                            style={{
+                                backgroundColor: COLOR_WARM_CREAM,
+                                color: COLOR_BURGUNDY,
+                            }}
+                            className="px-3 py-1.5 rounded-lg text-xs font-bold hover:opacity-90 transition-opacity shrink-0"
                         >
-                            <span>Lihat Semua Project</span>
-                            <ArrowRight className="w-3 h-3" />
+                            Lihat Semua Paket
                         </Link>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {recommendedProjects.map((rec) => (
-                            <div key={rec.id} className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-2xs hover:shadow-md transition-all flex flex-col justify-between">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
+                        {packageRecommendations.map((pkg, idx) => (
+                            <div
+                                key={pkg.id || idx}
+                                className="rounded-xl border border-slate-200/80 overflow-hidden flex flex-col justify-between bg-white shadow-2xs hover:shadow-lg hover:shadow-[#3C0E0E]/10 hover:-translate-y-1.5 hover:border-[#3C0E0E]/30 transition-all duration-300 group"
+                            >
                                 <div className="aspect-[4/3] bg-slate-100 overflow-hidden">
-                                    <img src={rec.image} alt={rec.title || rec.name} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                                    <img
+                                        src={pkg.image}
+                                        alt={pkg.title || pkg.name}
+                                        className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
+                                    />
                                 </div>
-                                <div className="p-4 space-y-2 flex flex-col flex-1 justify-between">
+
+                                <div className="p-3 space-y-2 flex flex-col flex-1 justify-between">
                                     <div className="space-y-1">
-                                        <h4 className="font-bold text-xs text-slate-900">{rec.title || rec.name}</h4>
-                                        <p className="text-[11px] text-slate-500 leading-snug line-clamp-2">{rec.desc || rec.description}</p>
+                                        <h4 className="font-bold text-xs text-slate-900 leading-snug group-hover:text-[#3C0E0E] transition-colors">
+                                            {pkg.title || pkg.name}
+                                        </h4>
+                                        <p className="text-[10px] text-slate-500 leading-tight line-clamp-2">
+                                            {pkg.desc || pkg.description}
+                                        </p>
                                     </div>
+
                                     <div className="pt-2 space-y-2">
-                                        <p className="text-xs font-bold text-slate-900">Mulai dari <span className="text-[#4A151B]">{rec.price || (rec.base_price ? formatRupiah(rec.base_price) : '')}</span></p>
-                                        <Link
-                                            href={`/form-klien?package_id=${rec.id}`}
-                                            className="w-full py-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-[11px] font-bold text-slate-700 transition-colors block text-center"
+                                        <p
+                                            style={{ color: COLOR_BURGUNDY }}
+                                            className="text-xs font-black"
                                         >
-                                            Pesan Paket Ini
-                                        </Link>
+                                            {pkg.price || (pkg.base_price ? formatRupiah(pkg.base_price) : '')}
+                                        </p>
+                                        <a
+                                            href={generalWhatsAppUrl}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            style={{
+                                                borderColor: '#E8DDD5',
+                                            }}
+                                            className="w-full py-1.5 rounded-lg border bg-white hover:bg-[#3C0E0E] hover:text-white hover:border-[#3C0E0E] text-[10.5px] font-bold text-[#3C0E0E] shadow-2xs transition-all duration-300 flex items-center justify-center gap-1 cursor-pointer group/btn"
+                                        >
+                                            <MessageCircle className="w-3 h-3 text-[#3C0E0E] group-hover/btn:text-white transition-colors" />
+                                            <span>Hubungi Admin</span>
+                                        </a>
                                     </div>
                                 </div>
                             </div>
                         ))}
                     </div>
                 </section>
+            </div>
 
-                {/* ── 6. DARI INSTAGRAM KAMI (Screenshot 1) ─────────────────── */}
-                <section className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-2xs space-y-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div>
-                            <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                                Dari Instagram Kami
-                            </h3>
-                            <p className="text-xs text-slate-500">
-                                Intip momen-momen terbaru dan hasil karya kami di Instagram.
-                            </p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <span className="text-xs text-slate-500 font-medium">{company?.instagram || '@aramspictures'}</span>
-                            <a
-                                href={company?.instagram_url || 'https://instagram.com/aramspictures'}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#240B10] text-white text-xs font-bold hover:bg-[#380E13] transition-colors"
+            {/* ── MODAL: RINCIAN & RIWAYAT PEMBAYARAN ───────────────────────────── */}
+            {isPaymentModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+                        {/* Modal Header */}
+                        <div className="p-5 sm:p-6 border-b border-slate-100 flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-[#F4EBE4] border border-[#E8DDD5] flex items-center justify-center shrink-0">
+                                    <CreditCard className="w-5 h-5 text-[#3C0E0E]" />
+                                </div>
+                                <div>
+                                    <h3
+                                        style={{ fontFamily: `'${portalFontHeading}', serif`, color: COLOR_BURGUNDY }}
+                                        className="text-base sm:text-lg font-serif font-black"
+                                    >
+                                        Rincian &amp; Riwayat Pembayaran
+                                    </h3>
+                                    <p className="text-xs text-slate-500">
+                                        Status invoice resmi, histori pembayaran per project, dan bukti transfer.
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsPaymentModalOpen(false)}
+                                className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                                aria-label="Tutup modal"
                             >
-                                <Instagram className="w-4 h-4" />
-                                <span>Ikuti Kami di Instagram</span>
-                            </a>
+                                <X className="w-4 h-4" />
+                            </button>
                         </div>
-                    </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
-                        {instagramPhotos.map((photo, i) => (
-                            <a
-                                key={photo.id || i}
-                                href={photo.post_url || 'https://instagram.com/aramspictures'}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="aspect-square rounded-xl overflow-hidden bg-slate-100 relative group block"
-                                title={photo.caption || 'Instagram Post'}
-                            >
-                                <img
-                                    src={photo.image}
-                                    alt={photo.caption || `Instagram ${i + 1}`}
-                                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                                />
-                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white p-1 text-center">
-                                    <Instagram className="w-5 h-5 mb-1" />
-                                    {photo.likes !== undefined && photo.likes > 0 && (
-                                        <span className="text-[10px] font-bold flex items-center gap-1">
-                                            <Heart className="w-2.5 h-2.5 fill-white" /> {photo.likes}
-                                        </span>
+                        {/* Modal Body */}
+                        <div className="p-5 sm:p-6 overflow-y-auto space-y-6">
+                            {/* Financial 3-Metric Cards */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
+                                    <span className="text-[10.5px] font-bold uppercase tracking-wider text-slate-400 block">
+                                        Total Nilai Project
+                                    </span>
+                                    <p className="text-base sm:text-lg font-black text-slate-900 font-mono">
+                                        {formatRupiah(payment_summary?.total_amount || 50000000)}
+                                    </p>
+                                </div>
+                                <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-100 space-y-1">
+                                    <span className="text-[10.5px] font-bold uppercase tracking-wider text-emerald-700 block">
+                                        Total Terbayar
+                                    </span>
+                                    <p className="text-base sm:text-lg font-black text-emerald-700 font-mono">
+                                        {formatRupiah(payment_summary?.paid_amount || 25000000)}
+                                    </p>
+                                    <span className="text-[10px] text-emerald-600 font-bold block">
+                                        {payment_summary?.paid_percentage || 50}% dari total
+                                    </span>
+                                </div>
+                                <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-100 space-y-1">
+                                    <span className="text-[10.5px] font-bold uppercase tracking-wider text-amber-700 block">
+                                        Sisa Tagihan
+                                    </span>
+                                    <p className="text-base sm:text-lg font-black text-amber-700 font-mono">
+                                        {formatRupiah(payment_summary?.remaining_amount || 25000000)}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Section: Invoice Resmi */}
+                            <div className="space-y-3">
+                                <h4 className="text-xs font-black uppercase tracking-wider text-slate-900">
+                                    Invoice Resmi
+                                </h4>
+                                <div className="p-4 rounded-2xl bg-[#FBF6F0] border border-[#F4EBE4] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div className="space-y-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-mono font-black text-xs text-slate-900">
+                                                {(active_project as any)?.invoices?.[0]?.invoice_number || `INV-${new Date().getFullYear()}06-0001`}
+                                            </span>
+                                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 uppercase">
+                                                {(active_project as any)?.invoices?.[0]?.status || (active_project?.paid_amount && active_project.paid_amount >= active_project.total_amount ? 'Lunas' : 'DP Diterima')}
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-slate-500">
+                                            Total: <strong className="text-slate-800">{formatRupiah(payment_summary?.total_amount || 50000000)}</strong> • Project: {active_project?.name || 'Wedding Day'}
+                                        </p>
+                                    </div>
+                                    <Link
+                                        href={active_project?.id ? `/client/projects/${active_project.id}#invoice` : '/client/projects'}
+                                        style={{ backgroundColor: '#FFFFFF', borderColor: '#E8DDD5', color: COLOR_BURGUNDY }}
+                                        className="px-3.5 py-2 rounded-xl border text-xs font-bold shadow-2xs hover:bg-[#3C0E0E] hover:text-white transition-all flex items-center justify-center gap-1.5 self-start sm:self-auto cursor-pointer"
+                                    >
+                                        <Printer className="w-3.5 h-3.5" />
+                                        <span>Lihat Invoice</span>
+                                    </Link>
+                                </div>
+                            </div>
+
+                            {/* Section: Riwayat Pembayaran Masuk Real per Project */}
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-900">
+                                        Riwayat Pembayaran Masuk
+                                    </h4>
+                                    <span className="text-[11px] text-slate-400 font-semibold">
+                                        {((active_project as any)?.payments?.length || 1)} Transaksi
+                                    </span>
+                                </div>
+
+                                <div className="space-y-2.5">
+                                    {((active_project as any)?.payments && (active_project as any).payments.length > 0) ? (
+                                        (active_project as any).payments.map((pm: any, idx: number) => (
+                                            <div
+                                                key={pm.id || idx}
+                                                className="p-3.5 rounded-xl border border-slate-100 bg-white hover:border-[#3C0E0E]/20 hover:shadow-2xs transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
+                                            >
+                                                <div className="space-y-0.5">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold text-xs text-slate-900">
+                                                            {pm.payment_method?.name || pm.paymentMethod?.name || 'Transfer Bank'}
+                                                        </span>
+                                                        <span className="font-mono text-[10px] text-slate-400">
+                                                            {pm.payment_number || `PAY-${idx + 1}`}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-[11px] text-slate-500">
+                                                        {formatDate(pm.payment_date || pm.created_at)} • Ref: {pm.reference_number || '-'}
+                                                    </p>
+                                                </div>
+
+                                                <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+                                                    <div className="text-left sm:text-right">
+                                                        <span className="font-mono font-black text-xs text-emerald-700 block">
+                                                            {formatRupiah(Number(pm.amount))}
+                                                        </span>
+                                                        <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 sm:justify-end">
+                                                            <Check className="w-3 h-3 stroke-[3]" />
+                                                            <span>Berhasil</span>
+                                                        </span>
+                                                    </div>
+
+                                                    {pm.proof_file ? (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setSelectedProofUrl(pm.proof_file)}
+                                                            className="px-2.5 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50/80 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold inline-flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                                                            title="Lihat Bukti Transfer"
+                                                        >
+                                                            <Eye className="w-3.5 h-3.5" />
+                                                            <span>Lihat Bukti</span>
+                                                        </button>
+                                                    ) : (
+                                                        <span className="text-[10px] text-slate-300 italic px-1">
+                                                            Tanpa Lampiran
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="p-3.5 rounded-xl border border-slate-100 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                                            <div className="space-y-0.5">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-bold text-xs text-slate-900">
+                                                        Transfer BCA
+                                                    </span>
+                                                    <span className="font-mono text-[10px] text-slate-400">
+                                                        PAY-2605-0012
+                                                    </span>
+                                                </div>
+                                                <p className="text-[11px] text-slate-500">
+                                                    {payment_summary?.last_payment_date || '26 Mei 2026'} • Ref: REF-PAY-857218
+                                                </p>
+                                            </div>
+                                            <div className="text-left sm:text-right">
+                                                <span className="font-mono font-black text-xs text-emerald-700 block">
+                                                    {formatRupiah(payment_summary?.paid_amount || 25000000)}
+                                                </span>
+                                                <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 sm:justify-end">
+                                                    <Check className="w-3 h-3 stroke-[3]" />
+                                                    <span>Berhasil Terverifikasi</span>
+                                                </span>
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
-                            </a>
-                        ))}
-                    </div>
+                            </div>
+                        </div>
 
-                    <div className="text-center pt-2">
-                        <a
-                            href={company?.instagram_url || 'https://instagram.com/aramspictures'}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs"
-                        >
-                            <span>Lihat Lebih Banyak di Instagram</span>
-                            <ExternalLink className="w-3.5 h-3.5" />
-                        </a>
+                        {/* Modal Footer */}
+                        <div className="p-4 px-6 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-3">
+                            <span className="text-xs text-slate-500">
+                                Perlu bantuan pembayaran? Hubungi tim support via WhatsApp.
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setIsPaymentModalOpen(false)}
+                                className="px-4 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer transition-colors"
+                            >
+                                Tutup
+                            </button>
+                        </div>
                     </div>
-                </section>
-            </div>
+                </div>
+            )}
+
+            {/* ── MODAL: LIHAT BUKTI PEMBAYARAN ─────────────────────────────────── */}
+            {selectedProofUrl && (
+                <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Receipt className="w-4 h-4 text-[#3C0E0E]" />
+                                <h3 className="font-bold text-sm text-slate-900">Bukti Pembayaran / Transfer</h3>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedProofUrl(null)}
+                                className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                        <div className="p-4 overflow-y-auto flex items-center justify-center bg-slate-900/5 min-h-[300px]">
+                            {selectedProofUrl.toLowerCase().endsWith('.pdf') ? (
+                                <iframe
+                                    src={selectedProofUrl}
+                                    title="Bukti Pembayaran PDF"
+                                    className="w-full h-[400px] rounded-xl border border-slate-200 bg-white"
+                                />
+                            ) : (
+                                <img
+                                    src={selectedProofUrl}
+                                    alt="Bukti Transfer"
+                                    className="max-h-[500px] w-auto max-w-full rounded-xl object-contain shadow-md"
+                                />
+                            )}
+                        </div>
+                        <div className="p-3.5 px-5 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+                            <a
+                                href={selectedProofUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:underline"
+                            >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                <span>Buka File Asli di Tab Baru</span>
+                            </a>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedProofUrl(null)}
+                                className="px-4 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-xl cursor-pointer hover:bg-slate-800"
+                            >
+                                Tutup
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── LIGHTBOX MODAL (PHOTO VIEWER FOR PORTFOLIO & HIGHLIGHTS) ──────── */}
+            {isLightboxOpen && (
+                <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-200">
+                    <button
+                        type="button"
+                        onClick={() => setIsLightboxOpen(false)}
+                        className="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer z-20"
+                        aria-label="Tutup preview"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setActiveLightboxIndex((prev) => (prev === 0 ? portfolioPhotos.length - 1 : prev - 1))}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer z-20"
+                        aria-label="Foto sebelumnya"
+                    >
+                        <ChevronLeft className="w-6 h-6" />
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setActiveLightboxIndex((prev) => (prev + 1) % portfolioPhotos.length)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer z-20"
+                        aria-label="Foto selanjutnya"
+                    >
+                        <ChevronRight className="w-6 h-6" />
+                    </button>
+
+                    <div className="relative max-w-4xl max-h-[85vh] flex flex-col items-center justify-center">
+                        <img
+                            src={portfolioPhotos[activeLightboxIndex % portfolioPhotos.length]?.image || ''}
+                            alt="Portofolio Arams Pictures"
+                            className="max-h-[75vh] w-auto max-w-full rounded-2xl object-contain shadow-2xl animate-in zoom-in-95 duration-200"
+                        />
+                        <div className="mt-4 text-center text-white/90">
+                            <span className="text-xs font-semibold px-3 py-1 rounded-full bg-white/10 backdrop-blur-sm">
+                                Foto {activeLightboxIndex + 1} dari {portfolioPhotos.length}
+                            </span>
+                            <div className="mt-2">
+                                <Link
+                                    href="/client/portfolio"
+                                    className="text-xs font-bold text-white hover:underline inline-flex items-center gap-1"
+                                >
+                                    <span>Lihat Semua Galeri Portfolio Lengkap</span>
+                                    <ArrowRight className="w-3.5 h-3.5" />
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </ClientLayout>
     );
 }

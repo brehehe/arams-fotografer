@@ -39,6 +39,7 @@ class UpdateProjectRequest extends FormRequest
             'thumbnail' => 'nullable|string',
             'notes' => 'nullable|string',
             'custom_timeline' => 'nullable|array',
+            'category_data' => 'nullable|array',
             'selected_addons' => 'nullable|array',
             'selected_addons.*.id' => 'nullable|string',
             'selected_addons.*.name' => 'required_with:selected_addons|string|max:255',

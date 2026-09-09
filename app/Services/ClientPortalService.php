@@ -45,7 +45,8 @@ class ClientPortalService
                     'package',
                     'client',
                     'fileLinks' => fn ($q) => $q->active()->latest()->limit(5),
-                    'payments' => fn ($q) => $q->latest('payment_date')->limit(5),
+                    'payments' => fn ($q) => $q->with('paymentMethod')->latest('payment_date')->limit(10),
+                    'invoices' => fn ($q) => $q->latest()->limit(5),
                     'highlights' => fn ($q) => $q->orderBy('sort_order')->limit(8),
                 ])
                 ->first();
@@ -61,7 +62,8 @@ class ClientPortalService
                     'category',
                     'package',
                     'fileLinks' => fn ($q) => $q->active()->latest()->limit(5),
-                    'payments' => fn ($q) => $q->latest('payment_date')->limit(5),
+                    'payments' => fn ($q) => $q->with('paymentMethod')->latest('payment_date')->limit(10),
+                    'invoices' => fn ($q) => $q->latest()->limit(5),
                     'highlights' => fn ($q) => $q->orderBy('sort_order')->limit(8),
                 ])
                 ->latest('event_date')
@@ -73,7 +75,8 @@ class ClientPortalService
                 'category',
                 'package',
                 'fileLinks' => fn ($q) => $q->active()->latest()->limit(5),
-                'payments' => fn ($q) => $q->latest('payment_date')->limit(5),
+                'payments' => fn ($q) => $q->with('paymentMethod')->latest('payment_date')->limit(10),
+                'invoices' => fn ($q) => $q->latest()->limit(5),
                 'highlights' => fn ($q) => $q->orderBy('sort_order')->limit(8),
             ])->latest()->first();
         }
@@ -255,6 +258,29 @@ class ClientPortalService
                         'image_url' => $h->image_url,
                         'is_cover' => (bool) $h->is_cover,
                     ]),
+                'payments' => $activeProject->payments->map(fn($p) => [
+                    'id' => $p->id,
+                    'payment_number' => $p->payment_number,
+                    'amount' => (float) $p->amount,
+                    'payment_date' => $p->payment_date?->isoFormat('D MMMM YYYY'),
+                    'payment_method' => $p->paymentMethod?->name ?? 'Transfer Bank',
+                    'account_number' => $p->paymentMethod?->account_number,
+                    'account_holder' => $p->paymentMethod?->account_holder,
+                    'reference_number' => $p->reference_number,
+                    'notes' => $p->notes,
+                    'proof_file' => $p->proof_file,
+                    'status' => $p->status,
+                ]),
+                'invoices' => $activeProject->invoices->map(fn($inv) => [
+                    'id' => $inv->id,
+                    'invoice_number' => $inv->invoice_number,
+                    'total' => (float) $inv->total,
+                    'paid_amount' => (float) $inv->paid_amount,
+                    'remaining_amount' => (float) $inv->remaining_amount,
+                    'status' => $inv->status,
+                    'issue_date' => $inv->issue_date?->isoFormat('D MMMM YYYY'),
+                    'due_date' => $inv->due_date?->isoFormat('D MMMM YYYY'),
+                ]),
             ] : null,
             'timeline' => $timeline,
             'payment_summary' => $paymentSummary,
@@ -566,6 +592,8 @@ class ClientPortalService
                     'account_number' => $p->paymentMethod?->account_number,
                     'account_holder' => $p->paymentMethod?->account_holder,
                     'reference_number' => $p->reference_number,
+                    'notes' => $p->notes,
+                    'proof_file' => $p->proof_file,
                     'status' => $p->status,
                 ]),
                 'invoices' => $project->invoices->map(fn($inv) => [
@@ -924,6 +952,75 @@ class ClientPortalService
         if (str_contains($lower, 'corporate') || str_contains($lower, 'commercial') || str_contains($lower, 'product')) {
             return 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200&auto=format&fit=crop&q=80';
         }
+
         return 'https://images.unsplash.com/photo-1537633552985-df8429e8048b?w=1200&auto=format&fit=crop&q=80';
+    }
+
+    /**
+     * Get portfolio gallery data for /client/portfolio.
+     */
+    public function getPortfolioData(Request $request): array
+    {
+        [$client] = $this->resolvePortalContext($request);
+
+        $instagramPosts = \App\Models\InstagramPost::active()->latest()->get()->map(function ($p) {
+            return [
+                'id' => $p->id,
+                'image' => $p->image_url,
+                'image_url' => $p->image_url,
+                'caption' => $p->caption ?? '',
+                'likes' => (int) $p->likes_count,
+                'comments' => (int) $p->comments_count,
+                'post_url' => $p->post_url ?: 'https://instagram.com/aramspictures',
+                'type' => $p->media_type ?: 'image',
+                'category' => 'Instagram Showcase',
+            ];
+        });
+
+        // Also fetch project highlights from database for rich multi-category gallery
+        $projectHighlights = \App\Models\ProjectHighlight::with(['project.category'])
+            ->latest()
+            ->limit(24)
+            ->get()
+            ->map(function ($h) {
+                $categoryName = $h->project?->category?->name ?? 'Wedding';
+                return [
+                    'id' => $h->id,
+                    'title' => $h->title ?? ($h->project?->name ? ('Project ' . $h->project->name) : 'Karya Arams Pictures'),
+                    'caption' => $h->caption ?: ($h->project?->category?->name ?? 'Dokumentasi Terbaik'),
+                    'image' => $h->image_url,
+                    'image_url' => $h->image_url,
+                    'category' => $categoryName,
+                    'likes' => rand(30, 250),
+                    'comments' => rand(5, 45),
+                    'post_url' => null,
+                    'type' => $h->media_type ?: 'image',
+                    'project_id' => $h->project_id,
+                    'is_cover' => (bool) $h->is_cover,
+                ];
+            });
+
+        $companySettings = [
+            'name' => Setting::get('company_name', 'Arams Pictures'),
+            'tagline' => Setting::get('company_tagline', 'Timeless Wedding & Portrait Photography'),
+            'phone' => Setting::get('company_phone', '0812-3456-7890'),
+            'email' => Setting::get('company_email', 'hello@arams.id'),
+            'instagram' => '@' . ltrim(Setting::get('company_instagram', 'aramspictures'), '@'),
+            'instagram_url' => 'https://www.instagram.com/' . ltrim(Setting::get('company_instagram', 'aramspictures'), '@') . '/',
+            'address' => Setting::get('company_address', 'Surabaya, Jawa Timur, Indonesia'),
+            'website' => Setting::get('company_website', 'www.aramspictures.com'),
+        ];
+
+        return [
+            'portfolios' => $instagramPosts,
+            'highlights' => $projectHighlights,
+            'client' => $client ? [
+                'id' => $client->id,
+                'name' => $client->name,
+                'bride_name' => $client->bride_name,
+                'groom_name' => $client->groom_name,
+            ] : null,
+            'company' => $companySettings,
+        ];
     }
 }

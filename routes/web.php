@@ -84,6 +84,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/dashboard', [ClientPortalController::class, 'dashboard'])->name('dashboard');
         Route::get('/projects', [ClientPortalController::class, 'projects'])->name('projects.index');
         Route::get('/projects/{project}', [ClientPortalController::class, 'projectDetail'])->name('projects.show');
+        Route::get('/portfolio', [ClientPortalController::class, 'portfolio'])->name('portfolio');
+        Route::get('/portfolios', fn () => redirect()->route('client.portfolio'));
         Route::post('/projects/{project}/review', [ClientPortalController::class, 'submitReview'])->name('projects.review');
         Route::post('/projects/{project}/note', [ClientPortalController::class, 'addNote'])->name('projects.note');
     });

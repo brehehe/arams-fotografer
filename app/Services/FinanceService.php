@@ -644,6 +644,11 @@ class FinanceService
             $data['invoice_id'] = $invoice->id;
         }
 
+        if (isset($data['proof_file']) && $data['proof_file'] instanceof \Illuminate\Http\UploadedFile) {
+            $proofPath = $data['proof_file']->store('payments/proofs', 'public');
+            $data['proof_file'] = '/storage/' . $proofPath;
+        }
+
         $payment = Payment::create($data);
 
         $newPaidAmount  = (float) $project->paid_amount + (float) $data['amount'];

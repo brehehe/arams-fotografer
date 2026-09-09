@@ -28,6 +28,13 @@ import {
 import { toast, Toaster } from 'sonner';
 import { SelectSearch, type SelectSearchOption } from '@/components/ui/select-search';
 import { NativeSelect } from '@/components/ui/native-select';
+import { CategorySpecificForm } from '@/components/projects/CategorySpecificForm';
+import { CategorySpecificView } from '@/components/projects/CategorySpecificView';
+import {
+    CategoryFormKey,
+    resolveCategoryKey,
+    AnyCategorySpecificData,
+} from '@/types/category-forms';
 
 export interface ChildItem {
     [key: string]: string;
@@ -178,6 +185,32 @@ export default function ClientIntakeForm({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+    // Specific category form data across all 14 categories
+    const [categoryData, setCategoryData] = useState<AnyCategorySpecificData>({});
+
+    const handleCategoryDataChange = (field: string, value: any) => {
+        setCategoryData((prev) => {
+            const next = { ...prev, [field]: value };
+            // Auto-sync event date and location with core form fields
+            if (field === 'session_date' || field === 'akad_date' || field === 'event_date' || field === 'departure_date') {
+                if (value) {
+                    setFormData((f) => ({ ...f, event_date: value }));
+                }
+            }
+            if (field === 'session_location' || field === 'location' || field === 'akad_location' || field === 'event_location' || field === 'destination_city_country') {
+                if (value) {
+                    setFormData((f) => ({ ...f, location: value }));
+                }
+            }
+            if (field === 'reception_location') {
+                if (value) {
+                    setFormData((f) => ({ ...f, reception_location: value }));
+                }
+            }
+            return next;
+        });
+    };
+
     // Form Data State matching 4 steps
     const [formData, setFormData] = useState({
         // DATA KATEGORI PROYEK (Langkah Awal)
@@ -235,7 +268,7 @@ export default function ClientIntakeForm({
         address: '',
 
         // Kontak Utama
-        primary_contact: 'cpw' as 'cpw' | 'cpp',
+        primary_contact: 'cpw' as string,
         phone: '',
         email: '',
         other_social_media: '',
@@ -334,6 +367,9 @@ export default function ClientIntakeForm({
                             },
                         ];
                     }
+                    if (parsed.category_data && typeof parsed.category_data === 'object') {
+                        setCategoryData(parsed.category_data);
+                    }
                     setFormData((prev) => ({ ...prev, ...parsed }));
                 }
             }
@@ -369,33 +405,38 @@ export default function ClientIntakeForm({
         );
     }, [categories, formData.category_id]);
 
-    const formType = (selectedCategory as any)?.form_type || (
-        (selectedCategory?.name || '').toLowerCase().includes('wedding') || selectedCategory?.slug === 'wedding' || selectedCategory?.slug === 'prewedding'
-            ? 'wedding'
-            : ((selectedCategory?.name || '').toLowerCase().includes('newborn') || selectedCategory?.slug === 'newborn'
-                ? 'newborn'
-                : 'standard')
-    );
+    const activeCategoryKey: CategoryFormKey = useMemo(() => {
+        return resolveCategoryKey(selectedCategory);
+    }, [selectedCategory]);
+
+    const formType = (selectedCategory as any)?.form_type || activeCategoryKey;
 
     const categoryOptions = useMemo<SelectSearchOption[]>(() => {
+        const iconMap: Record<string, string> = {
+            wedding: '💍',
+            prewedding: '💑',
+            maternity: '🤰',
+            family: '👨‍👩‍👧‍👦',
+            corporate: '🏢',
+            komunitas: '👥',
+            birthday: '🎂',
+            engagement: '💐',
+            event: '🎉',
+            traveling: '✈️',
+            commercial: '📸',
+            perorangan: '👤',
+            lainnya: '✨',
+            newborn: '👶',
+            standard: '📷',
+        };
+
         return categories.map((c) => {
-            const catFormType = c.form_type || (
-                c.slug === 'wedding' || c.slug === 'prewedding' || (c.name || '').toLowerCase().includes('wedding')
-                    ? 'wedding'
-                    : (c.slug === 'newborn' || (c.name || '').toLowerCase().includes('newborn')
-                        ? 'newborn'
-                        : 'standard')
-            );
-            const iconEmoji = catFormType === 'wedding' ? '👰🤵' : (catFormType === 'newborn' ? '👶' : '📷');
-            const subtitle = catFormType === 'wedding'
-                ? '👰🤵 CPP & CPW (Pernikahan)'
-                : (catFormType === 'newborn'
-                    ? '👶 Data Bayi & Anak (Newborn)'
-                    : '👤 Standar / Normal');
+            const key = resolveCategoryKey(c);
+            const iconEmoji = iconMap[key] || '📷';
             return {
                 value: String(c.id),
                 label: `${iconEmoji} ${c.name}`,
-                subtitle: c.description ? `${subtitle} • ${c.description}` : subtitle,
+                subtitle: c.description ? c.description : `Kategori ${c.name}`,
             };
         });
     }, [categories]);
@@ -403,20 +444,7 @@ export default function ClientIntakeForm({
     const handleCategoryChange = (val: string) => {
         handleFieldChange('category_id', val);
         const cat = categories.find((c) => String(c.id) === String(val) || c.slug === val);
-        const catFormType = cat?.form_type || (
-            cat?.slug === 'wedding' || cat?.slug === 'prewedding' || (cat?.name || '').toLowerCase().includes('wedding')
-                ? 'wedding'
-                : (cat?.slug === 'newborn' || (cat?.name || '').toLowerCase().includes('newborn')
-                    ? 'newborn'
-                    : 'standard')
-        );
-        if (catFormType === 'wedding') {
-            handleFieldChange('event_type', 'Pernikahan');
-        } else if (catFormType === 'newborn') {
-            handleFieldChange('event_type', 'Newborn Photoshoot');
-        } else {
-            handleFieldChange('event_type', cat?.name || 'Dokumentasi');
-        }
+        handleFieldChange('event_type', cat?.name || 'Dokumentasi');
 
         // Auto select first package of new category if current package does not belong
         const availablePkgs = packages.filter((p) => String(p.category_id) === String(val));
@@ -429,41 +457,130 @@ export default function ClientIntakeForm({
     };
 
     const primaryContactInfo = useMemo(() => {
-        if (formType === 'newborn') {
-            const isFather = formData.primary_contact === 'cpp';
+        if (activeCategoryKey === 'wedding' || activeCategoryKey === 'engagement') {
+            const isCpw = formData.primary_contact === 'cpw';
+            const name = isCpw
+                ? (categoryData.bride_name || formData.bride_name || '-')
+                : (categoryData.groom_name || formData.groom_name || '-');
+            return {
+                name,
+                nickname: isCpw
+                    ? (categoryData.bride_nickname || formData.bride_nickname || '-')
+                    : (categoryData.groom_nickname || formData.groom_nickname || '-'),
+                occupation: isCpw
+                    ? (categoryData.bride_occupation || formData.bride_occupation || '-')
+                    : (categoryData.groom_occupation || formData.groom_occupation || '-'),
+                instagram: isCpw
+                    ? (categoryData.bride_instagram || formData.bride_instagram || '-')
+                    : (categoryData.groom_instagram || formData.groom_instagram || '-'),
+                birth_date: isCpw
+                    ? (categoryData.bride_birth_date || formData.bride_birth_date || '-')
+                    : (categoryData.groom_birth_date || formData.groom_birth_date || '-'),
+                role: isCpw ? 'CPW' : 'CPP',
+            };
+        }
+        if (activeCategoryKey === 'prewedding') {
+            const isP1 = formData.primary_contact === 'p1' || formData.primary_contact === 'cpw';
+            const name = isP1
+                ? (categoryData.partner_1 || categoryData.bride_name || '-')
+                : (categoryData.partner_2 || categoryData.groom_name || '-');
+            return {
+                name,
+                nickname: '-',
+                occupation: '-',
+                instagram: '-',
+                birth_date: '-',
+                role: isP1 ? 'Pasangan 1' : 'Pasangan 2',
+            };
+        }
+        if (activeCategoryKey === 'maternity') {
+            const isPartner = formData.primary_contact === 'partner' || formData.primary_contact === 'cpp';
+            const name = isPartner
+                ? (categoryData.partner_name || categoryData.father_name || '-')
+                : (categoryData.mom_name || categoryData.mother_name || '-');
+            return {
+                name,
+                nickname: '-',
+                occupation: '-',
+                instagram: '-',
+                birth_date: '-',
+                role: isPartner ? 'Ayah / Pasangan' : 'Ibu Hamil',
+            };
+        }
+        if (activeCategoryKey === 'family') {
+            const choice = formData.primary_contact;
+            const name = choice === 'mother'
+                ? (categoryData.mother_name || '-')
+                : choice === 'family'
+                ? (categoryData.family_name || '-')
+                : (categoryData.father_name || categoryData.family_name || '-');
+            const role = choice === 'mother' ? 'Ibu' : choice === 'family' ? 'Keluarga' : 'Ayah';
+            return {
+                name,
+                nickname: '-',
+                occupation: '-',
+                instagram: '-',
+                birth_date: '-',
+                role,
+            };
+        }
+        if (activeCategoryKey === 'corporate') {
+            return {
+                name: categoryData.pic_name || categoryData.company_name || formData.name || '-',
+                nickname: '-',
+                occupation: categoryData.company_name || '-',
+                instagram: '-',
+                birth_date: '-',
+                role: 'PIC Perusahaan',
+            };
+        }
+        if (activeCategoryKey === 'komunitas') {
+            return {
+                name: categoryData.pic_name || categoryData.community_name || formData.name || '-',
+                nickname: '-',
+                occupation: categoryData.community_name || '-',
+                instagram: '-',
+                birth_date: '-',
+                role: 'PIC Komunitas',
+            };
+        }
+        if (activeCategoryKey === 'birthday') {
+            return {
+                name: categoryData.celebrant_name || formData.name || '-',
+                nickname: '-',
+                occupation: '-',
+                instagram: '-',
+                birth_date: '-',
+                role: 'Pemesan / Ultah',
+            };
+        }
+        if (activeCategoryKey === 'newborn') {
+            const isFather = formData.primary_contact === 'cpp' || formData.primary_contact === 'father';
             const parentName = isFather
-                ? (formData.father_name || formData.parent_names || 'Ayah')
-                : (formData.mother_name || formData.parent_names || 'Ibu');
+                ? (categoryData.father_name || formData.father_name || formData.parent_names || 'Ayah')
+                : (categoryData.mother_name || formData.mother_name || formData.parent_names || 'Ibu');
+            const firstBabyName = categoryData.babies?.[0]?.name || categoryData.baby_name || formData.child_name || '-';
+            const firstBabyBirthDate = categoryData.babies?.[0]?.birth_date || categoryData.baby_birth_date || formData.child_birth_date || '-';
             return {
                 name: parentName,
-                nickname: formData.child_nickname || formData.child_name || '-',
+                nickname: firstBabyName,
                 occupation: formData.parent_occupation || '-',
                 instagram: formData.parent_instagram || formData.instagram || '-',
-                birth_date: formData.child_birth_date || '-',
+                birth_date: firstBabyBirthDate,
                 role: isFather ? 'Ayah' : 'Ibu',
             };
         }
-        if (formType === 'standard') {
-            return {
-                name: formData.name || '-',
-                nickname: formData.nickname || '-',
-                occupation: formData.occupation || '-',
-                instagram: formData.instagram || '-',
-                birth_date: formData.birth_date || '-',
-                role: 'Pemesan',
-            };
-        }
-        const isCpw = formData.primary_contact === 'cpw';
+
         return {
-            name: isCpw ? (formData.bride_name || '-') : (formData.groom_name || '-'),
-            nickname: isCpw ? (formData.bride_nickname || '-') : (formData.groom_nickname || '-'),
-            occupation: isCpw ? (formData.bride_occupation || '-') : (formData.groom_occupation || '-'),
-            instagram: isCpw ? (formData.bride_instagram || '-') : (formData.groom_instagram || '-'),
-            birth_date: isCpw ? (formData.bride_birth_date || '-') : (formData.groom_birth_date || '-'),
-            role: isCpw ? 'CPW' : 'CPP',
+            name: categoryData.contact_person || formData.name || '-',
+            nickname: formData.nickname || '-',
+            occupation: formData.occupation || '-',
+            instagram: formData.instagram || '-',
+            birth_date: formData.birth_date || '-',
+            role: 'Pemesan',
         };
     }, [
-        formType,
+        activeCategoryKey,
         formData.primary_contact,
         formData.name,
         formData.nickname,
@@ -488,6 +605,7 @@ export default function ClientIntakeForm({
         formData.groom_instagram,
         formData.groom_birth_date,
         formData.instagram,
+        categoryData,
     ]);
 
     const availablePackages = useMemo(() => {
@@ -617,10 +735,344 @@ export default function ClientIntakeForm({
 
     const handleSaveDraft = () => {
         try {
-            localStorage.setItem('arams_intake_draft', JSON.stringify(formData));
+            localStorage.setItem('arams_intake_draft', JSON.stringify({
+                ...formData,
+                category_data: categoryData,
+            }));
             toast.success('Draft formulir berhasil disimpan di perangkat Anda!');
         } catch {
             toast.error('Gagal menyimpan draft.');
+        }
+    };
+
+    const validateStep1 = () => {
+        switch (activeCategoryKey) {
+            case 'maternity':
+                if (!categoryData.mom_name?.trim()) {
+                    toast.error('Nama Ibu wajib diisi');
+                    return false;
+                }
+                if (!categoryData.partner_name?.trim()) {
+                    toast.error('Nama Ayah / Pasangan wajib diisi');
+                    return false;
+                }
+                if (!categoryData.gestational_age_weeks) {
+                    toast.error('Usia Kehamilan Saat Sesi wajib diisi');
+                    return false;
+                }
+                if (!categoryData.hpl_date) {
+                    toast.error('HPL (Hari Perkiraan Lahir) wajib diisi');
+                    return false;
+                }
+                return true;
+
+            case 'lainnya':
+                if (!categoryData.needs_description?.trim()) {
+                    toast.error('Deskripsi Kebutuhan wajib diisi');
+                    return false;
+                }
+                if (!categoryData.location?.trim() && !formData.location?.trim()) {
+                    toast.error('Lokasi wajib diisi');
+                    return false;
+                }
+                if (!categoryData.needs_type?.trim()) {
+                    toast.error('Jenis Kebutuhan wajib dipilih');
+                    return false;
+                }
+                if (!categoryData.needs_detail?.trim()) {
+                    toast.error('Detail Kebutuhan wajib diisi');
+                    return false;
+                }
+                return true;
+
+            case 'perorangan':
+                if (!categoryData.photo_purpose?.trim()) {
+                    toast.error('Tujuan Foto wajib dipilih');
+                    return false;
+                }
+                if (!categoryData.session_type?.trim()) {
+                    toast.error('Jenis Sesi wajib dipilih');
+                    return false;
+                }
+                if (!categoryData.outfit_looks_count) {
+                    toast.error('Jumlah Look / Outfit wajib diisi');
+                    return false;
+                }
+                if (!categoryData.session_duration?.trim()) {
+                    toast.error('Durasi Sesi wajib dipilih');
+                    return false;
+                }
+                return true;
+
+            case 'prewedding':
+                if (!categoryData.groom_name?.trim() || !categoryData.bride_name?.trim()) {
+                    toast.error('Nama Lengkap Kedua Pasangan wajib diisi');
+                    return false;
+                }
+                if (!categoryData.session_date) {
+                    toast.error('Tanggal Sesi Foto Prewedding wajib diisi');
+                    return false;
+                }
+                if (!categoryData.concept_theme?.trim()) {
+                    toast.error('Konsep / Tema Foto wajib dipilih');
+                    return false;
+                }
+                if (!categoryData.session_location?.trim() && !formData.location?.trim()) {
+                    toast.error('Lokasi Sesi Foto wajib diisi');
+                    return false;
+                }
+                return true;
+
+            case 'commercial':
+                if (!categoryData.commercial_purpose?.trim()) {
+                    toast.error('Tujuan / Jenis Kebutuhan Foto wajib dipilih');
+                    return false;
+                }
+                if (!categoryData.product_brand_type?.trim()) {
+                    toast.error('Jenis Produk / Brand wajib diisi');
+                    return false;
+                }
+                if (!categoryData.products_count) {
+                    toast.error('Jumlah Produk wajib diisi');
+                    return false;
+                }
+                if (!categoryData.background_type?.trim()) {
+                    toast.error('Latar / Background Foto wajib dipilih');
+                    return false;
+                }
+                if (!categoryData.photo_style_mood?.trim()) {
+                    toast.error('Gaya Foto / Mood wajib dipilih');
+                    return false;
+                }
+                if (!categoryData.photo_usage || !Array.isArray(categoryData.photo_usage) || categoryData.photo_usage.length === 0) {
+                    toast.error('Pilih minimal satu Penggunaan Foto');
+                    return false;
+                }
+                return true;
+
+            case 'traveling':
+                if (!categoryData.destination_city_country?.trim()) {
+                    toast.error('Tujuan Destinasi (Negara / Kota) wajib diisi');
+                    return false;
+                }
+                if (!categoryData.travelers_count) {
+                    toast.error('Jumlah Traveler wajib diisi');
+                    return false;
+                }
+                if (!categoryData.trip_type?.trim()) {
+                    toast.error('Jenis Trip wajib dipilih');
+                    return false;
+                }
+                if (!categoryData.trip_duration_days) {
+                    toast.error('Durasi Trip wajib diisi');
+                    return false;
+                }
+                if (!categoryData.departure_date) {
+                    toast.error('Tanggal Berangkat wajib diisi');
+                    return false;
+                }
+                if (!categoryData.return_date) {
+                    toast.error('Tanggal Pulang wajib diisi');
+                    return false;
+                }
+                return true;
+
+            case 'wedding':
+                if (!categoryData.groom_name?.trim()) {
+                    toast.error('Nama Lengkap CPP (Mempelai Pria) wajib diisi');
+                    return false;
+                }
+                if (!categoryData.groom_nickname?.trim()) {
+                    toast.error('Nama Panggilan CPP (Mempelai Pria) wajib diisi');
+                    return false;
+                }
+                if (!categoryData.bride_name?.trim()) {
+                    toast.error('Nama Lengkap CPW (Mempelai Wanita) wajib diisi');
+                    return false;
+                }
+                if (!categoryData.bride_nickname?.trim()) {
+                    toast.error('Nama Panggilan CPW (Mempelai Wanita) wajib diisi');
+                    return false;
+                }
+                if (!categoryData.akad_date) {
+                    toast.error('Tanggal Akad wajib diisi');
+                    return false;
+                }
+                if (!categoryData.akad_time?.trim()) {
+                    toast.error('Waktu Akad wajib diisi');
+                    return false;
+                }
+                if (!categoryData.akad_location?.trim()) {
+                    toast.error('Lokasi Akad wajib diisi');
+                    return false;
+                }
+                if (!categoryData.reception_date) {
+                    toast.error('Tanggal Resepsi wajib diisi');
+                    return false;
+                }
+                if (!categoryData.reception_time?.trim()) {
+                    toast.error('Waktu Resepsi wajib diisi');
+                    return false;
+                }
+                if (!categoryData.reception_location?.trim()) {
+                    toast.error('Lokasi Resepsi wajib diisi');
+                    return false;
+                }
+                return true;
+
+            case 'birthday':
+                if (!categoryData.celebrant_name?.trim()) {
+                    toast.error('Nama yang Berulang Tahun wajib diisi');
+                    return false;
+                }
+                if (!categoryData.celebrant_age) {
+                    toast.error('Usia wajib diisi');
+                    return false;
+                }
+                if (!categoryData.birthday_theme?.trim()) {
+                    toast.error('Tema Ulang Tahun wajib diisi');
+                    return false;
+                }
+                if (!categoryData.event_type?.trim()) {
+                    toast.error('Jenis Acara wajib dipilih');
+                    return false;
+                }
+                if (!categoryData.estimated_guests) {
+                    toast.error('Jumlah Tamu wajib diisi');
+                    return false;
+                }
+                return true;
+
+            case 'corporate':
+                if (!categoryData.company_name?.trim()) {
+                    toast.error('Nama Perusahaan wajib diisi');
+                    return false;
+                }
+                if (!categoryData.event_type?.trim()) {
+                    toast.error('Jenis Acara wajib dipilih');
+                    return false;
+                }
+                if (!categoryData.event_scale?.trim()) {
+                    toast.error('Skala Acara wajib dipilih');
+                    return false;
+                }
+                if (!categoryData.documentation_purpose?.trim()) {
+                    toast.error('Tujuan Dokumentasi wajib dipilih');
+                    return false;
+                }
+                if (!categoryData.pic_name?.trim()) {
+                    toast.error('Nama PIC Acara wajib diisi');
+                    return false;
+                }
+                if (!categoryData.pic_phone?.trim()) {
+                    toast.error('Nomor Telepon / WA PIC wajib diisi');
+                    return false;
+                }
+                return true;
+
+            case 'engagement':
+                if (!categoryData.groom_name?.trim() || !categoryData.bride_name?.trim()) {
+                    toast.error('Nama Calon Pria dan Wanita wajib diisi');
+                    return false;
+                }
+                if (!categoryData.engagement_date) {
+                    toast.error('Tanggal Lamaran wajib diisi');
+                    return false;
+                }
+                if (!categoryData.engagement_time?.trim()) {
+                    toast.error('Waktu Lamaran wajib diisi');
+                    return false;
+                }
+                if (!categoryData.engagement_location?.trim()) {
+                    toast.error('Lokasi Lamaran wajib diisi');
+                    return false;
+                }
+                return true;
+
+            case 'event':
+                if (!categoryData.event_date) {
+                    toast.error('Tanggal Event wajib diisi');
+                    return false;
+                }
+                if (!categoryData.event_time_range?.trim()) {
+                    toast.error('Waktu Event wajib diisi');
+                    return false;
+                }
+                if (!categoryData.event_type?.trim()) {
+                    toast.error('Jenis Event wajib dipilih');
+                    return false;
+                }
+                if (!categoryData.event_scale?.trim()) {
+                    toast.error('Skala Event wajib dipilih');
+                    return false;
+                }
+                if (!categoryData.event_location?.trim() && !formData.location?.trim()) {
+                    toast.error('Lokasi Event wajib diisi');
+                    return false;
+                }
+                return true;
+
+            case 'family':
+                if (!categoryData.family_name?.trim()) {
+                    toast.error('Nama Keluarga wajib diisi');
+                    return false;
+                }
+                if (!categoryData.father_name?.trim()) {
+                    toast.error('Nama Ayah wajib diisi');
+                    return false;
+                }
+                if (!categoryData.mother_name?.trim()) {
+                    toast.error('Nama Ibu wajib diisi');
+                    return false;
+                }
+                if (!categoryData.members_count) {
+                    toast.error('Jumlah Anggota Keluarga wajib diisi');
+                    return false;
+                }
+                if (!categoryData.session_location?.trim() && !formData.location?.trim()) {
+                    toast.error('Lokasi Sesi Foto wajib diisi');
+                    return false;
+                }
+                return true;
+
+            case 'komunitas':
+                if (!categoryData.community_name?.trim()) {
+                    toast.error('Nama Komunitas wajib diisi');
+                    return false;
+                }
+                if (!categoryData.community_type?.trim()) {
+                    toast.error('Jenis Komunitas wajib dipilih');
+                    return false;
+                }
+                if (!categoryData.pic_name?.trim()) {
+                    toast.error('Nama PIC Komunitas wajib diisi');
+                    return false;
+                }
+                if (!categoryData.pic_phone?.trim()) {
+                    toast.error('Nomor Telepon / WA PIC wajib diisi');
+                    return false;
+                }
+                if (!categoryData.activity_type?.trim()) {
+                    toast.error('Jenis Kegiatan Komunitas wajib dipilih');
+                    return false;
+                }
+                return true;
+
+            case 'newborn': {
+                const firstBabyName = categoryData.babies?.[0]?.name?.trim() || categoryData.baby_name?.trim() || formData.child_name?.trim();
+                if (!firstBabyName) {
+                    toast.error('Nama Lengkap Bayi wajib diisi');
+                    return false;
+                }
+                return true;
+            }
+
+            default:
+                if (!formData.name?.trim() && !categoryData.contact_person?.trim()) {
+                    toast.error('Nama Lengkap Pemesan / Klien wajib diisi');
+                    return false;
+                }
+                return true;
         }
     };
 
@@ -628,27 +1080,7 @@ export default function ClientIntakeForm({
         e.preventDefault();
         // Validation per step
         if (currentStep === 1) {
-            if (formType === 'wedding') {
-                if (!formData.groom_name.trim() || !formData.bride_name.trim()) {
-                    toast.error('Nama Lengkap CPP dan CPW wajib diisi.');
-                    return;
-                }
-            } else if (formType === 'newborn') {
-                const hasValidChild = formData.children?.some((c) => c.name.trim().length > 0) || formData.child_name.trim().length > 0;
-                if (!hasValidChild) {
-                    toast.error('Nama Lengkap Bayi / Anak wajib diisi.');
-                    return;
-                }
-                if (!formData.father_name.trim() && !formData.mother_name.trim() && !formData.parent_names.trim()) {
-                    toast.error('Nama Orang Tua (Ayah / Ibu) wajib diisi.');
-                    return;
-                }
-            } else {
-                if (!formData.name.trim()) {
-                    toast.error('Nama Lengkap Pemesan / Klien wajib diisi.');
-                    return;
-                }
-            }
+            if (!validateStep1()) return;
         } else if (currentStep === 2) {
             if (!formData.phone.trim()) {
                 toast.error('Nomor WhatsApp wajib diisi untuk konfirmasi.');
@@ -674,8 +1106,10 @@ export default function ClientIntakeForm({
 
         const payload = {
             ...formData,
+            name: formData.name || primaryContactInfo.name || 'Klien Baru',
             category_id: selectedCategory.id,
             package_id: formData.package_id || null,
+            category_data: categoryData,
         };
 
         router.post('/form-klien', payload, {
@@ -924,486 +1358,16 @@ export default function ClientIntakeForm({
                                     </div>
                                 </div>
 
-                                {/* ── 2. DYNAMIC INPUT FORM BASED ON FORM_TYPE ── */}
-                                {formType === 'wedding' && (
-                                    <div className="space-y-6">
-                                        {/* Blue Info Alert */}
-                                        <div className="bg-indigo-50/70 border border-indigo-100/90 rounded-2xl p-4 flex items-center gap-3 text-xs text-indigo-900">
-                                            <Info className="w-4 h-4 text-indigo-600 shrink-0" />
-                                            <span>
-                                                <strong>Kategori Pernikahan:</strong> Mohon lengkapi informasi calon pengantin pria (CPP) dan calon pengantin wanita (CPW).
-                                            </span>
-                                        </div>
-
-                                        {/* CPP Card (Calon Pengantin Pria) */}
-                                        <div className="border border-slate-200/80 rounded-2xl p-5 sm:p-6 space-y-4 shadow-2xs bg-white">
-                                            <div className="flex items-center gap-2.5">
-                                                <div className="w-7 h-7 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
-                                                    <User className="w-4 h-4" />
-                                                </div>
-                                                <h3 className="text-sm font-bold text-slate-900">
-                                                    Informasi Calon Pengantin Pria (CPP)
-                                                </h3>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                                <div>
-                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                        Nama Lengkap <span className="text-red-500">*</span>
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        required
-                                                        value={formData.groom_name}
-                                                        onChange={(e) => handleFieldChange('groom_name', e.target.value)}
-                                                        placeholder="Nama lengkap CPP"
-                                                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                        Panggilan <span className="text-red-500">*</span>
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        required
-                                                        value={formData.groom_nickname}
-                                                        onChange={(e) => handleFieldChange('groom_nickname', e.target.value)}
-                                                        placeholder="Nama panggilan CPP"
-                                                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                        Pekerjaan
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        value={formData.groom_occupation}
-                                                        onChange={(e) => handleFieldChange('groom_occupation', e.target.value)}
-                                                        placeholder="Pekerjaan CPP"
-                                                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                        Tanggal Lahir
-                                                    </label>
-                                                    <input
-                                                        type="date"
-                                                        value={formData.groom_birth_date}
-                                                        onChange={(e) => handleFieldChange('groom_birth_date', e.target.value)}
-                                                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                        Akun Instagram
-                                                    </label>
-                                                    <div className="relative">
-                                                        <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                                                            <Instagram className="w-3.5 h-3.5" />
-                                                        </span>
-                                                        <input
-                                                            type="text"
-                                                            value={formData.groom_instagram}
-                                                            onChange={(e) => handleFieldChange('groom_instagram', e.target.value)}
-                                                            placeholder="@username"
-                                                            className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* CPW Card (Calon Pengantin Wanita) */}
-                                        <div className="border border-slate-200/80 rounded-2xl p-5 sm:p-6 space-y-4 shadow-2xs bg-white">
-                                            <div className="flex items-center gap-2.5">
-                                                <div className="w-7 h-7 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
-                                                    <User className="w-4 h-4" />
-                                                </div>
-                                                <h3 className="text-sm font-bold text-slate-900">
-                                                    Informasi Calon Pengantin Wanita (CPW)
-                                                </h3>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                                <div>
-                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                        Nama Lengkap <span className="text-red-500">*</span>
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        required
-                                                        value={formData.bride_name}
-                                                        onChange={(e) => handleFieldChange('bride_name', e.target.value)}
-                                                        placeholder="Nama lengkap CPW"
-                                                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                        Panggilan <span className="text-red-500">*</span>
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        required
-                                                        value={formData.bride_nickname}
-                                                        onChange={(e) => handleFieldChange('bride_nickname', e.target.value)}
-                                                        placeholder="Nama panggilan CPW"
-                                                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                        Pekerjaan
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        value={formData.bride_occupation}
-                                                        onChange={(e) => handleFieldChange('bride_occupation', e.target.value)}
-                                                        placeholder="Pekerjaan CPW"
-                                                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                        Tanggal Lahir
-                                                    </label>
-                                                    <input
-                                                        type="date"
-                                                        value={formData.bride_birth_date}
-                                                        onChange={(e) => handleFieldChange('bride_birth_date', e.target.value)}
-                                                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                        Akun Instagram
-                                                    </label>
-                                                    <div className="relative">
-                                                        <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                                                            <Instagram className="w-3.5 h-3.5" />
-                                                        </span>
-                                                        <input
-                                                            type="text"
-                                                            value={formData.bride_instagram}
-                                                            onChange={(e) => handleFieldChange('bride_instagram', e.target.value)}
-                                                            placeholder="@username"
-                                                            className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {formType === 'newborn' && (
-                                    <div className="space-y-6">
-                                        {/* Amber Info Alert */}
-                                        <div className="bg-amber-50/80 border border-amber-200/90 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-900">
-                                            <div className="flex items-center gap-3">
-                                                <Baby className="w-5 h-5 text-amber-600 shrink-0" />
-                                                <span>
-                                                    <strong>Kategori Newborn:</strong> Masukkan data si kecil (bisa tambah jika kembar) dan nama lengkap ayah serta ibu.
-                                                </span>
-                                            </div>
-                                            {formData.children.length > 1 && (
-                                                <span className="px-2.5 py-1 rounded-full bg-amber-200 text-amber-900 font-bold text-[10px] shrink-0">
-                                                    👶 {formData.children.length} Bayi Kembar
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        {/* Section 1: Data Bayi / Anak (Bisa Multiple / Kasus Anak Kembar) */}
-                                        <div className="space-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2.5">
-                                                    <div className="w-7 h-7 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
-                                                        <Baby className="w-4 h-4" />
-                                                    </div>
-                                                    <div>
-                                                        <h3 className="text-sm font-bold text-slate-900">
-                                                            Data Bayi / Anak (Newborn)
-                                                        </h3>
-                                                        <p className="text-[11px] text-slate-500">
-                                                            Tambahkan data anak jika memiliki bayi kembar (twins / triplets).
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                <button
-                                                    type="button"
-                                                    onClick={handleAddChild}
-                                                    className="px-3 py-1.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
-                                                >
-                                                    <Plus className="w-3.5 h-3.5 text-amber-700" />
-                                                    <span>+ Tambah Bayi (Kembar)</span>
-                                                </button>
-                                            </div>
-
-                                            {formData.children.map((child, idx) => (
-                                                <div
-                                                    key={idx}
-                                                    className="border border-slate-200/90 rounded-2xl p-4 sm:p-5 space-y-4 shadow-2xs bg-white relative transition-all"
-                                                >
-                                                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="px-2.5 py-0.5 rounded-lg bg-amber-100 text-amber-800 font-bold text-xs">
-                                                                👶 Bayi #{idx + 1} {formData.children.length > 1 ? '(Kembar)' : ''}
-                                                            </span>
-                                                            {idx === 0 && formData.children.length > 1 && (
-                                                                <span className="text-[10px] text-slate-400 font-medium">(Anak Pertama)</span>
-                                                            )}
-                                                            {idx > 0 && (
-                                                                <span className="text-[10px] text-slate-400 font-medium">(Kembaran)</span>
-                                                            )}
-                                                        </div>
-                                                        {formData.children.length > 1 && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleRemoveChild(idx)}
-                                                                className="px-2 py-1 rounded-lg text-red-600 hover:bg-red-50 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-                                                                title="Hapus bayi ini"
-                                                            >
-                                                                <Trash2 className="w-3.5 h-3.5" />
-                                                                <span>Hapus</span>
-                                                            </button>
-                                                        )}
-                                                    </div>
-
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                        <div>
-                                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                                Nama Lengkap Bayi #{idx + 1} <span className="text-red-500">*</span>
-                                                            </label>
-                                                            <input
-                                                                type="text"
-                                                                required
-                                                                value={child.name}
-                                                                onChange={(e) => handleChildChange(idx, 'name', e.target.value)}
-                                                                placeholder={idx === 0 ? "Contoh: Kenzo Alvino Pratama" : "Contoh: Keiko Alvina Pratama"}
-                                                                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600 transition-all"
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                                Nama Panggilan Bayi #{idx + 1}
-                                                            </label>
-                                                            <input
-                                                                type="text"
-                                                                value={child.nickname}
-                                                                onChange={(e) => handleChildChange(idx, 'nickname', e.target.value)}
-                                                                placeholder={idx === 0 ? "Contoh: Kenzo" : "Contoh: Keiko"}
-                                                                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600 transition-all"
-                                                            />
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                        <div>
-                                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                                Tanggal Lahir Bayi #{idx + 1}
-                                                            </label>
-                                                            <input
-                                                                type="date"
-                                                                value={child.birth_date}
-                                                                onChange={(e) => handleChildChange(idx, 'birth_date', e.target.value)}
-                                                                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600 transition-all"
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                                Jenis Kelamin Bayi #{idx + 1} <span className="text-red-500">*</span>
-                                                            </label>
-                                                            <NativeSelect
-                                                                value={child.gender}
-                                                                onChange={(e) => handleChildChange(idx, 'gender', e.target.value)}
-                                                                options={[
-                                                                    { value: 'Laki-laki', label: 'Laki-laki' },
-                                                                    { value: 'Perempuan', label: 'Perempuan' },
-                                                                ]}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-
-                                            <button
-                                                type="button"
-                                                onClick={handleAddChild}
-                                                className="w-full py-2.5 px-4 rounded-xl border-2 border-dashed border-amber-300 hover:border-amber-400 bg-amber-50/50 hover:bg-amber-50 text-amber-800 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
-                                            >
-                                                <Plus className="w-4 h-4 text-amber-600" />
-                                                <span>+ Tambah Data Bayi Kembar (Twins / Triplets)</span>
-                                            </button>
-                                        </div>
-
-                                        {/* Section 2: Data Orang Tua (Ayah & Ibu) */}
-                                        <div className="border border-slate-200/80 rounded-2xl p-5 sm:p-6 space-y-4 shadow-2xs bg-white">
-                                            <div className="flex items-center gap-2.5">
-                                                <div className="w-7 h-7 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
-                                                    <Users className="w-4 h-4" />
-                                                </div>
-                                                <div>
-                                                    <h3 className="text-sm font-bold text-slate-900">
-                                                        Data Orang Tua (Ayah &amp; Ibu)
-                                                    </h3>
-                                                    <p className="text-[11px] text-slate-500">
-                                                        Masukkan nama ayah dan nama ibu dari bayi yang akan difoto.
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                        Nama Lengkap Ayah <span className="text-red-500">*</span>
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        required
-                                                        value={formData.father_name}
-                                                        onChange={(e) => handleParentChange('father_name', e.target.value)}
-                                                        placeholder="Contoh: Budi Santoso"
-                                                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                        Nama Lengkap Ibu <span className="text-red-500">*</span>
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        required
-                                                        value={formData.mother_name}
-                                                        onChange={(e) => handleParentChange('mother_name', e.target.value)}
-                                                        placeholder="Contoh: Sinta Rahmawati"
-                                                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                        Pekerjaan Orang Tua
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        value={formData.parent_occupation}
-                                                        onChange={(e) => handleFieldChange('parent_occupation', e.target.value)}
-                                                        placeholder="Contoh: Dokter & Dosen"
-                                                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                        Instagram Orang Tua
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        value={formData.parent_instagram}
-                                                        onChange={(e) => handleFieldChange('parent_instagram', e.target.value)}
-                                                        placeholder="Contoh: @budi_sinta"
-                                                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {formType === 'standard' && (
-                                    <div className="space-y-6">
-                                        {/* Gray/Blue Info Alert */}
-                                        <div className="bg-slate-100 border border-slate-200 rounded-2xl p-4 flex items-center gap-3 text-xs text-slate-800">
-                                            <User className="w-4 h-4 text-indigo-600 shrink-0" />
-                                            <span>
-                                                <strong>Kategori Umum / Standar:</strong> Masukkan data diri pemesan atau penanggung jawab project dokumentasi ini.
-                                            </span>
-                                        </div>
-
-                                        {/* Standard Client Card */}
-                                        <div className="border border-slate-200/80 rounded-2xl p-5 sm:p-6 space-y-4 shadow-2xs bg-white">
-                                            <div className="flex items-center gap-2.5">
-                                                <div className="w-7 h-7 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
-                                                    <User className="w-4 h-4" />
-                                                </div>
-                                                <h3 className="text-sm font-bold text-slate-900">
-                                                    Informasi Pemesan / Klien
-                                                </h3>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                        Nama Lengkap Pemesan / Klien <span className="text-red-500">*</span>
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        required
-                                                        value={formData.name}
-                                                        onChange={(e) => handleFieldChange('name', e.target.value)}
-                                                        placeholder="Masukkan nama lengkap pemesan"
-                                                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                        Nama Panggilan / Alias
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        value={formData.groom_nickname}
-                                                        onChange={(e) => handleFieldChange('groom_nickname', e.target.value)}
-                                                        placeholder="Contoh: Budi"
-                                                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                        Perusahaan / Instansi / Pekerjaan
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        value={formData.groom_occupation}
-                                                        onChange={(e) => handleFieldChange('groom_occupation', e.target.value)}
-                                                        placeholder="Contoh: PT ABC / Pribadi"
-                                                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                        Akun Instagram (Opsional)
-                                                    </label>
-                                                    <div className="relative">
-                                                        <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                                                            <Instagram className="w-3.5 h-3.5" />
-                                                        </span>
-                                                        <input
-                                                            type="text"
-                                                            value={formData.instagram}
-                                                            onChange={(e) => handleFieldChange('instagram', e.target.value)}
-                                                            placeholder="@username"
-                                                            className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
+                                {/* ── 2. DYNAMIC INPUT FORM BASED ON CATEGORY ── */}
+                                <div className="pt-2">
+                                    <CategorySpecificForm
+                                        categoryKey={activeCategoryKey}
+                                        categoryName={selectedCategory?.name}
+                                        data={categoryData}
+                                        onChange={handleCategoryDataChange}
+                                        mode="public"
+                                    />
+                                </div>
                             </div>
                         )}
 
@@ -1599,8 +1563,39 @@ export default function ClientIntakeForm({
                                                     onChange={(e) => handleFieldChange('primary_contact', e.target.value)}
                                                     helperText="Data kontak akan terisi otomatis sesuai pilihan Anda."
                                                 >
-                                                    <option value="cpw">CPW — {formData.bride_name || 'Calon Pengantin Wanita'}</option>
-                                                    <option value="cpp">CPP — {formData.groom_name || 'Calon Pengantin Pria'}</option>
+                                                    {activeCategoryKey === 'wedding' || activeCategoryKey === 'engagement' ? (
+                                                        <>
+                                                            <option value="cpw">CPW — {categoryData.bride_name || formData.bride_name || 'Calon Pengantin Wanita'}</option>
+                                                            <option value="cpp">CPP — {categoryData.groom_name || formData.groom_name || 'Calon Pengantin Pria'}</option>
+                                                        </>
+                                                    ) : activeCategoryKey === 'prewedding' ? (
+                                                        <>
+                                                            <option value="cpw">Pasangan 1 — {categoryData.partner_1 || categoryData.bride_name || 'Pasangan 1'}</option>
+                                                            <option value="cpp">Pasangan 2 — {categoryData.partner_2 || categoryData.groom_name || 'Pasangan 2'}</option>
+                                                        </>
+                                                    ) : activeCategoryKey === 'maternity' ? (
+                                                        <>
+                                                            <option value="cpw">Ibu — {categoryData.mom_name || categoryData.mother_name || 'Ibu Hamil'}</option>
+                                                            <option value="cpp">Ayah / Pasangan — {categoryData.partner_name || categoryData.father_name || 'Ayah / Pasangan'}</option>
+                                                        </>
+                                                    ) : activeCategoryKey === 'family' ? (
+                                                        <>
+                                                            <option value="cpp">Ayah — {categoryData.father_name || 'Ayah'}</option>
+                                                            <option value="mother">Ibu — {categoryData.mother_name || 'Ibu'}</option>
+                                                            <option value="family">Keluarga — {categoryData.family_name || 'Keluarga'}</option>
+                                                        </>
+                                                    ) : activeCategoryKey === 'corporate' ? (
+                                                        <option value="pic">PIC Perusahaan — {categoryData.pic_name || 'PIC'}</option>
+                                                    ) : activeCategoryKey === 'komunitas' ? (
+                                                        <option value="pic">PIC Komunitas — {categoryData.pic_name || 'PIC'}</option>
+                                                    ) : activeCategoryKey === 'newborn' ? (
+                                                        <>
+                                                            <option value="mother">Ibu — {categoryData.mother_name || formData.mother_name || 'Ibu'}</option>
+                                                            <option value="cpp">Ayah — {categoryData.father_name || formData.father_name || 'Ayah'}</option>
+                                                        </>
+                                                    ) : (
+                                                        <option value="client">Pemesan — {categoryData.contact_person || formData.name || 'Pemesan'}</option>
+                                                    )}
                                                 </NativeSelect>
                                             </div>
 
@@ -1805,7 +1800,7 @@ export default function ClientIntakeForm({
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                         <div>
                                             <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                Tanggal Pernikahan / Akad <span className="text-red-500">*</span>
+                                                Tanggal Acara / Project / Sesi <span className="text-red-500">*</span>
                                             </label>
                                             <input
                                                 type="date"
@@ -1818,7 +1813,7 @@ export default function ClientIntakeForm({
 
                                         <div>
                                             <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                Waktu Pernikahan / Akad <span className="text-red-500">*</span>
+                                                Waktu / Jam Sesi / Acara <span className="text-red-500">*</span>
                                             </label>
                                             <input
                                                 type="text"
@@ -1832,7 +1827,7 @@ export default function ClientIntakeForm({
 
                                         <div>
                                             <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                Tempat / Venue <span className="text-red-500">*</span>
+                                                Tempat / Lokasi Sesi <span className="text-red-500">*</span>
                                             </label>
                                             <input
                                                 type="text"
@@ -1845,20 +1840,22 @@ export default function ClientIntakeForm({
                                         </div>
                                     </div>
 
-                                    {/* Row 3: Lokasi Resepsi, Estimasi Tamu, Warna Tema */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                        <div>
-                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                Lokasi Resepsi (Jika berbeda)
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={formData.reception_location}
-                                                onChange={(e) => handleFieldChange('reception_location', e.target.value)}
-                                                placeholder="Masukkan lokasi resepsi jika berbeda"
-                                                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
-                                            />
-                                        </div>
+                                    {/* Row 3: Lokasi Resepsi (Wedding only), Estimasi Tamu, Warna Tema */}
+                                    <div className={`grid grid-cols-1 ${activeCategoryKey === 'wedding' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-4`}>
+                                        {activeCategoryKey === 'wedding' && (
+                                            <div>
+                                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                    Lokasi Resepsi (Jika berbeda)
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.reception_location}
+                                                    onChange={(e) => handleFieldChange('reception_location', e.target.value)}
+                                                    placeholder="Masukkan lokasi resepsi jika berbeda"
+                                                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                                                />
+                                            </div>
+                                        )}
 
                                         <div>
                                             <label className="block text-[11px] font-bold text-slate-700 mb-1">
@@ -1993,194 +1990,36 @@ export default function ClientIntakeForm({
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {/* Card 1: Informasi Klien / Calon Pengantin / Bayi */}
-                                    <div className="border border-slate-200/80 rounded-2xl p-5 bg-white shadow-2xs space-y-3">
-                                        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
-                                                    {formType === 'newborn' ? (
-                                                        <Baby className="w-3.5 h-3.5" />
-                                                    ) : formType === 'wedding' ? (
-                                                        <Heart className="w-3.5 h-3.5" />
-                                                    ) : (
-                                                        <User className="w-3.5 h-3.5" />
-                                                    )}
-                                                </div>
-                                                <h3 className="text-xs font-bold text-slate-900">
-                                                    {formType === 'wedding'
-                                                        ? 'Informasi Calon Pengantin (CPW & CPP)'
-                                                        : formType === 'newborn'
-                                                        ? 'Informasi Bayi & Orang Tua (Newborn)'
-                                                        : 'Informasi Klien / Pemesan'}
-                                                </h3>
-                                            </div>
+                                    {/* Card 1: Informasi Khusus Kategori */}
+                                    <div className="md:col-span-2 space-y-2">
+                                        <div className="flex items-center justify-between pb-1">
+                                            <span className="text-xs font-bold text-slate-900">
+                                                Detail Kebutuhan Kategori: {selectedCategory.name}
+                                            </span>
                                             <button
                                                 type="button"
                                                 onClick={() => setCurrentStep(1)}
                                                 className="px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-[11px] font-semibold text-slate-700 flex items-center gap-1 transition-all"
                                             >
                                                 <Edit2 className="w-3 h-3" />
-                                                <span>Ubah</span>
+                                                <span>Ubah Data</span>
                                             </button>
                                         </div>
-
-                                        {formType === 'wedding' && (
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
-                                                {/* CPP */}
-                                                <div className="space-y-1.5 p-3 rounded-xl bg-slate-50/70 border border-slate-100">
-                                                    <span className="font-bold text-indigo-700 block">
-                                                        CPP (Calon Pengantin Pria)
-                                                    </span>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-400">Nama Lengkap</span>
-                                                        <span className="font-semibold text-slate-800 text-right">{formData.groom_name}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-400">Panggilan</span>
-                                                        <span className="font-semibold text-slate-800 text-right">{formData.groom_nickname || '-'}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-400">Pekerjaan</span>
-                                                        <span className="font-semibold text-slate-800 text-right">{formData.groom_occupation || '-'}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-400">Instagram</span>
-                                                        <span className="font-semibold text-slate-800 text-right">{formData.groom_instagram || '-'}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-400">Tanggal Lahir</span>
-                                                        <span className="font-semibold text-slate-800 text-right">{formData.groom_birth_date || '-'}</span>
-                                                    </div>
-                                                </div>
-
-                                                {/* CPW */}
-                                                <div className="space-y-1.5 p-3 rounded-xl bg-slate-50/70 border border-slate-100">
-                                                    <span className="font-bold text-purple-700 block">
-                                                        CPW (Calon Pengantin Wanita)
-                                                    </span>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-400">Nama Lengkap</span>
-                                                        <span className="font-semibold text-slate-800 text-right">{formData.bride_name}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-400">Panggilan</span>
-                                                        <span className="font-semibold text-slate-800 text-right">{formData.bride_nickname || '-'}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-400">Pekerjaan</span>
-                                                        <span className="font-semibold text-slate-800 text-right">{formData.bride_occupation || '-'}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-400">Instagram</span>
-                                                        <span className="font-semibold text-slate-800 text-right">{formData.bride_instagram || '-'}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-400">Tanggal Lahir</span>
-                                                        <span className="font-semibold text-slate-800 text-right">{formData.bride_birth_date || '-'}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {formType === 'newborn' && (
-                                            <div className="space-y-3 text-[11px]">
-                                                {/* Bayi Kembar / Multiple Bayi Card */}
-                                                <div className="space-y-2.5 p-3 rounded-xl bg-amber-50/50 border border-amber-100">
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="font-bold text-amber-800 flex items-center gap-1.5">
-                                                            <Baby className="w-3.5 h-3.5 text-amber-600" />
-                                                            Data Bayi / Anak {formData.children.length > 1 && (
-                                                                <span className="px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-900 text-[10px] font-bold">
-                                                                    Kembar ({formData.children.length} Bayi)
-                                                                </span>
-                                                            )}
-                                                        </span>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                                        {formData.children.map((child, idx) => (
-                                                            <div key={idx} className="p-2.5 rounded-lg bg-white/90 border border-amber-200/70 space-y-1">
-                                                                <div className="flex items-center justify-between pb-1 border-b border-amber-100 font-bold text-amber-900 text-[10px]">
-                                                                    <span>Bayi #{idx + 1} {formData.children.length > 1 ? '(Kembar)' : ''}</span>
-                                                                    <span className="text-amber-700 font-semibold">{child.gender || '-'}</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-slate-400">Nama Lengkap</span>
-                                                                    <span className="font-semibold text-slate-800 text-right">{child.name || '-'}</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-slate-400">Panggilan</span>
-                                                                    <span className="font-semibold text-slate-800 text-right">{child.nickname || '-'}</span>
-                                                                </div>
-                                                                <div className="flex justify-between">
-                                                                    <span className="text-slate-400">Tanggal Lahir</span>
-                                                                    <span className="font-semibold text-slate-800 text-right">{child.birth_date || '-'}</span>
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-
-                                                {/* Orang Tua */}
-                                                <div className="space-y-1.5 p-3 rounded-xl bg-slate-50/70 border border-slate-100">
-                                                    <span className="font-bold text-indigo-700 block">
-                                                        Data Orang Tua (Ayah &amp; Ibu)
-                                                    </span>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
-                                                        <div className="flex justify-between">
-                                                            <span className="text-slate-400">Nama Ayah</span>
-                                                            <span className="font-semibold text-slate-800 text-right">{formData.father_name || '-'}</span>
-                                                        </div>
-                                                        <div className="flex justify-between">
-                                                            <span className="text-slate-400">Nama Ibu</span>
-                                                            <span className="font-semibold text-slate-800 text-right">{formData.mother_name || '-'}</span>
-                                                        </div>
-                                                        <div className="flex justify-between">
-                                                            <span className="text-slate-400">Pekerjaan</span>
-                                                            <span className="font-semibold text-slate-800 text-right">{formData.parent_occupation || '-'}</span>
-                                                        </div>
-                                                        <div className="flex justify-between">
-                                                            <span className="text-slate-400">Instagram</span>
-                                                            <span className="font-semibold text-slate-800 text-right">{formData.parent_instagram || '-'}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {formType === 'standard' && (
-                                            <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-100 space-y-1.5 text-[11px]">
-                                                <span className="font-bold text-indigo-700 block">
-                                                    Data Pemesan / Klien
-                                                </span>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-400">Nama Lengkap</span>
-                                                        <span className="font-semibold text-slate-800 text-right">{formData.name}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-400">Nama Panggilan</span>
-                                                        <span className="font-semibold text-slate-800 text-right">{formData.nickname || '-'}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-400">Perusahaan / Brand</span>
-                                                        <span className="font-semibold text-slate-800 text-right">{formData.company_name || '-'}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-400">Pekerjaan</span>
-                                                        <span className="font-semibold text-slate-800 text-right">{formData.occupation || '-'}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-400">Instagram</span>
-                                                        <span className="font-semibold text-slate-800 text-right">{formData.instagram || '-'}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-slate-400">Tanggal Lahir</span>
-                                                        <span className="font-semibold text-slate-800 text-right">{formData.birth_date || '-'}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
+                                        <CategorySpecificView
+                                            project={{
+                                                category: selectedCategory,
+                                                category_data: categoryData,
+                                                location: formData.location || categoryData.location || categoryData.session_location || categoryData.akad_location || categoryData.event_location,
+                                                client: {
+                                                    name: primaryContactInfo.name,
+                                                    phone: formData.phone,
+                                                    email: formData.email,
+                                                    address: formData.address,
+                                                    city: formData.city,
+                                                    ...categoryData,
+                                                },
+                                            }}
+                                        />
                                     </div>
 
                                     {/* Card 2: Informasi Alamat & Kontak */}
@@ -2293,21 +2132,23 @@ export default function ClientIntakeForm({
 
                                             <div className="space-y-2 p-3 rounded-xl bg-slate-50/70 border border-slate-100">
                                                 <div>
-                                                    <span className="text-slate-400 block text-[10px]">Tanggal Pernikahan / Akad</span>
-                                                    <span className="font-semibold text-slate-800">{formData.event_date}</span>
+                                                    <span className="text-slate-400 block text-[10px]">Tanggal Project / Sesi</span>
+                                                    <span className="font-semibold text-slate-800">{formData.event_date || '-'}</span>
                                                 </div>
                                                 <div>
-                                                    <span className="text-slate-400 block text-[10px]">Waktu Pernikahan / Akad</span>
-                                                    <span className="font-semibold text-slate-800">{formData.event_time}</span>
+                                                    <span className="text-slate-400 block text-[10px]">Waktu / Jam Sesi</span>
+                                                    <span className="font-semibold text-slate-800">{formData.event_time || '-'}</span>
                                                 </div>
                                                 <div>
-                                                    <span className="text-slate-400 block text-[10px]">Tempat / Venue</span>
-                                                    <span className="font-semibold text-slate-800">{formData.location}</span>
+                                                    <span className="text-slate-400 block text-[10px]">Tempat / Lokasi</span>
+                                                    <span className="font-semibold text-slate-800">{formData.location || '-'}</span>
                                                 </div>
-                                                <div>
-                                                    <span className="text-slate-400 block text-[10px]">Lokasi Resepsi</span>
-                                                    <span className="font-semibold text-slate-800">{formData.reception_location || '-'}</span>
-                                                </div>
+                                                {activeCategoryKey === 'wedding' && (
+                                                    <div>
+                                                        <span className="text-slate-400 block text-[10px]">Lokasi Resepsi</span>
+                                                        <span className="font-semibold text-slate-800">{formData.reception_location || '-'}</span>
+                                                    </div>
+                                                )}
                                                 <div>
                                                     <span className="text-slate-400 block text-[10px]">Jumlah Tamu (Estimasi)</span>
                                                     <span className="font-semibold text-slate-800">{formData.estimated_guests || '-'}</span>

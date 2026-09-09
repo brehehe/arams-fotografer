@@ -68,6 +68,7 @@ import {
     Trash2,
     ChevronDown,
     Baby,
+    Upload,
 } from 'lucide-react';
 import { formatRupiah, formatDate, formatCurrencyShort } from '@/lib/formatters';
 import { ALL_WORKFLOWS, resolveWorkflow, type WorkflowDefinition } from '@/lib/workflows';
@@ -592,13 +593,22 @@ export default function ClientDetail({
 
     // Modal Tambah Pembayaran States
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-    const [paymentFormData, setPaymentFormData] = useState({
+    const [paymentFormData, setPaymentFormData] = useState<{
+        project_id: string;
+        amount: string;
+        payment_date: string;
+        payment_method_id: string;
+        reference_number: string;
+        notes: string;
+        proof_file: File | null;
+    }>({
         project_id: client.projects?.[0]?.id || '',
         amount: '',
         payment_date: new Date().toISOString().split('T')[0],
         payment_method_id: payment_methods?.[0]?.id || '1',
         reference_number: '',
         notes: 'Pelunasan / DP Project',
+        proof_file: null,
     });
     const [submittingPayment, setSubmittingPayment] = useState(false);
 
@@ -856,21 +866,28 @@ export default function ClientDetail({
 
         setSubmittingPayment(true);
 
+        const payload: Record<string, any> = {
+            project_id: targetProjectId,
+            amount: Number(paymentFormData.amount),
+            payment_date: paymentFormData.payment_date,
+            payment_method_id: paymentFormData.payment_method_id || payment_methods?.[0]?.id,
+            reference_number: paymentFormData.reference_number || null,
+            notes: paymentFormData.notes || null,
+        };
+
+        if (paymentFormData.proof_file) {
+            payload.proof_file = paymentFormData.proof_file;
+        }
+
         router.post(
             '/finance/payments',
+            payload,
             {
-                project_id: targetProjectId,
-                amount: Number(paymentFormData.amount),
-                payment_date: paymentFormData.payment_date,
-                payment_method_id: paymentFormData.payment_method_id || payment_methods?.[0]?.id,
-                reference_number: paymentFormData.reference_number || null,
-                notes: paymentFormData.notes || null,
-            },
-            {
+                forceFormData: true,
                 preserveScroll: true,
                 preserveState: true,
                 onSuccess: () => {
-                    toast.success('Pembayaran berhasil dicatat!');
+                    toast.success('Pembayaran dan bukti transfer berhasil dicatat!');
                     setIsPaymentModalOpen(false);
                     setPaymentFormData({
                         project_id: client.projects?.[0]?.id || '',
@@ -879,6 +896,7 @@ export default function ClientDetail({
                         payment_method_id: payment_methods?.[0]?.id || '1',
                         reference_number: '',
                         notes: 'Pelunasan / DP Project',
+                        proof_file: null,
                     });
                 },
                 onError: (errors) => {
@@ -2223,6 +2241,7 @@ export default function ClientDetail({
                                         payment_method_id: payment_methods?.[0]?.id || '1',
                                         reference_number: '',
                                         notes: 'Pelunasan / DP Project',
+                                        proof_file: null,
                                     });
                                     setIsPaymentModalOpen(true);
                                 }}
@@ -4804,6 +4823,7 @@ Terima kasih!`}
                                             payment_method_id: payment_methods?.[0]?.id || '1',
                                             reference_number: '',
                                             notes: 'Pelunasan / DP Project',
+                                            proof_file: null,
                                         });
                                         setIsPaymentModalOpen(true);
                                     }}
@@ -6047,6 +6067,57 @@ Terima kasih!`}
                                     placeholder="Contoh: DP 50% / Pelunasan"
                                     className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-accent/20 focus:border-primary-accent transition-all"
                                 />
+                            </div>
+
+                            {/* Upload Bukti Pembayaran / Struk Transfer */}
+                            <div>
+                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                    Upload Bukti Pembayaran / Struk Transfer (Opsional)
+                                </label>
+                                {paymentFormData.proof_file ? (
+                                    <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-200 flex items-center justify-between">
+                                        <div className="flex items-center gap-2.5 min-w-0">
+                                            <div className="w-8 h-8 rounded-lg bg-white border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+                                                <Receipt className="w-4 h-4" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-xs font-bold text-slate-800 truncate">
+                                                    {paymentFormData.proof_file.name}
+                                                </p>
+                                                <span className="text-[10px] text-slate-500">
+                                                    {(paymentFormData.proof_file.size / 1024).toFixed(1)} KB
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setPaymentFormData({ ...paymentFormData, proof_file: null })}
+                                            className="w-7 h-7 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-200 flex items-center justify-center transition-colors cursor-pointer"
+                                            title="Hapus file"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <label className="border-2 border-dashed border-slate-200 hover:border-primary-accent rounded-xl p-4 flex flex-col items-center justify-center text-center bg-slate-50/60 hover:bg-slate-50 transition-all cursor-pointer group">
+                                        <Upload className="w-5 h-5 text-slate-400 group-hover:text-primary-accent mb-1 transition-colors" />
+                                        <span className="text-xs font-bold text-slate-700 group-hover:text-primary-accent transition-colors">
+                                            Pilih Foto atau Dokumen Bukti Transfer
+                                        </span>
+                                        <span className="text-[10px] text-slate-400 mt-0.5">
+                                            JPG, PNG, WEBP, atau PDF (Maks. 10MB)
+                                        </span>
+                                        <input
+                                            type="file"
+                                            accept="image/jpeg,image/png,image/webp,application/pdf"
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0] || null;
+                                                setPaymentFormData({ ...paymentFormData, proof_file: file });
+                                            }}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                )}
                             </div>
                         </form>
                     )}

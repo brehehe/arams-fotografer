@@ -49,6 +49,7 @@ import {
 import { toast } from '@/components/ui/sonner';
 import SettingsTabNav, { SettingAdminSubTab } from '@/components/SettingsTabNav';
 import { GradientBuilder, ColorSettingRow } from '@/components/settings/ThemeControls';
+import { isDarkColor } from '@/lib/utils';
 
 interface SettingsAdminProps {
     settings?: any;
@@ -229,30 +230,30 @@ export default function AdminSettingsPage({ settings = {}, settingsMap = {} }: S
         {
             id: 'arams_maroon_luxury',
             name: 'Arams Maroon Luxury (Default)',
-            description: 'Deep Maroon #2E0F15, Rich Wine #4A151B & Warm Canvas Ivory #FAF7F5',
-            sidebar_bg: '#2E0F15',
-            sidebar_bg_gradient: 'linear-gradient(180deg, #2E0F15 0%, #200A0E 100%)',
-            sidebar_active_bg: '#4A151B',
+            description: 'Dark Burgundy #3C0E0E, Warm Cream #F4EBE4 & Off-White #FBF6F0',
+            sidebar_bg: '#3C0E0E',
+            sidebar_bg_gradient: 'linear-gradient(180deg, #3C0E0E 0%, #2A0909 100%)',
+            sidebar_active_bg: '#541515',
             sidebar_active_text: '#FFFFFF',
-            sidebar_text_color: '#FDA4AF',
-            primary_accent: '#4A151B',
+            sidebar_text_color: '#F4EBE4',
+            primary_accent: '#3C0E0E',
             primary_accent_gradient: '',
-            app_bg: '#FAF7F5',
+            app_bg: '#FBF6F0',
             app_bg_gradient: '',
-            app_heading_color: '#1C0A0E',
-            app_text_color: '#380E13',
-            app_muted_text_color: '#881337',
+            app_heading_color: '#3C0E0E',
+            app_text_color: '#334155',
+            app_muted_text_color: '#7A6666',
             header_bg_color: '#FFFFFF',
             header_bg_gradient: '',
-            header_text_color: '#1C0A0E',
-            header_border_color: '#F1E9E7',
-            breadcrumb_color: '#9F1239',
-            breadcrumb_active_color: '#2E0F15',
-            card_heading_color: '#2E0F15',
-            login_bg: '#2E0F15',
-            login_bg_gradient: 'linear-gradient(180deg, #2E0F15 0%, #200A0E 100%)',
-            login_card_bg: '#380E13',
-            login_accent: '#4A151B',
+            header_text_color: '#3C0E0E',
+            header_border_color: '#F4EBE4',
+            breadcrumb_color: '#3C0E0E',
+            breadcrumb_active_color: '#3C0E0E',
+            card_heading_color: '#3C0E0E',
+            login_bg: '#3C0E0E',
+            login_bg_gradient: 'linear-gradient(180deg, #3C0E0E 0%, #2A0909 100%)',
+            login_card_bg: '#4D1212',
+            login_accent: '#3C0E0E',
             font_heading: 'Plus Jakarta Sans',
             font_body: 'Plus Jakarta Sans',
             badge: 'Official Default',
@@ -2216,51 +2217,62 @@ export default function AdminSettingsPage({ settings = {}, settingsMap = {} }: S
                                             </div>
                                         </div>
 
-                                        <div
-                                            style={{
-                                                background: themeForm.login_card_bg === '#380E13' || themeForm.login_card_bg === '#1C132E' ? '#FFFFFF' : themeForm.login_card_bg,
-                                            }}
-                                            className="col-span-3 p-3 flex flex-col justify-between space-y-2"
-                                        >
-                                            <div>
-                                                <span className="font-extrabold text-[10px] text-slate-900 block">
-                                                    Welcome Back!
-                                                </span>
-                                                <span className="text-[7.5px] text-slate-400 block mt-0.5">
-                                                    Masuk ke sistem Arams
-                                                </span>
-                                            </div>
-
-                                            <div className="space-y-1.5">
-                                                <div>
-                                                    <span className="text-[7px] font-bold text-slate-500 block mb-0.5">Email</span>
-                                                    <div className="bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-[7.5px] text-slate-600 font-medium">
-                                                        admin@arams.com
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <span className="text-[7px] font-bold text-slate-500 block mb-0.5">Password</span>
-                                                    <div className="bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-[7.5px] text-slate-400">
-                                                        ••••••••
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div>
+                                        {(() => {
+                                            const isDarkLoginCard = isDarkColor(themeForm.login_card_bg);
+                                            return (
                                                 <div
                                                     style={{
-                                                        background: themeForm.login_accent_color,
-                                                        boxShadow: `0 3px 10px -2px ${themeForm.login_accent_color}66`,
+                                                        background: themeForm.login_card_bg_gradient || themeForm.login_card_bg || '#FFFFFF',
                                                     }}
-                                                    className="w-full py-1.5 rounded-lg text-white font-bold text-[8px] tracking-wide text-center cursor-pointer shadow-xs transition-transform hover:scale-[1.02]"
+                                                    className="col-span-3 p-3 flex flex-col justify-between space-y-2 transition-colors"
                                                 >
-                                                    Masuk
+                                                    <div>
+                                                        <span
+                                                            style={{
+                                                                color: isDarkLoginCard ? '#FFFFFF' : '#0F172A',
+                                                                fontFamily: `'${themeForm.font_family_heading || 'Plus Jakarta Sans'}', serif`,
+                                                            }}
+                                                            className="font-extrabold text-[10px] block"
+                                                        >
+                                                            Welcome Back!
+                                                        </span>
+                                                        <span className={`text-[7.5px] block mt-0.5 ${isDarkLoginCard ? 'text-slate-300' : 'text-slate-400'}`}>
+                                                            Masuk ke sistem {form.company_name || 'Arams'}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="space-y-1.5">
+                                                        <div>
+                                                            <span className={`text-[7px] font-bold block mb-0.5 ${isDarkLoginCard ? 'text-slate-200' : 'text-slate-500'}`}>Email</span>
+                                                            <div className={`rounded-md px-2 py-1 text-[7.5px] font-medium border ${isDarkLoginCard ? 'bg-white/10 border-white/20 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
+                                                                admin@arams.com
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <span className={`text-[7px] font-bold block mb-0.5 ${isDarkLoginCard ? 'text-slate-200' : 'text-slate-500'}`}>Password</span>
+                                                            <div className={`rounded-md px-2 py-1 text-[7.5px] border ${isDarkLoginCard ? 'bg-white/10 border-white/20 text-slate-300' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
+                                                                ••••••••
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <div
+                                                            style={{
+                                                                background: themeForm.login_accent_color,
+                                                                boxShadow: `0 3px 10px -2px ${themeForm.login_accent_color}66`,
+                                                            }}
+                                                            className="w-full py-1.5 rounded-lg text-white font-bold text-[8px] tracking-wide text-center cursor-pointer shadow-xs transition-transform hover:scale-[1.02]"
+                                                        >
+                                                            Masuk
+                                                        </div>
+                                                        <div className="text-center mt-1">
+                                                            <span className={`text-[6.5px] ${isDarkLoginCard ? 'text-slate-300' : 'text-slate-400'}`}>Lupa password?</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div className="text-center mt-1">
-                                                    <span className="text-[6.5px] text-slate-400">Lupa password?</span>
-                                                </div>
-                                            </div>
-                                        </div>
+                                            );
+                                        })()}
                                     </div>
 
                                     <span className="text-[8px] text-slate-400 text-center mt-3 z-10">

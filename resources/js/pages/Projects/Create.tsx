@@ -49,6 +49,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { FormattedNumberInput } from '@/components/ui/formatted-number-input';
 import { formatRupiah } from '@/lib/formatters';
 import { resolveWorkflow } from '@/lib/workflows';
+import { CategorySpecificForm } from '@/components/projects/CategorySpecificForm';
+import {
+    CategoryFormKey,
+    resolveCategoryKey,
+    AnyCategorySpecificData,
+} from '@/types/category-forms';
 
 interface ClientItem {
     id: string;
@@ -260,6 +266,24 @@ export default function ProjectsCreate({
     // ── STEP 1: FORM STATES ──────────────────────────────────────────────
     const todayStr = new Date().toISOString().substring(0, 10);
     const [projectDate, setProjectDate] = useState<string>(todayStr);
+    const [projectDeadline, setProjectDeadline] = useState<string>('');
+    const [categoryData, setCategoryData] = useState<AnyCategorySpecificData>(() => ({
+        bride_name: defaultClient?.bride_name || '',
+        groom_name: defaultClient?.groom_name || '',
+        partner_1: defaultClient?.bride_name || '',
+        partner_2: defaultClient?.groom_name || '',
+        father_name: defaultClient?.father_name || '',
+        mother_name: defaultClient?.mother_name || '',
+        family_name: defaultClient?.name ? `Keluarga ${defaultClient.name}` : '',
+        baby_name: defaultClient?.child_name || '',
+        contact_person: defaultClient?.name || '',
+        pic_name: defaultClient?.name || '',
+        pic_phone: defaultClient?.phone || '',
+        pic_email: defaultClient?.email || '',
+        children: defaultClient?.children && defaultClient.children.length > 0
+            ? defaultClient.children.map((k) => ({ name: k.name || '', age: '' }))
+            : (defaultClient?.child_name ? [{ name: defaultClient.child_name, age: '' }] : []),
+    }));
     const [projectName, setProjectName] = useState<string>(
         generateSuggestedProjectTitle(defaultCategory, defaultClient)
     );
@@ -271,6 +295,24 @@ export default function ProjectsCreate({
     const [referralSource, setReferralSource] = useState<string>(client_sources[0]?.name || '');
     const [referralName, setReferralName] = useState<string>('');
     const [referralLink, setReferralLink] = useState<string>('');
+
+    const handleCategoryDataChange = (field: string, value: any) => {
+        setCategoryData((prev) => {
+            const next = { ...prev, [field]: value };
+            if (field === 'session_location' || field === 'location' || field === 'akad_location' || field === 'event_location') {
+                if (!projectLocation || projectLocation === prev[field]) {
+                    setProjectLocation(value);
+                }
+            }
+            if (field === 'session_date' || field === 'akad_date' || field === 'event_date' || field === 'departure_date') {
+                if (!projectDate || projectDate === prev[field]) {
+                    setProjectDate(value);
+                    setShootingEventDate(value);
+                }
+            }
+            return next;
+        });
+    };
 
     // Optional Project Cover Image / Thumbnail
     const [projectThumbnail, setProjectThumbnail] = useState<string>('');
@@ -499,6 +541,26 @@ export default function ProjectsCreate({
             child_gender: cl.child_gender || 'L',
             children: kids,
         });
+        setCategoryData((prev) => ({
+            ...prev,
+            bride_name: prev.bride_name || cl.bride_name || '',
+            groom_name: prev.groom_name || cl.groom_name || '',
+            partner_1: prev.partner_1 || cl.bride_name || '',
+            partner_2: prev.partner_2 || cl.groom_name || '',
+            father_name: prev.father_name || cl.father_name || '',
+            mother_name: prev.mother_name || cl.mother_name || '',
+            family_name: prev.family_name || (cl.name ? `Keluarga ${cl.name}` : ''),
+            baby_name: prev.baby_name || cl.child_name || '',
+            contact_person: prev.contact_person || cl.name || '',
+            pic_name: prev.pic_name || cl.name || '',
+            pic_phone: prev.pic_phone || cl.phone || '',
+            pic_email: prev.pic_email || cl.email || '',
+            children: prev.children && prev.children.length > 0
+                ? prev.children
+                : (cl.children && cl.children.length > 0
+                    ? cl.children.map((k) => ({ name: k.name || '', age: '' }))
+                    : (cl.child_name ? [{ name: cl.child_name, age: '' }] : [])),
+        }));
     };
 
     const handleAddClientInfoChild = () => {
@@ -547,6 +609,10 @@ export default function ProjectsCreate({
     const selectedCategory = useMemo(() => {
         return categories.find((c) => String(c.id) === String(categoryId)) || defaultCategory;
     }, [categories, categoryId, defaultCategory]);
+
+    const activeCategoryKey: CategoryFormKey = useMemo(() => {
+        return resolveCategoryKey(selectedCategory);
+    }, [selectedCategory]);
 
     const activeFormType = useMemo(() => {
         const cat = selectedCategory;
@@ -1128,16 +1194,24 @@ export default function ProjectsCreate({
 
     // Step Validation
     const validateStep1 = () => {
-        if (!projectName.trim()) {
-            toast.error('Nama Project wajib diisi');
-            return false;
-        }
         if (!clientId) {
             toast.error('Silakan pilih Klien');
             return false;
         }
         if (!categoryId) {
             toast.error('Silakan pilih Kategori Project');
+            return false;
+        }
+        if (!projectName.trim()) {
+            toast.error('Nama Project wajib diisi');
+            return false;
+        }
+        if (!projectDate) {
+            toast.error('Tanggal Project / Sesi / Acara wajib diisi');
+            return false;
+        }
+        if (!projectLocation.trim()) {
+            toast.error('Lokasi Project / Sesi wajib diisi');
             return false;
         }
         return true;
@@ -1222,7 +1296,7 @@ export default function ProjectsCreate({
             package_id: selectedPackage?.id || null,
             event_date: shootingEventDate || projectDate || null,
             created_at_date: projectDate || null,
-            deadline: dpDueDate || null,
+            deadline: projectDeadline || dpDueDate || null,
             location: projectLocation || null,
             supervisor_id: supervisorId || null,
             photographer_name: photographerName || null,
@@ -1249,23 +1323,48 @@ export default function ProjectsCreate({
                 .filter(Boolean)
                 .join('\n\n'),
             selected_addons: selectedAddonsPayload,
-            // Client info overrides — update Client record with latest wedding/newborn data
-            client_overrides: activeFormType !== 'standard' ? {
-                ...(activeFormType === 'wedding' ? {
-                    bride_name: clientInfoEdits.bride_name || null,
-                    bride_nickname: clientInfoEdits.bride_nickname || null,
-                    groom_name: clientInfoEdits.groom_name || null,
-                    groom_nickname: clientInfoEdits.groom_nickname || null,
+            category_data: categoryData,
+            // Client info overrides — update Client record with latest category/wedding/maternity/etc data
+            client_overrides: {
+                ...(activeCategoryKey === 'wedding' || activeFormType === 'wedding' ? {
+                    bride_name: categoryData.bride_name || clientInfoEdits.bride_name || null,
+                    bride_nickname: categoryData.bride_nickname || clientInfoEdits.bride_nickname || null,
+                    groom_name: categoryData.groom_name || clientInfoEdits.groom_name || null,
+                    groom_nickname: categoryData.groom_nickname || clientInfoEdits.groom_nickname || null,
+                    bride_birth_date: categoryData.bride_birth_date || null,
+                    groom_birth_date: categoryData.groom_birth_date || null,
                 } : {}),
-                ...(activeFormType === 'newborn' ? {
-                    father_name: clientInfoEdits.father_name || null,
-                    mother_name: clientInfoEdits.mother_name || null,
-                    child_name: clientInfoEdits.child_name || null,
-                    child_birth_date: clientInfoEdits.child_birth_date || null,
-                    child_gender: clientInfoEdits.child_gender || null,
-                    children: clientInfoEdits.children.filter((c) => c.name.trim() !== ''),
+                ...(activeCategoryKey === 'prewedding' ? {
+                    bride_name: categoryData.partner_1 || clientInfoEdits.bride_name || null,
+                    groom_name: categoryData.partner_2 || clientInfoEdits.groom_name || null,
                 } : {}),
-            } : null,
+                ...(activeCategoryKey === 'engagement' ? {
+                    groom_name: categoryData.groom_name || null,
+                    bride_name: categoryData.bride_name || null,
+                } : {}),
+                ...(activeCategoryKey === 'maternity' ? {
+                    mother_name: categoryData.mother_name || null,
+                    father_name: categoryData.father_name || null,
+                } : {}),
+                ...(activeCategoryKey === 'family' ? {
+                    father_name: categoryData.father_name || null,
+                    mother_name: categoryData.mother_name || null,
+                    children: Array.isArray(categoryData.children) ? categoryData.children.map((c: any) => ({
+                        name: c.name,
+                        age: c.age,
+                    })) : [],
+                } : {}),
+                ...(activeCategoryKey === 'newborn' || activeFormType === 'newborn' ? {
+                    father_name: categoryData.father_name || clientInfoEdits.father_name || null,
+                    mother_name: categoryData.mother_name || clientInfoEdits.mother_name || null,
+                    child_name: categoryData.babies?.[0]?.name || categoryData.baby_name || clientInfoEdits.child_name || null,
+                    child_birth_date: categoryData.babies?.[0]?.birth_date || categoryData.baby_birth_date || categoryData.birth_date || clientInfoEdits.child_birth_date || null,
+                    child_gender: categoryData.babies?.[0]?.gender || categoryData.baby_gender || categoryData.gender || clientInfoEdits.child_gender || null,
+                    children: (Array.isArray(categoryData.babies) && categoryData.babies.length > 0)
+                        ? categoryData.babies
+                        : clientInfoEdits.children.filter((c) => c.name.trim() !== ''),
+                } : {}),
+            },
         };
 
 
@@ -1486,7 +1585,7 @@ export default function ProjectsCreate({
             {/* ═════════════════════════════════════════════════════════════════ */}
             {currentStep === 1 && (
                 <div className="space-y-6 text-slate-900">
-                    {/* ── CARD 1: DETAIL UTAMA PROJECT & JADWAL ─────────────────────────── */}
+                    {/* ── CARD 1: INFORMASI PROJECT (FORM UMUM — SEMUA PROJECT) ───────── */}
                     <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs space-y-4">
                         <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
                             <div className="flex items-center gap-2.5">
@@ -1494,61 +1593,50 @@ export default function ProjectsCreate({
                                     <Calendar className="w-4 h-4" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-base text-slate-900">Detail Utama Project &amp; Jadwal</h3>
-                                    <p className="text-[11px] text-slate-400">Tentukan jadwal pelaksanaan, durasi standby, nama project, kategori, dan lokasi</p>
+                                    <h3 className="font-bold text-base text-slate-900">1. Informasi Project</h3>
+                                    <p className="text-[11px] text-slate-400">Data umum project dan jadwal pelaksanaan</p>
                                 </div>
                             </div>
                             <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100 shrink-0">
-                                Langkah 1 dari 4
+                                Form Umum
                             </span>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 min-w-0">
-                            {/* Tanggal Project */}
-                            <div className="space-y-1 min-w-0">
-                                <label className="text-[11px] font-bold text-slate-600 block">
-                                    Tanggal Project <span className="text-rose-500">*</span>
-                                </label>
-                                <input
-                                    type="date"
-                                    value={projectDate}
-                                    onChange={(e) => {
-                                        setProjectDate(e.target.value);
-                                        if (!shootingEventDate || shootingEventDate === projectDate) {
-                                            setShootingEventDate(e.target.value);
-                                        }
-                                    }}
-                                    className="w-full h-[42px] px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:border-[#4F46E5] focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
-                                />
-                            </div>
-
-                            {/* Estimasi Durasi Standby */}
-                            <div className="space-y-1 min-w-0">
-                                <label className="text-[11px] font-bold text-slate-600 block">
-                                    Estimasi Durasi Standby
-                                </label>
+                            {/* Client (Select / Client Picker) - WAJIB */}
+                            <div className="space-y-1.5 min-w-0 sm:col-span-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-[11px] font-bold text-slate-600">
+                                        Client <span className="text-rose-500">*</span>
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAddClientModalOpen(true)}
+                                        className="text-[11px] text-[#4F46E5] hover:underline inline-flex items-center gap-1 font-bold cursor-pointer"
+                                    >
+                                        <Plus className="w-3 h-3" />
+                                        <span>Tambah Klien Baru</span>
+                                    </button>
+                                </div>
                                 <SelectSearch
-                                    options={shootingDurationOptions}
-                                    value={shootingDuration}
-                                    onChange={setShootingDuration}
+                                    options={clientOptions}
+                                    value={clientId}
+                                    onChange={handleClientChange}
+                                    placeholder="Cari atau pilih Client..."
+                                    searchPlaceholder="Ketik nama klien atau telepon..."
                                     clearable={false}
                                 />
+                                {selectedClient && (
+                                    <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80 text-xs flex flex-wrap items-center gap-x-4 gap-y-1 text-slate-600">
+                                        <span className="font-semibold text-slate-800">👤 {selectedClient.name}</span>
+                                        {selectedClient.phone && <span>📞 {selectedClient.phone}</span>}
+                                        {selectedClient.email && <span>✉️ {selectedClient.email}</span>}
+                                        {selectedClient.city && <span>📍 {selectedClient.city}</span>}
+                                    </div>
+                                )}
                             </div>
 
-                            {/* Nama Project */}
-                            <div className="space-y-1 min-w-0">
-                                <label className="text-[11px] font-bold text-slate-600 block">
-                                    Nama Project <span className="text-rose-500">*</span>
-                                </label>
-                                <Input
-                                    value={projectName}
-                                    onChange={(e) => setProjectName(e.target.value)}
-                                    placeholder="Contoh: Wedding Kevin & Jessica"
-                                    className="h-[42px]"
-                                />
-                            </div>
-
-                            {/* Kategori Project */}
+                            {/* Kategori Project - WAJIB */}
                             <div className="space-y-1 min-w-0">
                                 <div className="flex items-center justify-between">
                                     <label className="text-[11px] font-bold text-slate-600 block">
@@ -1566,17 +1654,85 @@ export default function ProjectsCreate({
                                 />
                             </div>
 
-                            {/* Lokasi Project / Event */}
+                            {/* Kode Project - AUTO */}
+                            <div className="space-y-1 min-w-0">
+                                <label className="text-[11px] font-bold text-slate-600 block">
+                                    Kode Project <span className="text-slate-400 font-normal">(Auto)</span>
+                                </label>
+                                <div className="h-[42px] px-3 bg-slate-100/80 border border-slate-200 rounded-xl text-xs font-mono font-semibold text-slate-700 flex items-center justify-between">
+                                    <span>{next_project_number || 'PRJ-AUTO'}</span>
+                                    <span className="text-[10px] uppercase tracking-wider font-bold bg-slate-200 text-slate-600 px-2 py-0.5 rounded">Otomatis</span>
+                                </div>
+                            </div>
+
+                            {/* Nama Project - WAJIB */}
                             <div className="space-y-1 min-w-0 sm:col-span-2">
                                 <label className="text-[11px] font-bold text-slate-600 block">
-                                    Lokasi Project / Event <span className="text-rose-500">*</span>
+                                    Nama Project <span className="text-rose-500">*</span>
+                                </label>
+                                <Input
+                                    value={projectName}
+                                    onChange={(e) => setProjectName(e.target.value)}
+                                    placeholder="Contoh: Maternity Shoot Sarah & Andrew"
+                                    className="h-[42px]"
+                                />
+                            </div>
+
+                            {/* Tanggal Project / Sesi / Acara - WAJIB */}
+                            <div className="space-y-1 min-w-0">
+                                <label className="text-[11px] font-bold text-slate-600 block">
+                                    Tanggal Project / Sesi / Acara <span className="text-rose-500">*</span>
+                                </label>
+                                <input
+                                    type="date"
+                                    value={projectDate}
+                                    onChange={(e) => {
+                                        setProjectDate(e.target.value);
+                                        if (!shootingEventDate || shootingEventDate === projectDate) {
+                                            setShootingEventDate(e.target.value);
+                                        }
+                                    }}
+                                    className="w-full h-[42px] px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:border-[#4F46E5] focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                                />
+                            </div>
+
+                            {/* Deadline Hasil Foto - OPSIONAL */}
+                            <div className="space-y-1 min-w-0">
+                                <label className="text-[11px] font-bold text-slate-600 block">
+                                    Deadline Hasil Foto <span className="text-slate-400 font-normal">(Opsional)</span>
+                                </label>
+                                <input
+                                    type="date"
+                                    value={projectDeadline}
+                                    onChange={(e) => setProjectDeadline(e.target.value)}
+                                    className="w-full h-[42px] px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:border-[#4F46E5] focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+                                />
+                            </div>
+
+                            {/* Lokasi Project / Sesi - WAJIB */}
+                            <div className="space-y-1 min-w-0 sm:col-span-2">
+                                <label className="text-[11px] font-bold text-slate-600 block">
+                                    Lokasi Project / Sesi <span className="text-rose-500">*</span>
                                 </label>
                                 <Input
                                     icon={<MapPin className="w-4 h-4 text-slate-400" />}
                                     value={projectLocation}
                                     onChange={(e) => setProjectLocation(e.target.value)}
-                                    placeholder="Contoh: Grand Ballroom, Hotel Indonesia Kempinski"
+                                    placeholder="Contoh: Studio Arams, Jakarta Selatan atau Alamat Lengkap Venue"
                                     className="h-[42px]"
+                                />
+                            </div>
+
+                            {/* Estimasi Durasi Standby */}
+                            <div className="space-y-1 min-w-0 sm:col-span-2">
+                                <label className="text-[11px] font-bold text-slate-600 block">
+                                    Estimasi Durasi Standby
+                                </label>
+                                <SelectSearch
+                                    options={shootingDurationOptions}
+                                    value={shootingDuration}
+                                    onChange={setShootingDuration}
+                                    clearable={false}
                                 />
                             </div>
 
@@ -1651,291 +1807,34 @@ export default function ProjectsCreate({
                         </div>
                     </div>
 
-                    {/* ── CARD 2: INFORMASI KLIEN & MEMPELAI / BAYI ───────────────────── */}
+                    {/* ── CARD 2: INFORMASI KATEGORI KHUSUS ───────────── */}
                     <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs space-y-4">
                         <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
                             <div className="flex items-center gap-2.5">
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                                    activeFormType === 'wedding'
-                                        ? 'bg-rose-50 text-rose-600'
-                                        : activeFormType === 'newborn'
-                                        ? 'bg-amber-50 text-amber-600'
-                                        : 'bg-indigo-50 text-indigo-600'
-                                }`}>
-                                    {activeFormType === 'wedding' ? (
-                                        <HeartHandshake className="w-4 h-4" />
-                                    ) : activeFormType === 'newborn' ? (
-                                        <Baby className="w-4 h-4" />
-                                    ) : (
-                                        <User className="w-4 h-4" />
-                                    )}
+                                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-[#4F46E5] flex items-center justify-center shrink-0">
+                                    <Sparkles className="w-4 h-4" />
                                 </div>
                                 <div>
                                     <h3 className="font-bold text-base text-slate-900">
-                                        {activeFormType === 'wedding'
-                                            ? 'Informasi Klien & Calon Pengantin'
-                                            : activeFormType === 'newborn'
-                                            ? 'Informasi Klien & Bayi / Orang Tua'
-                                            : 'Informasi Klien & Pemesan'}
+                                        2. Informasi {selectedCategory?.name || 'Kategori'}
                                     </h3>
-                                    <p className="text-[11px] text-slate-400">Pilih klien terdaftar dan lengkapi data spesifik project</p>
+                                    <p className="text-[11px] text-slate-400">
+                                        Form data spesifik untuk kebutuhan kategori {selectedCategory?.name || 'project'}
+                                    </p>
                                 </div>
                             </div>
-                            <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${
-                                activeFormType === 'wedding'
-                                    ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                    : activeFormType === 'newborn'
-                                    ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                    : 'bg-slate-50 text-slate-600 border-slate-200'
-                            }`}>
-                                {activeFormType === 'wedding' ? '👰🤵 Wedding' : activeFormType === 'newborn' ? '👶 Newborn' : '👤 Standar'}
+                            <span className="text-[11px] font-bold px-2.5 py-1 rounded-full border bg-indigo-50 text-indigo-700 border-indigo-200">
+                                {selectedCategory?.name || 'Kategori'}
                             </span>
                         </div>
 
-                        {/* Client Selection */}
-                        <div className="space-y-2 min-w-0">
-                            <div className="flex items-center justify-between">
-                                <label className="text-[11px] font-bold text-slate-600">
-                                    Client <span className="text-rose-500">*</span>
-                                </label>
-                                <button
-                                    type="button"
-                                    onClick={() => setAddClientModalOpen(true)}
-                                    className="text-[11px] text-[#4F46E5] hover:underline inline-flex items-center gap-1 font-bold cursor-pointer"
-                                >
-                                    <Plus className="w-3 h-3" />
-                                    <span>Tambah Klien Baru</span>
-                                </button>
-                            </div>
-                            <SelectSearch
-                                options={clientOptions}
-                                value={clientId}
-                                onChange={handleClientChange}
-                                placeholder="Cari atau pilih Client..."
-                                searchPlaceholder="Ketik nama klien atau telepon..."
-                                clearable={false}
-                            />
-                            {selectedClient && (
-                                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 text-xs mt-1.5 space-y-1.5">
-                                    {activeFormType === 'newborn' && (selectedClient.child_name || (selectedClient.children && selectedClient.children.length > 0)) ? (
-                                        <div className="space-y-1">
-                                            {selectedClient.children && selectedClient.children.length > 1 ? (
-                                                <div className="space-y-1">
-                                                    <div className="flex items-center gap-1.5 text-amber-900 font-bold text-[11px]">
-                                                        <Baby className="w-3.5 h-3.5 text-amber-600" />
-                                                        <span>Bayi Kembar ({selectedClient.children.length} Anak):</span>
-                                                    </div>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pl-2 border-l-2 border-amber-300">
-                                                        {selectedClient.children.map((c, idx) => (
-                                                            <div key={idx} className="text-amber-800 text-[11px] bg-amber-50/80 px-2 py-1 rounded border border-amber-200/60">
-                                                                <span className="font-semibold">#{idx + 1} {c.name || 'Tanpa Nama'}</span>
-                                                                {c.nickname && <span className="text-[10px] text-slate-500 ml-1">({c.nickname})</span>}
-                                                                <span className="text-[10px] text-amber-600 ml-1">({c.gender === 'P' || c.gender === 'Perempuan' ? 'Perempuan' : 'Laki-laki'})</span>
-                                                                {c.birth_date && <span className="text-[10px] text-slate-500 block">🎂 {c.birth_date}</span>}
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <div className="flex items-center justify-between text-amber-800 font-semibold text-[11px]">
-                                                    <span>👶 Bayi: {selectedClient.child_name || selectedClient.children?.[0]?.name || '-'} {(selectedClient.child_gender || selectedClient.children?.[0]?.gender) ? `(${selectedClient.child_gender === 'L' || selectedClient.children?.[0]?.gender === 'L' ? 'Laki-laki' : 'Perempuan'})` : ''}</span>
-                                                    {(selectedClient.child_birth_date || selectedClient.children?.[0]?.birth_date) && <span>🎂 {selectedClient.child_birth_date || selectedClient.children?.[0]?.birth_date}</span>}
-                                                </div>
-                                            )}
-                                            {(selectedClient.father_name || selectedClient.mother_name) && (
-                                                <div className="text-[10px] text-slate-600 flex flex-wrap items-center gap-2 pt-0.5 border-t border-slate-200/60">
-                                                    {selectedClient.father_name && <span>👨 Ayah: <strong className="text-slate-800">{selectedClient.father_name}</strong></span>}
-                                                    {selectedClient.father_name && selectedClient.mother_name && <span>•</span>}
-                                                    {selectedClient.mother_name && <span>👩 Ibu: <strong className="text-slate-800">{selectedClient.mother_name}</strong></span>}
-                                                </div>
-                                            )}
-                                        </div>
-                                    ) : activeFormType === 'wedding' && (selectedClient.bride_name || selectedClient.groom_name) ? (
-                                        <div className="text-rose-800 font-semibold text-[11px]">
-                                            👰 {selectedClient.bride_name || '-'} & 🤵 {selectedClient.groom_name || '-'}
-                                        </div>
-                                    ) : null}
-                                    <div className="text-slate-500 text-[10px] flex items-center gap-3">
-                                        {selectedClient.phone && <span>📞 {selectedClient.phone}</span>}
-                                        {selectedClient.email && <span>✉️ {selectedClient.email}</span>}
-                                        {selectedClient.city && <span>📍 {selectedClient.city}</span>}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Editable Client Info (form-klien fields) */}
-                        {selectedClient && activeFormType !== 'standard' && (
-                            <div className="space-y-3 text-xs pt-2 border-t border-slate-100">
-                                {/* WEDDING: CPP & CPW */}
-                                {activeFormType === 'wedding' && (
-                                    <div className="p-4 bg-rose-50/60 border border-rose-200/70 rounded-xl space-y-3">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[10px] font-extrabold text-rose-800 uppercase tracking-widest">👰🤵 Data Calon Pengantin</span>
-                                            <div className="flex-1 h-px bg-rose-200/60" />
-                                        </div>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            {/* CPW */}
-                                            <div className="space-y-2 bg-white/80 p-3 rounded-lg border border-rose-100">
-                                                <span className="text-[11px] font-bold text-rose-900 block">Calon Pengantin Wanita (CPW)</span>
-                                                <div className="space-y-1.5">
-                                                    <label className="text-[10px] text-slate-500 block">👰 Nama Lengkap</label>
-                                                    <Input
-                                                        value={clientInfoEdits.bride_name}
-                                                        onChange={(e) => setClientInfoEdits({ ...clientInfoEdits, bride_name: e.target.value })}
-                                                        placeholder="Nama lengkap CPW"
-                                                        className="h-[36px] text-xs bg-white"
-                                                    />
-                                                </div>
-                                                <div className="space-y-1.5">
-                                                    <label className="text-[10px] text-slate-500 block">Nama Panggilan</label>
-                                                    <Input
-                                                        value={clientInfoEdits.bride_nickname}
-                                                        onChange={(e) => setClientInfoEdits({ ...clientInfoEdits, bride_nickname: e.target.value })}
-                                                        placeholder="Nama panggilan CPW"
-                                                        className="h-[36px] text-xs bg-white"
-                                                    />
-                                                </div>
-                                            </div>
-                                            {/* CPP */}
-                                            <div className="space-y-2 bg-white/80 p-3 rounded-lg border border-rose-100">
-                                                <span className="text-[11px] font-bold text-rose-900 block">Calon Pengantin Pria (CPP)</span>
-                                                <div className="space-y-1.5">
-                                                    <label className="text-[10px] text-slate-500 block">🤵 Nama Lengkap</label>
-                                                    <Input
-                                                        value={clientInfoEdits.groom_name}
-                                                        onChange={(e) => setClientInfoEdits({ ...clientInfoEdits, groom_name: e.target.value })}
-                                                        placeholder="Nama lengkap CPP"
-                                                        className="h-[36px] text-xs bg-white"
-                                                    />
-                                                </div>
-                                                <div className="space-y-1.5">
-                                                    <label className="text-[10px] text-slate-500 block">Nama Panggilan</label>
-                                                    <Input
-                                                        value={clientInfoEdits.groom_nickname}
-                                                        onChange={(e) => setClientInfoEdits({ ...clientInfoEdits, groom_nickname: e.target.value })}
-                                                        placeholder="Nama panggilan CPP"
-                                                        className="h-[36px] text-xs bg-white"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* NEWBORN: Data Bayi & Orang Tua */}
-                                {activeFormType === 'newborn' && (
-                                    <div className="space-y-3">
-                                        {/* Babies */}
-                                        <div className="p-4 bg-amber-50/60 border border-amber-200/70 rounded-xl space-y-3">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <Baby className="w-4 h-4 text-amber-600" />
-                                                    <span className="text-[10px] font-extrabold text-amber-800 uppercase tracking-widest">Data Bayi / Anak</span>
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={handleAddClientInfoChild}
-                                                    className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-200/60 hover:bg-amber-200 px-2.5 py-1 rounded-md transition-colors cursor-pointer"
-                                                >
-                                                    <Plus className="w-3 h-3" />
-                                                    <span>Tambah Bayi (Kembar)</span>
-                                                </button>
-                                            </div>
-
-                                            <div className="space-y-2.5">
-                                                {clientInfoEdits.children.map((child, idx) => (
-                                                    <div key={idx} className="p-3 bg-white/90 border border-amber-200/80 rounded-lg space-y-2 relative shadow-2xs">
-                                                        <div className="flex items-center justify-between pb-1.5 border-b border-amber-100">
-                                                            <span className="text-[11px] font-bold text-amber-900">
-                                                                👶 Bayi #{idx + 1}
-                                                            </span>
-                                                            {clientInfoEdits.children.length > 1 && (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleRemoveClientInfoChild(idx)}
-                                                                    className="text-rose-500 hover:text-rose-700 text-[10px] font-semibold cursor-pointer"
-                                                                >
-                                                                    Hapus
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
-                                                            <div className="space-y-1">
-                                                                <label className="text-[10px] text-slate-500 block">Nama Lengkap</label>
-                                                                <Input
-                                                                    value={child.name}
-                                                                    onChange={(e) => handleClientInfoChildChange(idx, 'name', e.target.value)}
-                                                                    placeholder="Nama bayi"
-                                                                    className="h-[34px] text-xs bg-white"
-                                                                />
-                                                            </div>
-                                                            <div className="space-y-1">
-                                                                <label className="text-[10px] text-slate-500 block">Panggilan</label>
-                                                                <Input
-                                                                    value={child.nickname}
-                                                                    onChange={(e) => handleClientInfoChildChange(idx, 'nickname', e.target.value)}
-                                                                    placeholder="Panggilan"
-                                                                    className="h-[34px] text-xs bg-white"
-                                                                />
-                                                            </div>
-                                                            <div className="space-y-1">
-                                                                <label className="text-[10px] text-slate-500 block">Jenis Kelamin</label>
-                                                                <select
-                                                                    value={child.gender}
-                                                                    onChange={(e) => handleClientInfoChildChange(idx, 'gender', e.target.value)}
-                                                                    className="w-full h-[34px] px-2.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 outline-none focus:border-[#4F46E5]"
-                                                                >
-                                                                    <option value="">Pilih...</option>
-                                                                    <option value="L">Laki-laki</option>
-                                                                    <option value="P">Perempuan</option>
-                                                                </select>
-                                                            </div>
-                                                            <div className="space-y-1">
-                                                                <label className="text-[10px] text-slate-500 block">Tanggal Lahir</label>
-                                                                <input
-                                                                    type="date"
-                                                                    value={child.birth_date}
-                                                                    onChange={(e) => handleClientInfoChildChange(idx, 'birth_date', e.target.value)}
-                                                                    className="w-full h-[34px] px-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 outline-none focus:border-[#4F46E5]"
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* Parents */}
-                                        <div className="p-4 bg-amber-50/40 border border-amber-200/50 rounded-xl space-y-2.5">
-                                            <span className="text-[10px] font-extrabold text-amber-800 uppercase tracking-widest block">
-                                                👨‍👩‍👧 Data Orang Tua / Wali
-                                            </span>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                <div className="space-y-1">
-                                                    <label className="text-[10px] text-slate-500 block">👨 Nama Lengkap Ayah</label>
-                                                    <Input
-                                                        value={clientInfoEdits.father_name}
-                                                        onChange={(e) => setClientInfoEdits({ ...clientInfoEdits, father_name: e.target.value })}
-                                                        placeholder="Nama ayah"
-                                                        className="h-[36px] text-xs bg-white"
-                                                    />
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <label className="text-[10px] text-slate-500 block">👩 Nama Lengkap Ibu</label>
-                                                    <Input
-                                                        value={clientInfoEdits.mother_name}
-                                                        onChange={(e) => setClientInfoEdits({ ...clientInfoEdits, mother_name: e.target.value })}
-                                                        placeholder="Nama ibu"
-                                                        className="h-[36px] text-xs bg-white"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                        <CategorySpecificForm
+                            categoryKey={activeCategoryKey}
+                            categoryName={selectedCategory?.name}
+                            data={categoryData}
+                            onChange={handleCategoryDataChange}
+                            mode="admin"
+                        />
                     </div>
 
                     {/* ── CARD 3: PAKET LAYANAN & DELIVERABLES ─────────────────────────── */}

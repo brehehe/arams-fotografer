@@ -1113,7 +1113,13 @@ export default function WorkflowIndex({
                         <div className="py-2 overflow-x-auto pb-4 scrollbar-thin">
                             <div className="flex items-start justify-between min-w-[680px] relative px-6">
                                 {/* Connecting Line */}
-                                <div className="absolute top-4 left-10 right-10 h-0.5 bg-slate-200 z-0" />
+                                <div
+                                    className="absolute top-4 h-0.5 bg-slate-200 z-0"
+                                    style={{
+                                        left: `calc(24px + ((100% - 48px) / (${activeWorkflow.steps.length} * 2)))`,
+                                        right: `calc(24px + ((100% - 48px) / (${activeWorkflow.steps.length} * 2)))`,
+                                    }}
+                                />
 
                                 {activeWorkflow.steps.map((st, idx) => (
                                     <div

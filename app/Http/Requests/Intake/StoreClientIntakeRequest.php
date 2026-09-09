@@ -74,6 +74,7 @@ class StoreClientIntakeRequest extends FormRequest
             'has_reference' => 'nullable|string',
             'communication_preference' => 'nullable|string',
             'best_contact_time' => 'nullable|string',
+            'category_data' => 'nullable|array',
         ];
     }
 }

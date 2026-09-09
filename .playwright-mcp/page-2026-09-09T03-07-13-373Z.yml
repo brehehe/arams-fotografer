@@ -1,0 +1,43 @@
+- generic [ref=e3]:
+  - region "Notifications alt+T"
+  - generic [ref=e4]:
+    - img "Arams Couple" [ref=e6]
+    - generic [ref=e8]:
+      - generic [ref=e9]: ap
+      - generic [ref=e10]:
+        - heading "Arams Photography" [level=2] [ref=e11]
+        - paragraph [ref=e12]: Capturing Moments, Creating Timeless Memories
+    - generic [ref=e13]:
+      - generic [ref=e14]: STUDIO & CINEMA PHOTOGRAPHY SYSTEM
+      - heading "Abadikan Setiap Momen Berharga Anda" [level=1] [ref=e15]: Abadikan SetiapMomen Berharga Anda
+      - paragraph [ref=e17]: Terima kasih telah mempercayakan momen spesial Anda kepada Arams Photography.
+    - generic [ref=e18]:
+      - generic [ref=e19]:
+        - heading "Kualitas Terbaik" [level=4] [ref=e24]
+        - paragraph [ref=e25]: Peralatan profesional & editing berkualitas tinggi.
+      - generic [ref=e26]:
+        - heading "100% Aman" [level=4] [ref=e30]
+        - paragraph [ref=e31]: Data & file Anda aman bersama kami.
+      - generic [ref=e32]:
+        - heading "Layanan Personal" [level=4] [ref=e36]
+        - paragraph [ref=e37]: Kami mendengar & mewujudkan visi Anda.
+  - generic [ref=e39]:
+    - generic [ref=e40]:
+      - heading "Welcome Back!" [level=2] [ref=e41]
+      - paragraph [ref=e42]: Masuk ke sistem Arams Photography
+    - generic [ref=e43]:
+      - generic [ref=e44]:
+        - generic [ref=e45]: Email
+        - textbox "admin@arams.com" [active] [ref=e47]
+      - generic [ref=e48]:
+        - generic [ref=e49]: Password
+        - generic [ref=e50]:
+          - textbox "••••••••" [ref=e51]: password
+          - button [ref=e52] [cursor=pointer]
+      - button "Masuk" [ref=e56] [cursor=pointer]
+      - link "Lupa password?" [ref=e59] [cursor=pointer]:
+        - /url: /forgot-password
+    - generic [ref=e66]:
+      - heading "Belum memiliki akun?" [level=4] [ref=e67]
+      - paragraph [ref=e68]: Hubungi admin Arams Photography untuk mendapatkan akses ke portal ini.
+    - paragraph [ref=e69]: © 2026 Arams Photography Management System.

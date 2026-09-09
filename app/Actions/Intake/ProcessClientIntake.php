@@ -52,17 +52,29 @@ class ProcessClientIntake
                 }
             }
 
+            if (!$category && !empty($rawCategoryId) && !Str::isUuid($rawCategoryId)) {
+                $category = Category::firstOrCreate(
+                    ['slug' => strtolower($rawCategoryId)],
+                    [
+                        'name' => ucfirst($rawCategoryId),
+                        'form_type' => strtolower($rawCategoryId),
+                        'status' => 'active',
+                    ]
+                );
+            }
+
             if (!$category) {
                 $category = Category::where('slug', 'wedding')->first()
                     ?? Category::first();
             }
 
             $formType = $category?->form_type ?? 'wedding';
+            $catData = !empty($validated['category_data']) && is_array($validated['category_data']) ? $validated['category_data'] : [];
 
             // 2. Determine Client Name & Type based on Category Form Type
-            $children = !empty($validated['children']) && is_array($validated['children']) ? $validated['children'] : [];
-            $fatherName = trim($validated['father_name'] ?? '');
-            $motherName = trim($validated['mother_name'] ?? '');
+            $children = !empty($validated['children']) && is_array($validated['children']) ? $validated['children'] : ($catData['children'] ?? []);
+            $fatherName = trim($catData['father_name'] ?? ($validated['father_name'] ?? ''));
+            $motherName = trim($catData['mother_name'] ?? ($validated['mother_name'] ?? ''));
             $parentNames = trim($validated['parent_names'] ?? '');
             if (empty($parentNames)) {
                 $parentNames = implode(' & ', array_filter([$fatherName, $motherName]));
@@ -75,12 +87,12 @@ class ProcessClientIntake
                     if (count($children) > 1) {
                         $childName .= ' (Kembar)';
                     }
-                    $childBirthDate = $children[0]['birth_date'] ?? ($validated['child_birth_date'] ?? null);
-                    $childGender = count($children) > 1 ? 'Kembar' : ($children[0]['gender'] ?? ($validated['child_gender'] ?? null));
+                    $childBirthDate = $children[0]['birth_date'] ?? ($validated['child_birth_date'] ?? ($catData['birth_date'] ?? null));
+                    $childGender = count($children) > 1 ? 'Kembar' : ($children[0]['gender'] ?? ($validated['child_gender'] ?? ($catData['gender'] ?? null)));
                 } else {
-                    $childName = trim($validated['child_name'] ?? '');
-                    $childBirthDate = $validated['child_birth_date'] ?? null;
-                    $childGender = $validated['child_gender'] ?? null;
+                    $childName = trim($catData['baby_name'] ?? ($validated['child_name'] ?? ''));
+                    $childBirthDate = $validated['child_birth_date'] ?? ($catData['birth_date'] ?? null);
+                    $childGender = $validated['child_gender'] ?? ($catData['gender'] ?? null);
                 }
 
                 $clientName = $childName ?: ($parentNames ?: ($validated['name'] ?? 'Baby Client'));
@@ -89,16 +101,73 @@ class ProcessClientIntake
                 $childName = null;
                 $childBirthDate = null;
                 $childGender = null;
-                $clientName = trim(($validated['bride_name'] ?? '') . ' & ' . ($validated['groom_name'] ?? ''));
+                $brideName = trim($catData['bride_name'] ?? ($validated['bride_name'] ?? ''));
+                $groomName = trim($catData['groom_name'] ?? ($validated['groom_name'] ?? ''));
+                $clientName = trim($brideName . ' & ' . $groomName);
                 if (empty($clientName) || $clientName === '&') {
                     $clientName = $validated['name'] ?? 'Klien Pengantin';
                 }
                 $clientType = 'wedding';
+            } elseif ($formType === 'prewedding') {
+                $childName = null;
+                $childBirthDate = null;
+                $childGender = null;
+                $p1 = trim($catData['partner_1'] ?? ($validated['bride_name'] ?? ''));
+                $p2 = trim($catData['partner_2'] ?? ($validated['groom_name'] ?? ''));
+                $clientName = trim($p1 . ' & ' . $p2);
+                if (empty($clientName) || $clientName === '&') {
+                    $clientName = $validated['name'] ?? 'Klien Prewedding';
+                }
+                $clientType = 'prewedding';
+            } elseif ($formType === 'maternity') {
+                $childName = null;
+                $childBirthDate = null;
+                $childGender = null;
+                $clientName = trim($motherName . ($fatherName ? " & {$fatherName}" : ''));
+                if (empty($clientName)) {
+                    $clientName = $validated['name'] ?? 'Klien Maternity';
+                }
+                $clientType = 'maternity';
+            } elseif ($formType === 'family') {
+                $childName = null;
+                $childBirthDate = null;
+                $childGender = null;
+                $clientName = trim($catData['family_name'] ?? ($parentNames ?: ($validated['name'] ?? 'Keluarga')));
+                $clientType = 'family';
+            } elseif ($formType === 'corporate') {
+                $childName = null;
+                $childBirthDate = null;
+                $childGender = null;
+                $clientName = trim($catData['company_name'] ?? ($catData['pic_name'] ?? ($validated['name'] ?? 'Klien Corporate')));
+                $clientType = 'corporate';
+            } elseif ($formType === 'komunitas') {
+                $childName = null;
+                $childBirthDate = null;
+                $childGender = null;
+                $clientName = trim($catData['community_name'] ?? ($catData['pic_name'] ?? ($validated['name'] ?? 'Komunitas')));
+                $clientType = 'komunitas';
+            } elseif ($formType === 'birthday') {
+                $childName = null;
+                $childBirthDate = null;
+                $childGender = null;
+                $clientName = trim($catData['birthday_person_name'] ?? ($validated['name'] ?? 'Klien Ultah'));
+                $clientType = 'birthday';
+            } elseif ($formType === 'engagement') {
+                $childName = null;
+                $childBirthDate = null;
+                $childGender = null;
+                $groomName = trim($catData['groom_name'] ?? '');
+                $brideName = trim($catData['bride_name'] ?? '');
+                $clientName = trim($groomName . ' & ' . $brideName);
+                if (empty($clientName) || $clientName === '&') {
+                    $clientName = $validated['name'] ?? 'Klien Lamaran';
+                }
+                $clientType = 'engagement';
             } else {
                 $childName = null;
                 $childBirthDate = null;
                 $childGender = null;
-                $clientName = trim($validated['name'] ?? 'Klien Baru');
+                $clientName = trim($catData['contact_person'] ?? ($validated['name'] ?? 'Klien Baru'));
                 $clientType = Str::slug($category?->name ?? 'standard');
             }
 
@@ -265,15 +334,27 @@ class ProcessClientIntake
                 'status' => 'draft',
                 'workflow_step' => 'booking',
                 'progress' => 10,
-                'event_date' => $validated['event_date'] ?? Carbon::now()->addDays(30),
-                'event_time' => $validated['event_time'] ?? null,
+                'event_date' => $validated['event_date']
+                    ?? ($catData['session_date'] ?? null)
+                    ?? ($catData['akad_date'] ?? null)
+                    ?? ($catData['event_date'] ?? null)
+                    ?? ($catData['departure_date'] ?? null)
+                    ?? Carbon::now()->addDays(30),
+                'event_time' => $validated['event_time'] ?? ($catData['event_time'] ?? null),
                 'location' => !empty($validated['reception_location']) && $validated['reception_location'] !== ($validated['location'] ?? '')
                     ? (($validated['location'] ?? '') ? "Akad: {$validated['location']} | Resepsi: {$validated['reception_location']}" : $validated['reception_location'])
-                    : ($validated['location'] ?? null),
+                    : ($validated['location']
+                        ?? ($catData['session_location'] ?? null)
+                        ?? ($catData['location'] ?? null)
+                        ?? ($catData['akad_location'] ?? null)
+                        ?? ($catData['event_location'] ?? null)
+                        ?? ($catData['destination'] ?? null)
+                        ?? null),
                 'price' => $price,
                 'total_amount' => $price,
                 'paid_amount' => 0,
                 'payment_status' => 'pending',
+                'category_data' => $validated['category_data'] ?? null,
                 'notes' => $formattedNotes ?: ($validated['notes'] ?? 'Dibuat otomatis via Form Booking Online Klien.'),
             ]);
 
