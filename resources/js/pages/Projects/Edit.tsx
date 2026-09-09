@@ -1070,7 +1070,11 @@ export default function ProjectsEdit({
             client_overrides: {
                 ...(activeCategoryKey === 'wedding' || activeFormType === 'wedding' ? {
                     bride_name: categoryData.bride_name || null,
+                    bride_nickname: categoryData.bride_nickname || null,
                     groom_name: categoryData.groom_name || null,
+                    groom_nickname: categoryData.groom_nickname || null,
+                    bride_birth_date: categoryData.bride_birth_date || null,
+                    groom_birth_date: categoryData.groom_birth_date || null,
                 } : {}),
                 ...(activeCategoryKey === 'prewedding' ? {
                     bride_name: categoryData.partner_1 || null,
@@ -1095,9 +1099,12 @@ export default function ProjectsEdit({
                 ...(activeCategoryKey === 'newborn' || activeFormType === 'newborn' ? {
                     father_name: categoryData.father_name || null,
                     mother_name: categoryData.mother_name || null,
-                    child_name: categoryData.baby_name || null,
-                    child_birth_date: categoryData.birth_date || null,
-                    child_gender: categoryData.gender || null,
+                    child_name: categoryData.babies?.[0]?.name || categoryData.baby_name || null,
+                    child_birth_date: categoryData.babies?.[0]?.birth_date || categoryData.baby_birth_date || categoryData.birth_date || null,
+                    child_gender: categoryData.babies?.[0]?.gender || categoryData.baby_gender || categoryData.gender || null,
+                    children: (Array.isArray(categoryData.babies) && categoryData.babies.length > 0)
+                        ? categoryData.babies
+                        : undefined,
                 } : {}),
             },
         };

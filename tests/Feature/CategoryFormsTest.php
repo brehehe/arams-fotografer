@@ -361,5 +361,119 @@ class CategoryFormsTest extends TestCase
             );
         }
     }
+
+    public function test_intake_submission_with_wedding_detailed_cpp_cpw()
+    {
+        $category = Category::where('slug', 'wedding')->first()
+            ?? Category::firstOrCreate(['name' => 'Wedding', 'slug' => 'wedding', 'form_type' => 'wedding']);
+
+        $weddingData = [
+            'groom_name' => 'Aditya Pratama',
+            'groom_nickname' => 'Adit',
+            'groom_occupation' => 'Software Engineer',
+            'groom_birth_date' => '1995-04-12',
+            'groom_instagram' => '@adityapratama',
+            'bride_name' => 'Tiara Maharani',
+            'bride_nickname' => 'Tiara',
+            'bride_occupation' => 'Architect',
+            'bride_birth_date' => '1997-08-20',
+            'bride_instagram' => '@tiaramaharani',
+            'akad_date' => '2026-12-20',
+            'akad_time' => '08:00',
+            'akad_location' => 'Masjid Raya Pondok Indah',
+            'reception_date' => '2026-12-20',
+            'reception_time' => '19:00',
+            'reception_location' => 'Grand Ballroom Mulia',
+            'wedding_organizer' => 'Royal Wedding Planner',
+        ];
+
+        $payload = [
+            'category_id' => $category->id,
+            'name' => 'Tiara Maharani & Aditya Pratama',
+            'phone' => '081233445566',
+            'email' => 'adit.tiara@example.com',
+            'address' => 'Jl. Kebayoran Baru No. 15',
+            'city' => 'Jakarta Selatan',
+            'event_date' => '2026-12-20',
+            'location' => 'Grand Ballroom Mulia',
+            'category_data' => $weddingData,
+        ];
+
+        $response = $this->post('/form-klien', $payload);
+        $response->assertRedirect();
+
+        $client = Client::where('phone', '081233445566')->first();
+        $this->assertNotNull($client);
+        $this->assertEquals('Aditya Pratama', $client->groom_name);
+        $this->assertEquals('Adit', $client->groom_nickname);
+        $this->assertEquals('Tiara Maharani', $client->bride_name);
+        $this->assertEquals('Tiara', $client->bride_nickname);
+
+        $project = Project::where('category_id', $category->id)
+            ->where('client_id', $client->id)
+            ->first();
+        $this->assertNotNull($project);
+        $this->assertEquals('Software Engineer', $project->category_data['groom_occupation']);
+        $this->assertEquals('@adityapratama', $project->category_data['groom_instagram']);
+        $this->assertEquals('Architect', $project->category_data['bride_occupation']);
+        $this->assertEquals('@tiaramaharani', $project->category_data['bride_instagram']);
+    }
+
+    public function test_intake_submission_with_newborn_multiple_babies_repeater()
+    {
+        $category = Category::where('slug', 'newborn')->first()
+            ?? Category::firstOrCreate(['name' => 'Newborn', 'slug' => 'newborn', 'form_type' => 'newborn']);
+
+        $newbornData = [
+            'babies' => [
+                [
+                    'name' => 'Kenzo Althaf Pratama',
+                    'nickname' => 'Kenzo',
+                    'birth_date' => '2026-08-01',
+                    'gender' => 'Laki-laki',
+                ],
+                [
+                    'name' => 'Kenzie Althaf Pratama',
+                    'nickname' => 'Kenzie',
+                    'birth_date' => '2026-08-01',
+                    'gender' => 'Laki-laki',
+                ],
+            ],
+            'father_name' => 'Rizky Pratama',
+            'mother_name' => 'Annisa Rahma',
+            'additional_notes' => 'Bayi kembar laki-laki, request tema pastel',
+        ];
+
+        $payload = [
+            'category_id' => $category->id,
+            'name' => 'Annisa Rahma',
+            'phone' => '081299112233',
+            'email' => 'annisa.twins@example.com',
+            'address' => 'Jl. Bintaro Raya No. 8',
+            'city' => 'Tangerang Selatan',
+            'event_date' => '2026-08-15',
+            'location' => 'Home Studio',
+            'category_data' => $newbornData,
+        ];
+
+        $response = $this->post('/form-klien', $payload);
+        $response->assertRedirect();
+
+        $client = Client::where('phone', '081299112233')->first();
+        $this->assertNotNull($client);
+        $this->assertStringContainsString('Kenzo', $client->child_name);
+        $this->assertStringContainsString('Kenzie', $client->child_name);
+        $this->assertStringContainsString('(Kembar)', $client->child_name);
+        $this->assertIsArray($client->children);
+        $this->assertCount(2, $client->children);
+
+        $project = Project::where('category_id', $category->id)
+            ->where('client_id', $client->id)
+            ->first();
+        $this->assertNotNull($project);
+        $this->assertCount(2, $project->category_data['babies']);
+        $this->assertEquals('Kenzo Althaf Pratama', $project->category_data['babies'][0]['name']);
+        $this->assertEquals('Kenzie Althaf Pratama', $project->category_data['babies'][1]['name']);
+    }
 }
 

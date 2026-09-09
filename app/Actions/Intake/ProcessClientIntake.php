@@ -72,7 +72,9 @@ class ProcessClientIntake
             $catData = !empty($validated['category_data']) && is_array($validated['category_data']) ? $validated['category_data'] : [];
 
             // 2. Determine Client Name & Type based on Category Form Type
-            $children = !empty($validated['children']) && is_array($validated['children']) ? $validated['children'] : ($catData['children'] ?? []);
+            $children = !empty($validated['children']) && is_array($validated['children'])
+                ? $validated['children']
+                : ($catData['babies'] ?? ($catData['children'] ?? []));
             $fatherName = trim($catData['father_name'] ?? ($validated['father_name'] ?? ''));
             $motherName = trim($catData['mother_name'] ?? ($validated['mother_name'] ?? ''));
             $parentNames = trim($validated['parent_names'] ?? '');
@@ -209,26 +211,28 @@ class ProcessClientIntake
 
             $formattedNotes = implode("\n", $notesParts);
 
+            $groomInstagram = $catData['groom_instagram'] ?? ($validated['groom_instagram'] ?? null);
+            $brideInstagram = $catData['bride_instagram'] ?? ($validated['bride_instagram'] ?? null);
             $instagramHandle = $validated['instagram'] 
                 ?? (!empty($validated['primary_contact']) && $validated['primary_contact'] === 'cpp' 
-                    ? ($validated['groom_instagram'] ?? $validated['bride_instagram'] ?? null)
-                    : ($validated['bride_instagram'] ?? $validated['groom_instagram'] ?? null));
+                    ? ($groomInstagram ?? $brideInstagram ?? null)
+                    : ($brideInstagram ?? $groomInstagram ?? null));
 
             $clientData = [
                 'name' => $clientName,
-                'partner_name' => $validated['groom_name'] ?? ($parentNames ?: null),
+                'partner_name' => $catData['groom_name'] ?? ($validated['groom_name'] ?? ($parentNames ?: null)),
                 'child_name' => $childName,
                 'child_birth_date' => $childBirthDate,
                 'child_gender' => $childGender,
                 'father_name' => $fatherName ?: null,
                 'mother_name' => $motherName ?: null,
                 'children' => !empty($children) ? $children : null,
-                'bride_name' => $validated['bride_name'] ?? null,
-                'bride_nickname' => $validated['bride_nickname'] ?? null,
-                'groom_name' => $validated['groom_name'] ?? null,
-                'groom_nickname' => $validated['groom_nickname'] ?? null,
-                'bride_birth_date' => $validated['bride_birth_date'] ?? null,
-                'groom_birth_date' => $validated['groom_birth_date'] ?? null,
+                'bride_name' => $catData['bride_name'] ?? ($validated['bride_name'] ?? null),
+                'bride_nickname' => $catData['bride_nickname'] ?? ($validated['bride_nickname'] ?? null),
+                'groom_name' => $catData['groom_name'] ?? ($validated['groom_name'] ?? null),
+                'groom_nickname' => $catData['groom_nickname'] ?? ($validated['groom_nickname'] ?? null),
+                'bride_birth_date' => $catData['bride_birth_date'] ?? ($validated['bride_birth_date'] ?? null),
+                'groom_birth_date' => $catData['groom_birth_date'] ?? ($validated['groom_birth_date'] ?? null),
                 'phone' => $validated['phone'],
                 'secondary_phone' => $validated['secondary_phone'] ?? null,
                 'email' => $validated['email'] ?? null,

@@ -48,6 +48,7 @@ class UpdateProjectRequest extends FormRequest
             'selected_addons.*.unit' => 'nullable|string|max:50',
             'selected_addons.*.unit_price' => 'required_with:selected_addons|numeric|min:0',
             'selected_addons.*.total_price' => 'required_with:selected_addons|numeric|min:0',
+            'client_overrides' => 'nullable|array',
         ];
     }
 }

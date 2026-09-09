@@ -600,14 +600,14 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
                     {Array.isArray(data.babies) && data.babies.length > 0 ? (
                         <div className="space-y-3">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {data.babies.map((b: any, idx: number) => (
+                                {data.babies.map((b: any, idx: number, arr) => (
                                     <div key={idx} className="p-3.5 bg-rose-50/40 rounded-xl border border-rose-100 space-y-2">
                                         <div className="flex items-center gap-2 font-semibold text-xs text-rose-900 border-b border-rose-100 pb-1.5">
                                             <div className="w-5 h-5 rounded-full bg-rose-200/80 text-rose-800 flex items-center justify-center text-[10px] font-bold">
                                                 {idx + 1}
                                             </div>
-                                            <span>Bayi {data.babies.length > 1 ? `#${idx + 1}` : ''}</span>
-                                            {data.babies.length > 1 && (
+                                            <span>Bayi {arr.length > 1 ? `#${idx + 1}` : ''}</span>
+                                            {arr.length > 1 && (
                                                 <span className="text-[10px] text-rose-600 font-normal">(Kembar)</span>
                                             )}
                                         </div>

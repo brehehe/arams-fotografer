@@ -1233,36 +1233,46 @@ export default function ClientIntakeForm({
                         {/* STEPPER HEADER (4 Connected Steps) */}
                         {/* ================================================================= */}
                         <div className="relative pb-8 mb-6 border-b border-slate-100">
-                            <div className="flex items-center justify-between relative z-10">
-                                {steps.map((s, idx) => {
+                            {/* Continuous connecting background line */}
+                            <div
+                                className="absolute top-[18px] -translate-y-1/2 h-[2px] bg-slate-200 z-0 pointer-events-none"
+                                style={{
+                                    left: `calc(100% / ${steps.length * 2})`,
+                                    right: `calc(100% / ${steps.length * 2})`,
+                                }}
+                            >
+                                {/* Active progress fill line */}
+                                <div
+                                    className="h-full transition-all duration-300 ease-in-out"
+                                    style={{
+                                        width: `${((currentStep - 1) / (steps.length - 1)) * 100}%`,
+                                        backgroundColor: primaryColor,
+                                    }}
+                                />
+                            </div>
+
+                            <div className="flex items-start justify-between relative z-10">
+                                {steps.map((s) => {
                                     const isDone = currentStep > s.number;
                                     const isCurrent = currentStep === s.number;
                                     return (
                                         <div key={s.number} className="flex-1 flex flex-col items-center text-center px-1">
                                             <div className="relative flex items-center justify-center mb-2">
-                                                {/* Connecting line */}
-                                                {idx > 0 && (
-                                                    <div
-                                                        className={`absolute right-1/2 w-[calc(100vw/5)] sm:w-28 md:w-36 h-[2px] -z-10 transition-colors ${
-                                                            isDone || isCurrent ? '' : 'bg-slate-200'
-                                                        }`}
-                                                        style={{
-                                                            transform: 'translateX(-50%)',
-                                                            backgroundColor: isDone || isCurrent ? primaryColor : undefined,
-                                                        }}
-                                                    />
-                                                )}
                                                 {/* Step Circle Badge */}
                                                 <button
                                                     type="button"
                                                     onClick={() => (isDone ? setCurrentStep(s.number) : null)}
                                                     disabled={!isDone}
-                                                    style={isDone || isCurrent ? { backgroundColor: primaryColor } : undefined}
-                                                    className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                                                    style={{
+                                                        backgroundColor: isDone || isCurrent ? primaryColor : '#ffffff',
+                                                        borderColor: isDone || isCurrent ? primaryColor : undefined,
+                                                        boxShadow: isCurrent ? `0 0 0 5px ${primaryColor}25` : undefined,
+                                                    }}
+                                                    className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all relative z-10 ${
                                                         isDone
                                                             ? 'text-white cursor-pointer hover:opacity-90 shadow-md'
                                                             : isCurrent
-                                                            ? 'text-white ring-4 ring-indigo-100 shadow-md'
+                                                            ? 'text-white shadow-md'
                                                             : 'bg-white border-2 border-slate-300 text-slate-400 cursor-not-allowed'
                                                     }`}
                                                 >

@@ -466,7 +466,15 @@ class ProjectService
     public function updateProject(Project $project, array $data, ?User $causer = null): Project
     {
         $addons = $data['selected_addons'] ?? null;
-        unset($data['selected_addons']);
+        $clientOverrides = $data['client_overrides'] ?? null;
+        unset($data['selected_addons'], $data['client_overrides']);
+
+        // Apply client overrides (wedding/newborn info) to Client record
+        if (!empty($clientOverrides) && !empty($project->client_id)) {
+            \App\Models\Client::where('id', $project->client_id)->update(
+                array_filter($clientOverrides, fn($v) => $v !== null)
+            );
+        }
 
         if (array_key_exists('thumbnail', $data)) {
             if (!empty($data['thumbnail']) && is_string($data['thumbnail']) && str_starts_with($data['thumbnail'], 'data:image')) {
