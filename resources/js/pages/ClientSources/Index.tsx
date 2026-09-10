@@ -319,7 +319,7 @@ export default function ClientSourcesIndex({
     };
 
     return (
-        <div className="space-y-6 pb-12">
+        <div className="space-y-4 pb-2">
             <Head title="Sumber Klien / Referral - Arams Pictures" />
             {/* ── HEADER TITLE & CTA ─────────────────────────────────────────── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

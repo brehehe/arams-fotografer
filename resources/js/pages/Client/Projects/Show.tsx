@@ -1,4 +1,5 @@
 import { Head, Link, usePage, router } from '@inertiajs/react';
+import { ClientHeroCarousel } from '@/components/ClientHeroCarousel';
 import {
     Calendar,
     Check,
@@ -135,6 +136,7 @@ interface TestimonialDetailItem {
     comment: string;
     avatar?: string;
     date?: string;
+    updated_at_formatted?: string;
     created_at_formatted?: string;
 }
 
@@ -203,6 +205,7 @@ interface ClientProjectDetailProps {
     };
     timeline?: TimelineData;
     testimonials?: TestimonialDetailItem[];
+    project_review?: TestimonialDetailItem | null;
     payment_methods?: PaymentMethodItem[];
     company?: any;
 }
@@ -215,6 +218,7 @@ export default function ClientProjectDetail({
         steps: [],
     },
     testimonials = [],
+    project_review = null,
     payment_methods = [],
     company,
 }: ClientProjectDetailProps) {
@@ -308,10 +312,23 @@ export default function ClientProjectDetail({
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
     const [selectedStepNumber, setSelectedStepNumber] = useState<number>(timeline?.current_step || 1);
-    const [reviewText, setReviewText] = useState('');
-    const [rating, setRating] = useState(5);
+
+    // Project-specific review state
+    const initialReview = project_review || (testimonials && testimonials.length > 0 ? testimonials[0] : null);
+    const [existingReview, setExistingReview] = useState<TestimonialDetailItem | null>(initialReview);
+    const [isEditingReview, setIsEditingReview] = useState(false);
+    const [reviewText, setReviewText] = useState(initialReview?.comment || '');
+    const [rating, setRating] = useState<number>(initialReview?.rating || 5);
     const [submittingReview, setSubmittingReview] = useState(false);
-    const [currentTestimonialIdx, setCurrentTestimonialIdx] = useState(0);
+
+    useEffect(() => {
+        const review = project_review || (testimonials && testimonials.length > 0 ? testimonials[0] : null);
+        setExistingReview(review);
+        if (review) {
+            setReviewText(review.comment);
+            setRating(review.rating);
+        }
+    }, [project_review, testimonials]);
 
     // Modals & Lightbox states
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -326,8 +343,6 @@ export default function ClientProjectDetail({
     const fileList: FileLinkItem[] = project?.file_links || [];
     const notesList: NoteItem[] = project?.notes_list || [];
     const highlightPhotos: HighlightItem[] = project?.highlights || [];
-    const testimonialList: TestimonialDetailItem[] = testimonials || [];
-    const activeTestimonial = testimonialList.length > 0 ? testimonialList[currentTestimonialIdx % testimonialList.length] : null;
 
     const selectedStep = (timeline?.steps && timeline.steps.length > 0)
         ? (timeline.steps.find((s) => s.step === selectedStepNumber) || timeline.steps[0])
@@ -544,12 +559,12 @@ export default function ClientProjectDetail({
             {
                 preserveScroll: true,
                 onSuccess: () => {
-                    toast.success('Terima kasih! Ulasan Anda berhasil dikirim.');
-                    setReviewText('');
+                    toast.success(existingReview ? 'Ulasan Anda berhasil diperbarui!' : 'Terima kasih! Ulasan Anda berhasil dikirim.');
+                    setIsEditingReview(false);
                     setSubmittingReview(false);
                 },
                 onError: (errors) => {
-                    const firstErr = (Object.values(errors)[0] as string) || 'Gagal mengirim ulasan.';
+                    const firstErr = (Object.values(errors)[0] as string) || 'Gagal menyimpan ulasan.';
                     toast.error(firstErr);
                     setSubmittingReview(false);
                 },
@@ -695,13 +710,13 @@ export default function ClientProjectDetail({
             <Head title={`${project.name} - Detail Project - Arams Pictures`} />
 
             <div className="space-y-6">
-                {/* ── 1. HERO BANNER (Matching Dashboard Hero with Inner Box Frame) ── */}
-                <div
+                {/* ── 1. HERO BANNER - DETAIL PROJECT ─────────────────────── */}
+                <section
                     style={{
                         background: portalHeroGradient || portalHeroBg,
                         color: portalHeroText,
                     }}
-                    className="relative -mt-6 sm:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 overflow-hidden shadow-md min-h-[260px] sm:min-h-[320px] lg:min-h-[350px] flex flex-col justify-center transition-colors select-none"
+                    className="relative -mt-6 sm:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 overflow-hidden shadow-md min-h-[310px] sm:min-h-[390px] lg:min-h-[450px] flex items-center transition-colors select-none"
                 >
                     {/* Inner Decorative Box Frame (Kotak Bingkai) */}
                     <div className="absolute inset-2.5 sm:inset-3.5 lg:inset-4 border border-white/20 rounded-xl pointer-events-none z-20" />
@@ -709,7 +724,12 @@ export default function ClientProjectDetail({
                     {/* Background Wedding Photo on the Right */}
                     <div className="absolute inset-0 z-0">
                         <img
-                            src={project?.thumbnail || highlightPhotos.find(h => h.is_cover)?.image_url || highlightPhotos[0]?.image_url || 'https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=1920&auto=format&fit=crop&q=85'}
+                            src={
+                                project?.thumbnail ||
+                                highlightPhotos.find((h) => h.is_cover)?.image_url ||
+                                highlightPhotos[0]?.image_url ||
+                                'https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=1920&auto=format&fit=crop&q=85'
+                            }
                             alt={project.name}
                             className="w-full h-full object-cover object-center sm:object-right opacity-85 sm:opacity-95 filter brightness-95 contrast-[1.05]"
                         />
@@ -729,9 +749,9 @@ export default function ClientProjectDetail({
                         />
                     </div>
 
-                    {/* Left Meta Content */}
-                    <div className="relative z-10 px-6 sm:px-12 lg:px-16 py-8 sm:py-10 lg:py-12 max-w-2xl xl:max-w-3xl space-y-3 sm:space-y-4">
-                        {/* Breadcrumb inside hero banner */}
+                    {/* Hero Content */}
+                    <div className="relative z-10 w-full max-w-full px-6 sm:px-12 lg:px-16 py-8 sm:py-12 lg:py-14 space-y-4">
+                        {/* Breadcrumbs inside hero */}
                         <div className="flex items-center gap-2 text-xs font-medium">
                             <Link
                                 href="/client/projects"
@@ -741,11 +761,17 @@ export default function ClientProjectDetail({
                                 Project Saya
                             </Link>
                             <span className="text-white/40 font-light">&gt;</span>
-                            <span className="font-bold text-white">{project.name}</span>
+                            <span className="font-bold text-white truncate max-w-xs sm:max-w-md">{project.name}</span>
                         </div>
 
                         {/* Title & Status Badge */}
-                        <div className="space-y-2">
+                        <div className="space-y-2 max-w-2xl">
+                            <span
+                                style={{ color: COLOR_WARM_CREAM }}
+                                className="text-[10px] font-extrabold tracking-[0.25em] uppercase block opacity-90"
+                            >
+                                PROJECT #{project.project_number} • {categoryDisplayName.toUpperCase()}
+                            </span>
                             <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
                                 <h1
                                     style={{
@@ -759,8 +785,8 @@ export default function ClientProjectDetail({
                                 <span
                                     className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] sm:text-xs font-semibold backdrop-blur-xs ${
                                         project.status === 'completed' || project.workflow_step === 'selesai'
-                                            ? 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/30'
-                                            : 'bg-amber-500/20 text-amber-200 border border-amber-400/30'
+                                            ? 'bg-emerald-500/25 text-emerald-200 border border-emerald-400/35'
+                                            : 'bg-amber-500/25 text-amber-200 border border-amber-400/35'
                                     }`}
                                 >
                                     {project.status === 'completed' || project.workflow_step === 'selesai' ? 'Selesai' : 'Dalam Proses'}
@@ -784,55 +810,74 @@ export default function ClientProjectDetail({
                             </div>
                         </div>
 
-                        {/* 4 Metadata Columns with Vertical Dividers */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-0 pt-3 sm:pt-4 text-xs">
-                            <div className="sm:pr-6 sm:border-r border-white/15">
+                        {/* 4 Metadata Columns with vertical dividers */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-0 pt-2 text-xs max-w-2xl">
+                            <div className="sm:pr-6 sm:border-r border-white/15 space-y-0.5">
                                 <span
                                     style={{ color: COLOR_WARM_CREAM }}
-                                    className="text-[11px] sm:text-xs block font-normal mb-1 opacity-80"
+                                    className="text-[11px] block font-normal opacity-80"
                                 >
                                     Kategori Project
                                 </span>
-                                <strong className="text-sm sm:text-base font-bold text-white block">
+                                <strong className="text-sm font-bold text-white block">
                                     {categoryDisplayName}
                                 </strong>
                             </div>
-                            <div className="sm:px-6 sm:border-r border-white/15">
+                            <div className="sm:px-6 sm:border-r border-white/15 space-y-0.5">
                                 <span
                                     style={{ color: COLOR_WARM_CREAM }}
-                                    className="text-[11px] sm:text-xs block font-normal mb-1 opacity-80"
+                                    className="text-[11px] block font-normal opacity-80"
                                 >
-                                    Tipe Project
+                                    Tipe Paket
                                 </span>
-                                <strong className="text-sm sm:text-base font-bold text-white block">
+                                <strong className="text-sm font-bold text-white block">
                                     {packageDisplayName}
                                 </strong>
                             </div>
-                            <div className="sm:px-6 sm:border-r border-white/15">
+                            <div className="sm:px-6 sm:border-r border-white/15 space-y-0.5">
                                 <span
                                     style={{ color: COLOR_WARM_CREAM }}
-                                    className="text-[11px] sm:text-xs block font-normal mb-1 opacity-80"
+                                    className="text-[11px] block font-normal opacity-80"
                                 >
                                     Photographer
                                 </span>
-                                <strong className="text-sm sm:text-base font-bold text-white block">
+                                <strong className="text-sm font-bold text-white block">
                                     {photographerName}
                                 </strong>
                             </div>
-                            <div className="sm:pl-6">
+                            <div className="sm:pl-6 space-y-0.5">
                                 <span
                                     style={{ color: COLOR_WARM_CREAM }}
-                                    className="text-[11px] sm:text-xs block font-normal mb-1 opacity-80"
+                                    className="text-[11px] block font-normal opacity-80"
                                 >
                                     Supervisor
                                 </span>
-                                <strong className="text-sm sm:text-base font-bold text-white block">
+                                <strong className="text-sm font-bold text-white block">
                                     {supervisorName}
                                 </strong>
                             </div>
                         </div>
+
+                        {/* Action Buttons */}
+                        <div className="pt-2 flex flex-wrap items-center gap-2.5 sm:gap-3">
+                            <a
+                                href={whatsappLink}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="client-btn-primary"
+                            >
+                                <MessageCircle className="w-3.5 h-3.5" />
+                                <span>Hubungi Tim via WhatsApp</span>
+                            </a>
+                            <a
+                                href="#section-timeline"
+                                className="client-btn-outline"
+                            >
+                                <span>Lihat Timeline &amp; Progres</span>
+                            </a>
+                        </div>
                     </div>
-                </div>
+                </section>
 
                 {/* ── MAIN CONTENT: CONTINUOUS FULL-WIDTH SECTIONS ── */}
                 <main className="w-full space-y-6 sm:space-y-8 min-w-0">
@@ -897,7 +942,7 @@ export default function ClientProjectDetail({
                                                         title={`Tahap ${step.step}: ${step.title}`}
                                                         className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all group-hover:scale-110 cursor-pointer select-none ${isDone || isActive || isSelected
                                                                 ? 'bg-[#3E1015] text-white shadow-2xs'
-                                                                : 'bg-white text-stone-400 border border-stone-200 hover:border-stone-400'
+                                                                : 'bg-[#F4EBE4] text-[#3C0E0E] border border-[#E8DDD5] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E]'
                                                             }`}
                                                     >
                                                         {step.step}
@@ -1018,7 +1063,7 @@ export default function ClientProjectDetail({
                                                                     toast.info('Tautan berkas sedang dipersiapkan oleh tim studio.');
                                                                 }
                                                             }}
-                                                            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#4A151B] hover:underline cursor-pointer"
+                                                            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#3C0E0E] hover:underline cursor-pointer"
                                                         >
                                                             <ExternalLink className="w-3.5 h-3.5" />
                                                             <span>{file.is_link || file.file_type === 'link' ? 'Buka Link' : 'Buka / Unduh'}</span>
@@ -1027,7 +1072,7 @@ export default function ClientProjectDetail({
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleCopyText(fileUrl, 'Tautan berkas')}
-                                                                className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 transition-colors cursor-pointer"
+                                                                className="p-1.5 rounded-lg bg-[#F4EBE4] border border-[#E8DDD5] text-[#3C0E0E] hover:!text-white hover:!bg-[#3C0E0E] hover:!border-[#3C0E0E] transition-colors cursor-pointer"
                                                                 title="Salin Tautan"
                                                             >
                                                                 <Copy className="w-3.5 h-3.5" />
@@ -1095,9 +1140,9 @@ export default function ClientProjectDetail({
                                             <button
                                                 type="button"
                                                 onClick={() => setIsAddNoteOpen(true)}
-                                                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white border border-stone-200 text-xs font-bold text-stone-800 hover:bg-stone-50 shadow-2xs transition-all cursor-pointer"
+                                                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#F4EBE4] border border-[#E8DDD5] text-xs font-bold text-[#3C0E0E] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] shadow-2xs transition-all cursor-pointer group/note"
                                             >
-                                                <Plus className="w-3.5 h-3.5 text-[#4A151B]" />
+                                                <Plus className="w-3.5 h-3.5 text-[#3C0E0E] group-hover/note:text-white transition-colors" />
                                                 <span>Tulis Catatan Sekarang</span>
                                             </button>
                                         </div>
@@ -1277,9 +1322,9 @@ export default function ClientProjectDetail({
                                             <button
                                                 type="button"
                                                 onClick={() => handleCopyText('8415092811', 'Nomor Rekening BCA')}
-                                                className="px-2.5 py-1.5 rounded-lg border border-stone-200 bg-stone-50 hover:bg-stone-100 text-xs font-semibold text-stone-700 flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                                                className="px-2.5 py-1.5 rounded-lg border border-[#E8DDD5] bg-[#F4EBE4] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-xs font-semibold text-[#3C0E0E] flex items-center gap-1 cursor-pointer transition-all shadow-2xs group/btn"
                                             >
-                                                <Copy className="w-3 h-3" />
+                                                <Copy className="w-3 h-3 group-hover/btn:text-white transition-colors" />
                                                 <span>Salin</span>
                                             </button>
                                         </div>
@@ -1295,9 +1340,9 @@ export default function ClientProjectDetail({
                                             <button
                                                 type="button"
                                                 onClick={() => handleCopyText('137001928821', 'Nomor Rekening Mandiri')}
-                                                className="px-2.5 py-1.5 rounded-lg border border-stone-200 bg-stone-50 hover:bg-stone-100 text-xs font-semibold text-stone-700 flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                                                className="px-2.5 py-1.5 rounded-lg border border-[#E8DDD5] bg-[#F4EBE4] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-xs font-semibold text-[#3C0E0E] flex items-center gap-1 cursor-pointer transition-all shadow-2xs group/btn"
                                             >
-                                                <Copy className="w-3 h-3" />
+                                                <Copy className="w-3 h-3 group-hover/btn:text-white transition-colors" />
                                                 <span>Salin</span>
                                             </button>
                                         </div>
@@ -1323,9 +1368,9 @@ export default function ClientProjectDetail({
                                         href={`/projects/${project.id}/invoice`}
                                         target="_blank"
                                         rel="noreferrer"
-                                        className="px-4 py-2.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-xs font-bold text-stone-800 transition-all flex items-center gap-2 shadow-2xs cursor-pointer"
+                                        className="px-4 py-2.5 rounded-xl border border-[#E8DDD5] bg-[#F4EBE4] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-xs font-bold text-[#3C0E0E] transition-all flex items-center gap-2 shadow-2xs cursor-pointer group/print"
                                     >
-                                        <Printer className="w-4 h-4 text-indigo-600" />
+                                        <Printer className="w-4 h-4 text-[#3C0E0E] group-hover/print:text-white transition-colors" />
                                         <span>Cetak Invoice</span>
                                     </a>
                                 </div>
@@ -1507,40 +1552,12 @@ export default function ClientProjectDetail({
                                                     {project.notes ? `"${project.notes}"` : 'Tidak ada catatan khusus.'}
                                                 </p>
                                             </div>
-
-                                            <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-200/60">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setIsPaymentModalOpen(true)}
-                                                    className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-[11px] font-bold text-slate-800 hover:bg-slate-50 shadow-2xs cursor-pointer flex items-center gap-1.5"
-                                                >
-                                                    <Receipt className="w-3.5 h-3.5 text-emerald-600" />
-                                                    <span>Rincian Bayar</span>
-                                                </button>
-                                                <a
-                                                    href={`/projects/${project.id}/invoice`}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-[11px] font-bold text-slate-800 hover:bg-slate-50 shadow-2xs cursor-pointer flex items-center gap-1.5"
-                                                >
-                                                    <Printer className="w-3.5 h-3.5 text-indigo-600" />
-                                                    <span>Cetak Invoice</span>
-                                                </a>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setIsAddNoteOpen(true)}
-                                                    className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-[11px] font-bold text-slate-800 hover:bg-slate-50 shadow-2xs cursor-pointer flex items-center gap-1.5"
-                                                >
-                                                    <Edit3 className="w-3.5 h-3.5 text-rose-700" />
-                                                    <span>Tambah Catatan</span>
-                                                </button>
-                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </section>
 
-                            {/* Berikan Ulasan Anda & Testimonial Section */}
+                            {/* 6. ULASAN & PENILAIAN PROJECT (Hanya untuk Project Ini) */}
                             <section
                                 style={{
                                     backgroundColor: portalCardBg,
@@ -1548,123 +1565,209 @@ export default function ClientProjectDetail({
                                 }}
                                 className="rounded-xl border p-6 sm:p-8 shadow-xs hover:shadow-xl hover:shadow-[#3C0E0E]/8 hover:-translate-y-1 hover:border-[#3C0E0E]/25 space-y-6 transition-all duration-300"
                             >
-                                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                                    {/* Form Ulasan (Span 7) */}
-                                    <div className="lg:col-span-7 space-y-4">
-                                        <div>
-                                            <h4
-                                                style={{ color: portalHeadingColor }}
-                                                className="text-base font-bold"
-                                            >
-                                                Berikan Ulasan Anda
-                                            </h4>
-                                            <p className="text-xs text-slate-500">Bagaimana pengalaman Anda menggunakan layanan Arams Pictures?</p>
-                                        </div>
-
-                                        <form onSubmit={handleSubmitReview} className="space-y-3.5">
-                                            <div className="flex items-center gap-2">
-                                                {Array.from({ length: 5 }).map((_, i) => (
-                                                    <button
-                                                        key={i}
-                                                        type="button"
-                                                        onClick={() => setRating(i + 1)}
-                                                        className="cursor-pointer transition-transform hover:scale-110"
+                                {existingReview && !isEditingReview ? (
+                                    /* TAMPILAN JIKA SUDAH MENGISI ULASAN */
+                                    <div className="space-y-4">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-stone-100 gap-3">
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <h4
+                                                        style={{ color: portalHeadingColor }}
+                                                        className="text-base font-bold"
                                                     >
-                                                        <Star
-                                                            className={`w-5 h-5 ${i < rating
-                                                                ? 'text-amber-500 fill-amber-500'
-                                                                : 'text-slate-300'
-                                                                }`}
-                                                        />
-                                                    </button>
-                                                ))}
-                                                <span className="text-sm font-bold text-slate-900 ml-1.5">{rating}.0</span>
-                                                <span className="text-xs text-slate-500 font-medium">
-                                                    ({rating === 5 ? 'Sangat Puas' : (rating >= 4 ? 'Puas' : (rating >= 3 ? 'Cukup' : 'Kurang'))})
-                                                </span>
-                                            </div>
-
-                                            <div className="relative">
-                                                <textarea
-                                                    rows={4}
-                                                    maxLength={500}
-                                                    value={reviewText}
-                                                    onChange={(e) => setReviewText(e.target.value)}
-                                                    placeholder="Tuliskan pengalaman, kesan, atau saran Anda untuk tim kami..."
-                                                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs outline-hidden focus:bg-white focus:border-[#4A151B] transition-colors"
-                                                />
-                                                <span className="absolute right-3.5 bottom-2.5 text-[10px] text-slate-400">
-                                                    {reviewText.length}/500
-                                                </span>
+                                                        Ulasan Anda untuk Project Ini
+                                                    </h4>
+                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                        Terkirim
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-slate-500 mt-0.5">
+                                                    Terima kasih telah memberikan ulasan dan penilaian atas layanan Arams Pictures.
+                                                </p>
                                             </div>
 
                                             <button
-                                                type="submit"
-                                                disabled={submittingReview}
-                                                style={{
-                                                    backgroundColor: portalPrimaryAccent,
-                                                    color: '#FFFFFF',
+                                                type="button"
+                                                onClick={() => {
+                                                    setRating(existingReview.rating || 5);
+                                                    setReviewText(existingReview.comment || '');
+                                                    setIsEditingReview(true);
                                                 }}
-                                                className="px-6 py-2.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer hover:opacity-90 disabled:opacity-50"
+                                                className="px-3.5 py-2 rounded-xl bg-[#F4EBE4] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] border border-[#E8DDD5] text-xs font-bold text-[#3C0E0E] shadow-2xs flex items-center gap-1.5 transition-all self-start sm:self-auto cursor-pointer group/btn"
                                             >
-                                                {submittingReview ? 'Mengirim Ulasan...' : 'Kirim Ulasan'}
+                                                <Edit3 className="w-3.5 h-3.5 text-[#3C0E0E] group-hover/btn:text-white transition-colors" />
+                                                <span>Edit Ulasan</span>
                                             </button>
-                                        </form>
-                                    </div>
+                                        </div>
 
-                                    {/* Testimonial / Ulasan Klien Lain (Span 5) */}
-                                    <div className="lg:col-span-5 bg-[#FAF7F2] hover:bg-white hover:border-[#3C0E0E]/30 hover:shadow-md hover:-translate-y-0.5 p-5 sm:p-6 rounded-2xl border border-[#E8E1D7] flex flex-col justify-between space-y-4 transition-all duration-300">
-                                        <div className="space-y-2">
-                                            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
-                                                Pengalaman Klien Arams Pictures
-                                            </span>
-                                            {activeTestimonial ? (
-                                                <div className="space-y-3 pt-1">
-                                                    <div className="flex items-center gap-1 text-amber-500">
-                                                        {Array.from({ length: activeTestimonial.rating || 5 }).map((_, i) => (
-                                                            <Star key={i} className="w-3.5 h-3.5 fill-amber-500" />
-                                                        ))}
+                                        <div className="p-5 sm:p-6 rounded-2xl bg-[#FAF8F5] border border-[#E8DDD5] space-y-3.5">
+                                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                                <div className="flex items-center gap-1.5 text-amber-500">
+                                                    {Array.from({ length: 5 }).map((_, i) => (
+                                                        <Star
+                                                            key={i}
+                                                            className={`w-4 h-4 ${i < (existingReview.rating || 5)
+                                                                ? 'text-amber-500 fill-amber-500'
+                                                                : 'text-stone-300'
+                                                            }`}
+                                                        />
+                                                    ))}
+                                                    <span className="text-sm font-black text-stone-900 ml-1">
+                                                        {existingReview.rating || 5}.0
+                                                    </span>
+                                                    <span className="text-xs text-stone-500 font-medium">
+                                                        ({(existingReview.rating || 5) === 5 ? 'Sangat Puas' : ((existingReview.rating || 5) >= 4 ? 'Puas' : ((existingReview.rating || 5) >= 3 ? 'Cukup' : 'Kurang'))})
+                                                    </span>
+                                                </div>
+                                                {existingReview.date && (
+                                                    <span className="text-[11px] text-stone-400 font-medium">
+                                                        {existingReview.updated_at_formatted ? `Diperbarui: ${existingReview.updated_at_formatted}` : `Dikirim: ${existingReview.date}`}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <p className="text-xs sm:text-sm text-stone-700 italic leading-relaxed whitespace-pre-wrap">
+                                                "{existingReview.comment}"
+                                            </p>
+
+                                            <div className="pt-3 border-t border-stone-200/70 flex flex-wrap items-center justify-between gap-2 text-xs">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-7 h-7 rounded-full bg-[#F4EBE4] border border-[#E8DDD5] flex items-center justify-center text-[#3C0E0E] font-bold text-xs">
+                                                        {existingReview.client_name ? existingReview.client_name.charAt(0).toUpperCase() : 'K'}
                                                     </div>
-                                                    <p className="text-xs text-stone-700 italic leading-relaxed">
-                                                        "{activeTestimonial.comment}"
-                                                    </p>
-                                                    <div className="pt-2 border-t border-stone-200/60">
-                                                        <strong className="text-xs font-bold text-stone-900 block">{activeTestimonial.client_name}</strong>
-                                                        <span className="text-[10px] text-stone-400 block">{activeTestimonial.package_name || activeTestimonial.project_name || 'Klien Arams Pictures'}</span>
+                                                    <div>
+                                                        <strong className="text-xs font-bold text-stone-900 block">
+                                                            {existingReview.client_name || project?.client?.name || 'Klien Arams'}
+                                                        </strong>
+                                                        <span className="text-[10px] text-stone-400 block">
+                                                            {existingReview.package_name || project?.package_name || 'Dokumentasi'}
+                                                        </span>
                                                     </div>
                                                 </div>
-                                            ) : (
-                                                <p className="text-xs text-stone-500 italic">
-                                                    Ulasan Anda akan sangat berarti bagi pengembangan kualitas layanan kami ke depannya.
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    /* TAMPILAN FORM (JIKA BELUM MENGISI ATAU SEDANG EDIT) */
+                                    <div className="space-y-4">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-stone-100 gap-3">
+                                            <div>
+                                                <h4
+                                                    style={{ color: portalHeadingColor }}
+                                                    className="text-base font-bold"
+                                                >
+                                                    {existingReview ? 'Edit Ulasan Anda' : 'Berikan Ulasan Anda'}
+                                                </h4>
+                                                <p className="text-xs text-slate-500">
+                                                    {existingReview
+                                                        ? 'Perbarui penilaian atau masukan Anda untuk project ini.'
+                                                        : 'Bagaimana pengalaman Anda menggunakan layanan Arams Pictures?'}
                                                 </p>
+                                            </div>
+                                            {isEditingReview && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (existingReview) {
+                                                            setRating(existingReview.rating || 5);
+                                                            setReviewText(existingReview.comment || '');
+                                                        }
+                                                        setIsEditingReview(false);
+                                                    }}
+                                                    className="px-3.5 py-1.5 rounded-xl bg-[#F4EBE4] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] border border-[#E8DDD5] text-xs font-bold text-[#3C0E0E] transition-all self-start sm:self-auto cursor-pointer"
+                                                >
+                                                    Batal Edit
+                                                </button>
                                             )}
                                         </div>
 
-                                        {testimonialList.length > 1 && (
-                                            <div className="flex items-center justify-between pt-2 border-t border-stone-200/60 text-xs">
-                                                <span className="text-[10px] text-stone-400">
-                                                    {currentTestimonialIdx + 1} dari {testimonialList.length} ulasan
-                                                </span>
-                                                <div className="flex items-center gap-1">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setCurrentTestimonialIdx((prev) => (prev > 0 ? prev - 1 : testimonialList.length - 1))}
-                                                        className="w-6 h-6 rounded-lg bg-white border border-stone-200 flex items-center justify-center text-stone-600 hover:bg-stone-50 cursor-pointer shadow-2xs"
-                                                    >
-                                                        <ChevronLeft className="w-3 h-3" />
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setCurrentTestimonialIdx((prev) => (prev + 1) % testimonialList.length)}
-                                                        className="w-6 h-6 rounded-lg bg-white border border-stone-200 flex items-center justify-center text-stone-600 hover:bg-stone-50 cursor-pointer shadow-2xs"
-                                                    >
-                                                        <ChevronRight className="w-3 h-3" />
-                                                    </button>
+                                        <form onSubmit={handleSubmitReview} className="space-y-4 max-w-3xl">
+                                            {/* Star Rating Interactive Selection */}
+                                            <div className="space-y-1.5">
+                                                <label className="text-xs font-bold text-slate-700 block">
+                                                    Beri Nilai Rating Bintang
+                                                </label>
+                                                <div className="flex items-center gap-2">
+                                                    {Array.from({ length: 5 }).map((_, i) => (
+                                                        <button
+                                                            key={i}
+                                                            type="button"
+                                                            onClick={() => setRating(i + 1)}
+                                                            className="cursor-pointer transition-transform hover:scale-110 p-0.5"
+                                                            title={`${i + 1} Bintang`}
+                                                        >
+                                                            <Star
+                                                                className={`w-6 h-6 transition-colors ${i < rating
+                                                                    ? 'text-amber-500 fill-amber-500'
+                                                                    : 'text-slate-300 hover:text-amber-300'
+                                                                }`}
+                                                            />
+                                                        </button>
+                                                    ))}
+                                                    <span className="text-sm font-black text-slate-900 ml-2">{rating}.0</span>
+                                                    <span className="text-xs text-slate-500 font-medium">
+                                                        ({rating === 5 ? 'Sangat Puas' : (rating >= 4 ? 'Puas' : (rating >= 3 ? 'Cukup' : (rating >= 2 ? 'Kurang' : 'Sangat Kurang')))})
+                                                    </span>
                                                 </div>
                                             </div>
-                                        )}
+
+                                            {/* Textarea */}
+                                            <div className="space-y-1.5">
+                                                <label className="text-xs font-bold text-slate-700 block">
+                                                    Tulis Ulasan &amp; Kesan Anda
+                                                </label>
+                                                <div className="relative">
+                                                    <textarea
+                                                        rows={4}
+                                                        maxLength={500}
+                                                        value={reviewText}
+                                                        onChange={(e) => setReviewText(e.target.value)}
+                                                        placeholder="Tuliskan pengalaman, kesan, atau saran Anda untuk tim kami..."
+                                                        className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs outline-hidden focus:bg-white focus:border-[#3C0E0E] transition-colors"
+                                                    />
+                                                    <span className="absolute right-3.5 bottom-2.5 text-[10px] text-slate-400">
+                                                        {reviewText.length}/500
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* Buttons */}
+                                            <div className="flex items-center gap-2.5 pt-1">
+                                                <button
+                                                    type="submit"
+                                                    disabled={submittingReview}
+                                                    style={{
+                                                        backgroundColor: portalPrimaryAccent,
+                                                        color: '#FFFFFF',
+                                                    }}
+                                                    className="px-6 py-2.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+                                                >
+                                                    {submittingReview ? (
+                                                        <span>Menyimpan...</span>
+                                                    ) : (
+                                                        <span>{existingReview ? 'Simpan Perubahan' : 'Kirim Ulasan'}</span>
+                                                    )}
+                                                </button>
+
+                                                {isEditingReview && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (existingReview) {
+                                                                setRating(existingReview.rating || 5);
+                                                                setReviewText(existingReview.comment || '');
+                                                            }
+                                                            setIsEditingReview(false);
+                                                        }}
+                                                        className="px-4 py-2.5 rounded-xl bg-[#F4EBE4] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] border border-[#E8DDD5] text-xs font-bold text-[#3C0E0E] transition-all cursor-pointer shadow-2xs"
+                                                    >
+                                                        Batal
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </form>
                                     </div>
-                                </div>
+                                )}
                             </section>
                         </div>
                     </main>
@@ -1762,7 +1865,7 @@ export default function ClientProjectDetail({
                                 <button
                                     type="button"
                                     onClick={() => setIsAddNoteOpen(false)}
-                                    className="px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+                                    className="px-4 py-2.5 rounded-xl border border-[#E8DDD5] bg-[#F4EBE4] text-xs font-bold text-[#3C0E0E] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] transition-all cursor-pointer shadow-2xs"
                                 >
                                     Batal
                                 </button>
@@ -1957,9 +2060,9 @@ export default function ClientProjectDetail({
                                     <button
                                         type="button"
                                         onClick={() => handleCopyText('8820192837', 'Nomor Rekening BCA')}
-                                        className="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-[11px] font-bold text-slate-700 flex items-center gap-1 cursor-pointer transition-colors"
+                                        className="px-2.5 py-1.5 rounded-lg border border-[#E8DDD5] bg-[#F4EBE4] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-[11px] font-bold text-[#3C0E0E] flex items-center gap-1 cursor-pointer transition-all shadow-2xs group/btn"
                                     >
-                                        <Copy className="w-3 h-3" />
+                                        <Copy className="w-3 h-3 group-hover/btn:text-white transition-colors" />
                                         <span>Salin</span>
                                     </button>
                                 </div>
@@ -1973,9 +2076,9 @@ export default function ClientProjectDetail({
                                     <button
                                         type="button"
                                         onClick={() => handleCopyText('1370019283921', 'Nomor Rekening Mandiri')}
-                                        className="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-[11px] font-bold text-slate-700 flex items-center gap-1 cursor-pointer transition-colors"
+                                        className="px-2.5 py-1.5 rounded-lg border border-[#E8DDD5] bg-[#F4EBE4] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-[11px] font-bold text-[#3C0E0E] flex items-center gap-1 cursor-pointer transition-all shadow-2xs group/btn"
                                     >
-                                        <Copy className="w-3 h-3" />
+                                        <Copy className="w-3 h-3 group-hover/btn:text-white transition-colors" />
                                         <span>Salin</span>
                                     </button>
                                 </div>
@@ -1996,7 +2099,7 @@ export default function ClientProjectDetail({
                             <button
                                 type="button"
                                 onClick={() => setIsPaymentModalOpen(false)}
-                                className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-colors cursor-pointer"
+                                className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-[#E8DDD5] bg-[#F4EBE4] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-xs font-bold text-[#3C0E0E] transition-all cursor-pointer shadow-2xs"
                             >
                                 Tutup
                             </button>

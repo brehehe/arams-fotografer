@@ -15,6 +15,10 @@ import {
     Sparkles,
     RotateCcw,
     FileText,
+    Globe,
+    Star,
+    Shield,
+    ArrowRight,
 } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 import SettingsTabNav from '@/components/SettingsTabNav';
@@ -38,7 +42,7 @@ export default function FormKlienPage({ settings = {}, settingsMap = {} }: FormK
         return def;
     };
 
-    const [activeTab, setActiveTab] = useState<'content' | 'theme'>('theme');
+    const [activeTab, setActiveTab] = useState<'content' | 'theme' | 'portal_colors'>('theme');
 
     const [formKlien, setFormKlien] = useState({
         intake_form_title: getVal('intake_form_title', 'Formulir Pemesanan & Data Klien'),
@@ -56,6 +60,20 @@ export default function FormKlienPage({ settings = {}, settingsMap = {} }: FormK
         intake_sidebar_bg: getVal('intake_sidebar_bg', '#0F1424'),
         intake_card_bg: getVal('intake_card_bg', '#FFFFFF'),
         intake_text_color: getVal('intake_text_color', '#0F172A'),
+        // Portal Klien & Footer Color Customizations
+        portal_footer_bg: getVal('portal_footer_bg', '#3C0E0E'),
+        portal_footer_text: getVal('portal_footer_text', '#F4EBE4'),
+        portal_footer_main_bg: getVal('portal_footer_main_bg', '#FBF6F0'),
+        portal_footer_main_text: getVal('portal_footer_main_text', '#334155'),
+        portal_hero_bg: getVal('portal_hero_bg', '#3C0E0E'),
+        portal_nav_bg: getVal('portal_nav_bg', '#3C0E0E'),
+        portal_bg_color: getVal('portal_bg_color', '#FBF6F0'),
+        // Kustomisasi Tombol Portal Klien (/client/...)
+        portal_btn_bg: getVal('portal_btn_bg', '#FFFFFF'),
+        portal_btn_text: getVal('portal_btn_text', '#3C0E0E'),
+        portal_btn_border: getVal('portal_btn_border', '#FFFFFF'),
+        portal_btn_hover_bg: getVal('portal_btn_hover_bg', '#3C0E0E'),
+        portal_btn_hover_text: getVal('portal_btn_hover_text', '#FFFFFF'),
     });
 
     const [saving, setSaving] = useState(false);
@@ -168,7 +186,7 @@ export default function FormKlienPage({ settings = {}, settingsMap = {} }: FormK
     };
 
     return (
-        <div className="space-y-6 pb-16 w-full max-w-full">
+        <div className="space-y-4 pb-2 w-full max-w-full">
             <Head title="Pengaturan Form Klien - Arams Photography" />
 
             {/* Header Title & Subtitle */}
@@ -220,6 +238,18 @@ export default function FormKlienPage({ settings = {}, settingsMap = {} }: FormK
                     <Palette className="w-3.5 h-3.5" />
                     <span>Kustomisasi Warna &amp; Tema Form</span>
                     <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setActiveTab('portal_colors')}
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        activeTab === 'portal_colors'
+                            ? 'bg-[#4F46E5] text-white shadow-xs'
+                            : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                >
+                    <Globe className="w-3.5 h-3.5" />
+                    <span>Warna Footer &amp; Portal Klien</span>
                 </button>
                 <button
                     type="button"
@@ -389,6 +419,347 @@ export default function FormKlienPage({ settings = {}, settingsMap = {} }: FormK
                                         { hex: '#06120E', label: 'Deep Botanical' },
                                     ]}
                                 />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ══════════════════════════════════════════════════════════════ */}
+                    {/* TAB: WARNA FOOTER & PORTAL KLIEN */}
+                    {/* ══════════════════════════════════════════════════════════════ */}
+                    {activeTab === 'portal_colors' && (
+                        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-6">
+                            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                                <div>
+                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-extrabold uppercase tracking-wider mb-1">
+                                        <Globe className="w-3 h-3" />
+                                        <span>Master Setting Portal Klien</span>
+                                    </div>
+                                    <h3 className="text-base font-bold text-slate-900">Kustomisasi Warna Footer &amp; Portal Klien</h3>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        Pengaturan warna untuk bar keunggulan footer, teks &amp; ikon putih, hero banner, dan kanvas portal klien (/client/...).
+                                    </p>
+                                </div>
+                                <a
+                                    href="/client/dashboard"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors"
+                                >
+                                    <ExternalLink className="w-3 h-3" />
+                                    <span>Buka Portal</span>
+                                </a>
+                            </div>
+
+                            <div className="space-y-4">
+                                <ColorSettingRow
+                                    label="Warna Latar Bar Keunggulan &amp; Footer Portal"
+                                    description="Latar belakang bar 'Kenapa Memilih Arams Pictures?' di bagian bawah portal klien."
+                                    value={formKlien.portal_footer_bg}
+                                    onChange={(col) => setFormKlien({ ...formKlien, portal_footer_bg: col })}
+                                    presets={[
+                                        { hex: '#3C0E0E', label: 'Classic Maroon' },
+                                        { hex: '#22070A', label: 'Dark Wine' },
+                                        { hex: '#170406', label: 'Deep Dark Cherry' },
+                                        { hex: '#0F172A', label: 'Deep Navy' },
+                                        { hex: '#064E3B', label: 'Dark Emerald' },
+                                        { hex: '#18181B', label: 'Charcoal' },
+                                    ]}
+                                />
+
+                                <ColorSettingRow
+                                    label="Warna Teks &amp; Ikon Bar Keunggulan"
+                                    description="Warna tulisan judul, deskripsi, dan ikon pada bar keunggulan portal klien (disarankan putih/terang)."
+                                    value={formKlien.portal_footer_text}
+                                    onChange={(col) => setFormKlien({ ...formKlien, portal_footer_text: col })}
+                                    presets={[
+                                        { hex: '#FFFFFF', label: 'Pure White (Standar)' },
+                                        { hex: '#F4EBE4', label: 'Warm Cream' },
+                                        { hex: '#E2E8F0', label: 'Soft Slate' },
+                                    ]}
+                                />
+
+                                <ColorSettingRow
+                                    label="Warna Dasar Latar Footer Utama (Main Footer Background)"
+                                    description="Latar belakang area informasi brand, kontak, dan copyright di footer portal klien (default #FBF6F0)."
+                                    value={formKlien.portal_footer_main_bg}
+                                    onChange={(col) => setFormKlien({ ...formKlien, portal_footer_main_bg: col })}
+                                    presets={[
+                                        { hex: '#FBF6F0', label: 'Warm Cream (Default)' },
+                                        { hex: '#FFFFFF', label: 'Pure White' },
+                                        { hex: '#FAF7F5', label: 'Ivory Soft' },
+                                        { hex: '#F1F5F9', label: 'Slate Light' },
+                                        { hex: '#3C0E0E', label: 'Dark Burgundy' },
+                                        { hex: '#0F172A', label: 'Deep Navy' },
+                                    ]}
+                                />
+
+                                <ColorSettingRow
+                                    label="Warna Teks Footer Utama (Main Footer Text)"
+                                    description="Warna tulisan deskripsi usaha, nomor kontak, dan teks copyright pada footer utama."
+                                    value={formKlien.portal_footer_main_text}
+                                    onChange={(col) => setFormKlien({ ...formKlien, portal_footer_main_text: col })}
+                                    presets={[
+                                        { hex: '#334155', label: 'Slate Charcoal (Default)' },
+                                        { hex: '#1E293B', label: 'Dark Slate' },
+                                        { hex: '#3C0E0E', label: 'Arams Maroon' },
+                                        { hex: '#FFFFFF', label: 'Pure White' },
+                                        { hex: '#F4EBE4', label: 'Warm Light' },
+                                    ]}
+                                />
+
+                                <ColorSettingRow
+                                    label="Warna Latar Hero Banner Portal"
+                                    description="Warna latar belakang banner sambutan hero pada halaman utama portal klien."
+                                    value={formKlien.portal_hero_bg}
+                                    onChange={(col) => setFormKlien({ ...formKlien, portal_hero_bg: col })}
+                                    presets={[
+                                        { hex: '#3C0E0E', label: 'Arams Burgundy' },
+                                        { hex: '#22070A', label: 'Dark Wine' },
+                                        { hex: '#0F172A', label: 'Midnight Blue' },
+                                        { hex: '#064E3B', label: 'Emerald' },
+                                    ]}
+                                />
+
+                                <ColorSettingRow
+                                    label="Warna Latar Navbar Header Portal"
+                                    description="Warna navbar atas tempat logo Arams Pictures dan menu navigasi portal klien."
+                                    value={formKlien.portal_nav_bg}
+                                    onChange={(col) => setFormKlien({ ...formKlien, portal_nav_bg: col })}
+                                    presets={[
+                                        { hex: '#3C0E0E', label: 'Arams Burgundy' },
+                                        { hex: '#22070A', label: 'Dark Wine' },
+                                        { hex: '#0F172A', label: 'Midnight Blue' },
+                                        { hex: '#18181B', label: 'Charcoal' },
+                                    ]}
+                                />
+
+                                <ColorSettingRow
+                                    label="Warna Latar Belakang Kanvas Portal"
+                                    description="Warna latar belakang utama di luar kartu-kartu pada portal klien."
+                                    value={formKlien.portal_bg_color}
+                                    onChange={(col) => setFormKlien({ ...formKlien, portal_bg_color: col })}
+                                    presets={[
+                                        { hex: '#FBF6F0', label: 'Warm Off-White (Default)' },
+                                        { hex: '#FFFFFF', label: 'Pure White' },
+                                        { hex: '#F8FAFC', label: 'Light Slate' },
+                                        { hex: '#F4EBE4', label: 'Soft Cream' },
+                                    ]}
+                                />
+
+                                {/* ── KUSTOMISASI TOMBOL & OUTLINE PORTAL KLIEN ── */}
+                                <div className="pt-4 border-t border-slate-100">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <span className="w-2 h-2 rounded-full bg-[#3C0E0E]" />
+                                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                                            Kustomisasi Tombol &amp; Outline Portal Klien
+                                        </h4>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <ColorSettingRow
+                                            label="Warna Outline / Garis Tepi Tombol (Default: Putih)"
+                                            description="Outline awal di sekeliling tombol utama pada portal klien (Dashboard, Projects, Portfolio, Detail)."
+                                            value={formKlien.portal_btn_border}
+                                            onChange={(col) => setFormKlien({ ...formKlien, portal_btn_border: col })}
+                                            presets={[
+                                                { hex: '#FFFFFF', label: 'Putih Bersih (Default)' },
+                                                { hex: '#F4EBE4', label: 'Warm Cream' },
+                                                { hex: '#E2E8F0', label: 'Soft Slate' },
+                                                { hex: '#3C0E0E', label: 'Burgundy' },
+                                            ]}
+                                        />
+
+                                        <ColorSettingRow
+                                            label="Warna Teks Tombol (Default: #3C0E0E)"
+                                            description="Warna tulisan teks dan ikon pada tombol dalam keadaan normal."
+                                            value={formKlien.portal_btn_text}
+                                            onChange={(col) => setFormKlien({ ...formKlien, portal_btn_text: col })}
+                                            presets={[
+                                                { hex: '#3C0E0E', label: 'Burgundy (Default)' },
+                                                { hex: '#22070A', label: 'Dark Wine' },
+                                                { hex: '#0F172A', label: 'Midnight Blue' },
+                                                { hex: '#4F46E5', label: 'Indigo' },
+                                            ]}
+                                        />
+
+                                        <ColorSettingRow
+                                            label="Warna Latar Tombol (Default: Putih)"
+                                            description="Warna latar belakang bagian dalam tombol sebelum kursor masuk."
+                                            value={formKlien.portal_btn_bg}
+                                            onChange={(col) => setFormKlien({ ...formKlien, portal_btn_bg: col })}
+                                            presets={[
+                                                { hex: '#FFFFFF', label: 'Putih (Default)' },
+                                                { hex: '#F4EBE4', label: 'Warm Cream' },
+                                                { hex: '#FBF6F0', label: 'Off-White' },
+                                                { hex: '#F8FAFC', label: 'Light Slate' },
+                                            ]}
+                                        />
+
+                                        <ColorSettingRow
+                                            label="Warna Latar Hover Tombol (Default: #3C0E0E)"
+                                            description="Warna latar tombol ketika kursor mouse masuk ke dalam tombol."
+                                            value={formKlien.portal_btn_hover_bg}
+                                            onChange={(col) => setFormKlien({ ...formKlien, portal_btn_hover_bg: col })}
+                                            presets={[
+                                                { hex: '#3C0E0E', label: 'Burgundy (Default)' },
+                                                { hex: '#22070A', label: 'Dark Wine' },
+                                                { hex: '#4A151B', label: 'Arams Maroon' },
+                                                { hex: '#0F172A', label: 'Midnight Blue' },
+                                                { hex: '#4F46E5', label: 'Indigo Modern' },
+                                            ]}
+                                        />
+
+                                        <ColorSettingRow
+                                            label="Warna Teks Saat Hover (Default: Putih)"
+                                            description="Warna teks tulisan dan ikon saat tombol di-hover."
+                                            value={formKlien.portal_btn_hover_text}
+                                            onChange={(col) => setFormKlien({ ...formKlien, portal_btn_hover_text: col })}
+                                            presets={[
+                                                { hex: '#FFFFFF', label: 'Putih Bersih (Default)' },
+                                                { hex: '#F4EBE4', label: 'Warm Cream' },
+                                                { hex: '#FEF08A', label: 'Soft Yellow' },
+                                            ]}
+                                        />
+                                    </div>
+
+                                    {/* Live Interactive Button Preview */}
+                                    <div className="mt-4 p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2.5">
+                                        <div className="flex items-center justify-between text-white text-[11px]">
+                                            <span className="font-bold">Pratinjau Interaktif Tombol (Arahkan Mouse / Hover):</span>
+                                            <span className="text-slate-400 text-[10px]">Outline Putih + Warna Hover</span>
+                                        </div>
+                                        <div className="p-4 rounded-lg bg-black/40 flex flex-wrap items-center gap-4">
+                                            <button
+                                                type="button"
+                                                style={{
+                                                    backgroundColor: formKlien.portal_btn_bg,
+                                                    color: formKlien.portal_btn_text,
+                                                    border: `1.5px solid ${formKlien.portal_btn_border}`,
+                                                    outline: `2px solid ${formKlien.portal_btn_border}`,
+                                                    outlineOffset: '2px',
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.backgroundColor = formKlien.portal_btn_hover_bg;
+                                                    e.currentTarget.style.color = formKlien.portal_btn_hover_text;
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.backgroundColor = formKlien.portal_btn_bg;
+                                                    e.currentTarget.style.color = formKlien.portal_btn_text;
+                                                }}
+                                                className="px-5 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer shadow-md inline-flex items-center gap-2"
+                                            >
+                                                <span>Booking Project Baru</span>
+                                                <ArrowRight className="w-3.5 h-3.5" />
+                                            </button>
+
+                                            <span className="text-slate-400 text-xs">
+                                                ← Arahkan kursor ke tombol untuk melihat efek outline putih &amp; warna hover
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Mini Live Preview of Value Badges */}
+                            <div className="pt-4 border-t border-slate-100 space-y-3">
+                                <label className="block text-xs font-bold text-slate-800">
+                                    Pratinjau Miniatur Bar Keunggulan Footer
+                                </label>
+                                <div
+                                    style={{
+                                        background: `linear-gradient(180deg, ${formKlien.portal_footer_bg} 0%, #170406 100%)`,
+                                        color: formKlien.portal_footer_text || '#FFFFFF',
+                                    }}
+                                    className="p-4 rounded-xl border border-white/15 space-y-3 shadow-inner"
+                                >
+                                    <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-wider">
+                                        <span>Kenapa Memilih Arams Pictures?</span>
+                                        <span className="opacity-70 text-[9px]">Premium Client Experience</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[10px]">
+                                        <div className="p-2 rounded-lg bg-white/[0.04] border border-white/15 flex items-center gap-2">
+                                            <div className="w-5 h-5 rounded bg-white/10 flex items-center justify-center text-white shrink-0">
+                                                <Star className="w-3 h-3 text-white" />
+                                            </div>
+                                            <div>
+                                                <strong className="block font-bold text-white text-[10px]">Berpengalaman</strong>
+                                                <span className="text-[9px] opacity-75">7+ tahun berkarya</span>
+                                            </div>
+                                        </div>
+                                        <div className="p-2 rounded-lg bg-white/[0.04] border border-white/15 flex items-center gap-2">
+                                            <div className="w-5 h-5 rounded bg-white/10 flex items-center justify-center text-white shrink-0">
+                                                <CheckCircle2 className="w-3 h-3 text-white" />
+                                            </div>
+                                            <div>
+                                                <strong className="block font-bold text-white text-[10px]">Kualitas Terbaik</strong>
+                                                <span className="text-[9px] opacity-75">Editing standar tinggi</span>
+                                            </div>
+                                        </div>
+                                        <div className="p-2 rounded-lg bg-white/[0.04] border border-white/15 flex items-center gap-2">
+                                            <div className="w-5 h-5 rounded bg-white/10 flex items-center justify-center text-white shrink-0">
+                                                <Shield className="w-3 h-3 text-white" />
+                                            </div>
+                                            <div>
+                                                <strong className="block font-bold text-white text-[10px]">100% Aman</strong>
+                                                <span className="text-[9px] opacity-75">File aman terlindungi</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Mini Live Preview of Main Footer Body */}
+                                <div
+                                    style={{
+                                        backgroundColor: formKlien.portal_footer_main_bg || '#FBF6F0',
+                                        color: formKlien.portal_footer_main_text || '#334155',
+                                        borderColor: '#F4EBE4',
+                                    }}
+                                    className="p-4 rounded-xl border space-y-3 shadow-xs text-xs"
+                                >
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pb-3 border-b border-black/10">
+                                        {/* Kiri */}
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-1.5">
+                                                <div className="w-5 h-5 rounded bg-black/5 border border-black/10 flex items-center justify-center font-serif text-[9px] font-black text-[#3C0E0E]">
+                                                    ap
+                                                </div>
+                                                <span className="font-black text-xs text-[#3C0E0E]">Arams Pictures</span>
+                                            </div>
+                                            <p className="text-[10px] line-clamp-2 opacity-80">
+                                                Jasa fotografi &amp; videografi profesional untuk momen berharga Anda.
+                                            </p>
+                                        </div>
+
+                                        {/* Tengah */}
+                                        <div className="space-y-1">
+                                            <span className="font-bold text-[10px] uppercase tracking-wider text-[#3C0E0E] block">
+                                                Hubungi Kami
+                                            </span>
+                                            <div className="space-y-0.5 text-[10px]">
+                                                <div>WA: +62 812-3456-7890</div>
+                                                <div>Email: hello@aramspictures.com</div>
+                                                <div>Jam: 09.00 - 18.00 WIB</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Kanan */}
+                                        <div className="space-y-1 sm:text-right">
+                                            <span className="font-bold text-[10px] uppercase tracking-wider text-[#3C0E0E] block">
+                                                Ikuti Kami
+                                            </span>
+                                            <div className="flex items-center gap-1 sm:justify-end">
+                                                <span className="w-5 h-5 rounded-full border border-black/15 flex items-center justify-center text-[9px]">IG</span>
+                                                <span className="w-5 h-5 rounded-full border border-black/15 flex items-center justify-center text-[9px]">YT</span>
+                                                <span className="w-5 h-5 rounded-full border border-black/15 flex items-center justify-center text-[9px]">TT</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Bawah: Tengah Saja */}
+                                    <div className="text-center text-[10px] opacity-70">
+                                        © 2026 Arams Pictures. All rights reserved.
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}

@@ -16,10 +16,13 @@ class ReportController extends Controller
     public function index(Request $request): Response
     {
         $year = (int) $request->input('year', 2026);
-        $data = $this->reportService->getAnnualReport($year);
+        $period = (string) $request->input('period', 'monthly');
+        $dateRange = $request->input('date_range');
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+
+        $data = $this->reportService->getAnnualReport($year, $period, $dateRange, $startDate, $endDate);
 
         return Inertia::render('Reports/Index', $data);
     }
 }
-
-

@@ -1,920 +1,1216 @@
-import React, { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
-    BarChart3,
-    TrendingUp,
-    TrendingDown,
-    Briefcase,
-    Users,
     Download,
-    Calendar,
-    CheckCircle2,
-    Layers,
     ChevronDown,
-    Award,
-    Sparkles,
-    Target,
-    Zap,
+    ArrowUp,
+    ArrowDown,
+    CreditCard,
+    Folder,
     Info,
-    ArrowUpRight,
-    ArrowDownRight,
+    ArrowRight,
     Camera,
-    Palette,
     Video,
-    Smile,
-    Building2,
-    HeartHandshake,
-    Tag,
+    Navigation,
+    Tv,
+    Smartphone,
+    Clock,
+    BookOpen,
+    Film,
+    Image as ImageIcon,
+    Printer,
+    FileSpreadsheet,
 } from 'lucide-react';
-import { formatRupiah, formatRupiahCompact } from '@/lib/formatters';
-import {
-    Table,
-    TableHeader,
-    TableBody,
-    TableRow,
-    TableHead,
-    TableCell,
-    TableEmpty,
-} from '@/components/ui';
+import React, { useState, useRef, useEffect } from 'react';
+import type { DateRange} from '@/components/DateRangePicker';
+import DateRangePicker, { formatRangeLabel } from '@/components/DateRangePicker';
+import { formatRupiah } from '@/lib/formatters';
 
-interface ReportIndexProps {
-    year: number;
-    available_years?: number[];
-    summary: {
-        revenue: number;
-        projects: number;
-        completed: number;
-        new_clients: number;
-        completion_rate: number;
-        revenue_growth?: number;
-        projects_growth?: number;
-        clients_growth?: number;
-        completion_rate_growth?: number;
+interface MonthlyItem {
+    month: string;
+    revenue: number;
+    projects: number;
+}
+
+interface CategoryItem {
+    name: string;
+    percentage: number;
+    color: string;
+}
+
+interface TopProjectItem {
+    rank: number;
+    project_name: string;
+    client_name: string;
+    amount: number;
+}
+
+interface PackageItem {
+    package_name: string;
+    total_projects: number;
+    revenue: number;
+    percentage: number;
+}
+
+interface ServiceItem {
+    name: string;
+    icon: string;
+    total_projects: number;
+    revenue: number;
+}
+
+interface AddonItem {
+    name: string;
+    icon: string;
+    total_orders: number;
+    revenue: number;
+}
+
+interface SourceItem {
+    name: string;
+    count: number;
+    percentage: number;
+    color: string;
+}
+
+interface ReportsProps {
+    year?: number;
+    period?: string;
+    date_range_text?: string;
+    summary?: {
+        total_project_value: number;
+        total_project_value_growth: number;
+        total_received: number;
+        total_received_growth: number;
+        total_pending: number;
+        total_pending_growth: number;
+        total_projects: number;
+        total_projects_growth: number;
     };
-    insights?: {
-        highest_month?: { name: string; revenue: number };
-        top_category?: { name: string; count: number };
-        top_source?: { name: string; revenue: number };
-        completion_rate?: number;
+    monthly_performance?: MonthlyItem[];
+    project_categories?: CategoryItem[];
+    top_projects?: TopProjectItem[];
+    package_performance?: PackageItem[];
+    top_services?: ServiceItem[];
+    top_addons?: AddonItem[];
+    client_sources?: {
+        total: number;
+        items: SourceItem[];
     };
-    monthly_revenue: Array<{
-        month: string;
-        revenue: number;
-        projects: number;
-    }>;
-    categories_report: Array<{
-        id: string | number;
-        name: string;
-        projects_count: number;
-        projects_sum_total_amount: number;
-    }>;
-    team_report: Array<{
-        id: string | number;
-        name: string;
-        role: string;
-        avatar?: string;
-        photo_count: number;
-        edit_count: number;
-    }>;
-    referrals_report?: Array<{
-        source_name: string;
-        client_count: number;
-        project_count: number;
-        total_revenue: number;
-        total_paid: number;
-        percentage: number;
-    }>;
-    wedding_organizers_report?: Array<{
-        id: string;
-        name: string;
-        pic_name?: string;
-        phone?: string;
-        tier?: string;
-        projects_count: number;
-        total_revenue: number;
-    }>;
+    report_colors?: {
+        primary_accent?: string;
+        revenue_color?: string;
+        projects_color?: string;
+        received_color?: string;
+        pending_color?: string;
+    };
     last_updated?: string;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function getCategoryIcon(name: string) {
-    const lower = name.toLowerCase();
-    if (lower.includes('wedding')) return <HeartHandshake className="w-3.5 h-3.5 text-emerald-600" />;
-    if (lower.includes('prewed')) return <Sparkles className="w-3.5 h-3.5 text-purple-600" />;
-    if (lower.includes('event')) return <Video className="w-3.5 h-3.5 text-blue-600" />;
-    if (lower.includes('corp')) return <Building2 className="w-3.5 h-3.5 text-indigo-600" />;
-    if (lower.includes('mater')) return <Smile className="w-3.5 h-3.5 text-pink-600" />;
-    if (lower.includes('newborn')) return <Smile className="w-3.5 h-3.5 text-amber-600" />;
-    if (lower.includes('birth')) return <Sparkles className="w-3.5 h-3.5 text-rose-600" />;
-    if (lower.includes('produk') || lower.includes('brand')) return <Palette className="w-3.5 h-3.5 text-teal-600" />;
-    return <Camera className="w-3.5 h-3.5 text-slate-600" />;
+// ─── ICON MAPPING HELPER ──────────────────────────────────────────────────────
+function getServiceAddonIcon(icon: string) {
+    const props = { className: 'w-3.5 h-3.5 text-slate-600 dark:text-slate-300' };
+
+    switch (icon) {
+        case 'camera':
+            return <Camera {...props} />;
+        case 'video':
+            return <Video {...props} />;
+        case 'navigation':
+            return <Navigation {...props} />;
+        case 'tv':
+            return <Tv {...props} />;
+        case 'smartphone':
+            return <Smartphone {...props} />;
+        case 'clock':
+            return <Clock {...props} />;
+        case 'book-open':
+            return <BookOpen {...props} />;
+        case 'film':
+            return <Film {...props} />;
+        case 'image':
+            return <ImageIcon {...props} />;
+        default:
+            return <Camera {...props} />;
+    }
 }
 
-// ─── Smooth Area/Line Chart Component (Pure SVG Bezier Curves) ────────────────
-function RevenueAreaChart({
-    data,
-    year,
+// ─── DONUT CHART SVG (PURE SVG ACCURATE ARCS) ──────────────────────────────────
+function DonutChart({
+    items,
+    size = 140,
+    strokeWidth = 24,
+    centerLabel,
+    centerValue,
 }: {
-    data: Array<{ month: string; revenue: number }>;
-    year: number;
+    items: Array<{ percentage: number; color: string; name?: string }>;
+    size?: number;
+    strokeWidth?: number;
+    centerLabel?: string;
+    centerValue?: string | number;
 }) {
-    const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+    const radius = (size - strokeWidth) / 2;
+    const circumference = 2 * Math.PI * radius;
 
-    const maxVal = Math.max(...data.map(d => d.revenue), 250000000);
-    // Ceiling to nearest 50M
-    const yMax = Math.ceil(maxVal / 50000000) * 50000000;
-    const ySteps = [yMax, yMax * 0.8, yMax * 0.6, yMax * 0.4, yMax * 0.2, 0];
+    const slices = items.map((item, index) => {
+        const priorPercentage = items.slice(0, index).reduce((acc, prev) => acc + prev.percentage, 0);
+        const strokeDasharray = `${(item.percentage / 100) * circumference} ${circumference}`;
+        const strokeDashoffset = -((priorPercentage / 100) * circumference);
 
-    const chartWidth = 900;
-    const chartHeight = 280;
-    const paddingLeft = 65;
-    const paddingRight = 35;
-    const paddingTop = 35;
-    const paddingBottom = 40;
+        return {
+            item,
+            strokeDasharray,
+            strokeDashoffset,
+        };
+    });
 
-    const plotWidth = chartWidth - paddingLeft - paddingRight;
-    const plotHeight = chartHeight - paddingTop - paddingBottom;
+    return (
+        <div className="relative inline-flex items-center justify-center shrink-0" style={{ width: size, height: size }}>
+            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="rotate-[-90deg]">
+                {slices.map((slice, index) => (
+                    <circle
+                        key={index}
+                        cx={size / 2}
+                        cy={size / 2}
+                        r={radius}
+                        fill="transparent"
+                        stroke={slice.item.color}
+                        strokeWidth={strokeWidth}
+                        strokeDasharray={slice.strokeDasharray}
+                        strokeDashoffset={slice.strokeDashoffset}
+                        className="transition-all duration-500 ease-out"
+                    />
+                ))}
+            </svg>
+            {(centerLabel || centerValue !== undefined) && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center select-none pointer-events-none">
+                    {centerLabel && (
+                        <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase leading-tight">
+                            {centerLabel}
+                        </span>
+                    )}
+                    {centerValue !== undefined && (
+                        <span className="text-xl font-black text-slate-900 dark:text-white leading-none mt-0.5">
+                            {centerValue}
+                        </span>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
 
-    // Calculate coordinates for points
-    const points = data.map((d, index) => {
-        const x = paddingLeft + (index / (data.length - 1)) * plotWidth;
-        const normalizedVal = d.revenue / yMax;
-        const y = paddingTop + (1 - normalizedVal) * plotHeight;
+// ─── COMBO BAR + LINE CHART (REVENUE & JUMLAH PROJECT) ─────────────────────────
+function ComboBarLineChart({
+    data,
+    barColor = '#3C0E0E',
+    lineColor = '#10B981',
+}: {
+    data: MonthlyItem[];
+    barColor?: string;
+    lineColor?: string;
+}) {
+    const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+    const highestRev = Math.max(100000000, ...data.map((d) => d.revenue));
+    const maxRev = Math.ceil(highestRev / 50000000) * 50000000;
+    const highestProjects = Math.max(50, ...data.map((d) => d.projects));
+    const maxProjects = Math.ceil(highestProjects / 10) * 10;
+
+    const svgWidth = 460;
+    const svgHeight = 220;
+    const paddingLeft = 46;
+    const paddingRight = 36;
+    const paddingTop = 20;
+    const paddingBottom = 30;
+
+    const plotWidth = svgWidth - paddingLeft - paddingRight;
+    const plotHeight = svgHeight - paddingTop - paddingBottom;
+
+    const yLevels = [
+        { labelLeft: `${Math.round(maxRev / 1000000)} jt`, labelRight: `${maxProjects}`, ratio: 1 },
+        { labelLeft: `${Math.round((maxRev * 0.8) / 1000000)} jt`, labelRight: `${Math.round(maxProjects * 0.8)}`, ratio: 0.8 },
+        { labelLeft: `${Math.round((maxRev * 0.6) / 1000000)} jt`, labelRight: `${Math.round(maxProjects * 0.6)}`, ratio: 0.6 },
+        { labelLeft: `${Math.round((maxRev * 0.4) / 1000000)} jt`, labelRight: `${Math.round(maxProjects * 0.4)}`, ratio: 0.4 },
+        { labelLeft: `${Math.round((maxRev * 0.2) / 1000000)} jt`, labelRight: `${Math.round(maxProjects * 0.2)}`, ratio: 0.2 },
+        { labelLeft: '0', labelRight: '0', ratio: 0 },
+    ];
+
+    const count = data.length || 1;
+    const step = plotWidth / count;
+    const barWidth = 10;
+
+    // Line points for projects
+    const linePoints = data.map((d, i) => {
+        const x = paddingLeft + i * step + step / 2;
+        const normalizedProjects = Math.min(d.projects / maxProjects, 1);
+        const y = paddingTop + (1 - normalizedProjects) * plotHeight;
+
         return { x, y, ...d };
     });
 
-    // Create SVG smooth cubic bezier path
-    const createSmoothPath = (pts: Array<{ x: number; y: number }>) => {
-        if (pts.length === 0) return '';
-        let path = `M ${pts[0].x} ${pts[0].y}`;
-        for (let i = 0; i < pts.length - 1; i++) {
-            const p0 = pts[i === 0 ? 0 : i - 1];
-            const p1 = pts[i];
-            const p2 = pts[i + 1];
-            const p3 = pts[i + 2] || p2;
-
-            const cp1x = p1.x + (p2.x - p0.x) / 6;
-            const cp1y = p1.y + (p2.y - p0.y) / 6;
-            const cp2x = p2.x - (p3.x - p1.x) / 6;
-            const cp2y = p2.y - (p3.y - p1.y) / 6;
-
-            path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
-        }
-        return path;
-    };
-
-    const linePath = createSmoothPath(points);
-    const areaPath = points.length > 0
-        ? `${linePath} L ${points[points.length - 1].x} ${paddingTop + plotHeight} L ${points[0].x} ${paddingTop + plotHeight} Z`
-        : '';
+    const linePath = linePoints.reduce((acc, pt, i) => {
+        return i === 0 ? `M ${pt.x} ${pt.y}` : `${acc} L ${pt.x} ${pt.y}`;
+    }, '');
 
     return (
-        <div className="relative w-full overflow-x-auto">
+        <div className="relative w-full overflow-x-auto select-none">
             <svg
-                viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-                className="w-full h-auto min-w-[700px] select-none"
+                viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+                className="w-full h-auto min-w-[380px]"
                 style={{ overflow: 'visible' }}
             >
-                <defs>
-                    {/* Area Gradient */}
-                    <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#7C3AED" stopOpacity="0.18" />
-                        <stop offset="100%" stopColor="#7C3AED" stopOpacity="0.0" />
-                    </linearGradient>
-                    {/* Line Gradient */}
-                    <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor="#6366F1" />
-                        <stop offset="50%" stopColor="#8B5CF6" />
-                        <stop offset="100%" stopColor="#A855F7" />
-                    </linearGradient>
-                    {/* Glow filter */}
-                    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                        <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#7C3AED" floodOpacity="0.3" />
-                    </filter>
-                </defs>
+                {/* Horizontal Grid lines and Axis Labels */}
+                {yLevels.map((lvl, idx) => {
+                    const y = paddingTop + (1 - lvl.ratio) * plotHeight;
 
-                {/* Horizontal Grid lines & Y-Axis Labels */}
-                {ySteps.map((val, idx) => {
-                    const y = paddingTop + (idx / (ySteps.length - 1)) * plotHeight;
                     return (
                         <g key={idx} className="pointer-events-none">
                             <line
                                 x1={paddingLeft}
                                 y1={y}
-                                x2={chartWidth - paddingRight}
+                                x2={svgWidth - paddingRight}
                                 y2={y}
                                 stroke="#F1F5F9"
-                                strokeDasharray={idx === ySteps.length - 1 ? 'none' : '4 4'}
+                                strokeDasharray={lvl.ratio === 0 ? 'none' : '2,2'}
                                 strokeWidth="1"
                             />
+                            {/* Left Y-axis (Revenue) */}
                             <text
-                                x={paddingLeft - 10}
+                                x={paddingLeft - 8}
                                 y={y + 3.5}
                                 textAnchor="end"
-                                className="text-[10px] font-medium fill-slate-400 font-mono"
+                                className="fill-slate-400 text-[9px] font-medium"
                             >
-                                {val === 0 ? 'Rp 0' : formatRupiahCompact(val)}
+                                {lvl.labelLeft}
+                            </text>
+                            {/* Right Y-axis (Projects) */}
+                            <text
+                                x={svgWidth - paddingRight + 8}
+                                y={y + 3.5}
+                                textAnchor="start"
+                                className="fill-slate-400 text-[9px] font-medium"
+                            >
+                                {lvl.labelRight}
                             </text>
                         </g>
                     );
                 })}
 
-                {/* Filled Area */}
-                {areaPath && (
-                    <path d={areaPath} fill="url(#areaGradient)" className="pointer-events-none" />
-                )}
+                {/* Bars: Revenue */}
+                {data.map((d, i) => {
+                    const x = paddingLeft + i * step + (step - barWidth) / 2;
+                    const normalizedRev = Math.min(d.revenue / maxRev, 1);
+                    const bHeight = normalizedRev * plotHeight;
+                    const y = paddingTop + plotHeight - bHeight;
+                    const isHovered = hoveredIndex === i;
 
-                {/* Curved Line */}
-                {linePath && (
-                    <path
-                        d={linePath}
-                        fill="none"
-                        stroke="url(#lineGradient)"
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        filter="url(#glow)"
-                        className="pointer-events-none"
-                    />
-                )}
-
-                {/* Data Points, Value Pills & Stable Hit Areas */}
-                {points.map((pt, i) => {
-                    const isHovered = hoveredIdx === i;
                     return (
                         <g key={i}>
-                            {/* Vertical Guide Line on Hover */}
-                            {isHovered && (
-                                <line
-                                    x1={pt.x}
-                                    y1={paddingTop}
-                                    x2={pt.x}
-                                    y2={paddingTop + plotHeight}
-                                    stroke="#7C3AED"
-                                    strokeDasharray="3 3"
-                                    strokeWidth="1"
-                                    strokeOpacity="0.5"
-                                    className="pointer-events-none"
-                                />
-                            )}
-
-                            {/* Outer Glow Ring */}
-                            <circle
-                                cx={pt.x}
-                                cy={pt.y}
-                                r={isHovered ? 7 : 5}
-                                fill="#FFFFFF"
-                                stroke={isHovered ? '#6366F1' : '#7C3AED'}
-                                strokeWidth={isHovered ? 3 : 2.5}
-                                className="pointer-events-none transition-all duration-150"
-                            />
-                            {/* Inner Dot */}
-                            <circle
-                                cx={pt.x}
-                                cy={pt.y}
-                                r={isHovered ? 3 : 2}
-                                fill={isHovered ? '#6366F1' : '#7C3AED'}
-                                className="pointer-events-none transition-all duration-150"
+                            <rect
+                                x={x}
+                                y={y}
+                                width={barWidth}
+                                height={bHeight}
+                                rx="4"
+                                fill={barColor}
+                                className={`transition-all duration-200 cursor-pointer ${isHovered ? 'brightness-125' : 'hover:brightness-110'}`}
+                                onMouseEnter={() => setHoveredIndex(i)}
+                                onMouseLeave={() => setHoveredIndex(null)}
                             />
 
-                            {/* Value Pill Above Point */}
-                            {pt.revenue > 0 && (
-                                <g transform={`translate(${pt.x}, ${pt.y - (isHovered ? 15 : 12)})`} className="pointer-events-none transition-all duration-150">
-                                    {isHovered && (
-                                        <rect
-                                            x="-32"
-                                            y="-11"
-                                            width="64"
-                                            height="16"
-                                            rx="4"
-                                            fill="#1E1B4B"
-                                            opacity="0.9"
-                                        />
-                                    )}
-                                    <text
-                                        x="0"
-                                        y="0"
-                                        textAnchor="middle"
-                                        className={`text-[9px] font-bold font-mono ${isHovered ? 'fill-white' : 'fill-slate-700'
-                                            }`}
-                                    >
-                                        {formatRupiahCompact(pt.revenue)}
-                                    </text>
-                                </g>
-                            )}
-
-                            {/* Month X-Axis Label */}
+                            {/* X-axis Month Label */}
                             <text
-                                x={pt.x}
-                                y={chartHeight - 12}
+                                x={x + barWidth / 2}
+                                y={svgHeight - 12}
                                 textAnchor="middle"
-                                className={`text-[11px] pointer-events-none transition-all duration-150 ${isHovered ? 'fill-purple-600 font-bold' : 'fill-slate-500 font-medium'
-                                    }`}
+                                className={`text-[10px] font-semibold transition-colors ${
+                                    isHovered ? 'font-bold' : 'fill-slate-500'
+                                }`}
+                                style={{ fill: isHovered ? barColor : undefined }}
                             >
-                                {pt.month}
+                                {d.month}
                             </text>
 
-                            {/* Stable Wide Hit-Area to prevent hover jitter */}
+                            {/* Hit-area for easy hover */}
                             <rect
-                                x={pt.x - plotWidth / (data.length * 2)}
+                                x={paddingLeft + i * step}
                                 y={paddingTop}
-                                width={plotWidth / data.length}
-                                height={plotHeight + 30}
+                                width={step}
+                                height={plotHeight + 20}
                                 fill="transparent"
                                 className="cursor-pointer"
-                                onMouseEnter={() => setHoveredIdx(i)}
-                                onMouseLeave={() => setHoveredIdx(null)}
+                                onMouseEnter={() => setHoveredIndex(i)}
+                                onMouseLeave={() => setHoveredIndex(null)}
                             />
                         </g>
                     );
                 })}
+
+                {/* Line: Jumlah Project */}
+                <path
+                    d={linePath}
+                    fill="none"
+                    stroke={lineColor}
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="pointer-events-none"
+                />
+
+                {linePoints.map((pt, i) => {
+                    const isHovered = hoveredIndex === i;
+
+                    return (
+                        <g key={i} className="pointer-events-none">
+                            <circle
+                                cx={pt.x}
+                                cy={pt.y}
+                                r={isHovered ? 5.5 : 4}
+                                fill="#FFFFFF"
+                                stroke={lineColor}
+                                strokeWidth={isHovered ? 3 : 2.5}
+                                className="transition-all duration-150"
+                            />
+                        </g>
+                    );
+                })}
+
+                {/* Hover Tooltip */}
+                {hoveredIndex !== null && (
+                    <g className="pointer-events-none">
+                        <line
+                            x1={linePoints[hoveredIndex].x}
+                            y1={paddingTop}
+                            x2={linePoints[hoveredIndex].x}
+                            y2={paddingTop + plotHeight}
+                            stroke="#CBD5E1"
+                            strokeDasharray="2,2"
+                            strokeWidth="1"
+                        />
+                    </g>
+                )}
             </svg>
         </div>
     );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// ─── MAIN REPORTS COMPONENT ───────────────────────────────────────────────────
 export default function ReportIndex({
-    year = 2026,
-    available_years = [2024, 2025, 2026, 2027],
-    summary = { revenue: 0, projects: 0, completed: 0, new_clients: 0, completion_rate: 0 },
-    insights = {},
-    monthly_revenue = [],
-    categories_report = [],
-    team_report = [],
-    referrals_report = [],
-    last_updated = '22 Mei 2026 10:30 WIB',
-}: ReportIndexProps) {
+    date_range_text = '01 Agustus 2026 – 31 Agustus 2026',
+    summary = {
+        total_project_value: 482750000,
+        total_project_value_growth: 18.45,
+        total_received: 276450000,
+        total_received_growth: 22.22,
+        total_pending: 206300000,
+        total_pending_growth: -8.33,
+        total_projects: 46,
+        total_projects_growth: 12.24,
+    },
+    monthly_performance = [
+        { month: 'Jan', revenue: 20000000, projects: 18 },
+        { month: 'Feb', revenue: 60000000, projects: 20 },
+        { month: 'Mar', revenue: 55000000, projects: 38 },
+        { month: 'Apr', revenue: 70000000, projects: 35 },
+        { month: 'Mei', revenue: 65000000, projects: 40 },
+        { month: 'Jun', revenue: 70000000, projects: 38 },
+        { month: 'Jul', revenue: 68000000, projects: 36 },
+        { month: 'Agu', revenue: 75000000, projects: 42 },
+    ],
+    project_categories = [
+        { name: 'Wedding', percentage: 52.42, color: '#6366F1' },
+        { name: 'Maternity', percentage: 15.32, color: '#10B981' },
+        { name: 'Prewedding', percentage: 12.11, color: '#3B82F6' },
+        { name: 'Event', percentage: 8.25, color: '#F59E0B' },
+        { name: 'Others', percentage: 11.90, color: '#4338CA' },
+    ],
+    top_projects = [
+        { rank: 1, project_name: 'The Wedding of Budi & Sari', client_name: 'Budi Santoso', amount: 88300000 },
+        { rank: 2, project_name: 'Grand Opening PT Maju Bersama', client_name: 'PT Maju Bersama', amount: 65750000 },
+        { rank: 3, project_name: 'Family Gathering XYZ Community', client_name: 'XYZ Community', amount: 53200000 },
+        { rank: 4, project_name: 'Prewedding Rina & Dimas', client_name: 'Rina Amelia', amount: 31500000 },
+        { rank: 5, project_name: 'Maternity Session Dewi Lestari', client_name: 'Dewi Lestari', amount: 27800000 },
+    ],
+    package_performance = [
+        { package_name: 'Basic', total_projects: 8, revenue: 62500000, percentage: 12.95 },
+        { package_name: 'Basic Plus', total_projects: 14, revenue: 134000000, percentage: 27.77 },
+        { package_name: 'Premium', total_projects: 18, revenue: 222000000, percentage: 46.02 },
+        { package_name: 'Exclusive', total_projects: 6, revenue: 64250000, percentage: 13.26 },
+    ],
+    top_services = [
+        { name: 'Photography', icon: 'camera', total_projects: 42, revenue: 368500000 },
+        { name: 'Videography', icon: 'video', total_projects: 30, revenue: 196000000 },
+        { name: 'Drone', icon: 'navigation', total_projects: 12, revenue: 45800000 },
+        { name: 'Live Streaming', icon: 'tv', total_projects: 5, revenue: 18900000 },
+        { name: 'Content Creator', icon: 'smartphone', total_projects: 6, revenue: 14750000 },
+    ],
+    top_addons = [
+        { name: 'Same Day Edit', icon: 'clock', total_orders: 17, revenue: 25500000 },
+        { name: 'Extra Photographer', icon: 'camera', total_orders: 16, revenue: 24000000 },
+        { name: 'Album (Vinyl Box)', icon: 'book-open', total_orders: 12, revenue: 15600000 },
+        { name: 'Short Movie', icon: 'film', total_orders: 10, revenue: 12750000 },
+        { name: 'Photo Booth', icon: 'image', total_orders: 8, revenue: 9600000 },
+    ],
+    client_sources = {
+        total: 46,
+        items: [
+            { name: 'Instagram', count: 16, percentage: 34.78, color: '#8B5CF6' },
+            { name: 'Referral Client', count: 12, percentage: 26.09, color: '#3B82F6' },
+            { name: 'Google', count: 8, percentage: 17.39, color: '#F59E0B' },
+            { name: 'Website', count: 6, percentage: 13.04, color: '#EF4444' },
+            { name: 'Lainnya', count: 4, percentage: 8.70, color: '#6366F1' },
+        ],
+    },
+    report_colors,
+    last_updated,
+}: ReportsProps) {
+    const { props: pageProps } = usePage<any>();
 
-    const [selectedYear, setSelectedYear] = useState<number>(year);
-    const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
+    const reportPrimaryColor =
+        report_colors?.primary_accent ||
+        pageProps?.appSettings?.report_primary_accent ||
+        pageProps?.appSettings?.primary_accent_color ||
+        '#3C0E0E';
 
-    const handleYearChange = (newYear: number) => {
-        setSelectedYear(newYear);
-        setIsYearDropdownOpen(false);
-        router.get('/reports', { year: newYear }, { preserveState: true, preserveScroll: true });
+    const reportRevenueColor =
+        report_colors?.revenue_color ||
+        pageProps?.appSettings?.report_revenue_color ||
+        reportPrimaryColor;
+
+    const reportProjectsColor =
+        report_colors?.projects_color ||
+        pageProps?.appSettings?.report_projects_color ||
+        '#10B981';
+
+    const reportReceivedColor =
+        report_colors?.received_color ||
+        pageProps?.appSettings?.report_received_color ||
+        '#059669';
+
+    const reportPendingColor =
+        report_colors?.pending_color ||
+        pageProps?.appSettings?.report_pending_color ||
+        '#DC2626';
+
+    const [filterPeriod, setFilterPeriod] = useState('Bulanan');
+    const [periodDropdownOpen, setPeriodDropdownOpen] = useState(false);
+    const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
+
+    const exportRef = useRef<HTMLDivElement>(null);
+
+    // Close export dropdown when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (exportRef.current && !exportRef.current.contains(event.target as Node)) {
+                setExportDropdownOpen(false);
+            }
+        }
+
+        if (exportDropdownOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [exportDropdownOpen]);
+
+    // Handle date range change
+    const handleDateRangeChange = (range: DateRange) => {
+        const label = range.label || formatRangeLabel(range.startDate, range.endDate);
+        const startYmd = `${range.startDate.getFullYear()}-${String(range.startDate.getMonth() + 1).padStart(2, '0')}-${String(range.startDate.getDate()).padStart(2, '0')}`;
+        const endYmd = `${range.endDate.getFullYear()}-${String(range.endDate.getMonth() + 1).padStart(2, '0')}-${String(range.endDate.getDate()).padStart(2, '0')}`;
+
+        router.get(
+            '/reports',
+            {
+                date_range: label,
+                start_date: startYmd,
+                end_date: endYmd,
+            },
+            {
+                preserveState: true,
+                preserveScroll: true,
+            }
+        );
     };
 
-    const completionRate = summary.completion_rate ??
-        (summary.projects > 0 ? Math.round((summary.completed / summary.projects) * 100) : 100);
+    // Export CSV of report tables
+    const handleExportCSV = () => {
+        const rows: Array<Array<string | number>> = [
+            ['LAPORAN PERFORMA BISNIS & KEUANGAN - ARAMS PICTURES'],
+            ['Periode Laporan', date_range_text],
+            ['Tanggal Cetak', last_updated || new Date().toLocaleString('id-ID')],
+            [],
+            ['RINGKASAN METRIK KPI'],
+            ['Metrik', 'Nilai (Rp / Count)', 'Pertumbuhan (%)'],
+            ['Total Nilai Project', summary.total_project_value, `${summary.total_project_value_growth}%`],
+            ['Sudah Diterima', summary.total_received, `${summary.total_received_growth}%`],
+            ['Belum Diterima', summary.total_pending, `${summary.total_pending_growth}%`],
+            ['Total Project', summary.total_projects, `${summary.total_projects_growth}%`],
+            [],
+            ['TOP 5 PROJECT (BERDASARKAN NILAI)'],
+            ['Rank', 'Nama Project', 'Klien', 'Nilai Project (Rp)'],
+            ...top_projects.map((p) => [p.rank, `"${p.project_name.replace(/"/g, '""')}"`, `"${p.client_name.replace(/"/g, '""')}"`, p.amount]),
+            [],
+            ['PERFORMANCE PAKET'],
+            ['Nama Paket', 'Total Project', 'Revenue (Rp)', 'Kontribusi (%)'],
+            ...package_performance.map((pkg) => [`"${pkg.package_name.replace(/"/g, '""')}"`, pkg.total_projects, pkg.revenue, `${pkg.percentage}%`]),
+            [],
+            ['PERFORMANCE LAYANAN TERLARIS'],
+            ['Nama Layanan', 'Total Project', 'Revenue (Rp)'],
+            ...top_services.map((s) => [`"${s.name.replace(/"/g, '""')}"`, s.total_projects, s.revenue]),
+            [],
+            ['PERFORMANCE ADD-ON TERLARIS'],
+            ['Nama Add-on', 'Total Order', 'Revenue (Rp)'],
+            ...top_addons.map((a) => [`"${a.name.replace(/"/g, '""')}"`, a.total_orders, a.revenue]),
+            [],
+            ['SUMBER KLIEN / REFERRAL'],
+            ['Sumber Klien', 'Jumlah Klien', 'Persentase (%)'],
+            ...client_sources.items.map((src) => [`"${src.name.replace(/"/g, '""')}"`, src.count, `${src.percentage}%`]),
+        ];
+
+        const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + rows.map((e) => e.join(',')).join('\n');
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        link.setAttribute('download', `laporan-arams-${new Date().toISOString().slice(0, 10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setExportDropdownOpen(false);
+    };
+
+    const handlePrintPDF = () => {
+        setExportDropdownOpen(false);
+        // Small timeout so dropdown closes cleanly before print dialog triggers
+        setTimeout(() => {
+            window.print();
+        }, 150);
+    };
 
     return (
-        <div className="w-full max-w-full space-y-6 pb-12">
-            <Head title="Laporan & Analitik Studio - Arams Photography" />
+        <div className="w-full max-w-full space-y-4 pb-2">
+            <Head title="Reports - Arams Pictures" />
 
-            {/* ── HEADER TITLE & CONTROLS ── */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-purple-50 flex items-center justify-center border border-purple-100/60 shadow-2xs">
-                        <BarChart3 className="w-5 h-5 text-purple-600" />
+            {/* ── PRINT-ONLY OFFICIAL STUDIO REPORT HEADER ──────────────────── */}
+            <div className="hidden print:flex flex-col gap-3.5 mb-6 pb-4 border-b-2 border-slate-900 print-break-inside-avoid">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div
+                            className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-white text-lg tracking-wider shrink-0"
+                            style={{ backgroundColor: reportPrimaryColor }}
+                        >
+                            A
+                        </div>
+                        <div>
+                            <h1 className="text-xl font-extrabold tracking-tight text-slate-950 leading-tight">
+                                ARAMS PICTURES
+                            </h1>
+                            <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
+                                Studio &amp; Cinema Production — Laporan Performa Bisnis &amp; Keuangan
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 className="text-2xl lg:text-3xl font-extrabold tracking-tight" style={{ color: 'var(--app-heading-color)' }}>
-                            Laporan &amp; Analitik Studio
-                        </h1>
-                        <p className="text-sm mt-0.5" style={{ color: 'var(--app-muted-color)' }}>
-                            Ringkasan pendapatan, pertumbuhan project, rekapitulasi referral, dan produktivitas tim tahun {year}.
-                        </p>
+                    <div className="text-right">
+                        <span className="inline-block px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-800 border border-slate-300">
+                            Dokumen Resmi Internal
+                        </span>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2.5">
-                    {/* Year Selector Dropdown */}
-                    <div className="relative">
+                <div className="grid grid-cols-3 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+                    <div>
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                            Periode Laporan
+                        </span>
+                        <span className="font-bold text-slate-900">{date_range_text}</span>
+                    </div>
+                    <div>
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                            Tanggal Cetak
+                        </span>
+                        <span className="font-bold text-slate-900">
+                            {last_updated || new Date().toLocaleString('id-ID')}
+                        </span>
+                    </div>
+                    <div>
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                            Dicetak Oleh
+                        </span>
+                        <span className="font-bold text-slate-900">
+                            {pageProps?.auth?.user?.name || 'Administrator Arams'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {/* ── 1. SCREEN HEADER SECTION ─────────────────────────────────── */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                        Reports
+                    </h1>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        Ringkasan performa bisnis Arams Pictures.
+                    </p>
+                </div>
+
+                <div className="flex items-center gap-2.5 flex-wrap">
+                    {/* Export Laporan Dropdown (Gambar 1) */}
+                    <div ref={exportRef} className="relative">
                         <button
                             type="button"
-                            onClick={() => setIsYearDropdownOpen(!isYearDropdownOpen)}
-                            className="inline-flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200 text-slate-800 hover:bg-slate-50 rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                            onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
+                            style={{ backgroundColor: reportPrimaryColor }}
+                            className="inline-flex items-center gap-2 px-4 py-2 text-white rounded-full text-xs font-semibold shadow-xs transition-all cursor-pointer hover:opacity-90 active:scale-95"
+                            aria-expanded={exportDropdownOpen}
                         >
-                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                            <span>Tahun {selectedYear}</span>
-                            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Export Laporan</span>
+                            <ChevronDown
+                                className={`w-3.5 h-3.5 text-white/80 transition-transform duration-200 ${
+                                    exportDropdownOpen ? 'rotate-180' : ''
+                                }`}
+                            />
                         </button>
 
-                        {isYearDropdownOpen && (
-                            <div className="absolute right-0 top-11 z-30 w-36 bg-white rounded-xl shadow-xl border border-slate-200 py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
-                                {available_years.map((yr) => (
-                                    <button
-                                        key={yr}
-                                        type="button"
-                                        onClick={() => handleYearChange(yr)}
-                                        className={`w-full text-left px-4 py-2 text-xs font-semibold hover:bg-purple-50 transition-colors cursor-pointer flex items-center justify-between ${selectedYear === yr ? 'text-purple-600 bg-purple-50/60 font-bold' : 'text-slate-700'
-                                            }`}
-                                    >
-                                        <span>Tahun {yr}</span>
-                                        {selectedYear === yr && <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />}
-                                    </button>
-                                ))}
+                        {exportDropdownOpen && (
+                            <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 z-40 w-56 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-800 p-1.5 text-xs animate-in fade-in zoom-in-95 duration-100">
+                                <button
+                                    type="button"
+                                    onClick={handlePrintPDF}
+                                    className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold flex items-center gap-2.5 cursor-pointer transition-colors"
+                                >
+                                    <Printer className="w-4 h-4 text-slate-500 shrink-0" />
+                                    <div className="flex flex-col">
+                                        <span>Cetak / Simpan PDF</span>
+                                        <span className="text-[10px] text-slate-400 font-normal">Format A4 &amp; Tanda Tangan</span>
+                                    </div>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={handleExportCSV}
+                                    className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold flex items-center gap-2.5 cursor-pointer transition-colors border-t border-slate-100 dark:border-slate-800 mt-1"
+                                >
+                                    <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
+                                    <div className="flex flex-col">
+                                        <span>Export Excel / CSV</span>
+                                        <span className="text-[10px] text-slate-400 font-normal">Data tabel lengkap &amp; metrik</span>
+                                    </div>
+                                </button>
                             </div>
                         )}
                     </div>
 
-                    {/* Download PDF Button */}
-                    <button
-                        type="button"
-                        onClick={() => window.print()}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs transition-all active:scale-95 cursor-pointer"
+                    {/* Date Picker Button (Gambar 1 & Gambar 2) */}
+                    <DateRangePicker
+                        placeholder={date_range_text}
+                        onChange={handleDateRangeChange}
+                        primaryColor={reportPrimaryColor}
+                    />
+                </div>
+            </div>
+
+            {/* ── 2. ROW 1: 4 KPI METRIC CARDS ─────────────────────────────── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 print:grid-cols-4 print:gap-3 print-break-inside-avoid">
+                {/* 1. Total Nilai Project */}
+                <div className="bg-white dark:bg-slate-900/70 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex items-center justify-between print:shadow-none print:border-slate-300 print:bg-white print:p-3.5">
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 print:text-slate-800">
+                            <span>Total Nilai Project</span>
+                            <Info className="w-3 h-3 text-slate-400 print:hidden" />
+                        </div>
+                        <h2 className="text-xl sm:text-2xl font-black tracking-tight" style={{ color: reportPrimaryColor }}>
+                            {formatRupiah(summary.total_project_value)}
+                        </h2>
+                        <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                            <span>▲ {summary.total_project_value_growth.toFixed(2).replace('.', ',')}%</span>
+                            <span className="font-normal text-slate-400">dari periode lalu</span>
+                        </div>
+                    </div>
+                    <div
+                        className="w-12 h-12 rounded-2xl border flex items-center justify-center shrink-0 shadow-2xs print:shadow-none"
+                        style={{
+                            borderColor: `color-mix(in srgb, ${reportPrimaryColor} 30%, transparent)`,
+                            backgroundColor: `color-mix(in srgb, ${reportPrimaryColor} 10%, transparent)`,
+                        }}
                     >
-                        <Download className="w-4 h-4" />
-                        <span>Download Laporan (PDF)</span>
-                    </button>
-                </div>
-            </div>
-
-            {/* ── 4 SUMMARY STAT CARDS ── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
-                {/* 1. Total Pendapatan */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between space-y-3">
-                    <div className="flex items-center justify-between">
-                        <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center border border-blue-100/50">
-                            <Briefcase className="w-4.5 h-4.5 text-blue-600" />
-                        </div>
-                    </div>
-                    <div>
-                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                            TOTAL PENDAPATAN
-                        </span>
-                        <h3 className="text-xl font-extrabold text-slate-900 tracking-tight mt-0.5 font-mono">
-                            {formatRupiah(summary.revenue)}
-                        </h3>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 pt-1 border-t border-slate-100">
-                        <ArrowUpRight className="w-3.5 h-3.5" />
-                        <span>▲ {summary.revenue_growth ?? 18.6}% dari tahun {year - 1}</span>
+                        <CreditCard className="w-5 h-5" style={{ color: reportPrimaryColor }} />
                     </div>
                 </div>
 
-                {/* 2. Total Project */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between space-y-3">
-                    <div className="flex items-center justify-between">
-                        <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center border border-purple-100/50">
-                            <Layers className="w-4.5 h-4.5 text-purple-600" />
+                {/* 2. Sudah Diterima */}
+                <div className="bg-white dark:bg-slate-900/70 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex items-center justify-between print:shadow-none print:border-slate-300 print:bg-white print:p-3.5">
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 print:text-slate-800">
+                            <span>Sudah Diterima</span>
+                            <Info className="w-3 h-3 text-slate-400 print:hidden" />
+                        </div>
+                        <h2 className="text-xl sm:text-2xl font-black tracking-tight" style={{ color: reportReceivedColor }}>
+                            {formatRupiah(summary.total_received)}
+                        </h2>
+                        <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                            <span>▲ {summary.total_received_growth.toFixed(2).replace('.', ',')}%</span>
+                            <span className="font-normal text-slate-400">dari periode lalu</span>
                         </div>
                     </div>
-                    <div>
-                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                            TOTAL PROJECT
-                        </span>
-                        <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight mt-0.5">
-                            {summary.projects}
-                        </h3>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 pt-1 border-t border-slate-100">
-                        <ArrowUpRight className="w-3.5 h-3.5" />
-                        <span>▲ {summary.projects_growth ?? 16} Project dari tahun {year - 1}</span>
+                    <div
+                        className="w-12 h-12 rounded-2xl border flex items-center justify-center shrink-0 shadow-2xs print:shadow-none"
+                        style={{
+                            borderColor: `color-mix(in srgb, ${reportReceivedColor} 30%, transparent)`,
+                            backgroundColor: `color-mix(in srgb, ${reportReceivedColor} 10%, transparent)`,
+                        }}
+                    >
+                        <ArrowDown className="w-5 h-5" style={{ color: reportReceivedColor }} />
                     </div>
                 </div>
 
-                {/* 3. Klien Baru */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between space-y-3">
-                    <div className="flex items-center justify-between">
-                        <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center border border-emerald-100/50">
-                            <Users className="w-4.5 h-4.5 text-emerald-600" />
+                {/* 3. Belum Diterima */}
+                <div className="bg-white dark:bg-slate-900/70 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex items-center justify-between print:shadow-none print:border-slate-300 print:bg-white print:p-3.5">
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 print:text-slate-800">
+                            <span>Belum Diterima</span>
+                            <Info className="w-3 h-3 text-slate-400 print:hidden" />
+                        </div>
+                        <h2 className="text-xl sm:text-2xl font-black tracking-tight" style={{ color: reportPendingColor }}>
+                            {formatRupiah(summary.total_pending)}
+                        </h2>
+                        <div className="flex items-center gap-1 text-[11px] font-bold text-rose-600 dark:text-rose-400">
+                            <span>▼ {Math.abs(summary.total_pending_growth).toFixed(2).replace('.', ',')}%</span>
+                            <span className="font-normal text-slate-400">dari periode lalu</span>
                         </div>
                     </div>
-                    <div>
-                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                            KLIEN BARU
-                        </span>
-                        <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight mt-0.5">
-                            {summary.new_clients}
-                        </h3>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 pt-1 border-t border-slate-100">
-                        <ArrowUpRight className="w-3.5 h-3.5" />
-                        <span>▲ {summary.clients_growth ?? 22} Klien dari tahun {year - 1}</span>
+                    <div
+                        className="w-12 h-12 rounded-2xl border flex items-center justify-center shrink-0 shadow-2xs print:shadow-none"
+                        style={{
+                            borderColor: `color-mix(in srgb, ${reportPendingColor} 30%, transparent)`,
+                            backgroundColor: `color-mix(in srgb, ${reportPendingColor} 10%, transparent)`,
+                        }}
+                    >
+                        <ArrowUp className="w-5 h-5" style={{ color: reportPendingColor }} />
                     </div>
                 </div>
 
-                {/* 4. Completion Rate */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between space-y-3">
-                    <div className="flex items-center justify-between">
-                        <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center border border-amber-100/50">
-                            <CheckCircle2 className="w-4.5 h-4.5 text-amber-600" />
+                {/* 4. Total Project */}
+                <div className="bg-white dark:bg-slate-900/70 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex items-center justify-between print:shadow-none print:border-slate-300 print:bg-white print:p-3.5">
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 print:text-slate-800">
+                            <span>Total Project</span>
+                            <Info className="w-3 h-3 text-slate-400 print:hidden" />
+                        </div>
+                        <h2 className="text-xl sm:text-2xl font-black tracking-tight" style={{ color: reportProjectsColor }}>
+                            {summary.total_projects}
+                        </h2>
+                        <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                            <span>▲ {summary.total_projects_growth.toFixed(2).replace('.', ',')}%</span>
+                            <span className="font-normal text-slate-400">dari periode lalu</span>
                         </div>
                     </div>
-                    <div>
-                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                            COMPLETION RATE
-                        </span>
-                        <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight mt-0.5">
-                            {completionRate}%
-                        </h3>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-rose-500 pt-1 border-t border-slate-100">
-                        <ArrowDownRight className="w-3.5 h-3.5" />
-                        <span>▼ {summary.completion_rate_growth ?? -4}% dari tahun {year - 1}</span>
+                    <div
+                        className="w-12 h-12 rounded-2xl border flex items-center justify-center shrink-0 shadow-2xs print:shadow-none"
+                        style={{
+                            borderColor: `color-mix(in srgb, ${reportProjectsColor} 30%, transparent)`,
+                            backgroundColor: `color-mix(in srgb, ${reportProjectsColor} 10%, transparent)`,
+                        }}
+                    >
+                        <Folder className="w-5 h-5" style={{ color: reportProjectsColor }} />
                     </div>
                 </div>
             </div>
 
-            {/* ── GRAFIK PENDAPATAN BULANAN (AREA SPLINE CHART) ── */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3.5">
-                    <div>
-                        <h3 className="text-sm font-bold text-slate-900">
-                            Grafik Pendapatan Bulanan ({year})
-                        </h3>
-                        <p className="text-xs text-slate-400 mt-0.5">Total penerimaan kas per bulan dalam Rupiah (IDR)</p>
-                    </div>
-                    <span className="text-xs font-semibold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 flex items-center gap-1.5">
-                        <span>Tahun {year}</span>
-                        <ChevronDown className="w-3 h-3 text-slate-400" />
-                    </span>
-                </div>
+            {/* ── 3. ROW 2: PERFORMA BULANAN & TOP 5 PROJECTS ─────────────── */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 print:grid-cols-12 print:gap-4 print-break-inside-avoid">
+                {/* Left Card (~60%): Performa Project per Bulan + Kategori Project */}
+                <div className="lg:col-span-7 bg-white dark:bg-slate-900/70 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between print:shadow-none print:border-slate-300 print:bg-white print:p-4">
+                    <div className="space-y-4">
+                        {/* Header card */}
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                                <h3 className="text-sm font-bold text-slate-900 dark:text-white print:text-slate-950">
+                                    Performa Project per Bulan
+                                </h3>
+                                <Info className="w-3.5 h-3.5 text-slate-400 print:hidden" />
+                            </div>
 
-                <div className="pt-2">
-                    <RevenueAreaChart data={monthly_revenue} year={year} />
-                </div>
-            </div>
-
-            {/* ── REKAPITULASI SUMBER LEAD & REFERRAL KLIEN ── */}
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden space-y-4 p-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3.5">
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-bold text-slate-900">
-                                Rekapitulasi Sumber Lead &amp; Referral Klien ({year})
-                            </h3>
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                Menu Report
-                            </span>
+                            <div className="relative print:hidden">
+                                <button
+                                    type="button"
+                                    onClick={() => setPeriodDropdownOpen(!periodDropdownOpen)}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 cursor-pointer shadow-2xs"
+                                >
+                                    <span>{filterPeriod}</span>
+                                    <ChevronDown className="w-3 h-3 text-slate-400" />
+                                </button>
+                                {periodDropdownOpen && (
+                                    <div className="absolute right-0 top-8 z-20 w-32 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 py-1 text-xs">
+                                        {['Bulanan', 'Kuartalan', 'Tahunan'].map((p) => (
+                                            <button
+                                                key={p}
+                                                type="button"
+                                                onClick={() => {
+                                                    setFilterPeriod(p);
+                                                    setPeriodDropdownOpen(false);
+                                                }}
+                                                className="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium cursor-pointer"
+                                            >
+                                                {p}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                            Melacak sumber referral mana yang paling sering dan besar memberikan klien ke Arams Pictures
-                        </p>
-                    </div>
 
-                    <span className="text-xs font-mono font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
-                        {referrals_report.length} Sumber Terdata
-                    </span>
-                </div>
+                        {/* Chart Legend */}
+                        <div className="flex items-center gap-4 text-xs font-semibold text-slate-600 dark:text-slate-300 print:text-slate-800">
+                            <div className="flex items-center gap-1.5">
+                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: reportRevenueColor }} />
+                                <span>Revenue (Rp)</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: reportProjectsColor }} />
+                                <span>Jumlah Project</span>
+                            </div>
+                        </div>
 
-                {/* Table */}
-                <div className="overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="px-6">SUMBER / NAMA REFERRAL</TableHead>
-                                <TableHead className="text-center">TOTAL KLIEN (X)</TableHead>
-                                <TableHead className="text-center">TOTAL PROJECT</TableHead>
-                                <TableHead className="text-right">TOTAL NILAI PROJECT</TableHead>
-                                <TableHead className="text-right px-6">KONTRIBUSI (%)</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {referrals_report.length > 0 ? (
-                                referrals_report.map((ref, idx) => (
-                                    <TableRow key={idx} className="hover:bg-slate-50/70 transition-colors">
-                                        <TableCell className="px-6 font-bold text-slate-900">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-6 h-6 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-xs border border-amber-200/60 font-mono">
-                                                    {idx + 1}
+                        {/* Dual content: Combo chart on left, Donut category on right */}
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 pt-1 items-center">
+                            <div className="md:col-span-7">
+                                <ComboBarLineChart
+                                    data={monthly_performance}
+                                    barColor={reportRevenueColor}
+                                    lineColor={reportProjectsColor}
+                                />
+                            </div>
+
+                            <div className="md:col-span-5 border-t md:border-t-0 md:border-l border-slate-100 dark:border-slate-800 print:border-slate-200 pt-3 md:pt-0 md:pl-4 space-y-3">
+                                <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 print:text-slate-900">
+                                    Kategori Project
+                                </h4>
+                                <div className="flex items-center gap-3">
+                                    <DonutChart
+                                        items={project_categories}
+                                        size={105}
+                                        strokeWidth={20}
+                                    />
+                                    <div className="space-y-1 text-[11px] flex-1">
+                                        {project_categories.map((c) => (
+                                            <div key={c.name} className="flex items-center justify-between text-slate-600 dark:text-slate-300 print:text-slate-800 font-medium">
+                                                <div className="flex items-center gap-1.5 truncate">
+                                                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
+                                                    <span className="truncate">{c.name}</span>
                                                 </div>
-                                                <span>{ref.source_name}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-center font-mono">
-                                            <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 font-extrabold border border-emerald-200 text-xs inline-block">
-                                                {ref.client_count} Klien
-                                            </span>
-                                        </TableCell>
-                                        <TableCell className="text-center font-mono font-semibold text-slate-700">
-                                            {ref.project_count} Project
-                                        </TableCell>
-                                        <TableCell className="text-right font-mono font-bold text-slate-900">
-                                            {formatRupiah(ref.total_revenue)}
-                                        </TableCell>
-                                        <TableCell className="text-right px-6">
-                                            <div className="flex items-center justify-end gap-2.5">
-                                                <div className="w-20 h-2 rounded-full bg-slate-100 overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-[#C89445] rounded-full transition-all"
-                                                        style={{ width: `${ref.percentage}%` }}
-                                                    />
-                                                </div>
-                                                <span className="font-mono font-bold text-xs text-slate-700 min-w-[45px] text-right">
-                                                    {ref.percentage}%
+                                                <span className="font-bold shrink-0 ml-1">
+                                                    {c.percentage.toFixed(2).replace('.', ',')}%
                                                 </span>
                                             </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableEmpty colSpan={5} message="Belum ada data sumber referral yang tercatat." />
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-            </div>
-
-            {/* ── TWO COLUMN CARDS: CATEGORY PERFORMANCE & TEAM PRODUCTIVITY ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-                {/* Card 1: Performa per Kategori Layanan */}
-                <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col justify-between">
-                    <div>
-                        <div className="px-6 py-4 border-b border-slate-100">
-                            <h3 className="text-sm font-bold text-slate-900">
-                                Performa per Kategori Layanan
-                            </h3>
-                            <p className="text-xs text-slate-400 mt-0.5">Kontribusi nilai project berdasarkan kategori foto</p>
-                        </div>
-
-                        {/* Desktop View */}
-                        <div className="hidden md:block overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="px-6">KATEGORI LAYANAN</TableHead>
-                                        <TableHead className="text-center">TOTAL PROJECT</TableHead>
-                                        <TableHead className="text-right px-6">TOTAL NILAI</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {categories_report.length > 0 ? (
-                                        categories_report.map((cat) => (
-                                            <TableRow key={cat.id} className="hover:bg-slate-50/70 transition-colors">
-                                                <TableCell className="px-6 font-bold text-slate-800">
-                                                    <div className="flex items-center gap-2.5">
-                                                        <div className="w-6 h-6 rounded-lg bg-slate-50 flex items-center justify-center border border-slate-200/60">
-                                                            {getCategoryIcon(cat.name)}
-                                                        </div>
-                                                        <span>{cat.name}</span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="text-center font-mono font-semibold text-slate-700">
-                                                    {cat.projects_count} Project
-                                                </TableCell>
-                                                <TableCell className="text-right px-6 font-mono font-bold text-slate-900">
-                                                    {formatRupiah(cat.projects_sum_total_amount || 0)}
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : (
-                                        <TableEmpty colSpan={3} message="Belum ada data kategori" />
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
-
-                        {/* Mobile View */}
-                        <div className="md:hidden divide-y divide-slate-100">
-                            {categories_report.length > 0 ? (
-                                categories_report.map((cat) => (
-                                    <div key={cat.id} className="p-4 space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                {getCategoryIcon(cat.name)}
-                                                <h4 className="font-bold text-slate-900 text-xs">{cat.name}</h4>
-                                            </div>
-                                            <span className="font-mono font-semibold text-slate-700 text-xs">
-                                                {cat.projects_count} Project
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
-                                            <span className="text-slate-400">Total Nilai:</span>
-                                            <span className="font-mono font-bold text-slate-900 text-xs">
-                                                {formatRupiah(cat.projects_sum_total_amount || 0)}
-                                            </span>
-                                        </div>
+                                        ))}
                                     </div>
-                                ))
-                            ) : (
-                                <div className="p-6 text-center text-slate-400 text-xs">
-                                    Belum ada data kategori.
                                 </div>
-                            )}
+                            </div>
                         </div>
                     </div>
 
                     {/* Footer link */}
-                    <div className="px-6 py-3 border-t border-slate-100 bg-slate-50/50 text-center">
+                    <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80 mt-4 print:hidden">
                         <Link
-                            href="/projects"
-                            className="text-xs font-bold text-slate-700 hover:text-purple-600 inline-flex items-center gap-1 transition-colors"
+                            href="/client/projects"
+                            style={{ color: reportPrimaryColor }}
+                            className="inline-flex items-center gap-1.5 text-xs font-bold hover:opacity-80 transition-opacity"
                         >
-                            <span>Lihat Detail Kategori</span>
-                            <span>→</span>
+                            <span>Lihat Detail Project</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
                         </Link>
                     </div>
                 </div>
 
-                {/* Card 2: Produktivitas Fotografer & Editor */}
-                <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col justify-between">
-                    <div>
-                        <div className="px-6 py-4 border-b border-slate-100">
-                            <h3 className="text-sm font-bold text-slate-900">
-                                Produktivitas Fotografer &amp; Editor
+                {/* Right Card (~40%): Top 5 Project (Berdasarkan Nilai) */}
+                <div className="lg:col-span-5 bg-white dark:bg-slate-900/70 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between print:shadow-none print:border-slate-300 print:bg-white print:p-4">
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-1.5">
+                            <h3 className="text-sm font-bold text-slate-900 dark:text-white print:text-slate-950">
+                                Top 5 Project <span className="font-normal text-slate-500">(Berdasarkan Nilai)</span>
                             </h3>
-                            <p className="text-xs text-slate-400 mt-0.5">Distribusi beban kerja sesi foto dan editing selesai</p>
+                            <Info className="w-3.5 h-3.5 text-slate-400 print:hidden" />
                         </div>
 
-                        {/* Desktop View */}
-                        <div className="hidden md:block overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead className="px-6">ANGGOTA TIM</TableHead>
-                                        <TableHead className="text-center">SESI FOTO</TableHead>
-                                        <TableHead className="text-right px-6">EDITING SELESAI</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {team_report.length > 0 ? (
-                                        team_report.map((user) => (
-                                            <TableRow key={user.id} className="hover:bg-slate-50/70 transition-colors">
-                                                <TableCell className="px-6">
-                                                    <div className="flex items-center gap-3">
-                                                        <img
-                                                            src={
-                                                                user.avatar ||
-                                                                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
-                                                            }
-                                                            alt={user.name}
-                                                            className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-200"
+                        {/* Top 5 Table */}
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-xs text-left">
+                                <thead>
+                                    <tr className="text-[10px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 print:border-slate-200 tracking-wider">
+                                        <th className="pb-2 w-6">#</th>
+                                        <th className="pb-2">PROJECT</th>
+                                        <th className="pb-2">CLIENT</th>
+                                        <th className="pb-2 text-right">NILAI PROJECT</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 print:divide-slate-200 font-medium">
+                                    {top_projects.map((proj) => (
+                                        <tr key={proj.rank} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                                            <td className="py-2.5 text-slate-400 font-bold">{proj.rank}</td>
+                                            <td className="py-2.5 font-bold text-slate-800 dark:text-slate-200 print:text-slate-900 max-w-[130px] truncate" title={proj.project_name}>
+                                                {proj.project_name}
+                                            </td>
+                                            <td className="py-2.5 text-slate-500 dark:text-slate-400 print:text-slate-700 max-w-[100px] truncate">
+                                                {proj.client_name}
+                                            </td>
+                                            <td className="py-2.5 text-right font-bold text-slate-900 dark:text-white print:text-slate-900">
+                                                {formatRupiah(proj.amount)}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Footer link */}
+                    <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80 mt-4 print:hidden">
+                        <Link
+                            href="/client/projects"
+                            style={{ color: reportPrimaryColor }}
+                            className="inline-flex items-center gap-1.5 text-xs font-bold hover:opacity-80 transition-opacity"
+                        >
+                            <span>Lihat Semua Project</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                        </Link>
+                    </div>
+                </div>
+            </div>
+
+            {/* ── 4. ROW 3: PERFORMANCE PAKET & LAYANAN / ADD-ON ──────────── */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 print:grid-cols-12 print:gap-4 print-break-inside-avoid">
+                {/* Left Card (~40%): Performance Paket */}
+                <div className="lg:col-span-5 bg-white dark:bg-slate-900/70 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between print:shadow-none print:border-slate-300 print:bg-white print:p-4">
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-1.5">
+                            <h3 className="text-sm font-bold text-slate-900 dark:text-white print:text-slate-950">
+                                Performance Paket
+                            </h3>
+                            <Info className="w-3.5 h-3.5 text-slate-400 print:hidden" />
+                        </div>
+
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-xs text-left">
+                                <thead>
+                                    <tr className="text-[10px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 print:border-slate-200 tracking-wider">
+                                        <th className="pb-2">PAKET</th>
+                                        <th className="pb-2 text-center">TOTAL PROJECT</th>
+                                        <th className="pb-2 text-right">REVENUE</th>
+                                        <th className="pb-2 text-right w-24">% REVENUE</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 print:divide-slate-200 font-medium">
+                                    {package_performance.map((pkg) => (
+                                        <tr key={pkg.package_name} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                                            <td className="py-2.5 font-bold text-slate-800 dark:text-slate-200 print:text-slate-900">{pkg.package_name}</td>
+                                            <td className="py-2.5 text-center text-slate-600 dark:text-slate-300 print:text-slate-700 font-semibold">{pkg.total_projects}</td>
+                                            <td className="py-2.5 text-right font-bold text-slate-900 dark:text-white print:text-slate-900">{formatRupiah(pkg.revenue)}</td>
+                                            <td className="py-2.5 text-right">
+                                                <div className="flex items-center justify-end gap-1.5">
+                                                    <span className="font-bold text-slate-700 dark:text-slate-300 print:text-slate-900 text-[11px]">
+                                                        {pkg.percentage.toFixed(2).replace('.', ',')}%
+                                                    </span>
+                                                    <div className="w-10 h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 print:bg-slate-200 overflow-hidden shrink-0">
+                                                        <div
+                                                            className="h-full rounded-full"
+                                                            style={{
+                                                                width: `${Math.min(pkg.percentage, 100)}%`,
+                                                                backgroundColor: reportPrimaryColor,
+                                                            }}
                                                         />
-                                                        <div>
-                                                            <span className="font-bold text-slate-900 block text-xs">{user.name}</span>
-                                                            <span className="text-[10px] text-slate-400 block">{user.role}</span>
-                                                        </div>
                                                     </div>
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200/60 font-mono">
-                                                        {user.photo_count || 0} Sesi
-                                                    </span>
-                                                </TableCell>
-                                                <TableCell className="text-right px-6">
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200/60 font-mono">
-                                                        {user.edit_count || 0} Selesai
-                                                    </span>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : (
-                                        <TableEmpty colSpan={3} message="Belum ada data tim" />
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
-
-                        {/* Mobile View */}
-                        <div className="md:hidden divide-y divide-slate-100">
-                            {team_report.length > 0 ? (
-                                team_report.map((user) => (
-                                    <div key={user.id} className="p-4 space-y-2.5">
-                                        <div className="flex items-center gap-3">
-                                            <img
-                                                src={
-                                                    user.avatar ||
-                                                    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
-                                                }
-                                                alt={user.name}
-                                                className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-200"
-                                            />
-                                            <div>
-                                                <span className="font-bold text-slate-900 text-xs block">{user.name}</span>
-                                                <span className="text-[10px] text-slate-400 block">{user.role}</span>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
-                                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200/60 font-mono">
-                                                {user.photo_count || 0} Sesi Foto
-                                            </span>
-                                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200/60 font-mono">
-                                                {user.edit_count || 0} Editing Selesai
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="p-6 text-center text-slate-400 text-xs">
-                                    Belum ada data tim.
-                                </div>
-                            )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 
-                    {/* Footer link */}
-                    <div className="px-6 py-3 border-t border-slate-100 bg-slate-50/50 text-center">
+                    <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80 mt-4 print:hidden">
                         <Link
-                            href="/users"
-                            className="text-xs font-bold text-slate-700 hover:text-purple-600 inline-flex items-center gap-1 transition-colors"
+                            href="/master-data/packages"
+                            style={{ color: reportPrimaryColor }}
+                            className="inline-flex items-center gap-1.5 text-xs font-bold hover:opacity-80 transition-opacity"
                         >
-                            <span>Lihat Detail Tim</span>
-                            <span>→</span>
+                            <span>Lihat Detail Paket</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                        </Link>
+                    </div>
+                </div>
+
+                {/* Right Card (~60%): Performance Layanan & Add-on */}
+                <div className="lg:col-span-7 bg-white dark:bg-slate-900/70 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between print:shadow-none print:border-slate-300 print:bg-white print:p-4">
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-1.5">
+                            <h3 className="text-sm font-bold text-slate-900 dark:text-white print:text-slate-950">
+                                Performance Layanan &amp; Add-on
+                            </h3>
+                            <Info className="w-3.5 h-3.5 text-slate-400 print:hidden" />
+                        </div>
+
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 print:grid-cols-2 print:gap-4">
+                            {/* Column 1: Layanan Terlaris */}
+                            <div className="space-y-2 overflow-x-auto">
+                                <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 print:text-slate-900">
+                                    Layanan Terlaris
+                                </h4>
+                                <table className="w-full text-xs text-left min-w-[260px]">
+                                    <thead>
+                                        <tr className="text-[10px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 print:border-slate-200 tracking-wider">
+                                            <th className="pb-1.5 pr-2 whitespace-nowrap">LAYANAN</th>
+                                            <th className="pb-1.5 px-2 text-center whitespace-nowrap">PROYEK</th>
+                                            <th className="pb-1.5 pl-2 text-right whitespace-nowrap">REVENUE</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 print:divide-slate-200 font-medium">
+                                        {top_services.map((s) => (
+                                            <tr key={s.name} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                                                <td className="py-2 pr-2">
+                                                    <div className="flex items-center gap-1.5 min-w-0">
+                                                        {getServiceAddonIcon(s.icon)}
+                                                        <span className="font-semibold text-slate-800 dark:text-slate-200 print:text-slate-900 truncate max-w-[140px] block" title={s.name}>{s.name}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="py-2 px-2 text-center text-slate-600 dark:text-slate-300 print:text-slate-700 whitespace-nowrap">{s.total_projects}</td>
+                                                <td className="py-2 pl-2 text-right font-bold text-slate-900 dark:text-white print:text-slate-900 whitespace-nowrap">{formatRupiah(s.revenue)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Column 2: Add-on Terlaris */}
+                            <div className="space-y-2 overflow-x-auto">
+                                <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 print:text-slate-900">
+                                    Add-on Terlaris
+                                </h4>
+                                <table className="w-full text-xs text-left min-w-[260px]">
+                                    <thead>
+                                        <tr className="text-[10px] uppercase font-bold text-slate-400 border-b border-slate-100 dark:border-slate-800 print:border-slate-200 tracking-wider">
+                                            <th className="pb-1.5 pr-2 whitespace-nowrap">ADD-ON</th>
+                                            <th className="pb-1.5 px-2 text-center whitespace-nowrap">ORDER</th>
+                                            <th className="pb-1.5 pl-2 text-right whitespace-nowrap">REVENUE</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 print:divide-slate-200 font-medium">
+                                        {top_addons.map((a) => (
+                                            <tr key={a.name} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                                                <td className="py-2 pr-2">
+                                                    <div className="flex items-center gap-1.5 min-w-0">
+                                                        {getServiceAddonIcon(a.icon)}
+                                                        <span className="font-semibold text-slate-800 dark:text-slate-200 print:text-slate-900 truncate max-w-[140px] block" title={a.name}>{a.name}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="py-2 px-2 text-center text-slate-600 dark:text-slate-300 print:text-slate-700 whitespace-nowrap">{a.total_orders}</td>
+                                                <td className="py-2 pl-2 text-right font-bold text-slate-900 dark:text-white print:text-slate-900 whitespace-nowrap">{formatRupiah(a.revenue)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80 mt-4 print:hidden">
+                        <Link
+                            href="/master-data/services"
+                            className="inline-flex items-center gap-1.5 text-xs font-bold transition-colors hover:opacity-80"
+                            style={{ color: reportPrimaryColor }}
+                        >
+                            <span>Lihat Detail Layanan &amp; Add-on</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
                         </Link>
                     </div>
                 </div>
             </div>
 
-            {/* ── INSIGHT & RINGKASAN BOTTOM SECTION ── */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-                <h3 className="text-sm font-bold text-slate-900">
-                    Insight &amp; Ringkasan
-                </h3>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {/* Insight 1: Pendapatan Tertinggi */}
-                    <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-100 space-y-2">
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
-                                <TrendingUp className="w-4 h-4" />
-                            </div>
-                            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                                Pendapatan Tertinggi
-                            </span>
-                        </div>
-                        <div>
-                            <h4 className="text-sm font-extrabold text-slate-900">
-                                {insights?.highest_month?.name ?? `Mei ${year}`}
-                            </h4>
-                            <p className="text-xs font-bold text-emerald-700 font-mono mt-0.5">
-                                {formatRupiah(insights?.highest_month?.revenue ?? 224300000)}
-                            </p>
-                        </div>
-                        <p className="text-[11px] text-slate-500 leading-relaxed">
-                            Bulan paling produktif dari sisi pendapatan.
-                        </p>
+            {/* ── 5. ROW 4: SUMBER KLIEN / REFERRAL ───── */}
+            <div className="bg-white dark:bg-slate-900/70 rounded-2xl p-5 sm:p-6 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex flex-col justify-between space-y-4 print:shadow-none print:border-slate-300 print:bg-white print:p-4 print-break-inside-avoid">
+                <div className="space-y-4">
+                    <div className="flex items-center gap-1.5">
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white print:text-slate-950">
+                            Sumber Klien / Referral
+                        </h3>
+                        <Info className="w-3.5 h-3.5 text-slate-400 print:hidden" />
                     </div>
 
-                    {/* Insight 2: Kategori Terlaris */}
-                    <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-100 space-y-2">
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
-                                <Award className="w-4 h-4" />
-                            </div>
-                            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                                Kategori Terlaris
-                            </span>
+                    <div className="flex flex-col md:flex-row items-center gap-6 lg:gap-10 pt-2 print:flex-row print:gap-8">
+                        {/* Donut Chart with center Total Project */}
+                        <div className="shrink-0">
+                            <DonutChart
+                                items={client_sources.items}
+                                size={150}
+                                strokeWidth={24}
+                                centerLabel="Total Project"
+                                centerValue={client_sources.total}
+                            />
                         </div>
-                        <div>
-                            <h4 className="text-sm font-extrabold text-slate-900">
-                                {insights?.top_category?.name ?? 'Wedding'}
-                            </h4>
-                            <p className="text-xs font-bold text-blue-700 font-mono mt-0.5">
-                                {insights?.top_category?.count ?? 10} Project
-                            </p>
-                        </div>
-                        <p className="text-[11px] text-slate-500 leading-relaxed">
-                            Kontribusi terbesar dari total nilai project.
-                        </p>
-                    </div>
 
-                    {/* Insight 3: Sumber Terbaik */}
-                    <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-100 space-y-2">
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100">
-                                <Target className="w-4 h-4" />
-                            </div>
-                            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                                Sumber Terbaik
-                            </span>
+                        {/* Legend List (Responsive Grid) */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 w-full flex-1 print:grid-cols-3 print:gap-2">
+                            {client_sources.items.map((src) => (
+                                <div
+                                    key={src.name}
+                                    className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50/70 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 print:bg-slate-50 print:border-slate-200 text-xs text-slate-700 dark:text-slate-300 print:text-slate-800"
+                                >
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: src.color }} />
+                                        <span className="font-semibold truncate">{src.name}</span>
+                                    </div>
+                                    <span className="font-bold text-slate-900 dark:text-white print:text-slate-900 shrink-0 ml-2">
+                                        {src.count} ({src.percentage.toFixed(2).replace('.', ',')}%)
+                                    </span>
+                                </div>
+                            ))}
                         </div>
-                        <div>
-                            <h4 className="text-sm font-extrabold text-slate-900">
-                                {insights?.top_source?.name ?? 'Website'}
-                            </h4>
-                            <p className="text-xs font-bold text-amber-700 font-mono mt-0.5">
-                                {formatRupiah(insights?.top_source?.revenue ?? 484375000)}
-                            </p>
-                        </div>
-                        <p className="text-[11px] text-slate-500 leading-relaxed">
-                            Nilai project tertinggi dari sumber referral.
-                        </p>
                     </div>
+                </div>
 
-                    {/* Insight 4: Kinerja Tim */}
-                    <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-100 space-y-2">
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100">
-                                <Zap className="w-4 h-4" />
-                            </div>
-                            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                                Kinerja Tim
-                            </span>
-                        </div>
-                        <div>
-                            <h4 className="text-sm font-extrabold text-slate-900">
-                                {completionRate}% Completion
-                            </h4>
-                            <p className="text-xs font-bold text-rose-600 mt-0.5">
-                                {summary.completion_rate_growth ?? -4}% dari {year - 1}
-                            </p>
-                        </div>
-                        <p className="text-[11px] text-slate-500 leading-relaxed">
-                            Tingkat penyelesaian project tepat waktu.
-                        </p>
-                    </div>
+                <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80 print:hidden">
+                    <Link
+                        href="/client-sources"
+                        className="inline-flex items-center gap-1.5 text-xs font-bold transition-colors hover:opacity-80"
+                        style={{ color: reportPrimaryColor }}
+                    >
+                        <span>Lihat Detail Sumber Klien</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
                 </div>
             </div>
 
-            {/* ── FOOTER INFO ── */}
-            <div className="flex items-center justify-between text-xs text-slate-400 px-1">
-                <div className="flex items-center gap-1.5">
-                    <span>Data diperbarui terakhir: {last_updated}</span>
-                    <Info className="w-3.5 h-3.5 text-slate-400" />
+            {/* ── PRINT-ONLY FOOTER & OFFICIAL APPROVAL STAMP ────────────── */}
+            <div className="hidden print:flex flex-col gap-6 mt-10 pt-6 border-t-2 border-slate-300 print-break-inside-avoid">
+                <div className="flex justify-between items-start text-xs text-slate-600">
+                    <div className="max-w-md space-y-1">
+                        <p className="font-bold text-slate-900">Catatan &amp; Ketentuan Laporan:</p>
+                        <p className="text-[11px] text-slate-600 leading-relaxed">
+                            Laporan ini digenerate secara otomatis oleh Sistem Informasi Arams Pictures berdasarkan data transaksi dan aktivitas proyek aktual yang tercatat pada database.
+                        </p>
+                    </div>
+                    <div className="text-center min-w-[220px] space-y-14">
+                        <div>
+                            <p className="text-[11px] text-slate-600">
+                                Disahkan di Bandung,{' '}
+                                {new Date().toLocaleDateString('id-ID', {
+                                    day: 'numeric',
+                                    month: 'long',
+                                    year: 'numeric',
+                                })}
+                            </p>
+                            <p className="font-bold text-slate-900 text-xs mt-0.5">
+                                Manajemen Studio Arams Pictures
+                            </p>
+                        </div>
+                        <div className="border-t border-slate-500 pt-1 mx-4">
+                            <p className="font-bold text-slate-900 text-xs">( ___________________________ )</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

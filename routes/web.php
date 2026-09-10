@@ -24,6 +24,8 @@ use App\Http\Controllers\ClientSourceController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\MasterData\InstagramPostController;
+use App\Http\Controllers\MasterData\PortfolioCategoryController;
+use App\Http\Controllers\MasterData\PortfolioController;
 use App\Http\Controllers\MasterData\PromoSlideController;
 use App\Http\Controllers\MasterData\TestimonialController;
 use App\Http\Controllers\ProjectHighlightController;
@@ -126,6 +128,10 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('promo-slides', PromoSlideController::class)->except(['create', 'edit', 'show']);
         Route::resource('testimonials', TestimonialController::class)->except(['create', 'edit', 'show']);
         Route::resource('instagram-posts', InstagramPostController::class)->except(['create', 'edit', 'show']);
+        Route::resource('portfolio-categories', PortfolioCategoryController::class)->except(['create', 'edit', 'show']);
+        Route::patch('portfolio-categories/{portfolio_category}/toggle', [PortfolioCategoryController::class, 'toggleActive'])->name('portfolio-categories.toggle');
+        Route::resource('portfolios', PortfolioController::class)->except(['create', 'edit', 'show']);
+        Route::patch('portfolios/{portfolio}/toggle', [PortfolioController::class, 'toggleActive'])->name('portfolios.toggle');
         Route::put('workflows/packages/{package}/deliverables', [WorkflowController::class, 'updatePackageDeliverables'])->name('workflows.packages.deliverables');
         Route::post('workflows/packages/{package}/deliverables', [WorkflowController::class, 'addPackageDeliverable'])->name('workflows.packages.deliverables.add');
         Route::delete('workflows/packages/{package}/deliverables/{deliverableId}', [WorkflowController::class, 'destroyPackageDeliverable'])->name('workflows.packages.deliverables.destroy');
@@ -198,6 +204,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/settings/admin/promo-slides', fn() => redirect()->route('master-data.promo-slides.index'));
     Route::get('/settings/admin/testimonials', fn() => redirect()->route('master-data.testimonials.index'));
     Route::get('/settings/admin/instagram-posts', fn() => redirect()->route('master-data.instagram-posts.index'));
+    Route::get('/settings/admin/portfolio-categories', fn() => redirect()->route('master-data.portfolio-categories.index'));
+    Route::get('/settings/admin/portfolios', fn() => redirect()->route('master-data.portfolios.index'));
 });
 
 require __DIR__.'/settings.php';

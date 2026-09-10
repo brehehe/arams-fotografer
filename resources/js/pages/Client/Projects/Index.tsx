@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { ClientLayout } from '@/layouts/ClientLayout';
+import { ClientHeroCarousel } from '@/components/ClientHeroCarousel';
 import {
     Calendar,
     Check,
@@ -146,13 +147,13 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
             <Head title="Project Saya - Arams Pictures" />
 
             <div className="space-y-6">
-                {/* ── 1. HERO BANNER (Matching Dashboard Hero with Inner Box Frame) ────── */}
+                {/* ── 1. HERO BANNER - PROJECT SAYA ───────────────────────── */}
                 <section
                     style={{
                         background: portalHeroGradient || portalHeroBg,
                         color: portalHeroText,
                     }}
-                    className="relative -mt-6 sm:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 overflow-hidden shadow-md min-h-[240px] sm:min-h-[290px] lg:min-h-[320px] flex items-center transition-colors select-none"
+                    className="relative -mt-6 sm:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 overflow-hidden shadow-md min-h-[310px] sm:min-h-[390px] lg:min-h-[450px] flex items-center transition-colors select-none"
                 >
                     {/* Inner Decorative Box Frame (Kotak Bingkai) */}
                     <div className="absolute inset-2.5 sm:inset-3.5 lg:inset-4 border border-white/20 rounded-xl pointer-events-none z-20" />
@@ -161,7 +162,7 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                     <div className="absolute inset-0 z-0">
                         <img
                             src={displayProjects[0]?.thumbnail || 'https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=1920&auto=format&fit=crop&q=85'}
-                            alt="Project Arams Pictures"
+                            alt="Project Saya Arams Pictures"
                             className="w-full h-full object-cover object-center sm:object-right opacity-85 sm:opacity-95 filter brightness-95 contrast-[1.05]"
                         />
                         {/* Mobile Gradient Overlay */}
@@ -181,13 +182,13 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                     </div>
 
                     {/* Hero Content */}
-                    <div className="relative z-10 w-full max-w-full px-6 sm:px-12 lg:px-16 py-8 sm:py-10 lg:py-12">
-                        <div className="max-w-xl space-y-2.5 sm:space-y-3 drop-shadow-xs">
+                    <div className="relative z-10 w-full max-w-full px-6 sm:px-12 lg:px-16 py-8 sm:py-12 lg:py-14">
+                        <div className="max-w-xl space-y-3 sm:space-y-3.5 drop-shadow-xs">
                             <span
                                 style={{ color: COLOR_WARM_CREAM }}
                                 className="text-[10px] font-extrabold tracking-[0.25em] uppercase block opacity-90"
                             >
-                                CLIENT AREA
+                                CLIENT AREA • PROJECT MANAGEMENT
                             </span>
                             <h1
                                 style={{
@@ -202,20 +203,24 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                                 style={{ color: COLOR_WARM_CREAM }}
                                 className="text-xs sm:text-sm leading-relaxed max-w-lg opacity-90"
                             >
-                                Berikut adalah daftar seluruh project dokumentasi yang telah dan sedang Anda kerjakan bersama Arams Pictures.
+                                Pantau seluruh tahapan dokumentasi, timeline pengerjaan, jadwal pemotretan, dan unduh hasil karya foto & video Anda di satu tempat yang aman.
                             </p>
-                            <div className="pt-1.5 flex flex-wrap items-center gap-2.5">
-                                <div
-                                    style={{
-                                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                                        borderColor: 'rgba(255, 255, 255, 0.25)',
-                                        color: '#FFFFFF',
-                                    }}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold backdrop-blur-xs"
-                                >
+                            <div className="pt-2 flex flex-wrap items-center gap-2.5 sm:gap-3">
+                                <div className="client-btn-outline cursor-default">
                                     <FolderKanban className="w-3.5 h-3.5 text-white/90" />
                                     <span>{displayProjects.length} Total Project</span>
                                 </div>
+                                <div className="client-btn-outline cursor-default">
+                                    <Clock className="w-3.5 h-3.5 text-white/90" />
+                                    <span>{displayProjects.filter((p) => p.status !== 'completed' && p.status !== 'delivered' && p.status !== 'cancelled').length} Project Aktif</span>
+                                </div>
+                                <Link
+                                    href="/form-klien"
+                                    className="client-btn-primary"
+                                >
+                                    <span>Booking Project Baru</span>
+                                    <ArrowRight className="w-3.5 h-3.5" />
+                                </Link>
                             </div>
                         </div>
                     </div>
@@ -249,10 +254,10 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                                     className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
                                         isActive
                                             ? 'shadow-xs'
-                                            : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200/80'
+                                            : 'bg-[#F4EBE4] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-[#3C0E0E] border border-[#E8DDD5] group'
                                     }`}
                                 >
-                                    <Icon className="w-3.5 h-3.5" />
+                                    <Icon className={`w-3.5 h-3.5 transition-colors ${isActive ? 'text-white' : 'text-[#3C0E0E] group-hover:text-white'}`} />
                                     <span>{tab.label}</span>
                                 </button>
                             );
@@ -268,16 +273,16 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                                 value={search}
                                 onChange={(e) => handleSearchChange(e.target.value)}
                                 placeholder="Cari project..."
-                                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-hidden text-slate-900 placeholder:text-slate-400 transition-colors shadow-2xs"
+                                className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-hidden text-slate-900 placeholder:text-slate-400 transition-colors shadow-2xs focus:border-[#3C0E0E]"
                             />
                         </div>
 
                         <button
                             type="button"
-                            className="px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                            className="px-3.5 py-2 bg-[#F4EBE4] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] border border-[#E8DDD5] rounded-xl text-xs font-bold text-[#3C0E0E] shadow-2xs flex items-center gap-1.5 cursor-pointer group transition-all"
                         >
                             <span>Filter</span>
-                            <SlidersHorizontal className="w-3.5 h-3.5 text-slate-500" />
+                            <SlidersHorizontal className="w-3.5 h-3.5 text-[#3C0E0E] group-hover:text-white transition-colors" />
                         </button>
                     </div>
                 </div>
@@ -540,10 +545,7 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
 
                                         <Link
                                             href={`/client/projects/${p.id}`}
-                                            style={{
-                                                borderColor: '#E8DDD5',
-                                            }}
-                                            className="w-full py-2.5 px-3 rounded-xl border bg-white text-[#3C0E0E] hover:bg-[#3C0E0E] hover:text-white hover:border-[#3C0E0E] font-bold text-xs shadow-2xs transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer text-center group/btn"
+                                            className="w-full py-2.5 px-3 rounded-xl border border-[#E8DDD5] bg-[#F4EBE4] text-[#3C0E0E] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] font-bold text-xs shadow-2xs transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer text-center group/btn"
                                         >
                                             <span className="transition-colors">Lihat Detail</span>
                                             <ArrowRight className="w-3.5 h-3.5 text-[#3C0E0E] group-hover/btn:text-white group-hover/btn:translate-x-1 transition-all" />
@@ -566,7 +568,7 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                                 type="button"
                                 onClick={() => setCurrentPage(1)}
                                 disabled={safeCurrentPage === 1}
-                                className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center hover:bg-slate-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-slate-500"
+                                className="w-8 h-8 rounded-lg border border-[#E8DDD5] bg-[#F4EBE4] flex items-center justify-center hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-[#3C0E0E] transition-all"
                             >
                                 <ChevronsLeft className="w-4 h-4" />
                             </button>
@@ -574,7 +576,7 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                                 type="button"
                                 onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                                 disabled={safeCurrentPage === 1}
-                                className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center hover:bg-slate-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-slate-500"
+                                className="w-8 h-8 rounded-lg border border-[#E8DDD5] bg-[#F4EBE4] flex items-center justify-center hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-[#3C0E0E] transition-all"
                             >
                                 <ChevronLeft className="w-4 h-4" />
                             </button>
@@ -594,7 +596,7 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                                                 : {}
                                         }
                                         className={`w-8 h-8 rounded-lg font-bold flex items-center justify-center transition-all cursor-pointer ${
-                                            isActive ? 'shadow-xs' : 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                                            isActive ? 'shadow-xs' : 'border border-[#E8DDD5] bg-[#F4EBE4] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-[#3C0E0E]'
                                         }`}
                                     >
                                         {pageNum}
@@ -605,7 +607,7 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                                 type="button"
                                 onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                                 disabled={safeCurrentPage === totalPages}
-                                className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center hover:bg-slate-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-slate-500"
+                                className="w-8 h-8 rounded-lg border border-[#E8DDD5] bg-[#F4EBE4] flex items-center justify-center hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-[#3C0E0E] transition-all"
                             >
                                 <ChevronRight className="w-4 h-4" />
                             </button>
@@ -613,7 +615,7 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                                 type="button"
                                 onClick={() => setCurrentPage(totalPages)}
                                 disabled={safeCurrentPage === totalPages}
-                                className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center hover:bg-slate-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-slate-500"
+                                className="w-8 h-8 rounded-lg border border-[#E8DDD5] bg-[#F4EBE4] flex items-center justify-center hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-[#3C0E0E] transition-all"
                             >
                                 <ChevronsRight className="w-4 h-4" />
                             </button>

@@ -405,7 +405,7 @@ export default function FilesIndex({
     };
 
     return (
-        <div className="w-full max-w-full space-y-6 pb-12">
+        <div className="w-full max-w-full space-y-4 pb-2">
             <Head title="Files - Arams Pictures" />
 
             {/* ── HEADER TITLE & ACTION BUTTONS (Gambar 2) ─────────────────── */}

@@ -935,7 +935,7 @@ export default function ClientsIndex({
         <>
             <Head title="Clients | Arams Photography" />
 
-            <div className="space-y-6 w-full max-w-full pb-10">
+            <div className="space-y-4 w-full max-w-full pb-2">
                 {/* Header Title & Actions */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>

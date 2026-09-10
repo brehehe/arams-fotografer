@@ -1421,7 +1421,7 @@ export default function ProjectsCreate({
     };
 
     return (
-        <div className="w-full max-w-full space-y-5 pb-12">
+        <div className="w-full max-w-full space-y-4 pb-2">
             <Head title="Buat Project Baru - ARAMS PHOTOGRAPHY" />
 
             {/* ── TOP HEADER SECTION ───────────────────────────────────────── */}

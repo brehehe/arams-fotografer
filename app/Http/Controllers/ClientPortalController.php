@@ -66,20 +66,22 @@ class ClientPortalController extends Controller
 
         $client = $project->client;
 
-        \App\Models\Testimonial::create([
-            'project_id' => $project->id,
-            'client_id' => $client?->id,
-            'client_name' => $client?->name ?? 'Klien Arams',
-            'package_name' => $project->package?->name ?? 'Paket Dokumentasi',
-            'rating' => (int) $validated['rating'],
-            'comment' => $validated['comment'],
-            'event_date' => $project->event_date,
-            'is_featured' => true,
-            'status' => 'approved',
-            'sort_order' => 0,
-        ]);
+        \App\Models\Testimonial::updateOrCreate(
+            ['project_id' => $project->id],
+            [
+                'client_id' => $client?->id,
+                'client_name' => $client?->name ?? 'Klien Arams',
+                'package_name' => $project->package?->name ?? 'Paket Dokumentasi',
+                'rating' => (int) $validated['rating'],
+                'comment' => $validated['comment'],
+                'event_date' => $project->event_date,
+                'is_featured' => true,
+                'status' => 'approved',
+                'sort_order' => 0,
+            ]
+        );
 
-        return redirect()->back()->with('success', 'Terima kasih! Ulasan Anda berhasil dikirim.');
+        return redirect()->back()->with('success', 'Terima kasih! Ulasan Anda berhasil disimpan.');
     }
 
     /**

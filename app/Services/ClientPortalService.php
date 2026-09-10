@@ -24,9 +24,9 @@ class ClientPortalService
 
         // Retrieve linked client, or fallback to first client with project for preview/admins
         $client = null;
-        if ($user->client_id) {
+        if ($user?->client_id) {
             $client = Client::find($user->client_id);
-        } elseif ($user->email) {
+        } elseif ($user?->email) {
             $client = Client::where('email', $user->email)->first();
         }
 
@@ -97,7 +97,7 @@ class ClientPortalService
         $recommendedPackages = Package::where('status', 'active')
             ->with('category')
             ->orderBy('sort_order')
-            ->limit(4)
+            ->limit(5)
             ->get()
             ->map(function ($pkg) {
                 return [
@@ -110,7 +110,7 @@ class ClientPortalService
                     'duration_hours' => $pkg->duration_hours,
                     'description' => $pkg->description,
                     'desc' => $pkg->description ?: ($pkg->category?->name ?? 'Dokumentasi Terbaik'),
-                    'image' => $pkg->thumbnail ?? $this->getPackageSampleImage($pkg->name),
+                    'image' => $this->getPackageSampleImage($pkg->name),
                 ];
             });
 
@@ -139,7 +139,28 @@ class ClientPortalService
                 ];
             });
 
-        // 2. Instagram Posts from Database
+        // 2. Real Portfolios from Database (with fallback to Instagram Posts)
+        $realPortfolios = \App\Models\Portfolio::with('category')
+            ->active()
+            ->withImage()
+            ->orderBy('sort_order')
+            ->latest('updated_at')
+            ->limit(4)
+            ->get()
+            ->map(function ($p) {
+                return [
+                    'id' => $p->id,
+                    'title' => $p->title,
+                    'caption' => $p->caption ?? '',
+                    'image' => $p->image_url,
+                    'image_url' => $p->image_url,
+                    'likes' => (int) $p->likes_count,
+                    'comments' => (int) $p->comments_count,
+                    'type' => $p->media_type ?: 'photo',
+                ];
+            });
+
+        // 3. Instagram Posts from Database
         $instagramPosts = \App\Models\InstagramPost::active()->get()->map(function ($p) {
             return [
                 'id' => $p->id,
@@ -151,6 +172,8 @@ class ClientPortalService
                 'type' => $p->media_type,
             ];
         });
+
+        $portfoliosList = $realPortfolios->isNotEmpty() ? $realPortfolios : $instagramPosts;
 
         // 3. Testimonials from Database
         $testimonials = \App\Models\Testimonial::approved()->get()->map(function ($t) {
@@ -287,7 +310,8 @@ class ClientPortalService
             'promo_slides' => $promoSlides,
             'recommended_projects' => $recommendedPackages,
             'recommended_packages' => $recommendedPackages,
-            'portfolios' => $instagramPosts,
+            'portfolios' => $portfoliosList,
+            'total_portfolios' => \App\Models\Portfolio::active()->count(),
             'instagram_posts' => $instagramPosts,
             'testimonials' => $testimonials,
             'company' => $companySettings,
@@ -496,25 +520,19 @@ class ClientPortalService
             ];
         }
 
-        $testimonialsList = $project->testimonials->isNotEmpty()
-            ? $project->testimonials->map(fn($t) => [
-                'id' => $t->id,
-                'client_name' => $t->client_name,
-                'package_name' => $t->package_name ?? 'Dokumentasi',
-                'rating' => (int) $t->rating,
-                'comment' => $t->comment,
-                'avatar' => $t->avatar ?: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-                'date' => $t->created_at?->isoFormat('D MMMM YYYY'),
-            ])
-            : \App\Models\Testimonial::approved()->latest()->limit(5)->get()->map(fn($t) => [
-                'id' => $t->id,
-                'client_name' => $t->client_name,
-                'package_name' => $t->package_name ?? 'Dokumentasi',
-                'rating' => (int) $t->rating,
-                'comment' => $t->comment,
-                'avatar' => $t->avatar ?: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-                'date' => $t->created_at?->isoFormat('D MMMM YYYY'),
-            ]);
+        $existingReview = $project->testimonials()->latest()->first();
+        $projectReview = $existingReview ? [
+            'id' => $existingReview->id,
+            'client_name' => $existingReview->client_name,
+            'package_name' => $existingReview->package_name ?? ($project->package?->name ?? 'Dokumentasi'),
+            'rating' => (int) $existingReview->rating,
+            'comment' => $existingReview->comment,
+            'avatar' => $existingReview->avatar ?: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+            'date' => $existingReview->created_at?->isoFormat('D MMMM YYYY'),
+            'updated_at_formatted' => $existingReview->updated_at?->isoFormat('D MMMM YYYY, HH:mm'),
+        ] : null;
+
+        $testimonialsList = $projectReview ? [$projectReview] : [];
 
         $paymentMethodsList = \App\Models\PaymentMethod::where('status', 'active')->get()->map(fn($pm) => [
             'id' => $pm->id,
@@ -609,6 +627,7 @@ class ClientPortalService
                 'notes_list' => $notesList,
             ],
             'testimonials' => $testimonialsList,
+            'project_review' => $projectReview,
             'timeline' => $timeline,
             'payment_summary' => $paymentSummary,
             'payment_methods' => $paymentMethodsList,
@@ -963,6 +982,50 @@ class ClientPortalService
     {
         [$client] = $this->resolvePortalContext($request);
 
+        // 1. Fetch active portfolio items from database
+        $databasePortfolios = \App\Models\Portfolio::with('category')
+            ->active()
+            ->withImage()
+            ->orderBy('sort_order')
+            ->latest('updated_at')
+            ->get()
+            ->map(function ($p) {
+                return [
+                    'id' => $p->id,
+                    'category_id' => $p->portfolio_category_id,
+                    'category_slug' => $p->category?->slug ?? 'general',
+                    'category' => $p->category?->name ?? 'General',
+                    'title' => $p->title,
+                    'caption' => $p->caption ?? '',
+                    'image' => $p->image_url,
+                    'image_url' => $p->image_url,
+                    'likes' => (int) $p->likes_count,
+                    'comments' => (int) $p->comments_count,
+                    'post_url' => null,
+                    'type' => $p->media_type ?: 'photo',
+                    'is_cover' => false,
+                ];
+            });
+
+        // 2. Fetch active categories and FILTER OUT any category with 0 images
+        $categoriesWithImages = \App\Models\PortfolioCategory::active()
+            ->withCount(['activePortfolios'])
+            ->orderBy('sort_order')
+            ->get()
+            ->filter(function ($cat) {
+                return $cat->active_portfolios_count > 0;
+            })
+            ->values()
+            ->map(function ($cat) {
+                return [
+                    'id' => $cat->slug,
+                    'category_id' => $cat->id,
+                    'label' => $cat->name,
+                    'name' => $cat->name,
+                    'count' => $cat->active_portfolios_count,
+                ];
+            });
+
         $instagramPosts = \App\Models\InstagramPost::active()->latest()->get()->map(function ($p) {
             return [
                 'id' => $p->id,
@@ -991,6 +1054,7 @@ class ClientPortalService
                     'image' => $h->image_url,
                     'image_url' => $h->image_url,
                     'category' => $categoryName,
+                    'category_slug' => \Illuminate\Support\Str::slug($categoryName),
                     'likes' => rand(30, 250),
                     'comments' => rand(5, 45),
                     'post_url' => null,
@@ -1009,10 +1073,13 @@ class ClientPortalService
             'instagram_url' => 'https://www.instagram.com/' . ltrim(Setting::get('company_instagram', 'aramspictures'), '@') . '/',
             'address' => Setting::get('company_address', 'Surabaya, Jawa Timur, Indonesia'),
             'website' => Setting::get('company_website', 'www.aramspictures.com'),
+            'gdrive_url' => Setting::get('company_gdrive_url', 'https://drive.google.com'),
         ];
 
         return [
-            'portfolios' => $instagramPosts,
+            'portfolios' => $databasePortfolios,
+            'categories' => $categoriesWithImages,
+            'instagram_posts' => $instagramPosts,
             'highlights' => $projectHighlights,
             'client' => $client ? [
                 'id' => $client->id,

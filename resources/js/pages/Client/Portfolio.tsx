@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { ClientLayout } from '@/layouts/ClientLayout';
+import { ClientHeroCarousel } from '@/components/ClientHeroCarousel';
 import {
     Camera,
     Instagram,
@@ -32,13 +33,24 @@ interface PortfolioItem {
     post_url?: string | null;
     type?: string;
     category?: string;
+    category_slug?: string;
+    category_id?: string;
     project_id?: string;
     is_cover?: boolean;
+}
+
+interface ClientPortfolioCategory {
+    id: string;
+    category_id?: string;
+    label: string;
+    name?: string;
+    count?: number;
 }
 
 interface ClientPortfolioProps {
     portfolios?: PortfolioItem[];
     highlights?: PortfolioItem[];
+    categories?: ClientPortfolioCategory[];
     client?: {
         id: string;
         name: string;
@@ -57,6 +69,7 @@ interface ClientPortfolioProps {
 export default function ClientPortfolio({
     portfolios = [],
     highlights = [],
+    categories: serverCategories = [],
     client = null,
     company = {},
 }: ClientPortfolioProps) {
@@ -161,38 +174,91 @@ export default function ClientPortfolio({
         },
     ];
 
-    const allItems: PortfolioItem[] = [
-        ...portfolios,
-        ...highlights,
-        ...(portfolios.length < 4 ? samplePortfolios : []),
-    ];
+    const allItems: PortfolioItem[] = useMemo(() => {
+        if (portfolios && portfolios.length > 0) {
+            return portfolios;
+        }
+        return [
+            ...highlights,
+            ...(highlights.length < 4 ? samplePortfolios : []),
+        ];
+    }, [portfolios, highlights]);
 
     // Filter states
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
 
-    const categories = [
-        { id: 'all', label: 'Semua Karya' },
-        { id: 'wedding', label: 'Wedding' },
-        { id: 'prewedding', label: 'Prewedding' },
-        { id: 'engagement', label: 'Engagement' },
-        { id: 'studio', label: 'Studio & Maternity' },
-    ];
+    // Dynamically derive category pills from server categories, strictly ensuring categories without images are never shown!
+    // "dan di bagian menu ini jika dari kategori tidak ada gambar tidak perlu di munculkan kategorinya"
+    const categories = useMemo(() => {
+        const list = [{ id: 'all', label: 'Semua Karya' }];
 
-    const filteredItems = allItems.filter((item) => {
-        const itemCat = (item.category || item.title || '').toLowerCase();
-        const matchesCategory =
-            selectedCategory === 'all' ||
-            (selectedCategory === 'wedding' && itemCat.includes('wedding')) ||
-            (selectedCategory === 'prewedding' && itemCat.includes('prewedding')) ||
-            (selectedCategory === 'engagement' && itemCat.includes('engagement')) ||
-            (selectedCategory === 'studio' && (itemCat.includes('studio') || itemCat.includes('maternity') || itemCat.includes('portrait')));
+        if (serverCategories && serverCategories.length > 0) {
+            serverCategories.forEach((cat) => {
+                const catId = (cat.id || '').toLowerCase();
+                const catName = (cat.label || cat.name || '').toLowerCase();
+                // Check if there is actually at least one item with a valid image in allItems for this category
+                const hasImages = allItems.some((item) => {
+                    const imgSrc = item.image || item.image_url;
+                    if (!imgSrc) return false;
+                    const itemCat = (item.category || '').toLowerCase();
+                    const itemSlug = (item.category_slug || '').toLowerCase();
+                    const itemId = (item.category_id || '').toLowerCase();
+                    return (
+                        itemSlug === catId ||
+                        itemId === (cat.category_id || '').toLowerCase() ||
+                        itemCat === catName ||
+                        itemCat.includes(catName) ||
+                        catName.includes(itemCat)
+                    );
+                });
 
-        const textContent = `${item.title || ''} ${item.caption || ''} ${item.category || ''}`.toLowerCase();
-        const matchesSearch = textContent.includes(searchQuery.toLowerCase());
+                if (hasImages) {
+                    list.push({ id: cat.id, label: cat.label || cat.name || cat.id });
+                }
+            });
+        } else {
+            // Dynamic fallback from allItems
+            const seen = new Set<string>();
+            allItems.forEach((item) => {
+                const imgSrc = item.image || item.image_url;
+                if (!imgSrc || !item.category) return;
+                const catLabel = item.category.trim();
+                const catId = item.category_slug || catLabel.toLowerCase().replace(/\s+/g, '-');
+                if (!seen.has(catId)) {
+                    seen.add(catId);
+                    list.push({ id: catId, label: catLabel });
+                }
+            });
+        }
 
-        return matchesCategory && matchesSearch;
-    });
+        return list;
+    }, [serverCategories, allItems]);
+
+    const filteredItems = useMemo(() => {
+        return allItems.filter((item) => {
+            const imgSrc = item.image || item.image_url;
+            if (!imgSrc) return false; // Exclude items with no image
+
+            const itemCat = (item.category || '').toLowerCase();
+            const itemSlug = (item.category_slug || '').toLowerCase();
+            const itemId = (item.category_id || '').toLowerCase();
+            const selected = selectedCategory.toLowerCase();
+
+            const matchesCategory =
+                selected === 'all' ||
+                itemSlug === selected ||
+                itemId === selected ||
+                itemCat === selected ||
+                itemCat.includes(selected) ||
+                selected.includes(itemCat);
+
+            const textContent = `${item.title || ''} ${item.caption || ''} ${item.category || ''}`.toLowerCase();
+            const matchesSearch = textContent.includes(searchQuery.toLowerCase());
+
+            return matchesCategory && matchesSearch;
+        });
+    }, [allItems, selectedCategory, searchQuery]);
 
     // Lightbox modal states
     const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -224,27 +290,45 @@ export default function ClientPortfolio({
 
     const currentLightboxItem = lightboxIndex !== null ? filteredItems[lightboxIndex] : null;
 
+    useEffect(() => {
+        if (lightboxIndex !== null) {
+            document.body.style.overflow = 'hidden';
+            const handleKeyDown = (e: KeyboardEvent) => {
+                if (e.key === 'Escape') closeLightbox();
+                if (e.key === 'ArrowLeft') prevImage();
+                if (e.key === 'ArrowRight') nextImage();
+            };
+            window.addEventListener('keydown', handleKeyDown);
+            return () => {
+                document.body.style.overflow = '';
+                window.removeEventListener('keydown', handleKeyDown);
+            };
+        } else {
+            document.body.style.overflow = '';
+        }
+    }, [lightboxIndex, filteredItems.length]);
+
     return (
         <ClientLayout>
-            <Head title="Portofolio Karya - Arams Pictures" />
+            <Head title="Portofolio - Arams Pictures" />
 
             <div className="space-y-6 sm:space-y-8">
-                {/* ── 1. HERO BANNER ────────────────────────────────────────── */}
+                {/* ── 1. HERO BANNER - PORTOFOLIO KARYA ───────────────────── */}
                 <section
                     style={{
                         background: portalHeroGradient || portalHeroBg,
                         color: portalHeroText,
                     }}
-                    className="relative -mt-6 sm:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 overflow-hidden shadow-md min-h-[240px] sm:min-h-[290px] lg:min-h-[320px] flex items-center transition-colors select-none"
+                    className="relative -mt-6 sm:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 overflow-hidden shadow-md min-h-[310px] sm:min-h-[390px] lg:min-h-[450px] flex items-center transition-colors select-none"
                 >
-                    {/* Inner Decorative Box Frame */}
+                    {/* Inner Decorative Box Frame (Kotak Bingkai) */}
                     <div className="absolute inset-2.5 sm:inset-3.5 lg:inset-4 border border-white/20 rounded-xl pointer-events-none z-20" />
 
                     {/* Background Overlay */}
                     <div className="absolute inset-0 z-0">
                         <img
                             src="https://images.unsplash.com/photo-1519741497674-611481863552?w=1920&auto=format&fit=crop&q=85"
-                            alt="Portofolio Arams Pictures"
+                            alt="Portofolio Karya Arams Pictures"
                             className="w-full h-full object-cover object-center sm:object-right opacity-85 sm:opacity-95 filter brightness-95 contrast-[1.05]"
                         />
                         {/* Mobile Gradient Overlay */}
@@ -264,8 +348,8 @@ export default function ClientPortfolio({
                     </div>
 
                     {/* Hero Content */}
-                    <div className="relative z-10 w-full max-w-full px-6 sm:px-12 lg:px-16 py-8 sm:py-10 lg:py-12">
-                        <div className="max-w-xl space-y-2.5 sm:space-y-3 drop-shadow-xs">
+                    <div className="relative z-10 w-full max-w-full px-6 sm:px-12 lg:px-16 py-8 sm:py-12 lg:py-14">
+                        <div className="max-w-xl space-y-3 sm:space-y-3.5 drop-shadow-xs">
                             <span
                                 style={{ color: COLOR_WARM_CREAM }}
                                 className="text-[10px] font-extrabold tracking-[0.25em] uppercase block opacity-90"
@@ -279,30 +363,29 @@ export default function ClientPortfolio({
                                 }}
                                 className="text-xl sm:text-3xl lg:text-4xl font-serif font-normal tracking-tight leading-[1.2]"
                             >
-                                Portofolio Karya Kami
+                                Portofolio
                             </h1>
                             <p
                                 style={{ color: COLOR_WARM_CREAM }}
                                 className="text-xs sm:text-sm leading-relaxed max-w-lg opacity-90"
                             >
-                                Kumpulan momen magis dan karya dokumentasi terbaik yang telah kami abadikan dengan dedikasi penuh estetika.
+                                Jelajahi koleksi dokumentasi momen magis, pernikahan mewah, prewedding romantis, dan potret keluarga terbaik yang telah kami abadikan dengan dedikasi penuh estetika.
                             </p>
-                            <div className="pt-1.5 flex flex-wrap items-center gap-2.5">
+                            <div className="pt-2 flex flex-wrap items-center gap-2.5 sm:gap-3">
                                 <a
                                     href={company?.instagram_url || 'https://instagram.com/aramspictures'}
                                     target="_blank"
                                     rel="noreferrer"
-                                    style={{
-                                        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                                        borderColor: 'rgba(255, 255, 255, 0.25)',
-                                        color: '#FFFFFF',
-                                    }}
-                                    className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg border text-xs font-semibold backdrop-blur-xs hover:bg-white/25 transition-colors"
+                                    className="client-btn-primary"
                                 >
-                                    <Instagram className="w-3.5 h-3.5 text-white/90" />
-                                    <span>{company?.instagram || '@aramspictures'}</span>
-                                    <ExternalLink className="w-3 h-3 text-white/70" />
+                                    <Instagram className="w-3.5 h-3.5" />
+                                    <span>Follow {company?.instagram || '@aramspictures'}</span>
+                                    <ExternalLink className="w-3 h-3 opacity-60" />
                                 </a>
+                                <div className="client-btn-outline cursor-default">
+                                    <Camera className="w-3.5 h-3.5 text-white/90" />
+                                    <span>{filteredItems.length} Koleksi Karya</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -332,7 +415,7 @@ export default function ClientPortfolio({
                                     className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                                         isActive
                                             ? 'shadow-xs'
-                                            : 'bg-white hover:bg-slate-100 text-slate-700 border'
+                                            : 'bg-[#F4EBE4] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-[#3C0E0E] border'
                                     }`}
                                 >
                                     {cat.label}
@@ -342,7 +425,7 @@ export default function ClientPortfolio({
                     </div>
 
                     {/* Search Input */}
-                    <div className="relative w-full sm:w-64 shrink-0">
+                    {/* <div className="relative w-full sm:w-64 shrink-0">
                         <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                         <input
                             type="text"
@@ -351,7 +434,7 @@ export default function ClientPortfolio({
                             placeholder="Cari foto / tema..."
                             className="w-full pl-10 pr-4 py-2 bg-white border border-[#E8DDD5] rounded-xl text-xs outline-hidden text-slate-900 placeholder:text-slate-400 transition-colors shadow-2xs focus:border-[#3C0E0E]"
                         />
-                    </div>
+                    </div> */}
                 </div>
 
                 {/* ── 3. PORTFOLIO GRID GALLERY ────────────────────────────── */}
@@ -427,12 +510,6 @@ export default function ClientPortfolio({
                                         <p className="text-[11px] text-slate-500 line-clamp-1 leading-relaxed">
                                             {item.caption || 'Karya dokumentasi visual elegan dan berkesan.'}
                                         </p>
-
-                                        <div className="flex items-center justify-end pt-1.5 border-t border-slate-100/80">
-                                            <span className="text-[#3C0E0E] font-bold inline-flex items-center gap-1 group-hover:translate-x-1 transition-transform text-xs">
-                                                Buka <ArrowRight className="w-3 h-3" />
-                                            </span>
-                                        </div>
                                     </div>
                                 </div>
                             );
@@ -440,17 +517,23 @@ export default function ClientPortfolio({
                     </div>
                 )}
 
-                {/* ── 4. LIGHTBOX IMAGE VIEWER MODAL ───────────────────────── */}
+                {/* ── 4. LIGHTBOX IMAGE VIEWER MODAL (FIT SCREEN - NO SCROLL) ──── */}
                 {lightboxIndex !== null && currentLightboxItem && (
-                    <div className="fixed inset-0 z-50 bg-black/92 backdrop-blur-md flex flex-col justify-between animate-in fade-in duration-200">
+                    <div 
+                        className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col justify-between animate-in fade-in duration-200 select-none overflow-hidden"
+                        onClick={closeLightbox}
+                    >
                         {/* Top Lightbox Toolbar */}
-                        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 bg-black/40 text-white border-b border-white/10 z-20">
+                        <div 
+                            className="flex items-center justify-between px-4 sm:px-6 py-3 bg-black/60 text-white border-b border-white/10 z-20 shrink-0"
+                            onClick={(e) => e.stopPropagation()}
+                        >
                             <div className="flex items-center gap-3 min-w-0">
-                                <span className="text-xs font-bold tracking-wider uppercase text-white/70">
+                                <span className="text-xs font-bold tracking-wider uppercase text-white/75">
                                     Foto {lightboxIndex + 1} dari {filteredItems.length}
                                 </span>
                                 {currentLightboxItem.category && (
-                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/15 text-white">
+                                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-white/15 text-white">
                                         {currentLightboxItem.category}
                                     </span>
                                 )}
@@ -461,7 +544,7 @@ export default function ClientPortfolio({
                                     type="button"
                                     onClick={() => setZoomLevel((z) => (z === 1 ? 1.5 : 1))}
                                     className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
-                                    title={zoomLevel === 1 ? 'Zoom In' : 'Zoom Out'}
+                                    title={zoomLevel === 1 ? 'Perbesar (Zoom In)' : 'Perkecil (Zoom Out)'}
                                 >
                                     {zoomLevel === 1 ? <ZoomIn className="w-4 h-4" /> : <ZoomOut className="w-4 h-4" />}
                                 </button>
@@ -477,24 +560,33 @@ export default function ClientPortfolio({
                         </div>
 
                         {/* Center Image Container with Navigation Arrows */}
-                        <div className="relative flex-1 flex items-center justify-center p-4 sm:p-8 overflow-hidden select-none">
+                        <div 
+                            className="relative flex-1 min-h-0 w-full flex items-center justify-center px-2 sm:px-14 py-2 overflow-hidden"
+                            onClick={closeLightbox}
+                        >
                             {/* Prev Arrow */}
                             <button
                                 type="button"
-                                onClick={prevImage}
-                                className="absolute left-2 sm:left-6 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/15 hover:bg-white/30 text-white backdrop-blur-xs flex items-center justify-center transition-all cursor-pointer"
-                                title="Foto Sebelumnya"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    prevImage();
+                                }}
+                                className="absolute left-3 sm:left-6 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/40 hover:bg-white/30 text-white backdrop-blur-xs flex items-center justify-center transition-all cursor-pointer shadow-lg border border-white/10"
+                                title="Foto Sebelumnya (Panah Kiri)"
                             >
                                 <ChevronLeft className="w-6 h-6" />
                             </button>
 
-                            {/* Main Active Image */}
-                            <div className="max-w-full max-h-full flex items-center justify-center overflow-auto transition-transform duration-300">
+                            {/* Main Active Image - Fitted to 100% available container height & width without scrolling */}
+                            <div 
+                                className="w-full h-full flex items-center justify-center overflow-hidden p-1 sm:p-2"
+                                onClick={(e) => e.stopPropagation()}
+                            >
                                 <img
                                     src={currentLightboxItem.image || currentLightboxItem.image_url || '/images/wedding-couple.jpg'}
                                     alt={currentLightboxItem.title || 'Foto Portofolio'}
                                     style={{ transform: `scale(${zoomLevel})` }}
-                                    className="max-h-[75vh] sm:max-h-[80vh] w-auto max-w-full object-contain rounded-lg shadow-2xl transition-transform duration-300 cursor-zoom-in"
+                                    className="max-h-full max-w-full w-auto h-auto object-contain rounded-lg shadow-2xl transition-transform duration-300 cursor-zoom-in select-none"
                                     onClick={() => setZoomLevel((z) => (z === 1 ? 1.5 : 1))}
                                 />
                             </div>
@@ -502,21 +594,27 @@ export default function ClientPortfolio({
                             {/* Next Arrow */}
                             <button
                                 type="button"
-                                onClick={nextImage}
-                                className="absolute right-2 sm:right-6 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/15 hover:bg-white/30 text-white backdrop-blur-xs flex items-center justify-center transition-all cursor-pointer"
-                                title="Foto Selanjutnya"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    nextImage();
+                                }}
+                                className="absolute right-3 sm:right-6 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/40 hover:bg-white/30 text-white backdrop-blur-xs flex items-center justify-center transition-all cursor-pointer shadow-lg border border-white/10"
+                                title="Foto Selanjutnya (Panah Kanan)"
                             >
                                 <ChevronRight className="w-6 h-6" />
                             </button>
                         </div>
 
                         {/* Bottom Caption & Instagram Link */}
-                        <div className="p-4 sm:p-5 bg-black/50 text-white border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left z-20">
-                            <div className="space-y-0.5 max-w-2xl">
-                                <h4 className="text-sm font-bold text-white">
+                        <div 
+                            className="p-3 sm:p-4 bg-black/60 text-white border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left z-20 shrink-0"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="space-y-0.5 max-w-2xl min-w-0">
+                                <h4 className="text-sm font-bold text-white truncate">
                                     {currentLightboxItem.title || 'Dokumentasi Arams Pictures'}
                                 </h4>
-                                <p className="text-xs text-white/80 line-clamp-2">
+                                <p className="text-xs text-white/80 line-clamp-1 sm:line-clamp-2">
                                     {currentLightboxItem.caption || 'Karya dokumentasi visual eksklusif dan abadi.'}
                                 </p>
                             </div>

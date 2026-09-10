@@ -1130,7 +1130,7 @@ export default function ProjectsEdit({
     };
 
     return (
-        <div className="w-full max-w-full space-y-5 pb-12">
+        <div className="w-full max-w-full space-y-4 pb-2">
             <Head title={`Edit Project: ${project.name} - ARAMS PHOTOGRAPHY`} />
 
             {/* ── TOP HEADER SECTION ───────────────────────────────────────── */}

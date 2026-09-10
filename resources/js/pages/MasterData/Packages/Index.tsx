@@ -326,7 +326,7 @@ export default function PackagesIndex({
     };
 
     return (
-        <div className="w-full max-w-full space-y-6 pb-20">
+        <div className="w-full max-w-full space-y-4 pb-2">
             <Head title="Paket & Harga - Master Data" />
 
             {/* ── 1. HEADER TITLE & ACTIONS ────────────────────────────────────────── */}

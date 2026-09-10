@@ -332,7 +332,7 @@ export default function ClientSourceShow({
     };
 
     return (
-        <div className="space-y-6 pb-12">
+        <div className="space-y-4 pb-2">
             <Head title={`${source.name} - Detail Sumber Klien - Arams Pictures`} />
 
             {/* ── HEADER TITLE & TOP ACTIONS ─────────────────────────────────── */}

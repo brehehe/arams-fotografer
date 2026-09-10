@@ -200,7 +200,7 @@ export default function ClientEdit({ client, all_clients = [], wedding_organizer
     };
 
     return (
-        <div className="w-full max-w-full space-y-6 pb-12">
+        <div className="w-full max-w-full space-y-4 pb-2">
             <Head title={`Edit ${client.name} - Arams CRM`} />
 
             {/* Breadcrumb Header */}

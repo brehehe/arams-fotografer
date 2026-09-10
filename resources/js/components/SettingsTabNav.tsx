@@ -11,6 +11,8 @@ import {
     MessageSquareQuote,
     Instagram,
     Database,
+    FolderKanban,
+    Camera,
 } from 'lucide-react';
 
 export type SettingMainTab = 'admin' | 'form_klien' | 'portal_klien';
@@ -22,6 +24,8 @@ export type SettingAdminSubTab =
     | 'promo_slides'
     | 'testimonials'
     | 'instagram_posts'
+    | 'portfolio_categories'
+    | 'portfolios'
     | 'backup';
 
 interface SettingsTabNavProps {
@@ -58,7 +62,9 @@ export default function SettingsTabNav({
         { id: 'login_theme' as const, label: 'Tampilan Login', icon: Lock, href: '/setting/admin?sub=login_theme' },
         { id: 'promo_slides' as const, label: 'Promo Slide', icon: Sparkles, href: '/master-data/promo-slides', isExternalPage: true },
         { id: 'testimonials' as const, label: 'Ulasan Klien', icon: MessageSquareQuote, href: '/master-data/testimonials', isExternalPage: true },
-        { id: 'instagram_posts' as const, label: 'Feed Instagram', icon: Instagram, href: '/master-data/instagram-posts', isExternalPage: true },
+        // { id: 'instagram_posts' as const, label: 'Feed Instagram', icon: Instagram, href: '/master-data/instagram-posts', isExternalPage: true },
+        { id: 'portfolio_categories' as const, label: 'Kategori Portofolio', icon: FolderKanban, href: '/master-data/portfolio-categories', isExternalPage: true },
+        { id: 'portfolios' as const, label: 'Portofolio', icon: Camera, href: '/master-data/portfolios', isExternalPage: true },
         { id: 'backup' as const, label: 'Backup & Data', icon: Database, href: '/setting/admin?sub=backup' },
     ];
 
@@ -78,11 +84,10 @@ export default function SettingsTabNav({
                                     type="button"
                                     onClick={() => onSelectMainTab(tab.id)}
                                     style={isActive ? { borderColor: effectiveAccentColor, color: effectiveAccentColor } : undefined}
-                                    className={`flex items-center gap-2 px-4 py-3 border-b-2 text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
-                                        isActive
+                                    className={`flex items-center gap-2 px-4 py-3 border-b-2 text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${isActive
                                             ? 'bg-slate-50/60 dark:bg-slate-900/40 rounded-t-xl'
                                             : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:border-slate-300'
-                                    }`}
+                                        }`}
                                 >
                                     <Icon className="w-4 h-4 shrink-0" />
                                     <span>{tab.label}</span>
@@ -95,11 +100,10 @@ export default function SettingsTabNav({
                                 key={tab.id}
                                 href={tab.href}
                                 style={isActive ? { borderColor: effectiveAccentColor, color: effectiveAccentColor } : undefined}
-                                className={`flex items-center gap-2 px-4 py-3 border-b-2 text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
-                                    isActive
+                                className={`flex items-center gap-2 px-4 py-3 border-b-2 text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${isActive
                                         ? 'bg-slate-50/60 dark:bg-slate-900/40 rounded-t-xl'
                                         : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:border-slate-300'
-                                }`}
+                                    }`}
                             >
                                 <Icon className="w-4 h-4 shrink-0" />
                                 <span>{tab.label}</span>
@@ -124,11 +128,10 @@ export default function SettingsTabNav({
                                     type="button"
                                     onClick={() => onSelectAdminSubTab(sub.id)}
                                     style={isSubActive ? { backgroundColor: effectiveAccentColor, borderColor: effectiveAccentColor, color: '#FFFFFF' } : undefined}
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                                        isSubActive
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer whitespace-nowrap shrink-0 ${isSubActive
                                             ? 'shadow-xs font-bold'
                                             : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:border-slate-300'
-                                    }`}
+                                        }`}
                                 >
                                     <Icon className="w-3.5 h-3.5 shrink-0" />
                                     <span>{sub.label}</span>
@@ -142,11 +145,10 @@ export default function SettingsTabNav({
                                 key={sub.id}
                                 href={sub.href}
                                 style={isSubActive ? { backgroundColor: effectiveAccentColor, borderColor: effectiveAccentColor, color: '#FFFFFF' } : undefined}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                                    isSubActive
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer whitespace-nowrap shrink-0 ${isSubActive
                                         ? 'shadow-xs font-bold'
                                         : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:border-slate-300'
-                                }`}
+                                    }`}
                             >
                                 <Icon className="w-3.5 h-3.5 shrink-0" />
                                 <span>{sub.label}</span>

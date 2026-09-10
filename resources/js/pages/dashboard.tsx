@@ -269,37 +269,37 @@ export default function Dashboard({
     ];
 
     return (
-        <div className="space-y-6 pb-12 w-full max-w-full">
+        <div className="space-y-4 pb-2 w-full max-w-full">
             <Head title="Dashboard - Arams Photography" />
 
             {/* 1. Welcome Banner + Period */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                    <h1 className="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                    <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
                         Selamat datang, Admin <span className="animate-bounce">👋</span>
                     </h1>
-                    <p className="text-slate-500 text-sm mt-1">
+                    <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
                         Kelola semua project dan pantau progres pekerjaan dengan mudah.
                     </p>
                 </div>
 
                 <div className="relative">
                     <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Periode</span>
+                        <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Periode</span>
                         <button
                             type="button"
                             onClick={() => setPeriodDropdown(!periodDropdown)}
-                            className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl border border-slate-200 shadow-sm hover:border-slate-300 text-sm font-medium text-slate-800 transition-colors cursor-pointer"
+                            className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-xl border border-slate-200 shadow-xs hover:border-slate-300 text-xs font-medium text-slate-800 transition-colors cursor-pointer"
                         >
                             <span>{getPeriodLabel(activePeriod)}</span>
-                            <ChevronDown className="w-4 h-4 text-slate-400" />
+                            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                         </button>
                         <button
                             type="button"
                             onClick={() => setPeriodDropdown(!periodDropdown)}
-                            className="p-2 bg-white rounded-xl border border-slate-200 shadow-sm hover:border-slate-300 text-slate-400 transition-colors cursor-pointer"
+                            className="p-1.5 bg-white rounded-xl border border-slate-200 shadow-xs hover:border-slate-300 text-slate-400 transition-colors cursor-pointer"
                         >
-                            <Calendar className="w-4 h-4" />
+                            <Calendar className="w-3.5 h-3.5" />
                         </button>
                     </div>
                     {periodDropdown && (
@@ -328,208 +328,208 @@ export default function Dashboard({
             </div>
 
             {/* 2. 4 KPI Cards (Full Width 4 Kolom) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {/* Card 1: Total Project */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
                     <div className="flex items-start justify-between">
                         <div>
                             <span className="text-[10px] font-bold text-slate-800 stat-card-title uppercase tracking-wider leading-tight block">TOTAL PROJECT</span>
-                            <div className="text-3xl font-extrabold text-slate-900 mt-1 leading-none">{kpis.total_projects}</div>
-                            <span className="text-xs text-slate-500 mt-1 block">Semua Project</span>
+                            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-0.5 leading-none">{kpis.total_projects}</div>
+                            <span className="text-[11px] text-slate-500 mt-1 block">Semua Project</span>
                         </div>
-                        <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center shrink-0">
-                            <Folder className="w-5 h-5" />
+                        <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center shrink-0">
+                            <Folder className="w-4.5 h-4.5" />
                         </div>
                     </div>
-                    <div className="mt-4 pt-3 border-t border-slate-100">
-                        <Link href="/projects" className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-[#C89445] transition-colors">
-                            <span>Lihat Detail</span><ArrowUpRight className="w-3.5 h-3.5" />
+                    <div className="mt-3 pt-2 border-t border-slate-100">
+                        <Link href="/projects" className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 hover:text-[#C89445] transition-colors">
+                            <span>Lihat Detail</span><ArrowUpRight className="w-3 h-3" />
                         </Link>
                     </div>
                 </div>
 
                 {/* Card 2: Project Aktif */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
                     <div className="flex items-start justify-between">
                         <div>
                             <span className="text-[10px] font-bold text-slate-800 stat-card-title uppercase tracking-wider leading-tight block">PROJECT AKTIF</span>
-                            <div className="text-3xl font-extrabold text-slate-900 mt-1 leading-none">{kpis.active_projects}</div>
-                            <span className="text-xs text-slate-500 mt-1 block">Sedang Dikerjakan</span>
+                            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-0.5 leading-none">{kpis.active_projects}</div>
+                            <span className="text-[11px] text-slate-500 mt-1 block">Sedang Dikerjakan</span>
                         </div>
-                        <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center shrink-0">
-                            <TrendingUp className="w-5 h-5" />
+                        <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center shrink-0">
+                            <TrendingUp className="w-4.5 h-4.5" />
                         </div>
                     </div>
-                    <div className="mt-4 pt-3 border-t border-slate-100">
-                        <Link href="/projects?status=in_progress" className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-[#C89445] transition-colors">
-                            <span>Lihat Detail</span><ArrowUpRight className="w-3.5 h-3.5" />
+                    <div className="mt-3 pt-2 border-t border-slate-100">
+                        <Link href="/projects?status=in_progress" className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 hover:text-[#C89445] transition-colors">
+                            <span>Lihat Detail</span><ArrowUpRight className="w-3 h-3" />
                         </Link>
                     </div>
                 </div>
 
                 {/* Card 3: Project Selesai */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
                     <div className="flex items-start justify-between">
                         <div>
                             <span className="text-[10px] font-bold text-slate-800 stat-card-title uppercase tracking-wider leading-tight block">PROJECT SELESAI</span>
-                            <div className="text-3xl font-extrabold text-slate-900 mt-1 leading-none">{kpis.completed_projects}</div>
-                            <span className="text-xs text-slate-500 mt-1 block">Selesai</span>
+                            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-0.5 leading-none">{kpis.completed_projects}</div>
+                            <span className="text-[11px] text-slate-500 mt-1 block">Selesai</span>
                         </div>
-                        <div className="w-11 h-11 rounded-xl bg-purple-50 text-purple-500 flex items-center justify-center shrink-0">
-                            <CheckSquare className="w-5 h-5" />
+                        <div className="w-9 h-9 rounded-lg bg-purple-50 text-purple-500 flex items-center justify-center shrink-0">
+                            <CheckSquare className="w-4.5 h-4.5" />
                         </div>
                     </div>
-                    <div className="mt-4 pt-3 border-t border-slate-100">
-                        <Link href="/projects?status=completed" className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-[#C89445] transition-colors">
-                            <span>Lihat Detail</span><ArrowUpRight className="w-3.5 h-3.5" />
+                    <div className="mt-3 pt-2 border-t border-slate-100">
+                        <Link href="/projects?status=completed" className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 hover:text-[#C89445] transition-colors">
+                            <span>Lihat Detail</span><ArrowUpRight className="w-3 h-3" />
                         </Link>
                     </div>
                 </div>
 
                 {/* Card 4: Total Klien */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
                     <div className="flex items-start justify-between">
                         <div>
                             <span className="text-[10px] font-bold text-slate-800 stat-card-title uppercase tracking-wider leading-tight block">TOTAL KLIEN</span>
-                            <div className="text-3xl font-extrabold text-slate-900 mt-1 leading-none">{kpis.total_clients}</div>
-                            <span className="text-xs text-slate-500 mt-1 block">Klien Terdaftar</span>
+                            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-0.5 leading-none">{kpis.total_clients}</div>
+                            <span className="text-[11px] text-slate-500 mt-1 block">Klien Terdaftar</span>
                         </div>
-                        <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center shrink-0">
-                            <Users className="w-5 h-5" />
+                        <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center shrink-0">
+                            <Users className="w-4.5 h-4.5" />
                         </div>
                     </div>
-                    <div className="mt-4 pt-3 border-t border-slate-100">
-                        <Link href="/clients" className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-[#C89445] transition-colors">
-                            <span>Lihat Detail</span><ArrowUpRight className="w-3.5 h-3.5" />
+                    <div className="mt-3 pt-2 border-t border-slate-100">
+                        <Link href="/clients" className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 hover:text-[#C89445] transition-colors">
+                            <span>Lihat Detail</span><ArrowUpRight className="w-3 h-3" />
                         </Link>
                     </div>
                 </div>
             </div>
 
             {/* 3. Akses Cepat & Ringkasan Keuangan (Sejajar Rata 100%) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch">
                 {/* Akses Cepat (5 cols) */}
-                <div className="lg:col-span-5 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between h-full">
+                <div className="lg:col-span-5 bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full">
                     <div>
-                        <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 mb-3">
                             <div>
-                                <h3 className="text-sm font-bold text-slate-900">Akses Cepat</h3>
-                                <p className="text-xs text-slate-400 mt-0.5">Pintasan aksi untuk mempermudah pekerjaan Anda</p>
+                                <h3 className="text-xs sm:text-sm font-bold text-slate-900">Akses Cepat</h3>
+                                <p className="text-[11px] text-slate-400 mt-0.5">Pintasan aksi untuk mempermudah pekerjaan Anda</p>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             {/* + Klien */}
-                            <Link href="/clients" className="bg-slate-50/70 hover:bg-orange-50/50 p-3.5 rounded-xl border border-slate-200/70 hover:border-orange-200 shadow-2xs transition-all flex items-center gap-3 group">
-                                <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                                    <UserPlus className="w-5 h-5" />
+                            <Link href="/clients" className="bg-slate-50/70 hover:bg-orange-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-orange-200 shadow-2xs transition-all flex items-center gap-2.5 group">
+                                <div className="w-8 h-8 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                    <UserPlus className="w-4 h-4" />
                                 </div>
                                 <div className="min-w-0">
                                     <h4 className="text-xs font-bold text-slate-900 group-hover:text-orange-600 transition-colors truncate">+ Klien</h4>
-                                    <p className="text-[11px] text-slate-500 truncate">Tambah data klien baru</p>
+                                    <p className="text-[10px] text-slate-500 truncate">Tambah data klien baru</p>
                                 </div>
                             </Link>
 
                             {/* + Project */}
-                            <Link href="/projects" className="bg-slate-50/70 hover:bg-blue-50/50 p-3.5 rounded-xl border border-slate-200/70 hover:border-blue-200 shadow-2xs transition-all flex items-center gap-3 group">
-                                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                                    <FolderPlus className="w-5 h-5" />
+                            <Link href="/projects" className="bg-slate-50/70 hover:bg-blue-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-blue-200 shadow-2xs transition-all flex items-center gap-2.5 group">
+                                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                    <FolderPlus className="w-4 h-4" />
                                 </div>
                                 <div className="min-w-0">
                                     <h4 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate">+ Project</h4>
-                                    <p className="text-[11px] text-slate-500 truncate">Buat project baru</p>
+                                    <p className="text-[10px] text-slate-500 truncate">Buat project baru</p>
                                 </div>
                             </Link>
 
                             {/* + Pembayaran */}
-                            <Link href="/finance" className="bg-slate-50/70 hover:bg-emerald-50/50 p-3.5 rounded-xl border border-slate-200/70 hover:border-emerald-200 shadow-2xs transition-all flex items-center gap-3 group">
-                                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                                    <CreditCard className="w-5 h-5" />
+                            <Link href="/finance" className="bg-slate-50/70 hover:bg-emerald-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-emerald-200 shadow-2xs transition-all flex items-center gap-2.5 group">
+                                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                    <CreditCard className="w-4 h-4" />
                                 </div>
                                 <div className="min-w-0">
                                     <h4 className="text-xs font-bold text-slate-900 group-hover:text-emerald-600 transition-colors truncate">+ Pembayaran</h4>
-                                    <p className="text-[11px] text-slate-500 truncate">Catat pembayaran klien</p>
+                                    <p className="text-[10px] text-slate-500 truncate">Catat pembayaran klien</p>
                                 </div>
                             </Link>
 
                             {/* Lihat Laporan */}
-                            <Link href="/reports" className="bg-slate-50/70 hover:bg-purple-50/50 p-3.5 rounded-xl border border-slate-200/70 hover:border-purple-200 shadow-2xs transition-all flex items-center gap-3 group">
-                                <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                                    <BarChart3 className="w-5 h-5" />
+                            <Link href="/reports" className="bg-slate-50/70 hover:bg-purple-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-purple-200 shadow-2xs transition-all flex items-center gap-2.5 group">
+                                <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                    <BarChart3 className="w-4 h-4" />
                                 </div>
                                 <div className="min-w-0">
                                     <h4 className="text-xs font-bold text-slate-900 group-hover:text-purple-600 transition-colors truncate">Lihat Laporan</h4>
-                                    <p className="text-[11px] text-slate-500 truncate">Buka laporan &amp; analitik</p>
+                                    <p className="text-[10px] text-slate-500 truncate">Buka laporan &amp; analitik</p>
                                 </div>
                             </Link>
 
                             {/* Jadwal & Sesi Foto */}
-                            <Link href="/calendar" className="bg-slate-50/70 hover:bg-rose-50/50 p-3.5 rounded-xl border border-slate-200/70 hover:border-rose-200 shadow-2xs transition-all flex items-center gap-3 group">
-                                <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                                    <Calendar className="w-5 h-5" />
+                            <Link href="/calendar" className="bg-slate-50/70 hover:bg-rose-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-rose-200 shadow-2xs transition-all flex items-center gap-2.5 group">
+                                <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                    <Calendar className="w-4 h-4" />
                                 </div>
                                 <div className="min-w-0">
                                     <h4 className="text-xs font-bold text-slate-900 group-hover:text-rose-600 transition-colors truncate">Jadwal &amp; Sesi</h4>
-                                    <p className="text-[11px] text-slate-500 truncate">Kalender agenda photoshoot</p>
+                                    <p className="text-[10px] text-slate-500 truncate">Kalender agenda photoshoot</p>
                                 </div>
                             </Link>
 
                             {/* Master Paket & Layanan */}
-                            <Link href="/master-data/packages" className="bg-slate-50/70 hover:bg-indigo-50/50 p-3.5 rounded-xl border border-slate-200/70 hover:border-indigo-200 shadow-2xs transition-all flex items-center gap-3 group">
-                                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                                    <Database className="w-5 h-5" />
+                            <Link href="/master-data/packages" className="bg-slate-50/70 hover:bg-indigo-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-indigo-200 shadow-2xs transition-all flex items-center gap-2.5 group">
+                                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                    <Database className="w-4 h-4" />
                                 </div>
                                 <div className="min-w-0">
                                     <h4 className="text-xs font-bold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">Master Paket</h4>
-                                    <p className="text-[11px] text-slate-500 truncate">Paket, layanan &amp; harga</p>
+                                    <p className="text-[10px] text-slate-500 truncate">Paket, layanan &amp; harga</p>
                                 </div>
                             </Link>
 
                             {/* Drive & File Links */}
-                            <Link href="/files" className="bg-slate-50/70 hover:bg-cyan-50/50 p-3.5 rounded-xl border border-slate-200/70 hover:border-cyan-200 shadow-2xs transition-all flex items-center gap-3 group">
-                                <div className="w-10 h-10 rounded-xl bg-cyan-50 text-cyan-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                                    <HardDrive className="w-5 h-5" />
+                            <Link href="/files" className="bg-slate-50/70 hover:bg-cyan-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-cyan-200 shadow-2xs transition-all flex items-center gap-2.5 group">
+                                <div className="w-8 h-8 rounded-lg bg-cyan-50 text-cyan-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                    <HardDrive className="w-4 h-4" />
                                 </div>
                                 <div className="min-w-0">
                                     <h4 className="text-xs font-bold text-slate-900 group-hover:text-cyan-600 transition-colors truncate">Files</h4>
-                                    <p className="text-[11px] text-slate-500 truncate">Link cloud drive klien</p>
+                                    <p className="text-[10px] text-slate-500 truncate">Link cloud drive klien</p>
                                 </div>
                             </Link>
 
                             {/* Pengaturan Sistem */}
-                            <Link href="/settings" className="bg-slate-50/70 hover:bg-teal-50/50 p-3.5 rounded-xl border border-slate-200/70 hover:border-teal-200 shadow-2xs transition-all flex items-center gap-3 group">
-                                <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                                    <Settings className="w-5 h-5" />
+                            <Link href="/settings" className="bg-slate-50/70 hover:bg-teal-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-teal-200 shadow-2xs transition-all flex items-center gap-2.5 group">
+                                <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                    <Settings className="w-4 h-4" />
                                 </div>
                                 <div className="min-w-0">
                                     <h4 className="text-xs font-bold text-slate-900 group-hover:text-teal-600 transition-colors truncate">Pengaturan</h4>
-                                    <p className="text-[11px] text-slate-500 truncate">Branding &amp; konfigurasi</p>
+                                    <p className="text-[10px] text-slate-500 truncate">Branding &amp; konfigurasi</p>
                                 </div>
                             </Link>
                         </div>
                     </div>
 
-                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                    <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
                         <span>Pintasan cepat sistem Arams</span>
                         <span className="text-[11px] font-semibold text-[#C89445]">8 Fitur Aktif</span>
                     </div>
                 </div>
 
                 {/* Ringkasan Keuangan (7 cols) */}
-                <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between h-full">
+                <div className="lg:col-span-7 bg-white p-4 sm:p-5 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full">
                     <div>
                         {/* Header */}
-                        <div className="flex items-center justify-between mb-5">
+                        <div className="flex items-center justify-between mb-3">
                             <div>
                                 <span className="text-[11px] font-bold text-slate-800 uppercase tracking-wider block">RINGKASAN KEUANGAN</span>
-                                <span className="text-xs text-slate-400 font-medium">Performa arus kas masuk tahun berjalan</span>
+                                <span className="text-[11px] text-slate-400 font-medium">Performa arus kas masuk tahun berjalan</span>
                             </div>
                             {/* Year Selector Dropdown */}
                             <div className="relative">
                                 <button
                                     type="button"
                                     onClick={() => setYearDropdown(!yearDropdown)}
-                                    className="text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 cursor-pointer flex items-center gap-1.5 transition-colors shadow-2xs"
+                                    className="text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 cursor-pointer flex items-center gap-1.5 transition-colors shadow-2xs"
                                 >
                                     <span>Tahun {activeChartYear}</span>
                                     <ChevronDown className="w-3 h-3 text-slate-400" />
@@ -557,34 +557,34 @@ export default function Dashboard({
                         </div>
 
                         {/* Grid: Left Metrics + Right Full-Height Chart */}
-                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-5 items-stretch min-h-[290px]">
+                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-stretch min-h-[220px]">
                             {/* Left (sm:col-span-4): Total Nilai Project + Sudah & Belum Badges */}
-                            <div className="sm:col-span-4 flex flex-col justify-between gap-3">
+                            <div className="sm:col-span-4 flex flex-col justify-between gap-2.5">
                                 {/* Total Nilai Project */}
-                                <div className="pb-1">
-                                    <span className="text-xs text-slate-400 font-medium block">Total Nilai Project</span>
-                                    <div className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight mt-0.5">
+                                <div>
+                                    <span className="text-[11px] text-slate-400 font-medium block">Total Nilai Project</span>
+                                    <div className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight mt-0.5">
                                         {formatRupiah(financial.total_value)}
                                     </div>
                                 </div>
 
                                 {/* Sudah Diterima */}
-                                <div className="bg-emerald-50/80 border border-emerald-100 p-3.5 rounded-xl flex-1 flex flex-col justify-center">
-                                    <span className="text-[11px] font-semibold text-emerald-800 block">Sudah Diterima</span>
-                                    <p className="text-sm font-bold text-emerald-950 mt-1">{formatRupiah(financial.received)}</p>
-                                    <span className="text-xs font-bold text-emerald-600 mt-0.5 inline-block">{financial.collection_rate}%</span>
+                                <div className="bg-emerald-50/80 border border-emerald-100 p-2.5 rounded-lg flex-1 flex flex-col justify-center">
+                                    <span className="text-[10px] font-semibold text-emerald-800 block">Sudah Diterima</span>
+                                    <p className="text-xs sm:text-sm font-bold text-emerald-950 mt-0.5">{formatRupiah(financial.received)}</p>
+                                    <span className="text-[11px] font-bold text-emerald-600 mt-0.5 inline-block">{financial.collection_rate}%</span>
                                 </div>
 
                                 {/* Belum Diterima */}
-                                <div className="bg-amber-50/80 border border-amber-100 p-3.5 rounded-xl flex-1 flex flex-col justify-center">
-                                    <span className="text-[11px] font-semibold text-amber-800 block">Belum Diterima</span>
-                                    <p className="text-sm font-bold text-amber-950 mt-1">{formatRupiah(financial.outstanding)}</p>
-                                    <span className="text-xs font-bold text-amber-600 mt-0.5 inline-block">{(100 - financial.collection_rate).toFixed(1)}%</span>
+                                <div className="bg-amber-50/80 border border-amber-100 p-2.5 rounded-lg flex-1 flex flex-col justify-center">
+                                    <span className="text-[10px] font-semibold text-amber-800 block">Belum Diterima</span>
+                                    <p className="text-xs sm:text-sm font-bold text-amber-950 mt-0.5">{formatRupiah(financial.outstanding)}</p>
+                                    <span className="text-[11px] font-bold text-amber-600 mt-0.5 inline-block">{(100 - financial.collection_rate).toFixed(1)}%</span>
                                 </div>
                             </div>
 
                             {/* Right: Bar chart component filling full available vertical space */}
-                            <div className="sm:col-span-8 flex flex-col h-full min-h-[290px]">
+                            <div className="sm:col-span-8 flex flex-col h-full min-h-[220px]">
                                 <BarChart
                                     data={financial.monthly_chart.map((bar) => ({
                                         month: bar.month,
@@ -600,19 +600,19 @@ export default function Dashboard({
                         </div>
                     </div>
 
-                    <p className="text-[10px] text-slate-400 mt-4 border-t border-slate-100 pt-2.5">
+                    <p className="text-[10px] text-slate-400 mt-2.5 border-t border-slate-100 pt-2">
                         Grafik menunjukkan total pembayaran yang benar-benar diterima.
                     </p>
                 </div>
             </div>
 
             {/* 4. Project Terbaru + Donut Chart */}
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 mt-2">
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-3.5">
                 {/* Recent Projects Table (8 cols) */}
-                <div className="xl:col-span-8 bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+                <div className="xl:col-span-8 bg-white rounded-xl border border-slate-200/80 shadow-xs overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100">
                         <div>
-                            <h3 className="text-sm font-bold text-slate-900">Project Terbaru</h3>
+                            <h3 className="text-xs sm:text-sm font-bold text-slate-900">Project Terbaru</h3>
                         </div>
                         <Link
                             href="/projects"
@@ -627,24 +627,24 @@ export default function Dashboard({
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead className="px-6">Project</TableHead>
-                                    <TableHead>Klien</TableHead>
-                                    <TableHead>Kategori</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Progres</TableHead>
-                                    <TableHead className="px-6">Deadline</TableHead>
+                                    <TableHead className="px-4 py-2 text-xs">Project</TableHead>
+                                    <TableHead className="py-2 text-xs">Klien</TableHead>
+                                    <TableHead className="py-2 text-xs">Kategori</TableHead>
+                                    <TableHead className="py-2 text-xs">Status</TableHead>
+                                    <TableHead className="py-2 text-xs">Progres</TableHead>
+                                    <TableHead className="px-4 py-2 text-xs">Deadline</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {recent_projects.map((proj) => (
                                     <TableRow key={proj.id} className="hover:bg-slate-50/70 transition-colors">
                                         {/* Project Thumbnail & Name */}
-                                        <TableCell className="px-6">
-                                            <div className="flex items-center gap-3">
+                                        <TableCell className="px-4 py-2">
+                                            <div className="flex items-center gap-2.5">
                                                 <img
                                                     src={proj.thumbnail || 'https://images.unsplash.com/photo-1519741497674-611481863552?w=100&auto=format&fit=crop&q=80'}
                                                     alt={proj.name}
-                                                    className="w-10 h-10 rounded-xl object-cover ring-1 ring-slate-200 shadow-2xs shrink-0"
+                                                    className="w-8.5 h-8.5 rounded-lg object-cover ring-1 ring-slate-200 shadow-2xs shrink-0"
                                                 />
                                                 <div>
                                                     <Link
@@ -653,7 +653,7 @@ export default function Dashboard({
                                                     >
                                                         {proj.name}
                                                     </Link>
-                                                    <span className="text-[11px] text-slate-400 font-mono">
+                                                    <span className="text-[10px] text-slate-400 font-mono">
                                                         {proj.event_date || '15 Agustus 2026'}
                                                     </span>
                                                 </div>
@@ -661,14 +661,14 @@ export default function Dashboard({
                                         </TableCell>
 
                                         {/* Client */}
-                                        <TableCell className="font-semibold text-slate-800">
+                                        <TableCell className="font-semibold text-slate-800 text-xs py-2">
                                             {proj.client?.name || 'Tanpa Klien'}
                                         </TableCell>
 
                                         {/* Category */}
-                                        <TableCell>
+                                        <TableCell className="py-2">
                                             <span
-                                                className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${getCategoryBadgeClass(
+                                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${getCategoryBadgeClass(
                                                     proj.category?.name || 'Umum'
                                                 )}`}
                                             >
@@ -677,9 +677,9 @@ export default function Dashboard({
                                         </TableCell>
 
                                         {/* Status */}
-                                        <TableCell>
+                                        <TableCell className="py-2">
                                             <span
-                                                className={`px-2.5 py-1 rounded-md text-[10px] font-bold ${getStatusBadgeClass(
+                                                className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${getStatusBadgeClass(
                                                     proj.status
                                                 )}`}
                                             >
@@ -688,12 +688,12 @@ export default function Dashboard({
                                         </TableCell>
 
                                         {/* Progress */}
-                                        <TableCell>
+                                        <TableCell className="py-2">
                                             <div className="flex items-center gap-2">
-                                                <span className="text-[11px] font-bold text-slate-700 w-7 font-mono">
+                                                <span className="text-[10px] font-bold text-slate-700 w-6 font-mono">
                                                     {proj.progress}%
                                                 </span>
-                                                <div className="w-20 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                                <div className="w-16 bg-slate-100 rounded-full h-1.5 overflow-hidden">
                                                     <div
                                                         className={`h-full rounded-full transition-all duration-500 ${proj.progress === 100
                                                                 ? 'bg-emerald-500'
@@ -706,8 +706,8 @@ export default function Dashboard({
                                         </TableCell>
 
                                         {/* Deadline */}
-                                        <TableCell className="px-6">
-                                            <span className="text-[11px] text-slate-600 block">{proj.deadline || '05 Juni 2026'}</span>
+                                        <TableCell className="px-4 py-2">
+                                            <span className="text-[10px] text-slate-600 block">{proj.deadline || '05 Juni 2026'}</span>
                                             <span className={`text-[10px] font-bold ${proj.deadline_status === 'completed' ? 'text-emerald-600'
                                                     : proj.deadline_status === 'urgent' ? 'text-amber-600'
                                                         : proj.deadline_status === 'overdue' ? 'text-red-600'
@@ -725,13 +725,13 @@ export default function Dashboard({
                     {/* Mobile View */}
                     <div className="md:hidden divide-y divide-slate-100">
                         {recent_projects.map((proj) => (
-                            <div key={proj.id} className="p-4 bg-white space-y-2.5">
-                                <div className="flex items-start justify-between gap-2.5">
-                                    <div className="flex items-center gap-3">
+                            <div key={proj.id} className="p-3 bg-white space-y-2">
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="flex items-center gap-2.5">
                                         <img
                                             src={proj.thumbnail || 'https://images.unsplash.com/photo-1519741497674-611481863552?w=100&auto=format&fit=crop&q=80'}
                                             alt={proj.name}
-                                            className="w-10 h-10 rounded-xl object-cover ring-1 ring-slate-200 shrink-0 shadow-2xs"
+                                            className="w-8.5 h-8.5 rounded-lg object-cover ring-1 ring-slate-200 shrink-0 shadow-2xs"
                                         />
                                         <div>
                                             <Link
@@ -740,7 +740,7 @@ export default function Dashboard({
                                             >
                                                 {proj.name}
                                             </Link>
-                                            <span className="text-[11px] text-slate-500 block font-medium">
+                                            <span className="text-[10px] text-slate-500 block font-medium">
                                                 {proj.client?.name || 'Tanpa Klien'}
                                             </span>
                                         </div>
@@ -754,7 +754,7 @@ export default function Dashboard({
                                     </span>
                                 </div>
 
-                                <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+                                <div className="flex items-center justify-between text-xs text-slate-500 pt-0.5">
                                     <span
                                         className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${getCategoryBadgeClass(
                                             proj.category?.name || 'Umum'
@@ -762,13 +762,13 @@ export default function Dashboard({
                                     >
                                         {proj.category?.name || 'Umum'}
                                     </span>
-                                    <span className="font-mono text-[11px]">
+                                    <span className="font-mono text-[10px]">
                                         {proj.event_date || '15 Agu 2026'}
                                     </span>
                                 </div>
 
-                                <div className="space-y-1 pt-1">
-                                    <div className="flex items-center justify-between text-[11px]">
+                                <div className="space-y-1 pt-0.5">
+                                    <div className="flex items-center justify-between text-[10px]">
                                         <span className="text-slate-400">Progres ({proj.progress}%)</span>
                                         <span className={`font-bold ${proj.deadline_status === 'completed' ? 'text-emerald-600'
                                                 : proj.deadline_status === 'urgent' ? 'text-amber-600'
@@ -792,15 +792,15 @@ export default function Dashboard({
                 </div>
 
                 {/* Donut Chart (4 cols) */}
-                <div className="xl:col-span-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col">
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
-                        <h3 className="text-sm font-bold text-slate-900">Project Berdasarkan Kategori</h3>
+                <div className="xl:col-span-4 bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex flex-col">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2.5">
+                        <h3 className="text-xs sm:text-sm font-bold text-slate-900">Project Kategori</h3>
                         {/* Category Period Dropdown */}
                         <div className="relative">
                             <button
                                 type="button"
                                 onClick={() => setCategoryDropdown(!categoryDropdown)}
-                                className="text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 cursor-pointer flex items-center gap-1 transition-colors shadow-2xs"
+                                className="text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 px-2 py-1 rounded-lg border border-slate-200 cursor-pointer flex items-center gap-1 transition-colors shadow-2xs"
                             >
                                 <span>{getPeriodLabel(activeCategoryPeriod)}</span>
                                 <ChevronDown className="w-3 h-3 text-slate-400" />
@@ -839,40 +839,40 @@ export default function Dashboard({
                             count: cat.count,
                             color: cat.color,
                         }))}
-                        size={165}
-                        strokeWidth={22}
-                        centerLabel="TOTAL PROJECT"
+                        size={145}
+                        strokeWidth={18}
+                        centerLabel="TOTAL"
                         centerValue={kpis.total_projects}
                         layout="vertical"
                     />
                 </div>
             </div>
 
-            {/* 5. Bottom Section: 4 Spacious 2x2 Grid Cards */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
+            {/* 5. Bottom Section: 4 Grid Cards */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 items-stretch">
                 {/* 1. Deadline Terdekat (Card 1) */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full">
+                <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full">
                     <div className="flex-1 flex flex-col">
-                        <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center border border-amber-100/60">
-                                    <Clock className="w-4 h-4 text-amber-600" />
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 mb-2.5">
+                            <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center border border-amber-100/60">
+                                    <Clock className="w-3.5 h-3.5 text-amber-600" />
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-bold text-slate-900">Deadline Terdekat</h3>
-                                    <p className="text-[11px] text-slate-400">Monitoring tenggat waktu project yang berjalan</p>
+                                    <h3 className="text-xs sm:text-sm font-bold text-slate-900">Deadline Terdekat</h3>
+                                    <p className="text-[10px] text-slate-400">Monitoring tenggat waktu project yang berjalan</p>
                                 </div>
                             </div>
                             <Link
                                 href="/projects"
-                                className="text-xs font-semibold text-slate-600 hover:text-amber-600 transition-colors flex items-center gap-1 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200"
+                                className="text-xs font-semibold text-slate-600 hover:text-amber-600 transition-colors flex items-center gap-1 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200"
                             >
                                 <span>Lihat Semua</span>
-                                <ArrowUpRight className="w-3.5 h-3.5" />
+                                <ArrowUpRight className="w-3 h-3" />
                             </Link>
                         </div>
 
-                        <div className="space-y-2 flex-1">
+                        <div className="space-y-1.5 flex-1">
                             {upcoming_deadlines && upcoming_deadlines.length > 0 ? (
                                 upcoming_deadlines.slice(0, 5).map((dl) => (
                                     <Link
@@ -914,62 +914,62 @@ export default function Dashboard({
                         </div>
                     </div>
 
-                    <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+                    <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
                         <span>Monitoring tenggat waktu</span>
                         <span className="font-semibold text-amber-600">{upcoming_deadlines?.length ?? 0} Project Terpantau</span>
                     </div>
                 </div>
 
                 {/* 2. Top Sumber Klien / Lead Source (Card 2) */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full">
+                <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full">
                     <div className="flex-1 flex flex-col">
-                        <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-8 h-8 rounded-xl bg-purple-50 flex items-center justify-center border border-purple-100/60">
-                                    <Compass className="w-4 h-4 text-purple-600" />
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 mb-2.5">
+                            <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center border border-purple-100/60">
+                                    <Compass className="w-3.5 h-3.5 text-purple-600" />
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-bold text-slate-900">Top Sumber Klien (Lead Source)</h3>
-                                    <p className="text-[11px] text-slate-400">Peringkat saluran akuisisi klien & pendapatan</p>
+                                    <h3 className="text-xs sm:text-sm font-bold text-slate-900">Top Sumber Klien (Lead Source)</h3>
+                                    <p className="text-[10px] text-slate-400">Peringkat saluran akuisisi klien & pendapatan</p>
                                 </div>
                             </div>
                             <Link
                                 href="/reports"
-                                className="text-xs font-semibold text-slate-600 hover:text-purple-600 transition-colors flex items-center gap-1 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200"
+                                className="text-xs font-semibold text-slate-600 hover:text-purple-600 transition-colors flex items-center gap-1 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200"
                             >
                                 <span>Lihat Report</span>
-                                <ArrowUpRight className="w-3.5 h-3.5" />
+                                <ArrowUpRight className="w-3 h-3" />
                             </Link>
                         </div>
 
-                        <div className="space-y-3.5 flex-1 pt-1">
+                        <div className="space-y-2 flex-1 pt-0.5">
                             {displayLeadSources.length > 0 ? (
                                 displayLeadSources.map((src, idx) => (
-                                    <div key={idx} className="space-y-1.5">
+                                    <div key={idx} className="space-y-1">
                                         <div className="flex items-center justify-between text-xs">
-                                            <div className="flex items-center gap-2.5 min-w-0">
-                                                <span className="w-5 h-5 rounded-md bg-amber-50 text-amber-800 font-bold text-xs flex items-center justify-center font-mono border border-amber-200/60 shrink-0">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <span className="w-4.5 h-4.5 rounded-md bg-amber-50 text-amber-800 font-bold text-[10px] flex items-center justify-center font-mono border border-amber-200/60 shrink-0">
                                                     {idx + 1}
                                                 </span>
-                                                <span className="font-bold text-slate-900 text-xs">
+                                                <span className="font-bold text-slate-900 text-xs truncate">
                                                     {src.source}
                                                 </span>
                                             </div>
-                                            <div className="flex items-center gap-3 font-mono shrink-0">
+                                            <div className="flex items-center gap-2 font-mono shrink-0">
                                                 {src.total_revenue > 0 && (
                                                     <span className="text-xs font-extrabold text-slate-900">
                                                         {formatRupiahCompact(src.total_revenue)}
                                                     </span>
                                                 )}
-                                                <span className="text-[11px] font-extrabold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                                                <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                                                     {src.count} Klien
                                                 </span>
-                                                <span className="text-xs text-slate-500 font-bold min-w-[40px] text-right">
+                                                <span className="text-[11px] text-slate-500 font-bold min-w-[36px] text-right">
                                                     {src.percentage}%
                                                 </span>
                                             </div>
                                         </div>
-                                        <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                        <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
                                             <div
                                                 className="h-full rounded-full bg-[#C89445] transition-all duration-500"
                                                 style={{ width: `${src.percentage}%` }}
@@ -978,31 +978,31 @@ export default function Dashboard({
                                     </div>
                                 ))
                             ) : (
-                                <div className="text-center py-6 text-slate-400 text-xs">
+                                <div className="text-center py-5 text-slate-400 text-xs">
                                     Belum ada data sumber klien yang tercatat.
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+                    <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
                         <span>Lead acquisition</span>
                         <span className="font-semibold text-purple-600">{displayLeadSources.length} Sumber Terdata</span>
                     </div>
                 </div>
 
                 {/* 3. Kinerja Project (Card 3) */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full">
+                <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full">
                     <div className="flex-1 flex flex-col justify-between">
                         <div>
-                            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center border border-emerald-100/60">
-                                        <Target className="w-4 h-4 text-emerald-600" />
+                            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 mb-2.5">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 rounded-lg bg-emerald-50 flex items-center justify-center border border-emerald-100/60">
+                                        <Target className="w-3.5 h-3.5 text-emerald-600" />
                                     </div>
                                     <div>
-                                        <h3 className="text-sm font-bold text-slate-900">Kinerja Project</h3>
-                                        <p className="text-[11px] text-slate-400">Distribusi status pengerjaan seluruh project</p>
+                                        <h3 className="text-xs sm:text-sm font-bold text-slate-900">Kinerja Project</h3>
+                                        <p className="text-[10px] text-slate-400">Distribusi status pengerjaan seluruh project</p>
                                     </div>
                                 </div>
                                 {/* Performance Period Dropdown */}
@@ -1010,7 +1010,7 @@ export default function Dashboard({
                                     <button
                                         type="button"
                                         onClick={() => setPerformanceDropdown(!performanceDropdown)}
-                                        className="text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 px-3 py-1 rounded-xl border border-slate-200 cursor-pointer flex items-center gap-1 transition-colors shadow-2xs"
+                                        className="text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 cursor-pointer flex items-center gap-1 transition-colors shadow-2xs"
                                     >
                                         <span>{getPeriodLabel(activePerformancePeriod)}</span>
                                         <ChevronDown className="w-3 h-3 text-slate-400" />
@@ -1042,16 +1042,16 @@ export default function Dashboard({
                             </div>
 
                             {/* 5 Status Progress Bars */}
-                            <div className="space-y-2.5 pt-1">
+                            <div className="space-y-1.5 pt-0.5">
                                 {/* Belum Dimulai */}
                                 <div>
-                                    <div className="flex items-center justify-between text-xs mb-1">
-                                        <span className="font-semibold text-slate-700">Belum Dimulai</span>
-                                        <span className="text-slate-500 font-mono font-bold text-[11px]">
+                                    <div className="flex items-center justify-between text-xs mb-0.5">
+                                        <span className="font-semibold text-slate-700 text-[11px]">Belum Dimulai</span>
+                                        <span className="text-slate-500 font-mono font-bold text-[10px]">
                                             {performance.not_started?.count ?? 0} ({performance.not_started?.percentage ?? 0}%)
                                         </span>
                                     </div>
-                                    <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                    <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
                                         <div
                                             className="h-full rounded-full bg-slate-400 transition-all duration-500"
                                             style={{ width: `${performance.not_started?.percentage ?? 0}%` }}
@@ -1061,13 +1061,13 @@ export default function Dashboard({
 
                                 {/* Sedang Dikerjakan */}
                                 <div>
-                                    <div className="flex items-center justify-between text-xs mb-1">
-                                        <span className="font-semibold text-slate-700">Sedang Dikerjakan</span>
-                                        <span className="text-amber-700 font-mono font-bold text-[11px]">
+                                    <div className="flex items-center justify-between text-xs mb-0.5">
+                                        <span className="font-semibold text-slate-700 text-[11px]">Sedang Dikerjakan</span>
+                                        <span className="text-amber-700 font-mono font-bold text-[10px]">
                                             {performance.in_progress?.count ?? 0} ({performance.in_progress?.percentage ?? 0}%)
                                         </span>
                                     </div>
-                                    <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                    <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
                                         <div
                                             className="h-full rounded-full bg-amber-500 transition-all duration-500"
                                             style={{ width: `${performance.in_progress?.percentage ?? 0}%` }}
@@ -1077,13 +1077,13 @@ export default function Dashboard({
 
                                 {/* Pending / Menunggu */}
                                 <div>
-                                    <div className="flex items-center justify-between text-xs mb-1">
-                                        <span className="font-semibold text-slate-700">Pending / Tertunda</span>
-                                        <span className="text-purple-700 font-mono font-bold text-[11px]">
+                                    <div className="flex items-center justify-between text-xs mb-0.5">
+                                        <span className="font-semibold text-slate-700 text-[11px]">Pending / Tertunda</span>
+                                        <span className="text-purple-700 font-mono font-bold text-[10px]">
                                             {performance.pending?.count ?? 0} ({performance.pending?.percentage ?? 0}%)
                                         </span>
                                     </div>
-                                    <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                    <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
                                         <div
                                             className="h-full rounded-full bg-purple-500 transition-all duration-500"
                                             style={{ width: `${performance.pending?.percentage ?? 0}%` }}
@@ -1093,13 +1093,13 @@ export default function Dashboard({
 
                                 {/* Selesai */}
                                 <div>
-                                    <div className="flex items-center justify-between text-xs mb-1">
-                                        <span className="font-semibold text-slate-700">Selesai</span>
-                                        <span className="text-emerald-700 font-mono font-bold text-[11px]">
+                                    <div className="flex items-center justify-between text-xs mb-0.5">
+                                        <span className="font-semibold text-slate-700 text-[11px]">Selesai</span>
+                                        <span className="text-emerald-700 font-mono font-bold text-[10px]">
                                             {performance.completed?.count ?? 0} ({performance.completed?.percentage ?? 0}%)
                                         </span>
                                     </div>
-                                    <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                    <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
                                         <div
                                             className="h-full rounded-full bg-emerald-500 transition-all duration-500"
                                             style={{ width: `${performance.completed?.percentage ?? 0}%` }}
@@ -1109,13 +1109,13 @@ export default function Dashboard({
 
                                 {/* Batal / Dibatalkan */}
                                 <div>
-                                    <div className="flex items-center justify-between text-xs mb-1">
-                                        <span className="font-semibold text-slate-700">Batal</span>
-                                        <span className="text-rose-600 font-mono font-bold text-[11px]">
+                                    <div className="flex items-center justify-between text-xs mb-0.5">
+                                        <span className="font-semibold text-slate-700 text-[11px]">Batal</span>
+                                        <span className="text-rose-600 font-mono font-bold text-[10px]">
                                             {performance.cancelled?.count ?? 0} ({performance.cancelled?.percentage ?? 0}%)
                                         </span>
                                     </div>
-                                    <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                    <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
                                         <div
                                             className="h-full rounded-full bg-rose-500 transition-all duration-500"
                                             style={{ width: `${performance.cancelled?.percentage ?? 0}%` }}
@@ -1126,19 +1126,19 @@ export default function Dashboard({
                         </div>
 
                         {/* Mini Stat Summary Box */}
-                        <div className="grid grid-cols-2 gap-3 mt-4 pt-3.5 border-t border-slate-100">
-                            <div className="bg-emerald-50/70 border border-emerald-100 p-2.5 rounded-xl text-center">
-                                <span className="text-[10px] text-emerald-800 font-bold uppercase tracking-wider block">Tingkat Sukses</span>
-                                <span className="text-base font-extrabold text-emerald-950 font-mono">{performance.completed?.percentage ?? 0}%</span>
+                        <div className="grid grid-cols-2 gap-2 mt-3 pt-2.5 border-t border-slate-100">
+                            <div className="bg-emerald-50/70 border border-emerald-100 p-2 rounded-lg text-center">
+                                <span className="text-[9px] text-emerald-800 font-bold uppercase tracking-wider block">Tingkat Sukses</span>
+                                <span className="text-sm font-extrabold text-emerald-950 font-mono">{performance.completed?.percentage ?? 0}%</span>
                             </div>
-                            <div className="bg-blue-50/70 border border-blue-100 p-2.5 rounded-xl text-center">
-                                <span className="text-[10px] text-blue-800 font-bold uppercase tracking-wider block">Proyek Aktif</span>
-                                <span className="text-base font-extrabold text-blue-950 font-mono">{kpis.active_projects} Project</span>
+                            <div className="bg-blue-50/70 border border-blue-100 p-2 rounded-lg text-center">
+                                <span className="text-[9px] text-blue-800 font-bold uppercase tracking-wider block">Proyek Aktif</span>
+                                <span className="text-sm font-extrabold text-blue-950 font-mono">{kpis.active_projects} Project</span>
                             </div>
                         </div>
                     </div>
 
-                    <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+                    <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
                         <div className="flex items-center gap-1.5 truncate">
                             <Lightbulb className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                             <span className="truncate">Performa keseluruhan studio</span>
@@ -1148,33 +1148,33 @@ export default function Dashboard({
                 </div>
 
                 {/* 4. Aktivitas Terbaru (Card 4) */}
-                <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full">
+                <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full">
                     <div className="flex-1 flex flex-col">
-                        <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-8 h-8 rounded-xl bg-purple-50 flex items-center justify-center border border-purple-100/60">
-                                    <Activity className="w-4 h-4 text-purple-600" />
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 mb-2.5">
+                            <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center border border-purple-100/60">
+                                    <Activity className="w-3.5 h-3.5 text-purple-600" />
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-bold text-slate-900">Aktivitas Terbaru</h3>
-                                    <p className="text-[11px] text-slate-400">Log operasional & aktivitas tim studio terkini</p>
+                                    <h3 className="text-xs sm:text-sm font-bold text-slate-900">Aktivitas Terbaru</h3>
+                                    <p className="text-[10px] text-slate-400">Log operasional & aktivitas tim studio terkini</p>
                                 </div>
                             </div>
                             <Link
                                 href="/activity-log"
-                                className="text-xs font-semibold text-slate-600 hover:text-purple-600 transition-colors flex items-center gap-1 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200"
+                                className="text-xs font-semibold text-slate-600 hover:text-purple-600 transition-colors flex items-center gap-1 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200"
                             >
                                 <span>Lihat Semua</span>
-                                <ArrowUpRight className="w-3.5 h-3.5" />
+                                <ArrowUpRight className="w-3 h-3" />
                             </Link>
                         </div>
 
-                        <div className="space-y-2 flex-1">
+                        <div className="space-y-1.5 flex-1">
                             {recent_activities && recent_activities.length > 0 ? (
                                 recent_activities.slice(0, 5).map((act) => (
                                     <div
                                         key={act.id}
-                                        className="flex items-start gap-3 p-2 rounded-xl hover:bg-slate-50/80 transition-colors"
+                                        className="flex items-start gap-2.5 p-1.5 rounded-lg hover:bg-slate-50/80 transition-colors"
                                     >
                                         <img
                                             src={
@@ -1182,10 +1182,10 @@ export default function Dashboard({
                                                 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'
                                             }
                                             alt={act.causer_name}
-                                            className="w-8 h-8 rounded-full object-cover ring-2 ring-slate-100 shrink-0 mt-0.5"
+                                            className="w-7 h-7 rounded-full object-cover ring-1 ring-slate-100 shrink-0 mt-0.5"
                                         />
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center justify-between gap-1.5">
                                                 <span className="text-xs font-bold text-slate-900 truncate">
                                                     {act.causer_name}
                                                 </span>
@@ -1193,21 +1193,21 @@ export default function Dashboard({
                                                     {act.time_ago || act.created_at}
                                                 </span>
                                             </div>
-                                            <p className="text-xs text-slate-600 leading-snug line-clamp-2 mt-0.5">
+                                            <p className="text-[11px] text-slate-600 leading-snug line-clamp-2 mt-0.5">
                                                 {act.description}
                                             </p>
                                         </div>
                                     </div>
                                 ))
                             ) : (
-                                <div className="text-center py-6 text-slate-400 text-xs">
+                                <div className="text-center py-5 text-slate-400 text-xs">
                                     Belum ada aktivitas tercatat.
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+                    <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
                         <span>Log otomatis sistem</span>
                         <span className="font-semibold text-slate-700">{recent_activities?.length ?? 0} Aktivitas Terkini</span>
                     </div>

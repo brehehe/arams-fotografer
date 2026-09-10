@@ -27,7 +27,7 @@ class ProcessClientIntake
     /**
      * Process incoming client booking intake within a database transaction.
      */
-    public function execute(array $validated): Project
+    public function execute(array $validated): Client|Project
     {
         return DB::transaction(function () use ($validated) {
             // 0. Sanitize foreign UUID fields
@@ -70,6 +70,23 @@ class ProcessClientIntake
 
             $formType = $category?->form_type ?? 'wedding';
             $catData = !empty($validated['category_data']) && is_array($validated['category_data']) ? $validated['category_data'] : [];
+
+            // 1.5 Fetch & Resolve Package
+            $package = null;
+            $packageId = null;
+            $price = 0;
+            $rawPackageId = $validated['package_id'] ?? null;
+            if (!empty($rawPackageId)) {
+                if (Str::isUuid($rawPackageId)) {
+                    $package = Package::find($rawPackageId);
+                } else {
+                    $package = Package::whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($rawPackageId) . '%'])->first();
+                }
+                if ($package) {
+                    $packageId = $package->id;
+                    $price = (float) ($package->base_price ?? $package->price ?? 0);
+                }
+            }
 
             // 2. Determine Client Name & Type based on Category Form Type
             $children = !empty($validated['children']) && is_array($validated['children'])
@@ -177,6 +194,25 @@ class ProcessClientIntake
 
             // Format rich notes from form
             $notesParts = [];
+            if ($category) {
+                $notesParts[] = "Kategori Layanan: {$category->name}";
+            }
+            if ($package) {
+                $priceFormatted = number_format($price, 0, ',', '.');
+                $notesParts[] = "Pilihan Paket: {$package->name}" . ($price > 0 ? " (Rp {$priceFormatted})" : "");
+            }
+            if (!empty($validated['event_date'])) {
+                $notesParts[] = "Rencana Tanggal Acara: {$validated['event_date']}";
+            }
+            if (!empty($validated['event_time'])) {
+                $notesParts[] = "Waktu Acara: {$validated['event_time']}";
+            }
+            if (!empty($validated['location'])) {
+                $notesParts[] = "Lokasi: {$validated['location']}";
+            }
+            if (!empty($validated['reception_location']) && $validated['reception_location'] !== ($validated['location'] ?? '')) {
+                $notesParts[] = "Lokasi Resepsi: {$validated['reception_location']}";
+            }
             if (!empty($children)) {
                 foreach ($children as $idx => $ch) {
                     $num = $idx + 1;
@@ -316,6 +352,14 @@ class ProcessClientIntake
                 }
             }
 
+            /*
+             * =========================================================================
+             * FITUR PEMBUATAN PROJECT & INVOICE OTOMATIS (DI-NONAKTIFKAN / DI-KOMEN)
+             * =========================================================================
+             * Saat form-klien disubmit, sistem hanya mencatat sebagai pendaftaran baru
+             * (Lead & Catatan Klien), tanpa langsung membuat Project baru dan Invoice.
+             * Jika nanti ingin diaktifkan kembali, cukup buka blok komentar di bawah ini.
+             *
             // 4. Prepare Project Info based on form_type
             $categoryPrefix = $category->name ?? 'Project';
             if ($formType === 'wedding') {
@@ -395,14 +439,15 @@ class ProcessClientIntake
                     'total' => $price,
                 ]);
             }
+            */
 
             // 6. Log Activity
             activity()
-                ->performedOn($project)
+                ->performedOn($client)
                 ->event('client_intake')
-                ->log("Form Booking Online diterima dari {$clientName} (Project: {$projectNumber})");
+                ->log("Pendaftaran Klien Baru (Catatan Daftar Baru) diterima dari {$clientName}");
 
-            return $project;
+            return $client;
         });
     }
 }

@@ -32,6 +32,12 @@ class SettingController extends Controller
         }
 
         $params = [];
+        if ($tab === 'portfolio_categories' || $request->input('sub') === 'portfolio_categories') {
+            return redirect()->route('master-data.portfolio-categories.index');
+        }
+        if ($tab === 'portfolios' || $request->input('sub') === 'portfolios') {
+            return redirect()->route('master-data.portfolios.index');
+        }
         if (in_array($tab, ['company', 'general', 'appearance', 'login_theme', 'backup'])) {
             $params['sub'] = $tab;
         } elseif ($request->has('sub')) {
@@ -41,8 +47,25 @@ class SettingController extends Controller
         return redirect()->route('setting.admin', $params);
     }
 
-    public function admin(): Response
+    public function admin(Request $request): Response|RedirectResponse
     {
+        $sub = $request->input('sub');
+        if ($sub === 'portfolio_categories') {
+            return redirect()->route('master-data.portfolio-categories.index');
+        }
+        if ($sub === 'portfolios') {
+            return redirect()->route('master-data.portfolios.index');
+        }
+        if ($sub === 'promo_slides') {
+            return redirect()->route('master-data.promo-slides.index');
+        }
+        if ($sub === 'testimonials') {
+            return redirect()->route('master-data.testimonials.index');
+        }
+        if ($sub === 'instagram_posts') {
+            return redirect()->route('master-data.instagram-posts.index');
+        }
+
         $data = $this->settingService->getSettingsData();
 
         return Inertia::render('settings/Admin', [

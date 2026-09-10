@@ -2080,7 +2080,7 @@ export default function ClientDetail({
         <>
             <Head title={`${client.name || 'Detail Client'} - Arams Photography`} />
 
-            <div className="space-y-5 pb-12 text-slate-800 w-full max-w-full">
+            <div className="space-y-4 pb-2 text-slate-800 w-full max-w-full">
 
                 {/* 1. TOP HERO PROFILE CARD (FULL-WIDTH 12 COLS - LUXURY BALANCED BANNER) */}
                 <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs">

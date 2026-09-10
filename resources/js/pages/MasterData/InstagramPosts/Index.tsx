@@ -198,7 +198,7 @@ export default function InstagramPostsIndex({
     };
 
     return (
-        <div className="w-full max-w-full space-y-6 pb-20">
+        <div className="w-full max-w-full space-y-4 pb-2">
             <Head title="Feed Instagram - Setting Admin" />
 
             {/* ── 1. HEADER UTAMA PENGATURAN ADMIN (Sama persis dengan Admin.tsx) ── */}

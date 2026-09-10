@@ -210,7 +210,7 @@ export default function UsersIndex({
     };
 
     return (
-        <div className="space-y-8 pb-12">
+        <div className="space-y-4 pb-2">
             <Head title="Users - Arams Pictures" />
 
             {/* ── HEADER TITLE & CTA ─────────────────────────────────────────── */}

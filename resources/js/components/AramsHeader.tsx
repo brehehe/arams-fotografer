@@ -356,6 +356,20 @@ export default function AramsHeader({
                 { label: 'Admin', href: '/setting/admin' },
                 // { label: 'Instagram Kami' },
             ];
+        } else if (pageUrl.startsWith('/master-data/portfolio-categories')) {
+            effectiveBreadcrumbs = [
+                { label: 'Dashboard', href: '/dashboard' },
+                { label: 'Setting', href: '/setting/admin' },
+                { label: 'Admin', href: '/setting/admin' },
+                // { label: 'Kategori Portofolio' },
+            ];
+        } else if (pageUrl.startsWith('/master-data/portfolios')) {
+            effectiveBreadcrumbs = [
+                { label: 'Dashboard', href: '/dashboard' },
+                { label: 'Setting', href: '/setting/admin' },
+                { label: 'Admin', href: '/setting/admin' },
+                // { label: 'Portofolio' },
+            ];
         } else if (pageUrl.startsWith('/master-data/workflows')) {
             effectiveBreadcrumbs = [
                 { label: 'Dashboard', href: '/dashboard' },

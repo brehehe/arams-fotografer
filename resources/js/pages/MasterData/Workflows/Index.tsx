@@ -818,7 +818,7 @@ export default function WorkflowIndex({
     };
 
     return (
-        <div className="w-full max-w-full space-y-6 pb-20">
+        <div className="w-full max-w-full space-y-4 pb-2">
             <Head title="Workflow & Template Progress - Master Data" />
 
             {/* ── 1. HEADER TITLE & ACTIONS SECTION ────────────────────────────────── */}

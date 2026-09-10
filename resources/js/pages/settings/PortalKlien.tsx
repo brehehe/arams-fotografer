@@ -1,21 +1,20 @@
-import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import {
     Globe,
-    RefreshCw,
     RotateCcw,
     Save,
     Sparkles,
-    Check,
-    CheckCircle2,
     Eye,
     ExternalLink,
-    LayoutDashboard,
-    Briefcase,
     Palette,
+    Shield,
+    Star,
+    CheckCircle2,
+    SlidersHorizontal,
 } from 'lucide-react';
-import { toast } from '@/components/ui/sonner';
+import React, { useState } from 'react';
 import { GradientBuilder, ColorSettingRow } from '@/components/settings/ThemeControls';
+import { toast } from '@/components/ui/sonner';
 
 interface PortalKlienProps {
     settings?: any;
@@ -24,14 +23,24 @@ interface PortalKlienProps {
 
 export default function PortalKlienPage({ settings = {}, settingsMap = {} }: PortalKlienProps) {
     const getVal = (key: string, def: string = '') => {
-        if (settingsMap && settingsMap[key] !== undefined) return settingsMap[key];
-        if (!settings) return def;
+        if (settingsMap && settingsMap[key] !== undefined) {
+            return settingsMap[key];
+        }
+
+        if (!settings) {
+            return def;
+        }
+
         for (const group in settings) {
             if (Array.isArray(settings[group])) {
                 const found = settings[group].find((s: any) => s.key === key);
-                if (found && found.value) return found.value;
+
+                if (found && found.value) {
+                    return found.value;
+                }
             }
         }
+
         return def;
     };
 
@@ -56,8 +65,35 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
         portal_hero_bg: getVal('portal_hero_bg', '#3C0E0E'),
         portal_hero_gradient: getVal('portal_hero_gradient', 'linear-gradient(135deg, #3C0E0E 0%, #2A0909 100%)'),
         portal_hero_text_color: getVal('portal_hero_text_color', '#FFFFFF'),
+
+        // Detail Bar Keunggulan Atas
         portal_footer_bg: getVal('portal_footer_bg', '#3C0E0E'),
-        portal_footer_text: getVal('portal_footer_text', '#F4EBE4'),
+        portal_footer_badges_gradient: getVal('portal_footer_badges_gradient', ''),
+        portal_footer_text: getVal('portal_footer_text', '#FFFFFF'),
+        portal_footer_badges_title: getVal('portal_footer_badges_title', 'Kenapa Memilih Arams Pictures?'),
+        portal_footer_badges_subtitle: getVal('portal_footer_badges_subtitle', 'Premium Client Experience'),
+
+        // Detail Footer Utama Bagian Bawah
+        portal_footer_main_bg: getVal('portal_footer_main_bg', '#F4EBE4'),
+        portal_footer_main_text: getVal('portal_footer_main_text', '#334155'),
+        portal_footer_heading_color: getVal('portal_footer_heading_color', '#3C0E0E'),
+        portal_footer_muted_color: getVal('portal_footer_muted_color', '#7A6666'),
+        portal_footer_item_bg: getVal('portal_footer_item_bg', '#F4EBE4'),
+        portal_footer_item_icon_color: getVal('portal_footer_item_icon_color', '#3C0E0E'),
+        portal_footer_border_color: getVal('portal_footer_border_color', '#E8DDD5'),
+        portal_footer_tagline: getVal('portal_footer_tagline', 'Capturing Moments, Creating Timeless Memories'),
+        portal_footer_contact_title: getVal('portal_footer_contact_title', 'Hubungi Kami'),
+        portal_footer_contact_subtitle: getVal('portal_footer_contact_subtitle', 'Kami siap membantu Anda kapan saja.'),
+        portal_footer_social_title: getVal('portal_footer_social_title', 'Ikuti Kami'),
+        portal_footer_social_subtitle: getVal('portal_footer_social_subtitle', 'Ikuti sosial media kami untuk update terbaru.'),
+        portal_footer_copyright: getVal('portal_footer_copyright', '© 2026 Arams Photography. All rights reserved.'),
+
+        // Tombol Portal
+        portal_btn_bg: getVal('portal_btn_bg', '#FFFFFF'),
+        portal_btn_text: getVal('portal_btn_text', '#3C0E0E'),
+        portal_btn_border: getVal('portal_btn_border', '#FFFFFF'),
+        portal_btn_hover_bg: getVal('portal_btn_hover_bg', '#3C0E0E'),
+        portal_btn_hover_text: getVal('portal_btn_hover_text', '#FFFFFF'),
     });
 
     const [portalPreviewTab, setPortalPreviewTab] = useState<'dashboard' | 'project_detail'>('dashboard');
@@ -87,7 +123,23 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
             portal_hero_gradient: 'linear-gradient(135deg, #3C0E0E 0%, #2A0909 100%)',
             portal_hero_text_color: '#FFFFFF',
             portal_footer_bg: '#3C0E0E',
-            portal_footer_text: '#F4EBE4',
+            portal_footer_badges_gradient: '',
+            portal_footer_text: '#FFFFFF',
+            portal_footer_badges_title: 'Kenapa Memilih Arams Pictures?',
+            portal_footer_badges_subtitle: 'Premium Client Experience',
+            portal_footer_main_bg: '#F4EBE4',
+            portal_footer_main_text: '#334155',
+            portal_footer_heading_color: '#3C0E0E',
+            portal_footer_muted_color: '#7A6666',
+            portal_footer_item_bg: '#F4EBE4',
+            portal_footer_item_icon_color: '#3C0E0E',
+            portal_footer_border_color: '#E8DDD5',
+            portal_footer_tagline: 'Capturing Moments, Creating Timeless Memories',
+            portal_footer_contact_title: 'Hubungi Kami',
+            portal_footer_contact_subtitle: 'Kami siap membantu Anda kapan saja.',
+            portal_footer_social_title: 'Ikuti Kami',
+            portal_footer_social_subtitle: 'Ikuti sosial media kami untuk update terbaru.',
+            portal_footer_copyright: '© 2026 Arams Photography. All rights reserved.',
             badge: 'Official Default',
         },
         {
@@ -112,8 +164,24 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
             portal_hero_bg: '#1C132E',
             portal_hero_gradient: 'linear-gradient(135deg, #1C132E 0%, #0E091E 100%)',
             portal_hero_text_color: '#FFFFFF',
-            portal_footer_bg: '#FFFFFF',
-            portal_footer_text: '#475569',
+            portal_footer_bg: '#1C132E',
+            portal_footer_badges_gradient: '',
+            portal_footer_text: '#FFFFFF',
+            portal_footer_badges_title: 'Kenapa Memilih Arams Pictures?',
+            portal_footer_badges_subtitle: 'Premium Client Experience',
+            portal_footer_main_bg: '#FDFBF7',
+            portal_footer_main_text: '#334155',
+            portal_footer_heading_color: '#1C132E',
+            portal_footer_muted_color: '#64748B',
+            portal_footer_item_bg: '#FDFBF7',
+            portal_footer_item_icon_color: '#C98922',
+            portal_footer_border_color: '#E2E8F0',
+            portal_footer_tagline: 'Capturing Moments, Creating Timeless Memories',
+            portal_footer_contact_title: 'Hubungi Kami',
+            portal_footer_contact_subtitle: 'Kami siap membantu Anda kapan saja.',
+            portal_footer_social_title: 'Ikuti Kami',
+            portal_footer_social_subtitle: 'Ikuti sosial media kami untuk update terbaru.',
+            portal_footer_copyright: '© 2026 Arams Photography. All rights reserved.',
             badge: 'Master Gold',
         },
         {
@@ -138,8 +206,24 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
             portal_hero_bg: '#2D1B69',
             portal_hero_gradient: 'linear-gradient(135deg, #2D1B69 0%, #130D24 100%)',
             portal_hero_text_color: '#FFFFFF',
-            portal_footer_bg: '#130D24',
-            portal_footer_text: '#94A3B8',
+            portal_footer_bg: '#0B0616',
+            portal_footer_badges_gradient: '',
+            portal_footer_text: '#FFFFFF',
+            portal_footer_badges_title: 'Kenapa Memilih Arams Pictures?',
+            portal_footer_badges_subtitle: 'Premium Client Experience',
+            portal_footer_main_bg: '#130D24',
+            portal_footer_main_text: '#CBD5E1',
+            portal_footer_heading_color: '#FFFFFF',
+            portal_footer_muted_color: '#94A3B8',
+            portal_footer_item_bg: '#1C132E',
+            portal_footer_item_icon_color: '#E5A93C',
+            portal_footer_border_color: 'rgba(255, 255, 255, 0.12)',
+            portal_footer_tagline: 'Capturing Moments, Creating Timeless Memories',
+            portal_footer_contact_title: 'Hubungi Kami',
+            portal_footer_contact_subtitle: 'Kami siap membantu Anda kapan saja.',
+            portal_footer_social_title: 'Ikuti Kami',
+            portal_footer_social_subtitle: 'Ikuti sosial media kami untuk update terbaru.',
+            portal_footer_copyright: '© 2026 Arams Photography. All rights reserved.',
             badge: 'Dark Cinema',
         },
         {
@@ -164,8 +248,24 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
             portal_hero_bg: '#0F172A',
             portal_hero_gradient: 'linear-gradient(135deg, #334155 0%, #0F172A 100%)',
             portal_hero_text_color: '#FFFFFF',
-            portal_footer_bg: '#FFFFFF',
-            portal_footer_text: '#475569',
+            portal_footer_bg: '#0F172A',
+            portal_footer_badges_gradient: '',
+            portal_footer_text: '#FFFFFF',
+            portal_footer_badges_title: 'Kenapa Memilih Arams Pictures?',
+            portal_footer_badges_subtitle: 'Premium Client Experience',
+            portal_footer_main_bg: '#F8F9FA',
+            portal_footer_main_text: '#334155',
+            portal_footer_heading_color: '#0F172A',
+            portal_footer_muted_color: '#64748B',
+            portal_footer_item_bg: '#FFFFFF',
+            portal_footer_item_icon_color: '#0F172A',
+            portal_footer_border_color: '#E2E8F0',
+            portal_footer_tagline: 'Capturing Moments, Creating Timeless Memories',
+            portal_footer_contact_title: 'Hubungi Kami',
+            portal_footer_contact_subtitle: 'Kami siap membantu Anda kapan saja.',
+            portal_footer_social_title: 'Ikuti Kami',
+            portal_footer_social_subtitle: 'Ikuti sosial media kami untuk update terbaru.',
+            portal_footer_copyright: '© 2026 Arams Photography. All rights reserved.',
             badge: 'Minimalist',
         },
         {
@@ -191,7 +291,23 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
             portal_hero_gradient: 'linear-gradient(135deg, #1E3A8A 0%, #0A192F 100%)',
             portal_hero_text_color: '#FFFFFF',
             portal_footer_bg: '#0A192F',
-            portal_footer_text: '#94A3B8',
+            portal_footer_badges_gradient: '',
+            portal_footer_text: '#FFFFFF',
+            portal_footer_badges_title: 'Kenapa Memilih Arams Pictures?',
+            portal_footer_badges_subtitle: 'Premium Client Experience',
+            portal_footer_main_bg: '#F0F4F8',
+            portal_footer_main_text: '#1E293B',
+            portal_footer_heading_color: '#0A192F',
+            portal_footer_muted_color: '#64748B',
+            portal_footer_item_bg: '#FFFFFF',
+            portal_footer_item_icon_color: '#2563EB',
+            portal_footer_border_color: '#DBEAFE',
+            portal_footer_tagline: 'Capturing Moments, Creating Timeless Memories',
+            portal_footer_contact_title: 'Hubungi Kami',
+            portal_footer_contact_subtitle: 'Kami siap membantu Anda kapan saja.',
+            portal_footer_social_title: 'Ikuti Kami',
+            portal_footer_social_subtitle: 'Ikuti sosial media kami untuk update terbaru.',
+            portal_footer_copyright: '© 2026 Arams Photography. All rights reserved.',
             badge: 'Royal Navy',
         },
         {
@@ -217,7 +333,23 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
             portal_hero_gradient: 'linear-gradient(135deg, #065F46 0%, #064E3B 100%)',
             portal_hero_text_color: '#FFFFFF',
             portal_footer_bg: '#064E3B',
-            portal_footer_text: '#A7F3D0',
+            portal_footer_badges_gradient: '',
+            portal_footer_text: '#FFFFFF',
+            portal_footer_badges_title: 'Kenapa Memilih Arams Pictures?',
+            portal_footer_badges_subtitle: 'Premium Client Experience',
+            portal_footer_main_bg: '#F0FDF4',
+            portal_footer_main_text: '#065F46',
+            portal_footer_heading_color: '#064E3B',
+            portal_footer_muted_color: '#6EE7B7',
+            portal_footer_item_bg: '#FFFFFF',
+            portal_footer_item_icon_color: '#059669',
+            portal_footer_border_color: '#D1FAE5',
+            portal_footer_tagline: 'Capturing Moments, Creating Timeless Memories',
+            portal_footer_contact_title: 'Hubungi Kami',
+            portal_footer_contact_subtitle: 'Kami siap membantu Anda kapan saja.',
+            portal_footer_social_title: 'Ikuti Kami',
+            portal_footer_social_subtitle: 'Ikuti sosial media kami untuk update terbaru.',
+            portal_footer_copyright: '© 2026 Arams Photography. All rights reserved.',
             badge: 'Emerald',
         },
     ];
@@ -245,19 +377,38 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
             portal_hero_gradient: preset.portal_hero_gradient,
             portal_hero_text_color: preset.portal_hero_text_color,
             portal_footer_bg: preset.portal_footer_bg,
+            portal_footer_badges_gradient: preset.portal_footer_badges_gradient,
             portal_footer_text: preset.portal_footer_text,
+            portal_footer_badges_title: preset.portal_footer_badges_title,
+            portal_footer_badges_subtitle: preset.portal_footer_badges_subtitle,
+            portal_footer_main_bg: preset.portal_footer_main_bg,
+            portal_footer_main_text: preset.portal_footer_main_text,
+            portal_footer_heading_color: preset.portal_footer_heading_color,
+            portal_footer_muted_color: preset.portal_footer_muted_color,
+            portal_footer_item_bg: preset.portal_footer_item_bg,
+            portal_footer_item_icon_color: preset.portal_footer_item_icon_color,
+            portal_footer_border_color: preset.portal_footer_border_color,
+            portal_footer_tagline: preset.portal_footer_tagline,
+            portal_footer_contact_title: preset.portal_footer_contact_title,
+            portal_footer_contact_subtitle: preset.portal_footer_contact_subtitle,
+            portal_footer_social_title: preset.portal_footer_social_title,
+            portal_footer_social_subtitle: preset.portal_footer_social_subtitle,
+            portal_footer_copyright: preset.portal_footer_copyright,
         });
         toast.info(`Preset Portal "${preset.name}" Dipilih. Klik Simpan untuk menerapkan.`);
     };
 
     const handleSave = (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
+        if (e) {
+            e.preventDefault();
+        }
+
         setSaving(true);
         router.post('/settings', { settings: portalForm }, {
             preserveScroll: true,
             onSuccess: () => {
                 setSaving(false);
-                toast.success('Pengaturan Tema & Tampilan Portal Klien Berhasil Disimpan!');
+                toast.success('Pengaturan Tema & Footer Portal Klien Berhasil Disimpan!');
             },
             onError: () => {
                 setSaving(false);
@@ -291,21 +442,36 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
                 portal_hero_gradient: defaultPreset.portal_hero_gradient,
                 portal_hero_text_color: defaultPreset.portal_hero_text_color,
                 portal_footer_bg: defaultPreset.portal_footer_bg,
+                portal_footer_badges_gradient: defaultPreset.portal_footer_badges_gradient,
                 portal_footer_text: defaultPreset.portal_footer_text,
+                portal_footer_badges_title: defaultPreset.portal_footer_badges_title,
+                portal_footer_badges_subtitle: defaultPreset.portal_footer_badges_subtitle,
+                portal_footer_main_bg: defaultPreset.portal_footer_main_bg,
+                portal_footer_main_text: defaultPreset.portal_footer_main_text,
+                portal_footer_heading_color: defaultPreset.portal_footer_heading_color,
+                portal_footer_muted_color: defaultPreset.portal_footer_muted_color,
+                portal_footer_item_bg: defaultPreset.portal_footer_item_bg,
+                portal_footer_item_icon_color: defaultPreset.portal_footer_item_icon_color,
+                portal_footer_border_color: defaultPreset.portal_footer_border_color,
+                portal_footer_tagline: defaultPreset.portal_footer_tagline,
+                portal_footer_contact_title: defaultPreset.portal_footer_contact_title,
+                portal_footer_contact_subtitle: defaultPreset.portal_footer_contact_subtitle,
+                portal_footer_social_title: defaultPreset.portal_footer_social_title,
+                portal_footer_social_subtitle: defaultPreset.portal_footer_social_subtitle,
+                portal_footer_copyright: defaultPreset.portal_footer_copyright,
             },
         }, {
             preserveScroll: true,
             onSuccess: () => {
-                toast.success('Tema Portal Klien Berhasil Direset ke Default');
+                toast.success('Tema & Footer Portal Klien Berhasil Direset ke Default');
             },
         });
     };
 
     return (
-        <div className="space-y-6 pb-16 w-full max-w-full">
+        <div className="space-y-4 pb-2 w-full max-w-full">
             <Head title="Kustomisasi Portal Klien - Arams Photography" />
 
-            {/* Header Title & Subtitle */}
             {/* Header Title & Subtitle */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
                 <div>
@@ -313,7 +479,7 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
                         Pengaturan Portal Klien
                     </h1>
                     <p className="text-sm mt-0.5 text-slate-500">
-                        Kustomisasi tema visual, navigasi, palet warna, dan live preview portal klien.
+                        Kustomisasi tema visual, navigasi, detail bar keunggulan, dan footer bawah portal klien.
                     </p>
                 </div>
             </div>
@@ -323,14 +489,14 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
                 <div>
                     <div className="flex items-center gap-2 flex-wrap">
                         <h2 className="text-base font-bold text-slate-900">
-                            Kustomisasi Tema &amp; Tampilan Portal Klien
+                            Kustomisasi Tema, Bar Keunggulan &amp; Footer Portal Klien
                         </h2>
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 text-[#C98922] border border-amber-200 uppercase tracking-wider">
                             Client Experience
                         </span>
                     </div>
                     <p className="text-xs text-slate-500 mt-1 max-w-2xl">
-                        Sesuaikan warna latar belakang, navbar, banner hero selamat datang, kartu konten, warna teks, tipografi (font heading &amp; body), hingga tombol galeri yang dilihat oleh klien saat membuka portal.
+                        Sesuaikan warna latar belakang, navbar, hero banner, bar keunggulan atas, serta pecahkan detail footer bawah (background #F4EBE4, kontak, media sosial, dan hak cipta).
                     </p>
                 </div>
                 <div className="flex items-center gap-2.5 flex-wrap">
@@ -346,7 +512,7 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
                         type="button"
                         onClick={handleSave}
                         disabled={saving}
-                        style={{ backgroundColor: portalForm.portal_primary_accent || '#4A151B' }}
+                        style={{ backgroundColor: portalForm.portal_primary_accent || '#3C0E0E' }}
                         className="px-4 py-2 rounded-xl text-xs font-bold text-white shadow-xs hover:opacity-95 transition-all flex items-center gap-1.5 cursor-pointer"
                     >
                         <Save className="w-3.5 h-3.5" />
@@ -364,7 +530,7 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
                             <span>Pilihan Preset Tema Portal Klien</span>
                         </h3>
                         <p className="text-[11px] text-slate-500 mt-0.5">
-                            Klik salah satu preset di bawah untuk menerapkan palet warna &amp; tipografi yang telah dikurasi.
+                            Klik salah satu preset di bawah untuk menerapkan palet warna, bar keunggulan &amp; footer yang telah dikurasi.
                         </p>
                     </div>
                 </div>
@@ -372,6 +538,7 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 pt-1">
                     {portalPresets.map((preset) => {
                         const isSelected = portalForm.portal_preset === preset.id;
+
                         return (
                             <button
                                 key={preset.id}
@@ -379,7 +546,7 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
                                 onClick={() => handleApplyPortalPreset(preset)}
                                 className={`text-left p-3.5 rounded-2xl border transition-all cursor-pointer relative flex flex-col justify-between space-y-2.5 ${
                                     isSelected
-                                        ? 'border-[#4A151B] bg-rose-50/40 ring-2 ring-[#4A151B]/20 shadow-xs'
+                                        ? 'border-[#3C0E0E] bg-rose-50/40 ring-2 ring-[#3C0E0E]/20 shadow-xs'
                                         : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
                                 }`}
                             >
@@ -388,7 +555,7 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
                                         {preset.badge}
                                     </span>
                                     {isSelected && (
-                                        <span className="w-4 h-4 rounded-full bg-[#4A151B] text-white flex items-center justify-center text-[10px] font-bold">
+                                        <span className="w-4 h-4 rounded-full bg-[#3C0E0E] text-white flex items-center justify-center text-[10px] font-bold">
                                             ✓
                                         </span>
                                     )}
@@ -402,7 +569,7 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
                                 <div className="flex items-center gap-1.5 pt-2 border-t border-slate-100">
                                     <span className="w-4 h-4 rounded-full border border-slate-300 shadow-2xs" style={{ backgroundColor: preset.portal_nav_bg }} title="Navbar" />
                                     <span className="w-4 h-4 rounded-full border border-slate-300 shadow-2xs" style={{ backgroundColor: preset.portal_primary_accent }} title="Aksen Utama" />
-                                    <span className="w-4 h-4 rounded-full border border-slate-300 shadow-2xs" style={{ backgroundColor: preset.portal_bg_color }} title="Latar Belakang" />
+                                    <span className="w-4 h-4 rounded-full border border-slate-300 shadow-2xs" style={{ backgroundColor: preset.portal_footer_main_bg }} title="Footer Bawah" />
                                 </div>
                             </button>
                         );
@@ -413,19 +580,26 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
             {/* 2-Column: Form Customizer & Live Preview */}
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
                 {/* Form Controls (7 cols) */}
-                <form onSubmit={handleSave} className="xl:col-span-7 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-6">
-                    <div>
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-3 flex items-center gap-2">
-                            <Palette className="w-4 h-4 text-indigo-600" />
-                            <span>1. Warna &amp; Gradient Portal</span>
-                        </h3>
+                <form onSubmit={handleSave} className="xl:col-span-7 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-8">
+                    {/* SEKSI 1: WARNA & GRADIENT DASAR PORTAL */}
+                    <div className="space-y-4">
+                        <div className="border-b border-slate-100 pb-3">
+                            <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                                <Palette className="w-4 h-4 text-rose-600" />
+                                <span>1. Tema Dasar, Navbar &amp; Kartu Konten</span>
+                            </h3>
+                            <p className="text-[11px] text-slate-500 mt-0.5">
+                                Atur warna dasar latar belakang portal, navbar header, aksen tombol, dan kartu konten.
+                            </p>
+                        </div>
+
                         <div className="space-y-1">
                             <ColorSettingRow
                                 label="Latar Belakang Halaman Portal"
                                 description="Warna dasar canvas utama halaman portal klien"
                                 value={portalForm.portal_bg_color}
                                 onChange={(c) => setPortalForm({ ...portalForm, portal_bg_color: c })}
-                                presets={[{ hex: '#FAF8F5', label: 'Warm Ivory' }, { hex: '#FFFFFF', label: 'Pure White' }, { hex: '#0B0616', label: 'Dark Obsidian' }, { hex: '#F0F4F8', label: 'Ice Blue' }, { hex: '#F0FDF4', label: 'Mint Mist' }]}
+                                presets={[{ hex: '#FBF6F0', label: 'Warm Off-White' }, { hex: '#FFFFFF', label: 'Pure White' }, { hex: '#0B0616', label: 'Dark Obsidian' }, { hex: '#F0F4F8', label: 'Ice Blue' }, { hex: '#F0FDF4', label: 'Mint Mist' }]}
                             />
 
                             <GradientBuilder
@@ -439,7 +613,7 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
                                 description="Warna bar navigasi di bagian paling atas portal klien"
                                 value={portalForm.portal_nav_bg}
                                 onChange={(c) => setPortalForm({ ...portalForm, portal_nav_bg: c })}
-                                presets={[{ hex: '#240B10', label: 'Deep Wine' }, { hex: '#0A192F', label: 'Navy' }, { hex: '#FFFFFF', label: 'White' }, { hex: '#064E3B', label: 'Pine Forest' }]}
+                                presets={[{ hex: '#3C0E0E', label: 'Classic Maroon' }, { hex: '#0A192F', label: 'Navy' }, { hex: '#FFFFFF', label: 'White' }, { hex: '#064E3B', label: 'Pine Forest' }]}
                             />
 
                             <GradientBuilder
@@ -453,21 +627,15 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
                                 description="Warna tombol utama, ikon aktif, badge status, dan sorotan"
                                 value={portalForm.portal_primary_accent}
                                 onChange={(c) => setPortalForm({ ...portalForm, portal_primary_accent: c })}
-                                presets={[{ hex: '#4A151B', label: 'Royal Maroon' }, { hex: '#C98922', label: 'Champagne Gold' }, { hex: '#2563EB', label: 'Electric Blue' }, { hex: '#059669', label: 'Emerald' }]}
-                            />
-
-                            <GradientBuilder
-                                label="Gradient Tombol / Aksen (Opsional)"
-                                value={portalForm.portal_accent_gradient}
-                                onChange={(val) => setPortalForm({ ...portalForm, portal_accent_gradient: val })}
+                                presets={[{ hex: '#3C0E0E', label: 'Royal Maroon' }, { hex: '#C98922', label: 'Champagne Gold' }, { hex: '#2563EB', label: 'Electric Blue' }, { hex: '#059669', label: 'Emerald' }]}
                             />
 
                             <ColorSettingRow
-                                label="Warna Kartu & Kontainer Konten"
+                                label="Warna Kartu &amp; Kontainer Konten"
                                 description="Warna dasar card project, galeri foto, dan invoice"
                                 value={portalForm.portal_card_bg}
                                 onChange={(c) => setPortalForm({ ...portalForm, portal_card_bg: c })}
-                                presets={[{ hex: '#FFFFFF', label: 'White' }, { hex: '#1C132E', label: 'Dark Card' }, { hex: '#FAF7F5', label: 'Soft Ivory' }]}
+                                presets={[{ hex: '#FFFFFF', label: 'White' }, { hex: '#1C132E', label: 'Dark Card' }, { hex: '#FDFBF7', label: 'Soft Ivory' }]}
                             />
 
                             <ColorSettingRow
@@ -482,29 +650,295 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
                                 value={portalForm.portal_hero_gradient}
                                 onChange={(val) => setPortalForm({ ...portalForm, portal_hero_gradient: val })}
                             />
+                        </div>
+                    </div>
 
+                    {/* SEKSI 2: BAR KEUNGGULAN ATAS ("KENAPA MEMILIH ARAMS PICTURES?") */}
+                    <div className="space-y-4 pt-2">
+                        <div className="border-b border-slate-100 pb-3">
+                            <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                                <Shield className="w-4 h-4 text-rose-600" />
+                                <span>2. Bar Keunggulan Atas ("Kenapa Memilih Arams Pictures?")</span>
+                            </h3>
+                            <p className="text-[11px] text-slate-500 mt-0.5">
+                                Kustomisasi warna latar, gradient, teks, dan judul bar 5 kartu keunggulan di atas footer.
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 mb-1">
+                                    Judul Bar Keunggulan
+                                </label>
+                                <input
+                                    type="text"
+                                    value={portalForm.portal_footer_badges_title}
+                                    onChange={(e) => setPortalForm({ ...portalForm, portal_footer_badges_title: e.target.value })}
+                                    placeholder="KENAPA MEMILIH ARAMS PICTURES?"
+                                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white transition-all font-medium"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 mb-1">
+                                    Subjudul Kanan Bar Keunggulan
+                                </label>
+                                <input
+                                    type="text"
+                                    value={portalForm.portal_footer_badges_subtitle}
+                                    onChange={(e) => setPortalForm({ ...portalForm, portal_footer_badges_subtitle: e.target.value })}
+                                    placeholder="PREMIUM CLIENT EXPERIENCE"
+                                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white transition-all font-medium"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-1 pt-1">
                             <ColorSettingRow
-                                label="Warna Latar Footer Portal"
-                                description="Warna bagian copyright dan kontak di bawah halaman"
+                                label="Warna Latar Bar Keunggulan"
+                                description="Warna dasar latar belakang bar keunggulan (default maroon #3C0E0E)"
                                 value={portalForm.portal_footer_bg}
                                 onChange={(c) => setPortalForm({ ...portalForm, portal_footer_bg: c })}
+                                presets={[
+                                    { hex: '#3C0E0E', label: 'Classic Maroon' },
+                                    { hex: '#22070A', label: 'Dark Wine' },
+                                    { hex: '#1C132E', label: 'Obsidian Cinema' },
+                                    { hex: '#0F172A', label: 'Deep Navy' },
+                                    { hex: '#064E3B', label: 'Dark Emerald' },
+                                ]}
+                            />
+
+                            <GradientBuilder
+                                label="Gradient Bar Keunggulan Atas (Opsional)"
+                                value={portalForm.portal_footer_badges_gradient}
+                                onChange={(val) => setPortalForm({ ...portalForm, portal_footer_badges_gradient: val })}
+                            />
+
+                            <ColorSettingRow
+                                label="Warna Teks &amp; Ikon Kartu Keunggulan"
+                                description="Warna tulisan judul, deskripsi, dan ikon badge kartu keunggulan"
+                                value={portalForm.portal_footer_text}
+                                onChange={(c) => setPortalForm({ ...portalForm, portal_footer_text: c })}
+                                presets={[
+                                    { hex: '#FFFFFF', label: 'Pure White (Standar)' },
+                                    { hex: '#F4EBE4', label: 'Warm Cream' },
+                                    { hex: '#E2E8F0', label: 'Soft Slate' },
+                                ]}
                             />
                         </div>
                     </div>
 
-                    {/* Tipografi */}
-                    <div className="pt-4 border-t border-slate-100 space-y-4">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2">
-                            <Globe className="w-4 h-4 text-indigo-600" />
-                            <span>2. Tipografi &amp; Font Portal</span>
-                        </h3>
+                    {/* SEKSI 3: FOOTER UTAMA BAGIAN BAWAH (BACKGROUND #F4EBE4 & DETAILNYA) */}
+                    <div className="space-y-4 pt-2">
+                        <div className="border-b border-slate-100 pb-3">
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                                    <SlidersHorizontal className="w-4 h-4 text-rose-600" />
+                                    <span>3. Footer Utama Bagian Bawah (Brand, Kontak &amp; Sosial Media)</span>
+                                </h3>
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#F4EBE4] text-[#3C0E0E] border border-[#E8DDD5]">
+                                    Default #F4EBE4
+                                </span>
+                            </div>
+                            <p className="text-[11px] text-slate-500 mt-0.5">
+                                Kustomisasi detail warna latar (#F4EBE4), teks, ikon kontak, sosial media, dan teks informasi hak cipta.
+                            </p>
+                        </div>
+
+                        {/* Palet Warna Footer Bawah */}
+                        <div className="space-y-1">
+                            <ColorSettingRow
+                                label="Warna Latar Belakang Footer Bawah"
+                                description="Warna dasar footer utama bagian bawah (default #F4EBE4)"
+                                value={portalForm.portal_footer_main_bg}
+                                onChange={(c) => setPortalForm({ ...portalForm, portal_footer_main_bg: c })}
+                                presets={[
+                                    { hex: '#F4EBE4', label: 'Warm Rosy Cream (Default)' },
+                                    { hex: '#FAF7F5', label: 'Soft Ivory' },
+                                    { hex: '#FFFFFF', label: 'Pure White' },
+                                    { hex: '#F8FAFC', label: 'Light Slate' },
+                                    { hex: '#1C132E', label: 'Dark Mode' },
+                                ]}
+                            />
+
+                            <ColorSettingRow
+                                label="Warna Judul Kolom (Heading)"
+                                description="Warna nama brand, 'HUBUNGI KAMI', dan 'IKUTI KAMI' (default maroon #3C0E0E)"
+                                value={portalForm.portal_footer_heading_color}
+                                onChange={(c) => setPortalForm({ ...portalForm, portal_footer_heading_color: c })}
+                                presets={[
+                                    { hex: '#3C0E0E', label: 'Classic Maroon' },
+                                    { hex: '#0F172A', label: 'Slate Dark' },
+                                    { hex: '#C98922', label: 'Gold' },
+                                    { hex: '#FFFFFF', label: 'White' },
+                                ]}
+                            />
+
+                            <ColorSettingRow
+                                label="Warna Teks Isi &amp; Nilai Kontak"
+                                description="Warna nomor WhatsApp, email, dan jam operasional"
+                                value={portalForm.portal_footer_main_text}
+                                onChange={(c) => setPortalForm({ ...portalForm, portal_footer_main_text: c })}
+                                presets={[
+                                    { hex: '#334155', label: 'Slate 700' },
+                                    { hex: '#1E293B', label: 'Slate 800' },
+                                    { hex: '#475569', label: 'Slate 600' },
+                                    { hex: '#F8FAFC', label: 'Light' },
+                                ]}
+                            />
+
+                            <ColorSettingRow
+                                label="Warna Label Muted &amp; Subjudul"
+                                description="Warna label kecil 'WHATSAPP', 'EMAIL', subjudul, dan copyright"
+                                value={portalForm.portal_footer_muted_color}
+                                onChange={(c) => setPortalForm({ ...portalForm, portal_footer_muted_color: c })}
+                                presets={[
+                                    { hex: '#7A6666', label: 'Warm Muted Maroon' },
+                                    { hex: '#64748B', label: 'Slate Muted' },
+                                    { hex: '#94A3B8', label: 'Soft Gray' },
+                                ]}
+                            />
+
+                            <ColorSettingRow
+                                label="Warna Lingkaran Ikon Kontak &amp; Sosmed"
+                                description="Background lingkaran tombol ikon WhatsApp, email, jam, dan sosmed"
+                                value={portalForm.portal_footer_item_bg}
+                                onChange={(c) => setPortalForm({ ...portalForm, portal_footer_item_bg: c })}
+                                presets={[
+                                    { hex: '#F4EBE4', label: 'Cream #F4EBE4' },
+                                    { hex: '#FFFFFF', label: 'Pure White' },
+                                    { hex: '#FAF7F5', label: 'Soft Ivory' },
+                                    { hex: '#3C0E0E', label: 'Maroon' },
+                                ]}
+                            />
+
+                            <ColorSettingRow
+                                label="Warna Ikon Kontak &amp; Sosmed"
+                                description="Warna simbol ikon di dalam lingkaran"
+                                value={portalForm.portal_footer_item_icon_color}
+                                onChange={(c) => setPortalForm({ ...portalForm, portal_footer_item_icon_color: c })}
+                                presets={[
+                                    { hex: '#3C0E0E', label: 'Maroon #3C0E0E' },
+                                    { hex: '#0F172A', label: 'Slate' },
+                                    { hex: '#C98922', label: 'Gold' },
+                                    { hex: '#FFFFFF', label: 'White' },
+                                ]}
+                            />
+
+                            <ColorSettingRow
+                                label="Warna Garis Pemisah (Border)"
+                                description="Warna garis pemisah horizontal antara seksi footer"
+                                value={portalForm.portal_footer_border_color}
+                                onChange={(c) => setPortalForm({ ...portalForm, portal_footer_border_color: c })}
+                                presets={[
+                                    { hex: '#E8DDD5', label: 'Cream Border #E8DDD5' },
+                                    { hex: '#E2E8F0', label: 'Slate Border' },
+                                    { hex: '#CBD5E1', label: 'Darker Slate' },
+                                ]}
+                            />
+                        </div>
+
+                        {/* Konten Teks Footer Bawah */}
+                        <div className="space-y-3.5 pt-3 border-t border-slate-100">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 mb-1">
+                                    Deskripsi / Tagline Brand (Kolom Kiri)
+                                </label>
+                                <textarea
+                                    rows={2}
+                                    value={portalForm.portal_footer_tagline}
+                                    onChange={(e) => setPortalForm({ ...portalForm, portal_footer_tagline: e.target.value })}
+                                    placeholder="Capturing Moments, Creating Timeless Memories"
+                                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white transition-all font-medium"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                                        Judul Kolom Kontak (Tengah)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={portalForm.portal_footer_contact_title}
+                                        onChange={(e) => setPortalForm({ ...portalForm, portal_footer_contact_title: e.target.value })}
+                                        placeholder="Hubungi Kami"
+                                        className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white transition-all font-medium"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                                        Subjudul Kolom Kontak
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={portalForm.portal_footer_contact_subtitle}
+                                        onChange={(e) => setPortalForm({ ...portalForm, portal_footer_contact_subtitle: e.target.value })}
+                                        placeholder="Kami siap membantu Anda kapan saja."
+                                        className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white transition-all font-medium"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                                        Judul Kolom Sosial Media (Kanan)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={portalForm.portal_footer_social_title}
+                                        onChange={(e) => setPortalForm({ ...portalForm, portal_footer_social_title: e.target.value })}
+                                        placeholder="Ikuti Kami"
+                                        className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white transition-all font-medium"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                                        Subjudul Kolom Sosial Media
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={portalForm.portal_footer_social_subtitle}
+                                        onChange={(e) => setPortalForm({ ...portalForm, portal_footer_social_subtitle: e.target.value })}
+                                        placeholder="Ikuti sosial media kami untuk update terbaru."
+                                        className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white transition-all font-medium"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 mb-1">
+                                    Teks Hak Cipta (Copyright Footer)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={portalForm.portal_footer_copyright}
+                                    onChange={(e) => setPortalForm({ ...portalForm, portal_footer_copyright: e.target.value })}
+                                    placeholder="© 2026 Arams Photography. All rights reserved."
+                                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white transition-all font-medium"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* SEKSI 4: TIPOGRAFI & FONT PORTAL */}
+                    <div className="pt-2 space-y-4">
+                        <div className="border-b border-slate-100 pb-3">
+                            <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                                <Globe className="w-4 h-4 text-rose-600" />
+                                <span>4. Tipografi &amp; Font Portal</span>
+                            </h3>
+                            <p className="text-[11px] text-slate-500 mt-0.5">
+                                Pilih font keluarga heading dan isi teks portal klien.
+                            </p>
+                        </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-xs font-bold text-slate-700 mb-1.5">Font Heading (Judul)</label>
                                 <select
                                     value={portalForm.portal_font_heading}
                                     onChange={(e) => setPortalForm({ ...portalForm, portal_font_heading: e.target.value })}
-                                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800"
+                                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 cursor-pointer"
                                 >
                                     <option value="Plus Jakarta Sans">Plus Jakarta Sans (Modern Clean)</option>
                                     <option value="Playfair Display">Playfair Display (Luxury Serif)</option>
@@ -517,7 +951,7 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
                                 <select
                                     value={portalForm.portal_font_body}
                                     onChange={(e) => setPortalForm({ ...portalForm, portal_font_body: e.target.value })}
-                                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800"
+                                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 cursor-pointer"
                                 >
                                     <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
                                     <option value="Inter">Inter</option>
@@ -531,11 +965,11 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
                         <button
                             type="submit"
                             disabled={saving}
-                            style={{ backgroundColor: portalForm.portal_primary_accent || '#4A151B' }}
+                            style={{ backgroundColor: portalForm.portal_primary_accent || '#3C0E0E' }}
                             className="inline-flex items-center gap-2 px-6 py-2.5 text-white text-xs font-bold rounded-xl shadow-md transition-all hover:scale-[1.02] cursor-pointer"
                         >
                             <Save className="w-4 h-4" />
-                            <span>{saving ? 'Menyimpan...' : 'Simpan Perubahan Portal Klien'}</span>
+                            <span>{saving ? 'Menyimpan...' : 'Simpan Pengaturan Portal Klien'}</span>
                         </button>
                     </div>
                 </form>
@@ -544,7 +978,7 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
                 <div className="xl:col-span-5 bg-slate-100/80 p-5 rounded-2xl border border-slate-200/80 space-y-4 sticky top-20">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <Eye className="w-4 h-4 text-indigo-600" />
+                            <Eye className="w-4 h-4 text-rose-600" />
                             <span className="text-xs font-bold text-slate-800">Preview Live Portal Klien</span>
                         </div>
                         <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 text-[10px] font-bold">
@@ -572,7 +1006,7 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
                     {/* Preview Screen Canvas */}
                     <div
                         style={{
-                            background: portalForm.portal_bg_gradient || portalForm.portal_bg_color || '#FAF8F5',
+                            background: portalForm.portal_bg_gradient || portalForm.portal_bg_color || '#FBF6F0',
                             fontFamily: portalForm.portal_font_body || 'inherit',
                         }}
                         className="rounded-2xl border border-slate-300 shadow-md p-3.5 space-y-3 overflow-hidden text-xs"
@@ -580,11 +1014,11 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
                         {/* Mock Navbar */}
                         <div
                             style={{
-                                background: portalForm.portal_nav_gradient || portalForm.portal_nav_bg || '#240B10',
+                                background: portalForm.portal_nav_gradient || portalForm.portal_nav_bg || '#3C0E0E',
                                 color: portalForm.portal_nav_text_color || '#FFFFFF',
                                 borderColor: portalForm.portal_nav_border_color || 'transparent',
                             }}
-                            className="px-3 py-2 rounded-xl border flex items-center justify-between text-[11px] font-bold"
+                            className="px-3 py-2 rounded-xl border flex items-center justify-between text-[11px] font-bold shadow-xs"
                         >
                             <div className="flex items-center gap-2">
                                 <span className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center font-black text-[10px]">
@@ -598,18 +1032,18 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
                         {/* Mock Hero Sambutan */}
                         <div
                             style={{
-                                background: portalForm.portal_hero_gradient || portalForm.portal_hero_bg || '#240B10',
+                                background: portalForm.portal_hero_gradient || portalForm.portal_hero_bg || '#3C0E0E',
                                 color: portalForm.portal_hero_text_color || '#FFFFFF',
                             }}
-                            className="p-4 rounded-xl space-y-2 text-center"
+                            className="p-3.5 rounded-xl space-y-1.5 text-center shadow-xs"
                         >
                             <h4
                                 style={{ fontFamily: portalForm.portal_font_heading }}
-                                className="text-sm font-black"
+                                className="text-xs font-black"
                             >
                                 Selamat Datang, Sarah &amp; David
                             </h4>
-                            <p className="text-[10px] opacity-80 max-w-xs mx-auto">
+                            <p className="text-[10px] opacity-80 max-w-xs mx-auto leading-tight">
                                 Semua momen terindah pernikahan Anda dapat dipantau dan diunduh di sini.
                             </p>
                         </div>
@@ -618,21 +1052,21 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
                         <div
                             style={{
                                 background: portalForm.portal_card_bg_gradient || portalForm.portal_card_bg || '#FFFFFF',
-                                borderColor: portalForm.portal_card_border || '#E2E8F0',
+                                borderColor: portalForm.portal_card_border || '#F4EBE4',
                             }}
-                            className="p-3.5 rounded-xl border space-y-2.5"
+                            className="p-3 rounded-xl border space-y-2 shadow-2xs"
                         >
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold block">Paket Terpilih</span>
-                                    <h5 className="font-bold text-xs text-slate-900">Wedding Platinum Cinema</h5>
+                                    <span className="text-[8px] uppercase tracking-wider text-slate-400 font-bold block">Paket Terpilih</span>
+                                    <h5 className="font-bold text-[11px] text-slate-900">Wedding Platinum Cinema</h5>
                                 </div>
                                 <span
                                     style={{
                                         background: portalForm.portal_accent_gradient || portalForm.portal_primary_accent,
                                         color: '#FFFFFF',
                                     }}
-                                    className="px-2 py-0.5 rounded-full text-[9px] font-bold"
+                                    className="px-2 py-0.5 rounded-full text-[8px] font-bold"
                                 >
                                     Selesai
                                 </span>
@@ -643,21 +1077,108 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
                                     background: portalForm.portal_accent_gradient || portalForm.portal_primary_accent,
                                     color: '#FFFFFF',
                                 }}
-                                className="w-full py-1.5 rounded-lg text-xs font-bold cursor-pointer"
+                                className="w-full py-1.5 rounded-lg text-[10px] font-bold cursor-pointer shadow-xs"
                             >
                                 Buka Galeri &amp; Unduh File
                             </button>
                         </div>
 
-                        {/* Mock Footer */}
+                        {/* Mock Bar Keunggulan Atas (Dark Bar) */}
                         <div
                             style={{
-                                backgroundColor: portalForm.portal_footer_bg || '#1A070B',
-                                color: portalForm.portal_footer_text || '#FDA4AF',
+                                background: portalForm.portal_footer_badges_gradient || portalForm.portal_footer_bg || '#3C0E0E',
+                                color: portalForm.portal_footer_text || '#FFFFFF',
                             }}
-                            className="p-2 rounded-lg text-center text-[9px]"
+                            className="p-3 rounded-xl space-y-2 shadow-xs border border-white/10"
                         >
-                            © 2026 Arams Pictures • All rights reserved
+                            <div className="flex items-center justify-between">
+                                <span
+                                    style={{ fontFamily: portalForm.portal_font_heading }}
+                                    className="text-[9px] font-extrabold uppercase tracking-wider"
+                                >
+                                    {portalForm.portal_footer_badges_title || 'Kenapa Memilih Arams Pictures?'}
+                                </span>
+                                <span className="text-[7px] font-bold uppercase opacity-75 tracking-wider hidden sm:inline">
+                                    {portalForm.portal_footer_badges_subtitle || 'Premium Client Experience'}
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-1.5">
+                                <div className="p-1.5 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1.5">
+                                    <Star className="w-3 h-3 text-white shrink-0" />
+                                    <span className="text-[9px] font-bold truncate">Berpengalaman</span>
+                                </div>
+                                <div className="p-1.5 rounded-lg bg-white/5 border border-white/10 flex items-center gap-1.5">
+                                    <CheckCircle2 className="w-3 h-3 text-white shrink-0" />
+                                    <span className="text-[9px] font-bold truncate">Kualitas Terbaik</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Mock Main Footer Bawah (Warm Cream #F4EBE4) */}
+                        <div
+                            style={{
+                                backgroundColor: portalForm.portal_footer_main_bg || '#F4EBE4',
+                                borderColor: portalForm.portal_footer_border_color || '#E8DDD5',
+                            }}
+                            className="p-3 rounded-xl border space-y-2 text-[10px] transition-colors"
+                        >
+                            <div className="flex items-start justify-between gap-2 border-b pb-2" style={{ borderColor: portalForm.portal_footer_border_color || '#E8DDD5' }}>
+                                <div>
+                                    <h5
+                                        style={{
+                                            color: portalForm.portal_footer_heading_color || '#3C0E0E',
+                                            fontFamily: portalForm.portal_font_heading,
+                                        }}
+                                        className="font-black text-[11px] tracking-tight"
+                                    >
+                                        Arams Pictures
+                                    </h5>
+                                    <p
+                                        style={{ color: portalForm.portal_footer_main_text || '#334155' }}
+                                        className="text-[8px] leading-tight mt-0.5 line-clamp-2"
+                                    >
+                                        {portalForm.portal_footer_tagline}
+                                    </p>
+                                </div>
+                                <div className="text-right shrink-0">
+                                    <span
+                                        style={{ color: portalForm.portal_footer_heading_color || '#3C0E0E' }}
+                                        className="font-bold text-[8px] uppercase tracking-wider block"
+                                    >
+                                        {portalForm.portal_footer_contact_title}
+                                    </span>
+                                    <span
+                                        style={{ color: portalForm.portal_footer_main_text || '#334155' }}
+                                        className="text-[8px] font-bold block"
+                                    >
+                                        +62 812-3456-7890
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-0.5">
+                                <div className="flex items-center gap-1">
+                                    {['wa', 'mail', 'ig', 'yt'].map((k) => (
+                                        <div
+                                            key={k}
+                                            style={{
+                                                backgroundColor: portalForm.portal_footer_item_bg || '#F4EBE4',
+                                                borderColor: portalForm.portal_footer_border_color || '#E8DDD5',
+                                                color: portalForm.portal_footer_item_icon_color || '#3C0E0E',
+                                            }}
+                                            className="w-4 h-4 rounded-full border flex items-center justify-center text-[7px] font-bold"
+                                        >
+                                            •
+                                        </div>
+                                    ))}
+                                </div>
+                                <span
+                                    style={{ color: portalForm.portal_footer_muted_color || '#7A6666' }}
+                                    className="text-[7px]"
+                                >
+                                    {portalForm.portal_footer_copyright}
+                                </span>
+                            </div>
                         </div>
                     </div>
 
@@ -665,7 +1186,7 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
                         href="/client/dashboard"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="w-full py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-colors"
+                        className="w-full py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-colors shadow-2xs cursor-pointer"
                     >
                         <span>Buka Dashboard Portal Sebenarnya</span>
                         <ExternalLink className="w-3.5 h-3.5" />

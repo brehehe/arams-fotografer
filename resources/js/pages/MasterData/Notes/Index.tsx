@@ -337,7 +337,7 @@ export default function NoteTemplatesIndex({
     };
 
     return (
-        <div className="w-full max-w-full space-y-6 pb-12">
+        <div className="w-full max-w-full space-y-4 pb-2">
             <Head title="Template Catatan - Arams Pictures" />
             {/* ── HEADER TITLE & CTA ─────────────────────────────────────────── */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

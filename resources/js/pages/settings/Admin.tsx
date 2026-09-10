@@ -94,6 +94,8 @@ export default function AdminSettingsPage({ settings = {}, settingsMap = {} }: S
         company_address: getVal('company_address', 'Jl. Senopati No. 45, Kebayoran Baru, Jakarta Selatan 12190'),
         company_city: getVal('company_city', 'Jakarta Selatan'),
         timezone: getVal('timezone', '(GMT+07:00) Jakarta'),
+        company_description: getVal('company_description', getVal('company_tagline', 'Jasa fotografi & videografi profesional untuk mengabadikan setiap momen berharga Anda dengan kualitas sinematik terbaik.')),
+        company_operational_hours: getVal('company_operational_hours', 'Senin - Minggu, 09.00 - 18.00 WIB'),
         company_logo: getVal('company_logo', ''),
     });
 
@@ -132,10 +134,15 @@ export default function AdminSettingsPage({ settings = {}, settingsMap = {} }: S
         header_search_bg: getVal('header_search_bg', ''),
         header_search_text: getVal('header_search_text', ''),
         card_heading_color: getVal('card_heading_color', '#1E293B'),
+        report_primary_accent: getVal('report_primary_accent', getVal('primary_accent_color', '#3C0E0E')),
+        report_revenue_color: getVal('report_revenue_color', getVal('primary_accent_color', '#3C0E0E')),
+        report_projects_color: getVal('report_projects_color', '#10B981'),
+        report_received_color: getVal('report_received_color', '#059669'),
+        report_pending_color: getVal('report_pending_color', '#DC2626'),
     });
 
-    const [previewMode, setPreviewMode] = useState<'dashboard' | 'projects' | 'master_data' | 'finance' | 'login'>('dashboard');
-    const [adminSectionTab, setAdminSectionTab] = useState<'sidebar' | 'navbar' | 'main'>('sidebar');
+    const [previewMode, setPreviewMode] = useState<'dashboard' | 'projects' | 'master_data' | 'finance' | 'login' | 'reports'>('dashboard');
+    const [adminSectionTab, setAdminSectionTab] = useState<'sidebar' | 'navbar' | 'main' | 'report'>('sidebar');
 
     // Curated Login Presets
     const loginPresets = [
@@ -393,6 +400,8 @@ export default function AdminSettingsPage({ settings = {}, settingsMap = {} }: S
             login_card_bg: preset.login_card_bg || preset.sidebar_bg,
             login_card_bg_gradient: (preset as any).login_card_bg_gradient || '',
             login_accent_color: preset.login_accent || preset.primary_accent,
+            report_primary_accent: preset.primary_accent,
+            report_revenue_color: preset.primary_accent,
             font_family_heading: preset.font_heading,
             font_family_body: preset.font_body,
         });
@@ -438,6 +447,11 @@ export default function AdminSettingsPage({ settings = {}, settingsMap = {} }: S
                 login_tagline: 'STUDIO & CINEMA PHOTOGRAPHY SYSTEM',
                 font_family_heading: defaultPreset.font_heading,
                 font_family_body: defaultPreset.font_body,
+                report_primary_accent: defaultPreset.primary_accent,
+                report_revenue_color: defaultPreset.primary_accent,
+                report_projects_color: '#10B981',
+                report_received_color: '#059669',
+                report_pending_color: '#DC2626',
             },
         }, {
             preserveScroll: true,
@@ -563,7 +577,7 @@ export default function AdminSettingsPage({ settings = {}, settingsMap = {} }: S
     };
 
     return (
-        <div className="space-y-6 pb-16 w-full max-w-full">
+        <div className="space-y-4 pb-2 w-full max-w-full">
             <Head title="Pengaturan Admin - Arams Photography" />
 
             {/* Header Title & Subtitle */}
@@ -678,6 +692,20 @@ export default function AdminSettingsPage({ settings = {}, settingsMap = {} }: S
                                     </div>
                                 </div>
 
+                                {/* Row 2b: Deskripsi Singkat Usaha (Ditampilkan pada Footer Portal Klien) */}
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                        Deskripsi Singkat Usaha (Ditampilkan pada Footer Portal Klien)
+                                    </label>
+                                    <textarea
+                                        rows={2}
+                                        value={form.company_description}
+                                        onChange={(e) => setForm({ ...form, company_description: e.target.value })}
+                                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:border-[#C89445] focus:ring-2 focus:ring-[#C89445]/20 outline-hidden transition-all"
+                                        placeholder="Contoh: Jasa fotografi & videografi profesional untuk mengabadikan setiap momen berharga Anda dengan kualitas sinematik terbaik."
+                                    />
+                                </div>
+
                                 {/* Row 3: Website & Email */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
@@ -707,7 +735,7 @@ export default function AdminSettingsPage({ settings = {}, settingsMap = {} }: S
                                     </div>
                                 </div>
 
-                                {/* Row 4: No. Telepon & WhatsApp */}
+                                {/* Row 4: No. Telepon & WhatsApp + Jam Operasional */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-xs font-semibold text-slate-700 mb-1.5">
@@ -719,6 +747,19 @@ export default function AdminSettingsPage({ settings = {}, settingsMap = {} }: S
                                             onChange={(e) => setForm({ ...form, company_phone: e.target.value, company_whatsapp: e.target.value })}
                                             className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:border-[#C89445] focus:ring-2 focus:ring-[#C89445]/20 outline-hidden transition-all"
                                             placeholder="+62 812-3456-7890"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                            Jam Operasional (Footer Portal Klien)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={form.company_operational_hours}
+                                            onChange={(e) => setForm({ ...form, company_operational_hours: e.target.value })}
+                                            className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:border-[#C89445] focus:ring-2 focus:ring-[#C89445]/20 outline-hidden transition-all"
+                                            placeholder="Senin - Minggu, 09.00 - 18.00 WIB"
                                         />
                                     </div>
                                 </div>
@@ -1220,46 +1261,62 @@ export default function AdminSettingsPage({ settings = {}, settingsMap = {} }: S
                         {/* Left Column: Form Customizer Admin (7 cols) */}
                         <div className="xl:col-span-7 space-y-6">
                             <form onSubmit={handleSaveTheme} className="space-y-5">
-                                {/* Three Focused Tabs for Admin (Sidebar, Navbar, Main) */}
+                                {/* Four Focused Tabs for Admin (Sidebar, Navbar, Main, Report) */}
                                 <div className="bg-white p-2 rounded-2xl border border-slate-200/80 shadow-xs">
-                                    <div className="grid grid-cols-3 gap-2">
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                         <button
                                             type="button"
                                             onClick={() => setAdminSectionTab('sidebar')}
-                                            className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                                            className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                                                 adminSectionTab === 'sidebar'
                                                     ? 'bg-slate-900 text-white shadow-xs'
                                                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                                             }`}
                                         >
-                                            <PanelLeft className="w-3.5 h-3.5" />
-                                            <span>1. Sidebar Navigasi</span>
+                                            <PanelLeft className="w-3.5 h-3.5 shrink-0" />
+                                            <span className="truncate">1. Sidebar</span>
                                         </button>
 
                                         <button
                                             type="button"
                                             onClick={() => setAdminSectionTab('navbar')}
-                                            className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                                            className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                                                 adminSectionTab === 'navbar'
                                                     ? 'bg-slate-900 text-white shadow-xs'
                                                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                                             }`}
                                         >
-                                            <Layout className="w-3.5 h-3.5" />
-                                            <span>2. Navbar &amp; Header</span>
+                                            <Layout className="w-3.5 h-3.5 shrink-0" />
+                                            <span className="truncate">2. Navbar</span>
                                         </button>
 
                                         <button
                                             type="button"
                                             onClick={() => setAdminSectionTab('main')}
-                                            className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                                            className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                                                 adminSectionTab === 'main'
                                                     ? 'bg-slate-900 text-white shadow-xs'
                                                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                                             }`}
                                         >
-                                            <Layers className="w-3.5 h-3.5" />
-                                            <span>3. Main Content</span>
+                                            <Layers className="w-3.5 h-3.5 shrink-0" />
+                                            <span className="truncate">3. Main Content</span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setAdminSectionTab('report');
+                                                setPreviewMode('reports');
+                                            }}
+                                            className={`py-2 px-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                                                adminSectionTab === 'report'
+                                                    ? 'bg-slate-900 text-white shadow-xs'
+                                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                            }`}
+                                        >
+                                            <FileSpreadsheet className="w-3.5 h-3.5 shrink-0" />
+                                            <span className="truncate">4. Laporan &amp; Grafik</span>
                                         </button>
                                     </div>
                                 </div>
@@ -1682,6 +1739,134 @@ export default function AdminSettingsPage({ settings = {}, settingsMap = {} }: S
                                     </div>
                                 )}
 
+                                {/* 4. REPORT & CHARTS TAB */}
+                                {adminSectionTab === 'report' && (
+                                    <div className="space-y-4 animate-in fade-in duration-150">
+                                        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+                                            <div className="border-b border-slate-100 pb-2.5">
+                                                <span className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                                                    <FileSpreadsheet className="w-4 h-4 text-[#C89445]" />
+                                                    <span>Kustomisasi Warna Laporan &amp; Grafik (/reports)</span>
+                                                </span>
+                                                <span className="text-[11px] text-slate-400">
+                                                    Atur palet warna kartu KPI, tombol export, grafik combo bulanan, dan indikator pembayaran laporan
+                                                </span>
+                                            </div>
+
+                                            {/* Quick Report Palettes */}
+                                            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/70 space-y-2">
+                                                <span className="text-[11px] font-bold text-slate-700 block">
+                                                    Pilihan Palet Siap Pakai Laporan
+                                                </span>
+                                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                                    {[
+                                                        { name: 'Arams Maroon', primary: '#3C0E0E', revenue: '#3C0E0E', projects: '#10B981', received: '#059669', pending: '#DC2626' },
+                                                        { name: 'Royal Gold', primary: '#C98922', revenue: '#C98922', projects: '#10B981', received: '#059669', pending: '#DC2626' },
+                                                        { name: 'Studio Blue', primary: '#2563EB', revenue: '#3B82F6', projects: '#10B981', received: '#059669', pending: '#DC2626' },
+                                                        { name: 'Emerald Luxe', primary: '#059669', revenue: '#10B981', projects: '#3B82F6', received: '#059669', pending: '#DC2626' },
+                                                        { name: 'Royal Violet', primary: '#7C3AED', revenue: '#8B5CF6', projects: '#C98922', received: '#10B981', pending: '#EF4444' },
+                                                        { name: 'Dark Obsidian', primary: '#0F172A', revenue: '#334155', projects: '#10B981', received: '#059669', pending: '#DC2626' },
+                                                    ].map((pal, idx) => (
+                                                        <button
+                                                            key={idx}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setThemeForm({
+                                                                    ...themeForm,
+                                                                    report_primary_accent: pal.primary,
+                                                                    report_revenue_color: pal.revenue,
+                                                                    report_projects_color: pal.projects,
+                                                                    report_received_color: pal.received,
+                                                                    report_pending_color: pal.pending,
+                                                                });
+                                                            }}
+                                                            className="flex items-center gap-1.5 p-1.5 rounded-lg border border-slate-200 bg-white hover:border-slate-400 text-left cursor-pointer transition-all"
+                                                        >
+                                                            <div className="flex -space-x-1 shrink-0">
+                                                                <span className="w-3.5 h-3.5 rounded-full border border-white" style={{ backgroundColor: pal.primary }} />
+                                                                <span className="w-3.5 h-3.5 rounded-full border border-white" style={{ backgroundColor: pal.revenue }} />
+                                                                <span className="w-3.5 h-3.5 rounded-full border border-white" style={{ backgroundColor: pal.projects }} />
+                                                            </div>
+                                                            <span className="text-[10px] font-bold text-slate-700 truncate">{pal.name}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            <ColorSettingRow
+                                                label="Warna Aksen Utama Laporan (Total Nilai Project &amp; Export)"
+                                                description="Mengatur warna angka KPI Total Nilai Project, tombol Export Laporan, dan tautan Lihat Detail"
+                                                value={themeForm.report_primary_accent}
+                                                onChange={(val) => setThemeForm({ ...themeForm, report_primary_accent: val })}
+                                                presets={[
+                                                    { label: 'Arams Maroon', hex: '#3C0E0E' },
+                                                    { label: 'Royal Wine', hex: '#4A151B' },
+                                                    { label: 'Champagne Gold', hex: '#C98922' },
+                                                    { label: 'Sapphire Blue', hex: '#2563EB' },
+                                                    { label: 'Emerald Green', hex: '#059669' },
+                                                    { label: 'Modern Indigo', hex: '#6366F1' },
+                                                ]}
+                                            />
+
+                                            <ColorSettingRow
+                                                label="Warna Batang Grafik Omzet / Revenue"
+                                                description="Warna batang grafik (bar chart) performa omzet bulanan"
+                                                value={themeForm.report_revenue_color}
+                                                onChange={(val) => setThemeForm({ ...themeForm, report_revenue_color: val })}
+                                                presets={[
+                                                    { label: 'Arams Maroon', hex: '#3C0E0E' },
+                                                    { label: 'Royal Wine', hex: '#4A151B' },
+                                                    { label: 'Champagne Gold', hex: '#C98922' },
+                                                    { label: 'Sapphire Blue', hex: '#3B82F6' },
+                                                    { label: 'Indigo Purple', hex: '#6366F1' },
+                                                    { label: 'Emerald Green', hex: '#10B981' },
+                                                ]}
+                                            />
+
+                                            <ColorSettingRow
+                                                label="Warna Garis Tren Jumlah Project"
+                                                description="Warna garis dan titik (line chart) jumlah project bulanan"
+                                                value={themeForm.report_projects_color}
+                                                onChange={(val) => setThemeForm({ ...themeForm, report_projects_color: val })}
+                                                presets={[
+                                                    { label: 'Emerald Green', hex: '#10B981' },
+                                                    { label: 'Champagne Gold', hex: '#C98922' },
+                                                    { label: 'Sky Blue', hex: '#0EA5E9' },
+                                                    { label: 'Amber Orange', hex: '#F59E0B' },
+                                                    { label: 'Rose Red', hex: '#F43F5E' },
+                                                    { label: 'Violet', hex: '#8B5CF6' },
+                                                ]}
+                                            />
+
+                                            <ColorSettingRow
+                                                label="Warna Indikator Total Diterima"
+                                                description="Warna status dan angka kartu Total Nilai Pembayaran Diterima"
+                                                value={themeForm.report_received_color}
+                                                onChange={(val) => setThemeForm({ ...themeForm, report_received_color: val })}
+                                                presets={[
+                                                    { label: 'Emerald Green', hex: '#059669' },
+                                                    { label: 'Teal Green', hex: '#0D9488' },
+                                                    { label: 'Royal Gold', hex: '#C98922' },
+                                                    { label: 'Blue', hex: '#2563EB' },
+                                                ]}
+                                            />
+
+                                            <ColorSettingRow
+                                                label="Warna Indikator Total Tertunda"
+                                                description="Warna status dan angka kartu Total Nilai Pembayaran Tertunda / Piutang"
+                                                value={themeForm.report_pending_color}
+                                                onChange={(val) => setThemeForm({ ...themeForm, report_pending_color: val })}
+                                                presets={[
+                                                    { label: 'Rose Red', hex: '#DC2626' },
+                                                    { label: 'Crimson', hex: '#E11D48' },
+                                                    { label: 'Amber Orange', hex: '#D97706' },
+                                                    { label: 'Warm Maroon', hex: '#881337' },
+                                                ]}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Action Buttons */}
                                 <div className="flex items-center justify-between pt-2">
                                     <button
@@ -1721,6 +1906,7 @@ export default function AdminSettingsPage({ settings = {}, settingsMap = {} }: S
                                             { id: 'projects', label: 'Projects' },
                                             { id: 'master_data', label: 'Master Data' },
                                             { id: 'finance', label: 'Keuangan' },
+                                            { id: 'reports', label: 'Laporan' },
                                         ].map((m) => (
                                             <button
                                                 key={m.id}
@@ -1915,6 +2101,69 @@ export default function AdminSettingsPage({ settings = {}, settingsMap = {} }: S
                                                             <div className="p-1 rounded bg-rose-50 text-rose-800">
                                                                 <span className="block text-[6.5px] text-rose-600 font-bold uppercase">Pengeluaran</span>
                                                                 <span className="font-bold text-[8.5px]">Rp 8.120.000</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {previewMode === 'reports' && (
+                                                    <div className="space-y-1.5 animate-in fade-in duration-100">
+                                                        <div className="bg-white p-2 rounded-lg border border-slate-200/80 shadow-2xs space-y-1">
+                                                            <div className="flex items-center justify-between">
+                                                                <span style={{ color: themeForm.app_muted_text_color }} className="text-[7.5px] font-bold">Total Nilai Project</span>
+                                                                <span
+                                                                    className="text-[6.5px] px-1 py-0.5 rounded font-bold text-white shadow-2xs"
+                                                                    style={{ backgroundColor: themeForm.report_primary_accent }}
+                                                                >
+                                                                    Export
+                                                                </span>
+                                                            </div>
+                                                            <span
+                                                                style={{ color: themeForm.report_primary_accent }}
+                                                                className="font-extrabold text-[12px] block leading-tight tracking-tight"
+                                                            >
+                                                                Rp 1.581.000.000
+                                                            </span>
+                                                            <span className="text-[7px] text-emerald-600 font-bold block">
+                                                                ▲ 18.45% <span className="font-normal text-slate-400">dari periode lalu</span>
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-2 gap-1 text-[8px]">
+                                                            <div className="bg-white p-1.5 rounded-lg border border-slate-200/80">
+                                                                <span style={{ color: themeForm.app_muted_text_color }} className="text-[6.5px] block font-medium">Total Diterima</span>
+                                                                <span style={{ color: themeForm.report_received_color }} className="font-bold text-[8.5px] block">Rp 1.106.437.496</span>
+                                                            </div>
+                                                            <div className="bg-white p-1.5 rounded-lg border border-slate-200/80">
+                                                                <span style={{ color: themeForm.app_muted_text_color }} className="text-[6.5px] block font-medium">Total Tertunda</span>
+                                                                <span style={{ color: themeForm.report_pending_color }} className="font-bold text-[8.5px] block">Rp 474.562.504</span>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Mini Combo Chart Preview */}
+                                                        <div className="bg-white p-1.5 rounded-lg border border-slate-200/80 space-y-1">
+                                                            <div className="flex items-center justify-between text-[7px]">
+                                                                <span style={{ color: themeForm.app_heading_color }} className="font-bold">Grafik Bulanan</span>
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <div className="flex items-center gap-0.5">
+                                                                        <span className="w-1.5 h-1.5 rounded-xs" style={{ backgroundColor: themeForm.report_revenue_color }} />
+                                                                        <span className="text-slate-400 text-[6.5px]">Omzet</span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-0.5">
+                                                                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: themeForm.report_projects_color }} />
+                                                                        <span className="text-slate-400 text-[6.5px]">Project</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="h-9 flex items-end justify-between gap-1 pt-1.5 px-1 bg-slate-50 rounded border border-slate-100">
+                                                                {[35, 55, 48, 75, 62, 80, 70, 92].map((h, i) => (
+                                                                    <div key={i} className="flex-1 flex flex-col items-center gap-0.5 h-full justify-end">
+                                                                        <div
+                                                                            className="w-full rounded-t-xs transition-all"
+                                                                            style={{ height: `${h}%`, backgroundColor: themeForm.report_revenue_color }}
+                                                                        />
+                                                                    </div>
+                                                                ))}
                                                             </div>
                                                         </div>
                                                     </div>

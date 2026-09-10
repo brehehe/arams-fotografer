@@ -42,6 +42,11 @@ export default function AramsLayout({
     const cardHeadingColor = pageProps?.appSettings?.card_heading_color || '#1E293B';
     const fontFamily = pageProps?.appSettings?.font_family_body || 'Plus Jakarta Sans';
     const fontHeading = pageProps?.appSettings?.font_family_heading || 'Plus Jakarta Sans';
+    const reportPrimary = pageProps?.appSettings?.report_primary_accent || primaryAccent;
+    const reportRevenue = pageProps?.appSettings?.report_revenue_color || reportPrimary;
+    const reportProjects = pageProps?.appSettings?.report_projects_color || '#10B981';
+    const reportReceived = pageProps?.appSettings?.report_received_color || '#059669';
+    const reportPending = pageProps?.appSettings?.report_pending_color || '#DC2626';
 
     return (
         <div
@@ -62,6 +67,11 @@ export default function AramsLayout({
                     --primary-accent-gradient: ${primaryAccentGradient || 'none'};
                     --primary-accent-dark: color-mix(in srgb, ${primaryAccent} 85%, black);
                     --primary-accent-light: color-mix(in srgb, ${primaryAccent} 12%, transparent);
+                    --report-primary: ${reportPrimary};
+                    --report-revenue: ${reportRevenue};
+                    --report-projects: ${reportProjects};
+                    --report-received: ${reportReceived};
+                    --report-pending: ${reportPending};
                     --sidebar-bg: ${sidebarBg};
                     --sidebar-bg-gradient: ${sidebarBgGradient || 'none'};
                     --sidebar-active-bg: ${sidebarActiveBg};
@@ -158,6 +168,69 @@ export default function AramsLayout({
                     color: #0F172A !important;
                     opacity: 0.95 !important;
                 }
+
+                /* ── PRINT & PDF OPTIMIZATIONS ────────────────────────────── */
+                @media print {
+                    /* Hide non-printable navigation, sidebar, header, and buttons */
+                    #arams-sidebar,
+                    #arams-header,
+                    aside,
+                    header,
+                    nav,
+                    .no-print,
+                    .print\\:hidden,
+                    [role="tooltip"],
+                    [data-sonner-toaster] {
+                        display: none !important;
+                    }
+
+                    /* Suppress all interactive buttons and dropdown triggers in print mode */
+                    button:not(.print-visible) {
+                        display: none !important;
+                    }
+
+                    /* Reset body and container backgrounds & paddings */
+                    body, html, #root, div[style*="min-height"] {
+                        background: #FFFFFF !important;
+                        color: #0F172A !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        min-height: auto !important;
+                    }
+
+                    .lg\\:pl-64 {
+                        padding-left: 0 !important;
+                    }
+
+                    main {
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        width: 100% !important;
+                        max-width: 100% !important;
+                    }
+
+                    /* Exact color accuracy for background colors, badges, and charts */
+                    * {
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+
+                    /* Avoid page cuts through cards and tables */
+                    .print-break-inside-avoid,
+                    .bg-white,
+                    table,
+                    tr {
+                        break-inside: avoid !important;
+                        page-break-inside: avoid !important;
+                    }
+
+                    @page {
+                        margin: 12mm 10mm 15mm 10mm;
+                        size: A4 portrait;
+                    }
+                }
             `}</style>
             {/* Desktop & Mobile Sidebar */}
             <AramsSidebar
@@ -173,7 +246,7 @@ export default function AramsLayout({
                     onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
                 />
 
-                <main className="flex-1 p-4 sm:p-5 lg:p-6 w-full max-w-full animate-in fade-in-50 duration-200">
+                <main className="flex-1 p-3.5 sm:p-4 lg:p-5 pb-4 w-full max-w-full animate-in fade-in-50 duration-200">
                     {children}
                 </main>
             </div>

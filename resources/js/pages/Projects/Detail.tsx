@@ -784,7 +784,7 @@ export default function ProjectDetail({
     };
 
     return (
-        <div className="w-full max-w-full space-y-6 pb-20">
+        <div className="w-full max-w-full space-y-4 pb-2">
             <Head title={`${project?.name || 'Project'} - Detail Project`} />
 
             {/* ── 1. TOP BREADCRUMB & HEADER SECTION ────────────────────────────── */}

@@ -546,7 +546,7 @@ cName = 'orange';
     };
 
     return (
-        <div className="w-full max-w-full space-y-6 pb-20">
+        <div className="w-full max-w-full space-y-4 pb-2">
             <Head title="Calendar & Schedule - Arams Pictures" />
 
             {/* ── 1. PAGE HEADER ── */}

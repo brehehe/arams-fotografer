@@ -244,7 +244,7 @@ export default function ServicesIndex({
     };
 
     return (
-        <div className="w-full max-w-full space-y-6 pb-20">
+        <div className="w-full max-w-full space-y-4 pb-2">
             <Head title="Jenis Layanan - Master Data" />
 
             {/* ── 1. HEADER TITLE & ACTIONS ── */}

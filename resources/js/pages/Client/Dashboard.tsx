@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { ClientLayout } from '@/layouts/ClientLayout';
+import { ClientHeroCarousel } from '@/components/ClientHeroCarousel';
 import {
     Calendar,
     Check,
@@ -171,21 +172,16 @@ interface ClientDashboardProps {
     };
     promo_slides?: PromoSlideItem[];
     recommended_projects?: RecommendedItem[];
+    recommended_packages?: RecommendedItem[];
     testimonials?: TestimonialItem[];
     portfolios?: any[];
     company?: any;
 }
 
 export default function ClientDashboard({
-    client = null,
-    metrics = {
-        total_projects: 1,
-        total_invoices: 1,
-        total_payments: 0,
-        event_date: '12 Des 2026',
-        event_category: 'Wedding Day',
-    },
-    active_project = null,
+    client,
+    metrics,
+    active_project,
     timeline = {
         current_step: 3,
         active_step_title: 'Preview Foto',
@@ -202,6 +198,7 @@ export default function ClientDashboard({
     },
     promo_slides = [],
     recommended_projects = [],
+    recommended_packages = [],
     testimonials = [],
     portfolios = [],
     company = {},
@@ -252,12 +249,32 @@ export default function ClientDashboard({
     const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
     const [isHoveredPromo, setIsHoveredPromo] = useState(false);
     const [currentTestimonialIndex, setCurrentTestimonialIndex] = useState(0);
+    const [isHoveredTestimonial, setIsHoveredTestimonial] = useState(false);
 
     // Payment History & Lightbox Modal States
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
     const [activeLightboxIndex, setActiveLightboxIndex] = useState(0);
+
+    useEffect(() => {
+        if (isLightboxOpen || isPaymentModalOpen) {
+            document.body.style.overflow = 'hidden';
+            const handleKeyDown = (e: KeyboardEvent) => {
+                if (e.key === 'Escape') {
+                    setIsLightboxOpen(false);
+                    setIsPaymentModalOpen(false);
+                }
+            };
+            window.addEventListener('keydown', handleKeyDown);
+            return () => {
+                document.body.style.overflow = '';
+                window.removeEventListener('keydown', handleKeyDown);
+            };
+        } else {
+            document.body.style.overflow = '';
+        }
+    }, [isLightboxOpen, isPaymentModalOpen]);
 
     // Timeline Steps (5 Steps as per client dashboard design)
     const defaultSteps: TimelineStep[] = [
@@ -403,13 +420,14 @@ export default function ClientDashboard({
             { id: '4', title: 'Highlight 4', image_url: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?w=600&auto=format&fit=crop&q=80' },
         ];
 
-    // Portfolio Gallery (4 photos from backend or fallback)
+    // Portfolio Gallery (4 photos from backend real Portfolios or fallback)
+    const totalPortfoliosCount = (pageProps as any)?.total_portfolios ?? portfolios?.length ?? 7;
     const portfolioPhotos = (portfolios && portfolios.length > 0)
         ? portfolios.slice(0, 4).map((item, idx) => ({
             id: item.id || String(idx + 1),
             image: item.image || item.image_url || 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&auto=format&fit=crop&q=80',
             isOverlay: idx === 3,
-            count: '+25',
+            count: `+${Math.max(1, totalPortfoliosCount - 3)}`,
         }))
         : [
             { id: '1', image: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&auto=format&fit=crop&q=80' },
@@ -448,9 +466,20 @@ export default function ClientDashboard({
             },
         ];
 
-    // 5 Package Recommendations (Matching Screenshot)
-    const packageRecommendations: RecommendedItem[] = (recommended_projects && recommended_projects.length >= 5)
+    // Auto-advance Testimonials Carousel every 5 seconds (pauses on hover)
+    useEffect(() => {
+        if (testimonialList.length <= 1 || isHoveredTestimonial) return;
+        const timer = setInterval(() => {
+            setCurrentTestimonialIndex((prev) => (prev + 1) % testimonialList.length);
+        }, 5000);
+        return () => clearInterval(timer);
+    }, [testimonialList.length, isHoveredTestimonial]);
+
+    // 5 Package Recommendations (From Real Database Packages)
+    const packageRecommendations: RecommendedItem[] = (recommended_projects && recommended_projects.length > 0)
         ? recommended_projects.slice(0, 5)
+        : (recommended_packages && (recommended_packages as RecommendedItem[]).length > 0)
+        ? (recommended_packages as RecommendedItem[]).slice(0, 5)
         : [
             {
                 id: '1',
@@ -498,146 +527,7 @@ export default function ClientDashboard({
 
             <div className="space-y-6 sm:space-y-8">
                 {/* ── 1. HERO CAROUSEL BANNER ─────────────────────────────── */}
-                <section
-                    style={{
-                        background: portalHeroGradient || portalHeroBg,
-                        color: portalHeroText,
-                    }}
-                    onMouseEnter={() => setIsHoveredPromo(true)}
-                    onMouseLeave={() => setIsHoveredPromo(false)}
-                    className="relative -mt-6 sm:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 overflow-hidden shadow-md min-h-[260px] sm:min-h-[340px] lg:min-h-[380px] pb-12 sm:pb-16 lg:pb-18 flex items-center transition-colors select-none"
-                >
-                    {/* Inner Decorative Box Frame (Kotak Bingkai) */}
-                    <div className="absolute inset-2.5 sm:inset-3.5 lg:inset-4 border border-white/20 rounded-xl pointer-events-none z-20" />
-
-                    {/* Pre-rendered Stacked Cross-Fade Background Images */}
-                    <div className="absolute inset-0 z-0">
-                        {promoSlides.map((slide, idx) => (
-                            <img
-                                key={slide.id || idx}
-                                src={slide.image}
-                                alt={slide.title}
-                                className={`absolute inset-0 w-full h-full object-cover object-center sm:object-right filter brightness-95 contrast-[1.05] transition-opacity duration-700 ease-in-out ${
-                                    currentPromoIndex === idx ? 'opacity-85 sm:opacity-95' : 'opacity-0 pointer-events-none'
-                                }`}
-                            />
-                        ))}
-                        {/* Mobile Gradient Overlay */}
-                        <div
-                            style={{
-                                background: `linear-gradient(to bottom, ${hexToRgba(portalHeroBg, 0.95)} 0%, ${hexToRgba(portalHeroBg, 0.70)} 50%, ${hexToRgba(portalHeroBg, 0.95)} 100%)`,
-                            }}
-                            className="absolute inset-0 sm:hidden z-10 pointer-events-none"
-                        />
-                        {/* Desktop Gradient Overlay */}
-                        <div
-                            style={{
-                                background: `linear-gradient(to right, ${hexToRgba(portalHeroBg, 0.97)} 0%, ${hexToRgba(portalHeroBg, 0.90)} 35%, ${hexToRgba(portalHeroBg, 0.55)} 60%, ${hexToRgba(portalHeroBg, 0.15)} 80%, transparent 100%)`,
-                            }}
-                            className="absolute inset-0 hidden sm:block z-10 pointer-events-none"
-                        />
-                    </div>
-
-                    {/* Hero Slide Text Content with Smooth Animated Transition */}
-                    <div className="relative z-10 w-full max-w-full px-6 sm:px-12 lg:px-16 py-8 sm:py-12 lg:py-14">
-                        <AnimatePresence mode="wait">
-                            <motion.div
-                                key={currentPromoIndex}
-                                initial={{ opacity: 0, y: 8 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -8 }}
-                                transition={{ duration: 0.35, ease: 'easeOut' }}
-                                className="max-w-xl space-y-2.5 sm:space-y-3 drop-shadow-xs"
-                            >
-                                <span
-                                    style={{ color: COLOR_WARM_CREAM }}
-                                    className="text-[10px] font-extrabold tracking-[0.25em] uppercase block opacity-90"
-                                >
-                                    {activePromo.tag}
-                                </span>
-                                <h1
-                                    style={{
-                                        fontFamily: `'${portalFontHeading}', serif`,
-                                        color: portalHeroText,
-                                    }}
-                                    className="text-xl sm:text-3xl lg:text-4xl font-serif font-normal tracking-tight leading-[1.2]"
-                                >
-                                    {activePromo.title}
-                                </h1>
-                                <p
-                                    style={{ color: COLOR_WARM_CREAM }}
-                                    className="text-xs sm:text-sm leading-relaxed max-w-lg opacity-90"
-                                >
-                                    {activePromo.description}
-                                </p>
-                                <div className="pt-1.5">
-                                    <Link
-                                        href={activePromo.button_url || '/form-klien'}
-                                        style={{
-                                            backgroundColor: '#FFFFFF',
-                                            color: COLOR_BURGUNDY,
-                                        }}
-                                        className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg text-xs font-bold shadow-md hover:bg-slate-50 transition-all cursor-pointer"
-                                    >
-                                        <span>{activePromo.button_text}</span>
-                                        <ArrowRight className="w-3.5 h-3.5" />
-                                    </Link>
-                                </div>
-                            </motion.div>
-                        </AnimatePresence>
-                    </div>
-
-                    {/* Left & Right Circular Arrows */}
-                    {promoSlides.length > 1 && (
-                        <>
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setCurrentPromoIndex((prev) => (prev === 0 ? promoSlides.length - 1 : prev - 1));
-                                }}
-                                className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white hover:bg-slate-100 text-[#3C0E0E] shadow-md flex items-center justify-center cursor-pointer transition-all z-30"
-                                aria-label="Previous promo slide"
-                            >
-                                <ChevronLeft className="w-4 h-4 text-[#3C0E0E]" />
-                            </button>
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    setCurrentPromoIndex((prev) => (prev + 1) % promoSlides.length);
-                                }}
-                                className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white hover:bg-slate-100 text-[#3C0E0E] shadow-md flex items-center justify-center cursor-pointer transition-all z-30"
-                                aria-label="Next promo slide"
-                            >
-                                <ChevronRight className="w-4 h-4 text-[#3C0E0E]" />
-                            </button>
-                        </>
-                    )}
-
-                    {/* Pagination Dots */}
-                    {promoSlides.length > 1 && (
-                        <div className="absolute bottom-8 sm:bottom-10 lg:bottom-12 inset-x-0 flex justify-center items-center gap-1.5 z-20">
-                            {promoSlides.map((_, idx) => (
-                                <button
-                                    key={idx}
-                                    type="button"
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        setCurrentPromoIndex(idx);
-                                    }}
-                                    className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                                        currentPromoIndex === idx ? 'w-6 bg-white' : 'w-1.5 bg-white/40 hover:bg-white/60'
-                                    }`}
-                                    aria-label={`Slide ${idx + 1}`}
-                                />
-                            ))}
-                        </div>
-                    )}
-                </section>
+                <ClientHeroCarousel slides={promoSlides} />
 
                 {/* ── 2. STATUS PROGRESS (Timeline Stepper) ────────────────── */}
                 <section
@@ -645,7 +535,7 @@ export default function ClientDashboard({
                         backgroundColor: '#FFFFFF',
                         borderColor: COLOR_WARM_CREAM,
                     }}
-                    className="relative z-20 !-mt-8 sm:!-mt-10 lg:!-mt-12 rounded-xl border p-5 sm:p-7 shadow-xs hover:shadow-xl hover:shadow-[#3C0E0E]/8 hover:border-[#3C0E0E]/25 transition-all duration-300 space-y-6"
+                    className="relative z-10 rounded-xl border p-5 sm:p-7 shadow-xs hover:shadow-xl hover:shadow-[#3C0E0E]/8 hover:border-[#3C0E0E]/25 transition-all duration-300 space-y-6"
                 >
                     <div className="flex items-center justify-between">
                         <div>
@@ -810,15 +700,10 @@ export default function ClientDashboard({
 
                                 <Link
                                     href={active_project?.id ? `/client/projects/${active_project.id}#timeline` : '/client/projects'}
-                                    style={{
-                                        backgroundColor: '#FFFFFF',
-                                        color: COLOR_BURGUNDY,
-                                        borderColor: '#E8DDD5',
-                                    }}
-                                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border text-xs font-bold shadow-2xs hover:bg-[#3C0E0E] hover:text-white hover:border-[#3C0E0E] transition-all duration-300 group/btn"
+                                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[#E8DDD5] bg-[#F4EBE4] text-[#3C0E0E] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-xs font-bold shadow-2xs transition-all duration-300 group/btn cursor-pointer"
                                 >
                                     <span>Lihat Detail</span>
-                                    <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform" />
+                                    <ArrowRight className="w-3.5 h-3.5 text-[#3C0E0E] group-hover/btn:text-white group-hover/btn:translate-x-1 transition-all" />
                                 </Link>
                             </div>
                         </div>
@@ -868,11 +753,7 @@ export default function ClientDashboard({
                                 </div>
                                 <Link
                                     href={active_project?.id ? `/client/projects/${active_project.id}#files` : '/client/projects'}
-                                    style={{
-                                        backgroundColor: COLOR_WARM_CREAM,
-                                        color: COLOR_BURGUNDY,
-                                    }}
-                                    className="px-2.5 py-1 rounded-md text-[10px] font-bold hover:opacity-90 transition-opacity shrink-0"
+                                    className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-[#F4EBE4] text-[#3C0E0E] border border-transparent hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] transition-all duration-200 shrink-0 cursor-pointer"
                                 >
                                     Lihat Semua
                                 </Link>
@@ -899,15 +780,10 @@ export default function ClientDashboard({
                                             href={file.drive_url || '#'}
                                             target="_blank"
                                             rel="noreferrer"
-                                            style={{
-                                                backgroundColor: '#FFFFFF',
-                                                borderColor: '#E8DDD5',
-                                                color: COLOR_BURGUNDY,
-                                            }}
-                                            className="px-2.5 py-1 rounded-md border text-[10px] font-bold inline-flex items-center gap-1 hover:bg-slate-50 transition-colors shrink-0 shadow-2xs cursor-pointer"
+                                            className="px-2.5 py-1 rounded-md border border-[#E8DDD5] bg-[#F4EBE4] text-[#3C0E0E] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-[10px] font-bold inline-flex items-center gap-1 transition-all duration-200 shrink-0 shadow-2xs cursor-pointer group/buka"
                                         >
                                             <span>Buka</span>
-                                            <ArrowUpRight className="w-3 h-3" />
+                                            <ArrowUpRight className="w-3 h-3 text-[#3C0E0E] group-hover/buka:text-white transition-colors" />
                                         </a>
                                     </div>
                                 ))}
@@ -917,16 +793,11 @@ export default function ClientDashboard({
                         <div className="pt-4 mt-auto">
                             <Link
                                 href={active_project?.id ? `/client/projects/${active_project.id}#files` : '/client/projects'}
-                                style={{
-                                    backgroundColor: '#FFFFFF',
-                                    color: COLOR_BURGUNDY,
-                                    borderColor: '#E8DDD5',
-                                }}
-                                className="w-full py-2.5 rounded-lg border text-xs font-bold text-center inline-flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors shadow-2xs group/btn"
+                                className="w-full py-2.5 rounded-lg border border-[#E8DDD5] bg-[#F4EBE4] text-[#3C0E0E] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-xs font-bold text-center inline-flex items-center justify-center gap-2 transition-all duration-300 shadow-2xs group/btn cursor-pointer"
                             >
-                                <Folder className="w-3.5 h-3.5" />
+                                <Folder className="w-3.5 h-3.5 text-[#3C0E0E] group-hover/btn:text-white transition-colors" />
                                 <span>Lihat Semua File &amp; Drive Link</span>
-                                <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform" />
+                                <ArrowRight className="w-3.5 h-3.5 text-[#3C0E0E] group-hover/btn:text-white group-hover/btn:translate-x-1 transition-all" />
                             </Link>
                         </div>
                     </div>
@@ -955,11 +826,7 @@ export default function ClientDashboard({
                                 <button
                                     type="button"
                                     onClick={() => setIsPaymentModalOpen(true)}
-                                    style={{
-                                        backgroundColor: COLOR_WARM_CREAM,
-                                        color: COLOR_BURGUNDY,
-                                    }}
-                                    className="px-2.5 py-1 rounded-md text-[10px] font-bold hover:opacity-90 transition-opacity shrink-0 cursor-pointer"
+                                    className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-[#F4EBE4] text-[#3C0E0E] border border-transparent hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] transition-all duration-200 shrink-0 cursor-pointer"
                                 >
                                     Lihat Detail
                                 </button>
@@ -1032,16 +899,11 @@ export default function ClientDashboard({
                             <button
                                 type="button"
                                 onClick={() => setIsPaymentModalOpen(true)}
-                                style={{
-                                    backgroundColor: '#FFFFFF',
-                                    color: COLOR_BURGUNDY,
-                                    borderColor: '#E8DDD5',
-                                }}
-                                className="w-full py-2.5 rounded-lg border text-xs font-bold text-center inline-flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors shadow-2xs group/btn cursor-pointer"
+                                className="w-full py-2.5 rounded-lg border border-[#E8DDD5] bg-[#F4EBE4] text-[#3C0E0E] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-xs font-bold text-center inline-flex items-center justify-center gap-2 transition-all duration-300 shadow-2xs group/btn cursor-pointer"
                             >
-                                <CreditCard className="w-3.5 h-3.5" />
+                                <CreditCard className="w-3.5 h-3.5 text-[#3C0E0E] group-hover/btn:text-white transition-colors" />
                                 <span>Lihat Rincian &amp; Riwayat Pembayaran</span>
-                                <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform" />
+                                <ArrowRight className="w-3.5 h-3.5 text-[#3C0E0E] group-hover/btn:text-white group-hover/btn:translate-x-1 transition-all" />
                             </button>
                         </div>
                     </div>
@@ -1098,15 +960,10 @@ export default function ClientDashboard({
                         <div className="pt-4 mt-auto">
                             <Link
                                 href={active_project?.id ? `/client/projects/${active_project.id}#highlights` : '/client/projects'}
-                                style={{
-                                    backgroundColor: '#FFFFFF',
-                                    color: COLOR_BURGUNDY,
-                                    borderColor: '#E8DDD5',
-                                }}
-                                className="w-full py-2.5 rounded-lg border text-xs font-bold text-center inline-flex items-center justify-center gap-1.5 hover:bg-slate-50 transition-colors shadow-2xs group/btn"
+                                className="w-full py-2.5 rounded-lg border border-[#E8DDD5] bg-[#F4EBE4] text-[#3C0E0E] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-xs font-bold text-center inline-flex items-center justify-center gap-1.5 transition-all duration-300 shadow-2xs group/btn cursor-pointer"
                             >
                                 <span>Lihat Semua Highlight</span>
-                                <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform" />
+                                <ArrowRight className="w-3.5 h-3.5 text-[#3C0E0E] group-hover/btn:text-white group-hover/btn:translate-x-1 transition-all" />
                             </Link>
                         </div>
                     </div>
@@ -1137,11 +994,7 @@ export default function ClientDashboard({
                                 </div>
                                 <Link
                                     href="/client/portfolio"
-                                    style={{
-                                        backgroundColor: COLOR_WARM_CREAM,
-                                        color: COLOR_BURGUNDY,
-                                    }}
-                                    className="px-2.5 py-1 rounded-md text-[10px] font-bold hover:opacity-90 transition-opacity shrink-0 cursor-pointer"
+                                    className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-[#F4EBE4] text-[#3C0E0E] border border-transparent hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] transition-all duration-200 shrink-0 cursor-pointer"
                                 >
                                     Lihat Portfolio
                                 </Link>
@@ -1160,9 +1013,9 @@ export default function ClientDashboard({
                                         title="Klik untuk melihat foto"
                                     >
                                         <img
-                                            src={item.image}
-                                            alt="Portfolio thumbnail"
-                                            className="w-full h-full object-cover group-hover/pimg:scale-110 transition-transform duration-500"
+                                             src={item.image}
+                                             alt="Portfolio thumbnail"
+                                             className="w-full h-full object-cover group-hover/pimg:scale-110 transition-transform duration-500"
                                         />
                                         {item.isOverlay ? (
                                             <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center text-white text-center p-1 group-hover/pimg:bg-black/60 transition-colors">
@@ -1180,81 +1033,114 @@ export default function ClientDashboard({
                         </div>
                     </div>
 
-                    {/* Card 2: Testimoni Klien */}
+                    {/* Card 2: Testimoni Klien (Auto-sliding with hover pause & smooth transitions) */}
                     <div
                         style={{
                             backgroundColor: '#FFFFFF',
                             borderColor: COLOR_WARM_CREAM,
                         }}
-                        className="rounded-xl border p-5 sm:p-6 shadow-xs flex flex-col justify-between hover:shadow-lg hover:shadow-[#3C0E0E]/5 hover:-translate-y-1 hover:border-[#3C0E0E]/25 transition-all duration-300 group"
+                        onMouseEnter={() => setIsHoveredTestimonial(true)}
+                        onMouseLeave={() => setIsHoveredTestimonial(false)}
+                        className="rounded-xl border p-5 sm:p-6 shadow-xs flex flex-col justify-between hover:shadow-lg hover:shadow-[#3C0E0E]/5 hover:-translate-y-1 hover:border-[#3C0E0E]/25 transition-all duration-300 group select-none"
                     >
                         <div className="space-y-3">
-                            <div className="border-b border-slate-100 pb-3">
-                                <h4
-                                    style={{ color: COLOR_BURGUNDY }}
-                                    className="text-xs font-black uppercase tracking-wider"
-                                >
-                                    Testimoni Klien
-                                </h4>
-                                <p className="text-[11px] text-slate-400 mt-0.5">
-                                    Kata mereka tentang pengalaman bersama kami.
-                                </p>
-                            </div>
-
-                            {/* Stars */}
-                            <div className="flex items-center gap-1 text-rose-600">
-                                {Array.from({ length: 5 }).map((_, i) => (
-                                    <Star
-                                        key={i}
-                                        className="w-3.5 h-3.5 text-rose-600 fill-rose-600"
-                                    />
-                                ))}
-                            </div>
-
-                            {/* Quote */}
-                            <p className="text-xs text-slate-700 leading-relaxed italic line-clamp-3">
-                                "{activeTestimonial.comment}"
-                            </p>
-
-                            {/* Client Avatar + Navigation */}
-                            <div className="flex items-center justify-between pt-2">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-200 shrink-0">
-                                        <img
-                                            src={activeTestimonial.avatar}
-                                            alt={activeTestimonial.client_name}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-bold text-slate-900 leading-none">
-                                            {activeTestimonial.client_name}
-                                        </p>
-                                        <span className="text-[10px] text-slate-400 block mt-0.5">
-                                            {activeTestimonial.package_name || 'Paket Prewedding'}
-                                        </span>
-                                    </div>
+                            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                                <div>
+                                    <h4
+                                        style={{ color: COLOR_BURGUNDY }}
+                                        className="text-xs font-black uppercase tracking-wider"
+                                    >
+                                        Testimoni Klien
+                                    </h4>
+                                    <p className="text-[11px] text-slate-400 mt-0.5">
+                                        Kata mereka tentang pengalaman bersama kami.
+                                    </p>
                                 </div>
-
                                 <div className="flex items-center gap-1">
                                     <button
                                         type="button"
                                         onClick={() => setCurrentTestimonialIndex((prev) => (prev === 0 ? testimonialList.length - 1 : prev - 1))}
-                                        className="w-6 h-6 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors cursor-pointer"
+                                        className="w-6 h-6 rounded-full border border-[#E8DDD5] bg-[#F4EBE4] flex items-center justify-center text-[#3C0E0E] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] transition-all cursor-pointer group"
                                         aria-label="Previous testimonial"
                                     >
-                                        <ChevronLeft className="w-3.5 h-3.5" />
+                                        <ChevronLeft className="w-3.5 h-3.5 text-[#3C0E0E] group-hover:text-white transition-colors" />
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setCurrentTestimonialIndex((prev) => (prev + 1) % testimonialList.length)}
-                                        className="w-6 h-6 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors cursor-pointer"
+                                        className="w-6 h-6 rounded-full border border-[#E8DDD5] bg-[#F4EBE4] flex items-center justify-center text-[#3C0E0E] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] transition-all cursor-pointer group"
                                         aria-label="Next testimonial"
                                     >
-                                        <ChevronRight className="w-3.5 h-3.5" />
+                                        <ChevronRight className="w-3.5 h-3.5 text-[#3C0E0E] group-hover:text-white transition-colors" />
                                     </button>
                                 </div>
                             </div>
+
+                            <AnimatePresence mode="wait">
+                                <motion.div
+                                    key={activeTestimonial.id || currentTestimonialIndex}
+                                    initial={{ opacity: 0, y: 6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -6 }}
+                                    transition={{ duration: 0.35, ease: 'easeInOut' }}
+                                    className="space-y-3"
+                                >
+                                    {/* Stars */}
+                                    <div className="flex items-center gap-1 text-rose-600">
+                                        {Array.from({ length: activeTestimonial.rating || 5 }).map((_, i) => (
+                                            <Star
+                                                key={i}
+                                                className="w-3.5 h-3.5 text-rose-600 fill-rose-600"
+                                            />
+                                        ))}
+                                    </div>
+
+                                    {/* Quote */}
+                                    <p className="text-xs text-slate-700 leading-relaxed italic line-clamp-3 min-h-[48px]">
+                                        "{activeTestimonial.comment}"
+                                    </p>
+
+                                    {/* Client Avatar + Name + Slide Dots */}
+                                    <div className="flex items-center justify-between pt-1">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-200 shrink-0 ring-1 ring-slate-200">
+                                                <img
+                                                    src={activeTestimonial.avatar}
+                                                    alt={activeTestimonial.client_name}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-bold text-slate-900 leading-none">
+                                                    {activeTestimonial.client_name}
+                                                </p>
+                                                <span className="text-[10px] text-slate-400 block mt-0.5">
+                                                    {activeTestimonial.package_name || 'Wedding Day Luxury'}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Testimonial Page Slider Indicator Dots */}
+                                        {testimonialList.length > 1 && (
+                                            <div className="flex items-center gap-1">
+                                                {testimonialList.map((_, dotIdx) => (
+                                                    <button
+                                                        key={dotIdx}
+                                                        type="button"
+                                                        onClick={() => setCurrentTestimonialIndex(dotIdx)}
+                                                        className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                                                            (currentTestimonialIndex % testimonialList.length) === dotIdx
+                                                                ? 'w-4 bg-[#3C0E0E]'
+                                                                : 'w-1.5 bg-slate-200 hover:bg-slate-300'
+                                                        }`}
+                                                        aria-label={`Testimoni ${dotIdx + 1}`}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            </AnimatePresence>
                         </div>
                     </div>
                 </section>
@@ -1282,16 +1168,6 @@ export default function ClientDashboard({
                                 Pilihan paket menarik lainnya yang mungkin Anda sukai.
                             </p>
                         </div>
-                        <Link
-                            href="/form-klien"
-                            style={{
-                                backgroundColor: COLOR_WARM_CREAM,
-                                color: COLOR_BURGUNDY,
-                            }}
-                            className="px-3 py-1.5 rounded-lg text-xs font-bold hover:opacity-90 transition-opacity shrink-0"
-                        >
-                            Lihat Semua Paket
-                        </Link>
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
@@ -1329,10 +1205,7 @@ export default function ClientDashboard({
                                             href={generalWhatsAppUrl}
                                             target="_blank"
                                             rel="noreferrer"
-                                            style={{
-                                                borderColor: '#E8DDD5',
-                                            }}
-                                            className="w-full py-1.5 rounded-lg border bg-white hover:bg-[#3C0E0E] hover:text-white hover:border-[#3C0E0E] text-[10.5px] font-bold text-[#3C0E0E] shadow-2xs transition-all duration-300 flex items-center justify-center gap-1 cursor-pointer group/btn"
+                                            className="w-full py-1.5 rounded-lg border border-[#E8DDD5] bg-[#F4EBE4] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-[10.5px] font-bold text-[#3C0E0E] shadow-2xs transition-all duration-300 flex items-center justify-center gap-1 cursor-pointer group/btn"
                                         >
                                             <MessageCircle className="w-3 h-3 text-[#3C0E0E] group-hover/btn:text-white transition-colors" />
                                             <span>Hubungi Admin</span>
@@ -1431,10 +1304,9 @@ export default function ClientDashboard({
                                     </div>
                                     <Link
                                         href={active_project?.id ? `/client/projects/${active_project.id}#invoice` : '/client/projects'}
-                                        style={{ backgroundColor: '#FFFFFF', borderColor: '#E8DDD5', color: COLOR_BURGUNDY }}
-                                        className="px-3.5 py-2 rounded-xl border text-xs font-bold shadow-2xs hover:bg-[#3C0E0E] hover:text-white transition-all flex items-center justify-center gap-1.5 self-start sm:self-auto cursor-pointer"
+                                        className="px-3.5 py-2 rounded-xl border border-[#E8DDD5] bg-[#F4EBE4] text-[#3C0E0E] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-xs font-bold shadow-2xs transition-all flex items-center justify-center gap-1.5 self-start sm:self-auto cursor-pointer group/inv"
                                     >
-                                        <Printer className="w-3.5 h-3.5" />
+                                        <Printer className="w-3.5 h-3.5 text-[#3C0E0E] group-hover/inv:text-white transition-colors" />
                                         <span>Lihat Invoice</span>
                                     </Link>
                                 </div>
@@ -1539,7 +1411,7 @@ export default function ClientDashboard({
                             <button
                                 type="button"
                                 onClick={() => setIsPaymentModalOpen(false)}
-                                className="px-4 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer transition-colors"
+                                className="px-4 py-2 bg-[#F4EBE4] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] border border-[#E8DDD5] text-[#3C0E0E] text-xs font-bold rounded-xl cursor-pointer transition-all shadow-2xs"
                             >
                                 Tutup
                             </button>

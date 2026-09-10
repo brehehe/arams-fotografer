@@ -32,14 +32,18 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
     const isMasterData = currentPath.startsWith('/master-data') &&
         !currentPath.startsWith('/master-data/promo-slides') &&
         !currentPath.startsWith('/master-data/testimonials') &&
-        !currentPath.startsWith('/master-data/instagram-posts');
+        !currentPath.startsWith('/master-data/instagram-posts') &&
+        !currentPath.startsWith('/master-data/portfolio-categories') &&
+        !currentPath.startsWith('/master-data/portfolios');
     const [masterDataOpen, setMasterDataOpen] = useState(isMasterData);
 
     const isSettingSection = currentPath.startsWith('/setting') ||
         currentPath.startsWith('/settings') ||
         currentPath.startsWith('/master-data/promo-slides') ||
         currentPath.startsWith('/master-data/testimonials') ||
-        currentPath.startsWith('/master-data/instagram-posts');
+        currentPath.startsWith('/master-data/instagram-posts') ||
+        currentPath.startsWith('/master-data/portfolio-categories') ||
+        currentPath.startsWith('/master-data/portfolios');
     const [settingsOpen, setSettingsOpen] = useState(isSettingSection);
 
     useEffect(() => {
@@ -105,7 +109,9 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
         (currentPath === '/setting') ||
         currentPath.startsWith('/master-data/promo-slides') ||
         currentPath.startsWith('/master-data/testimonials') ||
-        currentPath.startsWith('/master-data/instagram-posts');
+        currentPath.startsWith('/master-data/instagram-posts') ||
+        currentPath.startsWith('/master-data/portfolio-categories') ||
+        currentPath.startsWith('/master-data/portfolios');
 
     const settingNav = [
         { name: 'Admin', href: '/setting/admin', active: isAdminActive },

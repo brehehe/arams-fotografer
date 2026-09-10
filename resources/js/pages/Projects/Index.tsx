@@ -369,7 +369,7 @@ export default function ProjectsIndex({
     const dibatalkanPct = statTotal > 0 ? Math.round((statDibatalkan / statTotal) * 100) : 0;
 
     return (
-        <div className="w-full max-w-full space-y-5 pb-12">
+        <div className="w-full max-w-full space-y-4 pb-2">
             <Head title="Projects & Orders - ARAMS PHOTOGRAPHY" />
 
             {/* ── 1. TOP HEADER & ACTION BUTTONS ─────────────────────────────────── */}

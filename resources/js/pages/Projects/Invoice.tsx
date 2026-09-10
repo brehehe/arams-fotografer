@@ -520,7 +520,7 @@ return '27 Agustus 2026';
     };
 
     return (
-        <div className="w-full max-w-full space-y-6 pb-20">
+        <div className="w-full max-w-full space-y-4 pb-2">
             <Head title={`Invoice ${inv.invoice_number} - ${project?.name || 'Project'}`} />
 
             {/* Print Isolation CSS */}
