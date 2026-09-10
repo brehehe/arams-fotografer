@@ -132,10 +132,10 @@ return;
             }}
             onMouseEnter={() => setIsHoveredPromo(true)}
             onMouseLeave={() => setIsHoveredPromo(false)}
-            className={`relative -mt-6 sm:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 overflow-hidden shadow-md min-h-[310px] sm:min-h-[390px] lg:min-h-[450px] flex items-center transition-colors select-none ${className}`}
+            className={`relative -mt-6 sm:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 overflow-hidden shadow-md min-h-[380px] sm:min-h-[480px] lg:min-h-[560px] flex items-center transition-colors select-none ${className}`}
         >
-            {/* Inner Decorative Box Frame (Kotak Bingkai - lifted at bottom so slider dots sit below the line) */}
-            <div className="absolute inset-x-2.5 top-2.5 bottom-8 sm:inset-x-3.5 sm:top-3.5 sm:bottom-9 lg:inset-x-4 lg:top-4 lg:bottom-10 border border-white/20 rounded-xl pointer-events-none z-20" />
+            {/* Inner Decorative Box Frame (Kotak Bingkai - with generous breathing room from top navbar and bottom dots) */}
+            <div className="absolute inset-x-4 top-6 bottom-10 sm:inset-x-6 sm:top-8 sm:bottom-12 lg:inset-x-8 lg:top-10 lg:bottom-14 border border-white/20 rounded-2xl pointer-events-none z-20" />
 
             {/* Pre-rendered Stacked Cross-Fade Background Images */}
             <div className="absolute inset-0 z-0">
@@ -166,7 +166,7 @@ return;
             </div>
 
             {/* Hero Slide Text Content with Smooth Animated Transition */}
-            <div className="relative z-10 w-full max-w-full px-6 sm:px-12 lg:px-16 py-8 sm:py-12 lg:py-14">
+            <div className="relative z-10 w-full max-w-full px-6 sm:px-12 lg:px-16 py-10 sm:py-16 lg:py-20">
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={currentPromoIndex}
@@ -174,12 +174,12 @@ return;
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -8 }}
                         transition={{ duration: 0.35, ease: 'easeOut' }}
-                        className="max-w-xl space-y-2.5 sm:space-y-3 drop-shadow-xs"
+                        className="max-w-2xl space-y-3 sm:space-y-4 drop-shadow-xs"
                     >
                         {activePromo.tag && (
                             <span
                                 style={{ color: COLOR_WARM_CREAM }}
-                                className="text-[10px] font-extrabold tracking-[0.25em] uppercase block opacity-90"
+                                className="text-[10px] sm:text-xs font-extrabold tracking-[0.25em] uppercase block opacity-90"
                             >
                                 {activePromo.tag}
                             </span>
@@ -189,22 +189,22 @@ return;
                                 fontFamily: `'${portalFontHeading}', serif`,
                                 color: portalHeroText,
                             }}
-                            className="text-xl sm:text-3xl lg:text-4xl font-serif font-normal tracking-tight leading-[1.2]"
+                            className="text-2xl sm:text-4xl lg:text-5xl font-serif font-normal tracking-tight leading-[1.18]"
                         >
                             {activePromo.title}
                         </h1>
                         {activePromo.description && (
                             <p
                                 style={{ color: COLOR_WARM_CREAM }}
-                                className="text-xs sm:text-sm leading-relaxed max-w-lg opacity-90"
+                                className="text-xs sm:text-base leading-relaxed max-w-xl opacity-90"
                             >
                                 {activePromo.description}
                             </p>
                         )}
-                        <div className="pt-2">
+                        <div className="pt-2 sm:pt-3">
                             <Link
                                 href={activePromo.button_url || '/form-klien'}
-                                className="client-btn-primary"
+                                className="client-btn-primary text-xs sm:text-sm"
                             >
                                 <span>{activePromo.button_text || 'Lihat Selengkapnya'}</span>
                                 <ArrowRight className="w-3.5 h-3.5" />
@@ -216,7 +216,7 @@ return;
 
             {/* Pagination Slider Dots - positioned below the inner frame line so they never collide */}
             {promoSlides.length > 1 && (
-                <div className="absolute bottom-2 sm:bottom-2.5 inset-x-0 flex justify-center items-center gap-1.5 z-20">
+                <div className="absolute bottom-3 sm:bottom-4 inset-x-0 flex justify-center items-center gap-1.5 z-20">
                     {promoSlides.map((_, idx) => (
                         <button
                             key={idx}

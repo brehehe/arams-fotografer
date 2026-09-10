@@ -18,6 +18,7 @@ class Category extends Model
         'name',
         'slug',
         'description',
+        'image',
         'icon',
         'color',
         'workflow_type',
@@ -29,7 +30,7 @@ class Category extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['name', 'slug', 'status'])
+            ->logOnly(['name', 'slug', 'image', 'status'])
             ->logOnlyDirty();
     }
 

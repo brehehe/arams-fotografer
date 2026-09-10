@@ -25,7 +25,7 @@ class ClientIntakeController extends Controller
     public function create(): Response
     {
         $categories = Category::where('status', 'active')
-            ->select('id', 'name', 'slug', 'description', 'color', 'form_type')
+            ->select('id', 'name', 'slug', 'description', 'color', 'form_type', 'image')
             ->orderBy('sort_order')
             ->get();
 

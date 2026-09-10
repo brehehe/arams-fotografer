@@ -329,14 +329,10 @@ export default function ClientDashboard({
         ? timeline.steps
         : defaultSteps;
 
-    const [selectedStepNum, setSelectedStepNum] = useState<number>(
-        timeline.current_step || 3
-    );
-
-    const activeStepObj = timelineSteps.find((s) => s.step === selectedStepNum) || timelineSteps[2] || timelineSteps[0];
     const isProjectCompleted = active_project?.status === 'completed' || active_project?.workflow_step === 'selesai' || active_project?.status === 'delivered';
     const totalTimelineSteps = timelineSteps.length;
-    const currentStepNum = isProjectCompleted ? totalTimelineSteps : (selectedStepNum || timeline.current_step || 1);
+    const currentStepNum = isProjectCompleted ? totalTimelineSteps : (timeline.current_step || 1);
+    const activeStepObj = timelineSteps.find((s) => s.step === currentStepNum) || timelineSteps.find((s) => s.status === 'active') || timelineSteps[0];
     const progressPercent = active_project?.progress_percentage ?? active_project?.progress ?? (
         isProjectCompleted ? 100 : Math.min(100, Math.max(0, Math.round((currentStepNum / totalTimelineSteps) * 100)))
     );
@@ -466,12 +462,12 @@ export default function ClientDashboard({
             },
         ];
 
-    // Auto-advance Testimonials Carousel every 5 seconds (pauses on hover)
+    // Auto-advance Testimonials Carousel every 3 seconds (pauses on hover)
     useEffect(() => {
         if (testimonialList.length <= 1 || isHoveredTestimonial) return;
         const timer = setInterval(() => {
             setCurrentTestimonialIndex((prev) => (prev + 1) % testimonialList.length);
-        }, 5000);
+        }, 3000);
         return () => clearInterval(timer);
     }, [testimonialList.length, isHoveredTestimonial]);
 
@@ -575,17 +571,14 @@ export default function ClientDashboard({
 
                             {timelineSteps.map((step, idx) => {
                                 const isCompleted = step.status === 'completed';
-                                const isActive = step.status === 'active' || step.step === selectedStepNum;
+                                const isActive = step.status === 'active' || (!isCompleted && step.step === currentStepNum);
 
                                 return (
                                     <div
                                         key={step.step || idx}
-                                        className="flex flex-col items-center relative z-10 flex-1 cursor-pointer group"
-                                        onClick={() => setSelectedStepNum(step.step)}
+                                        className="flex flex-col items-center relative z-10 flex-1 select-none"
                                     >
-                                        <button
-                                            type="button"
-                                            onClick={() => setSelectedStepNum(step.step)}
+                                        <div
                                             style={
                                                 isCompleted
                                                     ? {
@@ -604,7 +597,7 @@ export default function ClientDashboard({
                                                           borderColor: '#E8DDD5',
                                                       }
                                             }
-                                            className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-200 group-hover:scale-110 cursor-pointer ${
+                                            className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-200 ${
                                                 isActive ? 'border-2 shadow-xs' : !isCompleted ? 'border' : ''
                                             }`}
                                         >
@@ -619,14 +612,14 @@ export default function ClientDashboard({
                                             ) : (
                                                 <span className="text-xs font-bold">{step.step}</span>
                                             )}
-                                        </button>
+                                        </div>
 
                                         <div className="text-center mt-2 space-y-0.5">
                                             <p
                                                 style={{
                                                     color: isCompleted || isActive ? COLOR_BURGUNDY : '#64748B',
                                                 }}
-                                                className="text-[11px] sm:text-xs font-bold group-hover:text-[#3C0E0E] transition-colors"
+                                                className="text-[11px] sm:text-xs font-bold"
                                             >
                                                 {step.title || `${step.step}. ${step.name}`}
                                             </p>
@@ -676,7 +669,7 @@ export default function ClientDashboard({
                                             {activeStepObj.title?.replace(/^\d+\.\s*/, '') || activeStepObj.name || 'Editing Seleksi'}
                                         </h4>
                                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white text-[#3C0E0E] border border-[#E8DDD5] shadow-2xs">
-                                            Tahap {selectedStepNum} dari {totalTimelineSteps}
+                                            Tahap {currentStepNum} dari {totalTimelineSteps}
                                         </span>
                                     </div>
                                     <p className="text-xs text-slate-600 leading-relaxed line-clamp-1 sm:line-clamp-none">
@@ -1082,7 +1075,7 @@ export default function ClientDashboard({
                                     initial={{ opacity: 0, y: 6 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -6 }}
-                                    transition={{ duration: 0.35, ease: 'easeInOut' }}
+                                    transition={{ duration: 0.28, ease: 'easeOut' }}
                                     className="space-y-3"
                                 >
                                     {/* Stars */}

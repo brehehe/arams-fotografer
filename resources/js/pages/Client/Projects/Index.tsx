@@ -153,10 +153,10 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                         background: portalHeroGradient || portalHeroBg,
                         color: portalHeroText,
                     }}
-                    className="relative -mt-6 sm:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 overflow-hidden shadow-md min-h-[310px] sm:min-h-[390px] lg:min-h-[450px] flex items-center transition-colors select-none"
+                    className="relative -mt-6 sm:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 overflow-hidden shadow-md min-h-[380px] sm:min-h-[480px] lg:min-h-[560px] flex items-center transition-colors select-none"
                 >
                     {/* Inner Decorative Box Frame (Kotak Bingkai) */}
-                    <div className="absolute inset-2.5 sm:inset-3.5 lg:inset-4 border border-white/20 rounded-xl pointer-events-none z-20" />
+                    <div className="absolute inset-x-4 top-6 bottom-6 sm:inset-x-6 sm:top-8 sm:bottom-8 lg:inset-x-8 lg:top-10 lg:bottom-10 border border-white/20 rounded-2xl pointer-events-none z-20" />
 
                     {/* Background Overlay */}
                     <div className="absolute inset-0 z-0">
@@ -182,11 +182,11 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                     </div>
 
                     {/* Hero Content */}
-                    <div className="relative z-10 w-full max-w-full px-6 sm:px-12 lg:px-16 py-8 sm:py-12 lg:py-14">
-                        <div className="max-w-xl space-y-3 sm:space-y-3.5 drop-shadow-xs">
+                    <div className="relative z-10 w-full max-w-full px-6 sm:px-12 lg:px-16 py-10 sm:py-16 lg:py-20">
+                        <div className="max-w-2xl space-y-3 sm:space-y-4 drop-shadow-xs">
                             <span
                                 style={{ color: COLOR_WARM_CREAM }}
-                                className="text-[10px] font-extrabold tracking-[0.25em] uppercase block opacity-90"
+                                className="text-[10px] sm:text-xs font-extrabold tracking-[0.25em] uppercase block opacity-90"
                             >
                                 CLIENT AREA • PROJECT MANAGEMENT
                             </span>
@@ -195,17 +195,17 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                                     fontFamily: `'${portalFontHeading}', serif`,
                                     color: portalHeroText,
                                 }}
-                                className="text-xl sm:text-3xl lg:text-4xl font-serif font-normal tracking-tight leading-[1.2]"
+                                className="text-2xl sm:text-4xl lg:text-5xl font-serif font-normal tracking-tight leading-[1.18]"
                             >
                                 Project Saya
                             </h1>
                             <p
                                 style={{ color: COLOR_WARM_CREAM }}
-                                className="text-xs sm:text-sm leading-relaxed max-w-lg opacity-90"
+                                className="text-xs sm:text-base leading-relaxed max-w-xl opacity-90"
                             >
-                                Pantau seluruh tahapan dokumentasi, timeline pengerjaan, jadwal pemotretan, dan unduh hasil karya foto & video Anda di satu tempat yang aman.
+                                Pantau seluruh tahapan dokumentasi, timeline pengerjaan, jadwal pemotretan, dan unduh hasil karya foto &amp; video Anda di satu tempat yang aman.
                             </p>
-                            <div className="pt-2 flex flex-wrap items-center gap-2.5 sm:gap-3">
+                            <div className="pt-2 sm:pt-3 flex flex-wrap items-center gap-2.5 sm:gap-3">
                                 <div className="client-btn-outline cursor-default">
                                     <FolderKanban className="w-3.5 h-3.5 text-white/90" />
                                     <span>{displayProjects.length} Total Project</span>
@@ -216,7 +216,7 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                                 </div>
                                 <Link
                                     href="/form-klien"
-                                    className="client-btn-primary"
+                                    className="client-btn-primary text-xs sm:text-sm"
                                 >
                                     <span>Booking Project Baru</span>
                                     <ArrowRight className="w-3.5 h-3.5" />

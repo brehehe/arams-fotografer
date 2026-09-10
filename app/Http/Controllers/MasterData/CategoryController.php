@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\MasterData\StoreCategoryRequest;
 use App\Http\Requests\MasterData\UpdateCategoryRequest;
 use App\Models\Category;
+use App\Traits\HasWebpUpload;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -14,6 +15,8 @@ use Inertia\Response;
 
 class CategoryController extends Controller
 {
+    use HasWebpUpload;
+
     public function index(Request $request): Response
     {
         $query = Category::withCount(['projects', 'packages', 'services']);
@@ -47,6 +50,12 @@ class CategoryController extends Controller
             $validated['slug'] = Str::slug($validated['name']);
         }
 
+        $imagePath = $request->input('image_url') ?: ($request->input('image') ?: null);
+        if ($request->hasFile('image_file')) {
+            $imagePath = $this->uploadAsWebp($request->file('image_file'), 'categories', 85, 1920);
+        }
+        $validated['image'] = $imagePath;
+
         $category = Category::create($validated);
 
         activity()
@@ -65,6 +74,16 @@ class CategoryController extends Controller
             $validated['slug'] = Str::slug($validated['name']);
         }
 
+        $imagePath = $category->image;
+        if ($request->hasFile('image_file')) {
+            $imagePath = $this->uploadAsWebp($request->file('image_file'), 'categories', 85, 1920, $category->image);
+        } elseif ($request->has('image_url')) {
+            $imagePath = $request->input('image_url');
+        } elseif ($request->has('image')) {
+            $imagePath = $request->input('image');
+        }
+        $validated['image'] = $imagePath;
+
         $category->update($validated);
 
         activity()
@@ -78,6 +97,10 @@ class CategoryController extends Controller
 
     public function destroy(Category $category): RedirectResponse
     {
+        if ($category->image) {
+            $this->deleteWebpImage($category->image);
+        }
+
         $category->delete();
 
         return redirect()->back()->with('success', 'Kategori berhasil dihapus.');

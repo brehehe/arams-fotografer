@@ -14,8 +14,6 @@ import {
     Download,
     Edit2,
     Trash2,
-    ChevronLeft,
-    ChevronRight,
     ChevronDown,
     X,
     Heart,
@@ -32,7 +30,7 @@ import {
     Layers,
     GitBranch,
     Box,
-    ExternalLink,
+    Upload,
 } from 'lucide-react';
 
 interface CategoryItem {
@@ -40,6 +38,7 @@ interface CategoryItem {
     name: string;
     slug?: string;
     description?: string;
+    image?: string;
     icon?: string;
     color?: string;
     workflow_type?: string;
@@ -113,6 +112,8 @@ export default function CategoriesIndex({
     const [editItem, setEditItem] = useState<CategoryItem | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const [imagePreview, setImagePreview] = useState('');
+
     // Form state
     const [form, setForm] = useState({
         name: '',
@@ -121,6 +122,9 @@ export default function CategoriesIndex({
         form_type: 'standard',
         color: '#6366F1',
         icon: 'Tag',
+        image: '',
+        image_url: '',
+        image_file: null as File | null,
         status: 'active',
     });
 
@@ -142,6 +146,18 @@ export default function CategoriesIndex({
         });
     }, [categoryList, searchQuery, statusFilter]);
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setForm((prev) => ({
+                ...prev,
+                image_file: file,
+                image_url: '',
+            }));
+            setImagePreview(URL.createObjectURL(file));
+        }
+    };
+
     const handleOpenCreate = () => {
         setEditItem(null);
         setForm({
@@ -151,8 +167,12 @@ export default function CategoriesIndex({
             form_type: 'standard',
             color: '#6366F1',
             icon: 'Tag',
+            image: '',
+            image_url: '',
+            image_file: null,
             status: 'active',
         });
+        setImagePreview('');
         setCreateModalOpen(true);
     };
 
@@ -165,37 +185,64 @@ export default function CategoriesIndex({
             form_type: item.form_type || (item.slug === 'wedding' || item.slug === 'prewedding' ? 'wedding' : (item.slug === 'newborn' ? 'newborn' : 'standard')),
             color: item.color || '#6366F1',
             icon: item.icon || 'Tag',
+            image: item.image || '',
+            image_url: item.image || '',
+            image_file: null,
             status: item.status || 'active',
         });
+        setImagePreview(item.image || '');
         setCreateModalOpen(true);
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
+
+        const formData = new FormData();
+        formData.append('name', form.name);
+        if (form.description) formData.append('description', form.description);
+        formData.append('workflow_type', form.workflow_type);
+        formData.append('form_type', form.form_type);
+        formData.append('color', form.color);
+        formData.append('icon', form.icon);
+        formData.append('status', form.status);
+
+        if (form.image_file) {
+            formData.append('image_file', form.image_file);
+        } else if (form.image_url) {
+            formData.append('image_url', form.image_url);
+        } else if (form.image) {
+            formData.append('image', form.image);
+        }
+
         if (editItem) {
-            router.put(`/master-data/categories/${editItem.id}`, form, {
+            formData.append('_method', 'PUT');
+            router.post(`/master-data/categories/${editItem.id}`, formData, {
+                preserveScroll: true,
                 onSuccess: () => {
                     toast.success(`Kategori "${form.name}" berhasil diperbarui!`);
                     setCreateModalOpen(false);
                     setIsSubmitting(false);
                 },
                 onError: (errs) => {
-                    toast.error('Gagal memperbarui: ' + Object.values(errs).join(', '));
+                    toast.error('Gagal memperbarui: ' + (Object.values(errs)[0] || 'Terjadi kesalahan'));
                     setIsSubmitting(false);
                 },
+                onFinish: () => setIsSubmitting(false),
             });
         } else {
-            router.post('/master-data/categories', form, {
+            router.post('/master-data/categories', formData, {
+                preserveScroll: true,
                 onSuccess: () => {
                     toast.success(`Kategori "${form.name}" berhasil ditambahkan!`);
                     setCreateModalOpen(false);
                     setIsSubmitting(false);
                 },
                 onError: (errs) => {
-                    toast.error('Gagal menambah: ' + Object.values(errs).join(', '));
+                    toast.error('Gagal menambah: ' + (Object.values(errs)[0] || 'Terjadi kesalahan'));
                     setIsSubmitting(false);
                 },
+                onFinish: () => setIsSubmitting(false),
             });
         }
     };
@@ -469,10 +516,20 @@ export default function CategoriesIndex({
                                             </td>
 
                                             <td className="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">
-                                                <div className="flex items-center gap-2.5">
-                                                    <div className={`w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 ${bgStyle}`}>
-                                                        {iconEl}
-                                                    </div>
+                                                <div className="flex items-center gap-3">
+                                                    {cat.image ? (
+                                                        <div className="relative w-9 h-9 rounded-xl overflow-hidden border border-slate-200 shadow-2xs shrink-0 group bg-slate-100">
+                                                            <img
+                                                                src={cat.image}
+                                                                alt={cat.name}
+                                                                className="w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-300"
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${bgStyle}`}>
+                                                            {iconEl}
+                                                        </div>
+                                                    )}
                                                     <div>
                                                         <span className="block font-bold text-slate-900">{cat.name}</span>
                                                         {cat.description && (
@@ -588,8 +645,8 @@ export default function CategoriesIndex({
             {/* ── 4. MODAL: TAMBAH / EDIT KATEGORI ── */}
             {createModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
-                    <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
-                        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-slate-100 space-y-4">
+                        <div className="flex items-center justify-between pb-3 border-b border-slate-100 sticky top-0 bg-white z-10">
                             <h3 className="text-base font-black text-slate-900">
                                 {editItem ? 'Edit Kategori Project' : 'Tambah Kategori Project'}
                             </h3>
@@ -598,7 +655,7 @@ export default function CategoriesIndex({
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
+                        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
                             <div>
                                 <label className="block font-bold text-slate-700 mb-1">
                                     Nama Kategori <span className="text-rose-500">*</span>
@@ -611,6 +668,75 @@ export default function CategoriesIndex({
                                     placeholder="Contoh: Wedding, Prewedding, Event, dll"
                                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                                 />
+                            </div>
+
+                            {/* Foto Cover Kategori */}
+                            <div>
+                                <label className="block font-bold text-slate-700 mb-1.5">
+                                    Foto / Cover Kategori (Sinkron ke Form Klien)
+                                </label>
+                                <div className="border border-dashed border-slate-200 rounded-2xl p-3.5 bg-slate-50/60 transition-colors">
+                                    {imagePreview ? (
+                                        <div className="relative aspect-16/9 w-full rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shadow-xs max-h-44 mx-auto">
+                                            <img
+                                                src={imagePreview}
+                                                alt="Preview Kategori"
+                                                className="w-full h-full object-cover object-center"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setImagePreview('');
+                                                    setForm({ ...form, image_file: null, image_url: '', image: '' });
+                                                }}
+                                                className="absolute top-2 right-2 p-1.5 bg-rose-600/90 hover:bg-rose-700 text-white rounded-lg shadow-md transition-colors cursor-pointer"
+                                                title="Hapus gambar"
+                                            >
+                                                <X className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <label className="flex flex-col items-center justify-center cursor-pointer py-4 hover:bg-slate-100/70 rounded-xl transition-colors">
+                                            <div className="w-9 h-9 rounded-xl bg-white shadow-2xs border border-slate-200 flex items-center justify-center text-slate-500 mb-2">
+                                                <Upload className="w-4 h-4 text-indigo-600" />
+                                            </div>
+                                            <span className="text-xs font-bold text-slate-700">
+                                                Klik untuk unggah foto (JPG, PNG, WebP)
+                                            </span>
+                                            <span className="text-[10px] text-slate-400 mt-0.5">
+                                                Maks 10MB • Kompresi otomatis WebP
+                                            </span>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleFileChange}
+                                                className="hidden"
+                                            />
+                                        </label>
+                                    )}
+
+                                    <div className="mt-2.5 pt-2.5 border-t border-slate-200/60 flex items-center gap-2">
+                                        <span className="text-[11px] font-semibold text-slate-500 shrink-0">atau URL:</span>
+                                        <input
+                                            type="url"
+                                            value={form.image_url}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                setForm({ ...form, image_url: val, image: val, image_file: null });
+                                                if (val.trim()) {
+                                                    setImagePreview(val);
+                                                } else {
+                                                    setImagePreview('');
+                                                }
+                                            }}
+                                            placeholder="https://images.unsplash.com/..."
+                                            className="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg font-normal text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                                        />
+                                    </div>
+                                </div>
+                                <p className="text-[10px] text-slate-400 mt-1">
+                                    Foto ini akan langsung tampil di sidebar kiri halaman <code>/form-klien</code> ketika calon klien memilih kategori ini.
+                                </p>
                             </div>
 
                             <div>

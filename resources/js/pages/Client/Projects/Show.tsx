@@ -311,7 +311,6 @@ export default function ClientProjectDetail({
         window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
-    const [selectedStepNumber, setSelectedStepNumber] = useState<number>(timeline?.current_step || 1);
 
     // Project-specific review state
     const initialReview = project_review || (testimonials && testimonials.length > 0 ? testimonials[0] : null);
@@ -343,19 +342,6 @@ export default function ClientProjectDetail({
     const fileList: FileLinkItem[] = project?.file_links || [];
     const notesList: NoteItem[] = project?.notes_list || [];
     const highlightPhotos: HighlightItem[] = project?.highlights || [];
-
-    const selectedStep = (timeline?.steps && timeline.steps.length > 0)
-        ? (timeline.steps.find((s) => s.step === selectedStepNumber) || timeline.steps[0])
-        : {
-            step: 1,
-            name: 'Booking & DP',
-            title: 'Booking & DP',
-            desc: 'Tanda jadi & penguncian jadwal tanggal acara',
-            status: 'completed' as const,
-            status_label: 'Selesai',
-            date: project?.event_date,
-            tasks: [],
-        };
 
     const totalAmount = Number(project?.total_amount || 0);
     const paidAmount = Number(project?.paid_amount || 0);
@@ -716,10 +702,10 @@ export default function ClientProjectDetail({
                         background: portalHeroGradient || portalHeroBg,
                         color: portalHeroText,
                     }}
-                    className="relative -mt-6 sm:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 overflow-hidden shadow-md min-h-[310px] sm:min-h-[390px] lg:min-h-[450px] flex items-center transition-colors select-none"
+                    className="relative -mt-6 sm:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 overflow-hidden shadow-md min-h-[380px] sm:min-h-[480px] lg:min-h-[560px] flex items-center transition-colors select-none"
                 >
                     {/* Inner Decorative Box Frame (Kotak Bingkai) */}
-                    <div className="absolute inset-2.5 sm:inset-3.5 lg:inset-4 border border-white/20 rounded-xl pointer-events-none z-20" />
+                    <div className="absolute inset-x-4 top-6 bottom-6 sm:inset-x-6 sm:top-8 sm:bottom-8 lg:inset-x-8 lg:top-10 lg:bottom-10 border border-white/20 rounded-2xl pointer-events-none z-20" />
 
                     {/* Background Wedding Photo on the Right */}
                     <div className="absolute inset-0 z-0">
@@ -750,7 +736,7 @@ export default function ClientProjectDetail({
                     </div>
 
                     {/* Hero Content */}
-                    <div className="relative z-10 w-full max-w-full px-6 sm:px-12 lg:px-16 py-8 sm:py-12 lg:py-14 space-y-4">
+                    <div className="relative z-10 w-full max-w-full px-6 sm:px-12 lg:px-16 py-10 sm:py-16 lg:py-20 space-y-4">
                         {/* Breadcrumbs inside hero */}
                         <div className="flex items-center gap-2 text-xs font-medium">
                             <Link
@@ -859,23 +845,6 @@ export default function ClientProjectDetail({
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="pt-2 flex flex-wrap items-center gap-2.5 sm:gap-3">
-                            <a
-                                href={whatsappLink}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="client-btn-primary"
-                            >
-                                <MessageCircle className="w-3.5 h-3.5" />
-                                <span>Hubungi Tim via WhatsApp</span>
-                            </a>
-                            <a
-                                href="#section-timeline"
-                                className="client-btn-outline"
-                            >
-                                <span>Lihat Timeline &amp; Progres</span>
-                            </a>
-                        </div>
                     </div>
                 </section>
 
@@ -932,23 +901,20 @@ export default function ClientProjectDetail({
                                         {displaySteps.map((step) => {
                                             const isDone = step.status === 'completed';
                                             const isActive = step.status === 'active';
-                                            const isSelected = selectedStepNumber === step.step;
 
                                             return (
-                                                <div key={step.step} className="flex flex-col items-center text-center relative z-10 flex-1 px-1 group cursor-pointer">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setSelectedStepNumber(step.step)}
-                                                        title={`Tahap ${step.step}: ${step.title}`}
-                                                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all group-hover:scale-110 cursor-pointer select-none ${isDone || isActive || isSelected
+                                                <div key={step.step} className="flex flex-col items-center text-center relative z-10 flex-1 px-1">
+                                                    <div
+                                                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all select-none ${
+                                                            isDone || isActive
                                                                 ? 'bg-[#3E1015] text-white shadow-2xs'
-                                                                : 'bg-[#F4EBE4] text-[#3C0E0E] border border-[#E8DDD5] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E]'
-                                                            }`}
+                                                                : 'bg-[#F4EBE4] text-[#3C0E0E] border border-[#E8DDD5]'
+                                                        }`}
                                                     >
                                                         {step.step}
-                                                    </button>
+                                                    </div>
                                                     <div className="mt-2.5 space-y-0.5 max-w-[95px]">
-                                                        <h5 className="font-bold text-[11px] text-stone-900 group-hover:text-[#3E1015] leading-tight transition-colors">
+                                                        <h5 className="font-bold text-[11px] text-stone-900 leading-tight">
                                                             {step.title}
                                                         </h5>
                                                         <span className="text-[10px] text-stone-400 block font-medium">
@@ -1111,18 +1077,6 @@ export default function ClientProjectDetail({
                                             Instruksi khusus, referensi konsep foto, preferensi warna, atau catatan revisi dari tim studio &amp; klien.
                                         </p>
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsAddNoteOpen(true)}
-                                        style={{
-                                            backgroundColor: portalPrimaryAccent,
-                                            color: '#FFFFFF',
-                                        }}
-                                        className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-xs hover:opacity-90 active:scale-98 cursor-pointer shrink-0 self-start sm:self-center"
-                                    >
-                                        <Plus className="w-4 h-4" />
-                                        <span>Tambah Catatan Baru</span>
-                                    </button>
                                 </div>
 
                                 {displayNotes.length === 0 ? (

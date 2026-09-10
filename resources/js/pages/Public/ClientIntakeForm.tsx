@@ -51,6 +51,7 @@ interface CategoryItem {
     description?: string;
     color?: string;
     form_type?: string;
+    image?: string;
 }
 
 interface PackageItem {
@@ -1203,14 +1204,23 @@ export default function ClientIntakeForm({
                             </p>
                         </div>
 
-                        {/* Showcase Wedding Couple Photo (Stretches down seamlessly) */}
-                        <div className="relative rounded-2xl overflow-hidden shadow-xl border border-white/10 aspect-[3/3.8] lg:aspect-auto lg:flex-1 min-h-[280px] sm:min-h-[320px] mt-6 group flex flex-col justify-end">
+                        {/* Showcase Category Photo (Stretches down seamlessly) */}
+                        <div className="relative rounded-2xl overflow-hidden shadow-xl border border-white/10 aspect-[3/3.8] lg:aspect-auto lg:flex-1 min-h-[280px] sm:min-h-[320px] mt-6 group flex flex-col justify-end bg-slate-900/50">
                             <img
-                                src="/images/wedding-couple.jpg"
-                                alt="Arams Client Couple"
-                                className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
+                                key={selectedCategory?.id || 'default-category-image'}
+                                src={selectedCategory?.image || '/images/wedding-couple.jpg'}
+                                alt={selectedCategory?.name || 'Arams Client'}
+                                className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-all duration-700 animate-in fade-in"
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
+                            {selectedCategory && (
+                                <div className="relative z-10 p-3.5 sm:p-4 text-white">
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-black/40 backdrop-blur-md border border-white/20 text-white shadow-xs">
+                                        <Sparkles className="w-3 h-3 text-amber-300" />
+                                        <span>{selectedCategory.name}</span>
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     </div>
 

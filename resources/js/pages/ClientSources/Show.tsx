@@ -686,29 +686,54 @@ export default function ClientSourceShow({
                             {/* Status Apresiasi */}
                             <div className="space-y-1.5">
                                 <label className="font-bold text-slate-700 block">Status Apresiasi</label>
-                                <div className="flex items-center gap-4">
-                                    <label className="flex items-center gap-2 font-semibold text-slate-600 cursor-pointer">
-                                        <input
-                                            type="radio"
-                                            name="appreciation_status"
-                                            value="pending"
-                                            checked={appreciationForm.status === 'pending'}
-                                            onChange={() => setAppreciationForm({ ...appreciationForm, status: 'pending' })}
-                                            className="text-indigo-600 focus:ring-indigo-500"
-                                        />
-                                        <span>Belum diberikan</span>
-                                    </label>
-                                    <label className="flex items-center gap-2 font-semibold text-slate-800 cursor-pointer">
-                                        <input
-                                            type="radio"
-                                            name="appreciation_status"
-                                            value="given"
-                                            checked={appreciationForm.status === 'given'}
-                                            onChange={() => setAppreciationForm({ ...appreciationForm, status: 'given' })}
-                                            className="text-indigo-600 focus:ring-indigo-500"
-                                        />
-                                        <span>Sudah diberikan</span>
-                                    </label>
+                                <div className="grid grid-cols-2 gap-2.5">
+                                    {/* Belum Diberikan (Pending) */}
+                                    <button
+                                        type="button"
+                                        onClick={() => setAppreciationForm({ ...appreciationForm, status: 'pending' })}
+                                        className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer text-left ${
+                                            appreciationForm.status === 'pending'
+                                                ? 'bg-amber-50/90 border-amber-300 text-amber-900 shadow-xs ring-2 ring-amber-400/20'
+                                                : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:border-slate-300'
+                                        }`}
+                                    >
+                                        <div
+                                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+                                                appreciationForm.status === 'pending'
+                                                    ? 'border-amber-600 bg-white'
+                                                    : 'border-slate-300 bg-white'
+                                            }`}
+                                        >
+                                            {appreciationForm.status === 'pending' && (
+                                                <div className="w-2.5 h-2.5 rounded-full bg-amber-600 animate-in zoom-in-75 duration-150" />
+                                            )}
+                                        </div>
+                                        <span className="leading-tight">⏳ Belum diberikan</span>
+                                    </button>
+
+                                    {/* Sudah Diberikan (Given) */}
+                                    <button
+                                        type="button"
+                                        onClick={() => setAppreciationForm({ ...appreciationForm, status: 'given' })}
+                                        className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer text-left ${
+                                            appreciationForm.status === 'given'
+                                                ? 'bg-emerald-50/90 border-emerald-300 text-emerald-900 shadow-xs ring-2 ring-emerald-400/20'
+                                                : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:border-slate-300'
+                                        }`}
+                                    >
+                                        <div
+                                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+                                                appreciationForm.status === 'given'
+                                                    ? 'border-emerald-600 bg-white'
+                                                    : 'border-slate-300 bg-white'
+                                            }`}
+                                        >
+                                            {appreciationForm.status === 'given' && (
+                                                <div className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-in zoom-in-75 duration-150" />
+                                            )}
+                                        </div>
+                                        <span className="leading-tight">✓ Sudah diberikan</span>
+                                    </button>
                                 </div>
                             </div>
 
@@ -774,7 +799,7 @@ export default function ClientSourceShow({
                                 {appreciationForm.is_recorded_in_finance && (
                                     <div className="space-y-2">
                                         <label className="block text-[11px] font-bold text-indigo-900">
-                                            Metode Pembayaran / Sumber Kas
+                                            Sumber Dana
                                         </label>
                                         <select
                                             value={appreciationForm.payment_method_id}
@@ -910,11 +935,10 @@ export default function ClientSourceShow({
                                                         : '-'}
                                                 </span>
                                                 <span
-                                                    className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
-                                                        appr.status === 'given'
+                                                    className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${appr.status === 'given'
                                                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                                             : 'bg-amber-50 text-amber-700 border-amber-200'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     {appr.status === 'given' ? '✓ Diberikan' : '⏳ Pending'}
                                                 </span>

@@ -101,8 +101,8 @@ export function ClientLayout({ children }: ClientLayoutProps) {
     // Safe hex to rgba converter for smooth transparent gradients and opacity
     const hexToRgba = (hex: string, alpha: number) => {
         if (!hex || !hex.startsWith('#')) {
-return hex;
-}
+            return hex;
+        }
 
         const clean = hex.replace('#', '');
 
@@ -130,16 +130,16 @@ return hex;
         const currentUrl = rawUrl.split('?')[0].split('#')[0];
 
         if (path === '/client/dashboard' && (currentUrl === '/client/dashboard' || currentUrl === '/client' || currentUrl === '/portal')) {
-return true;
-}
+            return true;
+        }
 
         if (path === '/client/projects' && currentUrl.startsWith('/client/projects')) {
-return true;
-}
+            return true;
+        }
 
         if (path === '/client/portfolio' && (currentUrl.startsWith('/client/portfolio') || currentUrl.startsWith('/client/portfolios'))) {
-return true;
-}
+            return true;
+        }
 
         return false;
     };
@@ -741,7 +741,7 @@ return true;
                                 </a>
 
                                 {/* Jam Operasional */}
-                                <div className="flex items-center gap-2.5">
+                                {/* <div className="flex items-center gap-2.5">
                                     <div
                                         style={{
                                             backgroundColor: footerItemBg,
@@ -768,7 +768,7 @@ return true;
                                             {companyHours}
                                         </span>
                                     </div>
-                                </div>
+                                </div> */}
                             </div>
                         </div>
 
