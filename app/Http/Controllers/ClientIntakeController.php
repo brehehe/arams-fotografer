@@ -6,6 +6,7 @@ use App\Actions\Intake\ProcessClientIntake;
 use App\Http\Requests\Intake\StoreClientIntakeRequest;
 use App\Models\Category;
 use App\Models\Client;
+use App\Models\ClientSource;
 use App\Models\Package;
 use App\Models\Setting;
 use App\Models\WeddingOrganizer;
@@ -45,11 +46,18 @@ class ClientIntakeController extends Controller
 
         $settings = Setting::all()->pluck('value', 'key')->toArray();
 
+        $clientSources = ClientSource::where('status', 'active')
+            ->select('id', 'name', 'type', 'avatar', 'is_primary')
+            ->orderByDesc('is_primary')
+            ->orderBy('name')
+            ->get();
+
         return Inertia::render('Public/ClientIntakeForm', [
             'categories' => $categories,
             'packages' => $packages,
             'wedding_organizers' => $weddingOrganizers,
             'all_clients' => $allClients,
+            'client_sources' => $clientSources,
             'form_status' => $settings['intake_form_status'] ?? 'open',
             'intake_closed_message' => $settings['intake_closed_message'] ?? 'Mohon maaf, saat ini pendaftaran booking baru sedang ditutup sementara. Silakan hubungi kami melalui WhatsApp.',
             'intake_form_title' => $settings['intake_form_title'] ?? 'Formulir Pemesanan & Data Klien',

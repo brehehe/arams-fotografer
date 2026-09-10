@@ -10,10 +10,10 @@ class AddonSeeder extends Seeder
 {
     public function run(): void
     {
-        $weddingCat = Category::where('name', 'like', '%Wedding%')->first();
-        $eventCat = Category::where('name', 'like', '%Event%')->first();
-        $prewedCat = Category::where('name', 'like', '%Prewedding%')->first();
-        $corporateCat = Category::where('name', 'like', '%Corporate%')->first();
+        $weddingCat = Category::where('name', 'ilike', '%Wedding%')->first();
+        $eventCat = Category::where('name', 'ilike', '%Event%')->first();
+        $prewedCat = Category::where('name', 'ilike', '%Prewedding%')->first();
+        $corporateCat = Category::where('name', 'ilike', '%Corporate%')->first();
 
         $addons = [
             // ── TYPE: ADDON (Ala Carte / Layanan Tambahan) ─────────────────

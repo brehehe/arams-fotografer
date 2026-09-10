@@ -550,7 +550,7 @@ class FinanceService
         [$prefixPart, $suffixPart] = explode('{NUMBER}', $resolved, 2);
 
         $allMatching = Payment::withTrashed()
-            ->where('payment_number', 'like', "{$prefixPart}%")
+            ->where('payment_number', 'ilike', "{$prefixPart}%")
             ->pluck('payment_number')
             ->map(function ($num) use ($prefixPart, $suffixPart) {
                 $mid = substr((string) $num, strlen($prefixPart));
@@ -594,7 +594,7 @@ class FinanceService
         [$prefixPart, $suffixPart] = explode('{NUMBER}', $resolved, 2);
 
         $allMatching = Invoice::withTrashed()
-            ->where('invoice_number', 'like', "{$prefixPart}%")
+            ->where('invoice_number', 'ilike', "{$prefixPart}%")
             ->pluck('invoice_number')
             ->map(function ($num) use ($prefixPart, $suffixPart) {
                 $mid = substr((string) $num, strlen($prefixPart));

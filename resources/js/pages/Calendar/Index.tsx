@@ -562,7 +562,7 @@ cName = 'orange';
             {/* ── 2. CALENDAR MAIN CONTAINER ── */}
             <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-visible">
                 {/* Top Calendar Toolbar */}
-                <div className="p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 bg-white relative">
+                <div className="p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 bg-white relative rounded-t-2xl">
                     {/* Left: Hari Ini, Arrows, Date Range Dropdown */}
                     <div className="flex items-center gap-3">
                         <button
@@ -732,7 +732,7 @@ cName = 'orange';
                 {/* ── 1. BULAN (MONTHLY) GRID VIEW ─────────────────────────────── */}
                 {/* ════════════════════════════════════════════════════════════════ */}
                 {viewMode === 'bulan' && (
-                    <div className="p-4 sm:p-5 space-y-3">
+                    <div className="p-4 sm:p-5 space-y-3 rounded-b-2xl">
                         <div className="grid grid-cols-7 text-center font-bold text-xs text-slate-500 border-b border-slate-100 pb-2.5">
                             {dayNames.map(d => (
                                 <div key={d}>{d}</div>
@@ -845,7 +845,7 @@ cName = 'orange';
                 {/* ── 2. MINGGU (WEEKLY) GRID VIEW ─────────────────────────────── */}
                 {/* ════════════════════════════════════════════════════════════════ */}
                 {viewMode === 'minggu' && (
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto rounded-b-2xl">
                         <div className="min-w-[900px]">
                             {/* Grid Day Headers (7 Columns) */}
                             <div className="grid grid-cols-[80px_repeat(7,1fr)] border-b border-slate-200 bg-slate-50/40 text-center text-xs">
@@ -992,7 +992,7 @@ return slotIdx === 0;
                 {/* ── 3. HARI (DAILY) TIMELINE VIEW ────────────────────────────── */}
                 {/* ════════════════════════════════════════════════════════════════ */}
                 {viewMode === 'hari' && (
-                    <div className="p-5 space-y-6">
+                    <div className="p-5 space-y-6 rounded-b-2xl">
                         {/* Day Header Banner */}
                         <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>
@@ -1118,7 +1118,7 @@ return false;
                 {/* ── 4. DAFTAR (LIST / AGENDA) VIEW ───────────────────────────── */}
                 {/* ════════════════════════════════════════════════════════════════ */}
                 {viewMode === 'daftar' && (
-                    <div className="p-5 space-y-4">
+                    <div className="p-5 space-y-4 rounded-b-2xl">
                         {/* Search and Category Filter Toolbar */}
                         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pb-3 border-b border-slate-100">
                             <input

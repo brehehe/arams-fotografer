@@ -11,9 +11,9 @@ class WorkflowDeliverableSeeder extends Seeder
     public function run(): void
     {
         // 1. Set Custom workflow_type for Lainnya / Custom category
-        Category::where('slug', 'like', '%lainnya%')
-            ->orWhere('name', 'like', '%Lainnya%')
-            ->orWhere('name', 'like', '%Custom%')
+        Category::where('slug', 'ilike', '%lainnya%')
+            ->orWhere('name', 'ilike', '%Lainnya%')
+            ->orWhere('name', 'ilike', '%Custom%')
             ->update(['workflow_type' => 'custom']);
 
         // 2. Ensure custom packages exist in DB

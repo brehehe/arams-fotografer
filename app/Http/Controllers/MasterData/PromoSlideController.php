@@ -21,12 +21,12 @@ class PromoSlideController extends Controller
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                    ->orWhere('tag', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%")
+                $q->where('title', 'ilike', "%{$search}%")
+                    ->orWhere('tag', 'ilike', "%{$search}%")
+                    ->orWhere('description', 'ilike', "%{$search}%")
                     ->orWhereHas('project', function ($pq) use ($search) {
-                        $pq->where('name', 'like', "%{$search}%")
-                            ->orWhere('project_number', 'like', "%{$search}%");
+                        $pq->where('name', 'ilike', "%{$search}%")
+                            ->orWhere('project_number', 'ilike', "%{$search}%");
                     });
             });
         }

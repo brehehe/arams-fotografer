@@ -40,6 +40,9 @@ import {
     Share2,
     Copy,
     Baby,
+    Edit2,
+    Bookmark,
+    Info,
 } from 'lucide-react';
 import { formatRupiah, formatRupiahCompact, formatNumber } from '@/lib/formatters';
 import {
@@ -69,10 +72,27 @@ import {
     AlertTitle,
     AlertDescription,
 } from '@/components/ui';
+import { CategorySpecificForm } from '@/components/projects/CategorySpecificForm';
+import { CategorySpecificView } from '@/components/projects/CategorySpecificView';
+import {
+    CategoryFormKey,
+    resolveCategoryKey,
+    AnyCategorySpecificData,
+} from '@/types/category-forms';
+
+interface SelectSearchOption {
+    value: string;
+    label: string;
+    subtitle?: string;
+}
 
 interface ClientItem {
     id: string | number;
     name: string;
+    projects?: any[];
+    category?: any;
+    category_data?: any;
+    [key: string]: any;
     partner_name?: string;
     bride_name?: string;
     bride_nickname?: string;
@@ -184,6 +204,13 @@ interface ClientsIndexProps {
         groom_name?: string;
         child_name?: string;
     }>;
+    client_sources?: Array<{
+        id: string;
+        name: string;
+        type?: string;
+        avatar?: string;
+        is_primary?: boolean;
+    }>;
     stats: {
         total_clients: number;
         active_clients: number;
@@ -224,16 +251,13 @@ const getInitialsBg = (name?: string) => {
 };
 
 const getClientTypeLabel = (client: ClientItem) => {
-    if (client.child_name) {
-        return `👶 ${client.child_name}`;
-    }
-    if (client.bride_name && client.groom_name) {
-        return `👰🤵 ${client.groom_name} & ${client.bride_name}`;
-    }
     if (client.client_type === 'corporate' || client.company_name || client.name?.toLowerCase().includes('pt ') || client.name?.toLowerCase().includes('bank')) {
         return 'Klien Corporate';
     }
-    if ((client.total_value || 0) > 40000000 || client.client_type === 'premium') {
+    if (client.client_type === 'vip' || (client as any).tags?.includes('VIP') || (client as any).tags?.includes('vip')) {
+        return 'Klien VIP';
+    }
+    if ((client.total_value || 0) > 40000000 || client.client_type === 'premium' || (client as any).tags?.includes('Premium') || (client as any).tags?.includes('premium')) {
         return 'Klien Premium';
     }
     return 'Klien Regular';
@@ -275,6 +299,7 @@ export default function ClientsIndex({
     packages = [],
     wedding_organizers = [],
     all_clients = [],
+    client_sources = [],
     stats = { total_clients: 0, active_clients: 0, blocked_clients: 0, new_this_month: 0, total_projects: 0, ongoing_projects: 0, total_value: 0, total_received: 0 },
 }: ClientsIndexProps) {
     // Search & Filter State
@@ -347,6 +372,8 @@ export default function ClientsIndex({
     const initialFormData = {
         name: '',
         client_type: 'wedding',
+        category_id: '',
+        primary_contact: 'cpw',
         partner_name: '',
         bride_name: '',
         bride_nickname: '',
@@ -382,18 +409,26 @@ export default function ClientsIndex({
         village_code: '',
         postal_code: '',
         address: '',
-        event_type: 'Wedding',
+        event_type: 'Pernikahan',
         event_date: '',
         event_time: '',
         event_location: '',
+        reception_location: '',
+        estimated_guests: '',
+        concept_theme: '',
+        other_vendors: '',
+        project_notes: '',
+        reference_url: '',
+        special_requests: '',
         package_id: '',
         source: 'Instagram',
+        client_source_id: '',
         referred_by_client_id: '',
         wedding_organizer_id: '',
         referral_name: '',
         status: 'active',
         notes: '',
-        tags: ['VIP', 'Wedding 2026'] as string[],
+        tags: [] as string[],
     };
 
     interface RegionItem {
@@ -444,7 +479,8 @@ export default function ClientsIndex({
     ];
 
     const [formData, setFormData] = useState(initialFormData);
-    const [activeFormTab, setActiveFormTab] = useState<'profile' | 'contact' | 'location' | 'event' | 'preferences'>('profile');
+    const [createCurrentStep, setCreateCurrentStep] = useState(1);
+    const [categoryData, setCategoryData] = useState<AnyCategorySpecificData>({});
     const [customTagInput, setCustomTagInput] = useState('');
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -459,6 +495,19 @@ export default function ClientsIndex({
     const [loadingCities, setLoadingCities] = useState(false);
     const [loadingDistricts, setLoadingDistricts] = useState(false);
     const [loadingVillages, setLoadingVillages] = useState(false);
+
+    const handleCategoryDataChange = (field: string, value: any) => {
+        setCategoryData((prev) => {
+            const next = { ...prev, [field]: value };
+            if (field === 'session_date' || field === 'akad_date' || field === 'event_date' || field === 'departure_date') {
+                if (value) setFormData((f) => ({ ...f, event_date: value }));
+            }
+            if (field === 'session_location' || field === 'location' || field === 'akad_location' || field === 'event_location' || field === 'destination_city_country') {
+                if (value) setFormData((f) => ({ ...f, event_location: value }));
+            }
+            return next;
+        });
+    };
 
     // Cascade handlers for regional data
     const handleProvinceChange = (provCode: string) => {
@@ -580,59 +629,74 @@ export default function ClientsIndex({
         [regionVillages]
     );
 
-    // Kategori / Tipe Klien dynamically fetched from Master Data Categories
-    const categoryOptions = useMemo(() => {
-        const list = (categories || []).map((cat) => {
-            const formLabel = cat.form_type === 'wedding' ? '👰🤵 CPP & CPW' : cat.form_type === 'newborn' ? '👶 Nama Anak' : '👤 Standar';
+    const selectedCategory = useMemo(() => {
+        return (
+            (categories || []).find(
+                (c: any) => String(c.id) === String(formData.category_id) || c.slug === formData.client_type || c.slug === formData.category_id
+            ) ||
+            categories[0] || {
+                id: 'wedding',
+                name: 'Wedding',
+                form_type: 'wedding',
+            }
+        );
+    }, [categories, formData.category_id, formData.client_type]);
+
+    const activeCategoryKey: CategoryFormKey = useMemo(() => {
+        return resolveCategoryKey(selectedCategory);
+    }, [selectedCategory]);
+
+    const activeFormType = (selectedCategory as any)?.form_type || activeCategoryKey;
+
+    const categoryOptions = useMemo<SelectSearchOption[]>(() => {
+        const iconMap: Record<string, string> = {
+            wedding: '💍',
+            prewedding: '💑',
+            maternity: '🤰',
+            family: '👨‍👩‍👧‍👦',
+            corporate: '🏢',
+            komunitas: '👥',
+            birthday: '🎂',
+            engagement: '💐',
+            event: '🎉',
+            traveling: '✈️',
+            commercial: '📸',
+            perorangan: '👤',
+            lainnya: '✨',
+            newborn: '👶',
+            standard: '📷',
+        };
+
+        return (categories || []).map((c: any) => {
+            const key = resolveCategoryKey(c);
+            const iconEmoji = iconMap[key] || '📷';
             return {
-                value: cat.slug || String(cat.id),
-                label: cat.name,
-                subtitle: `${cat.description || `Master Kategori: ${cat.name}`} • Input: ${formLabel}`,
+                value: String(c.id),
+                label: `${iconEmoji} ${c.name}`,
+                subtitle: c.description ? c.description : `Kategori ${c.name}`,
             };
         });
+    }, [categories]);
 
-        const cur = formData.client_type;
-        if (cur && !list.some((o) => o.value === cur)) {
-            if (cur === 'personal') {
-                const perorangan = list.find((o) => o.value === 'perorangan');
-                list.unshift({
-                    value: 'personal',
-                    label: perorangan ? `${perorangan.label} (Personal)` : 'Personal Portrait',
-                    subtitle: 'Kategori Klien • Input: 👤 Standar',
-                });
-            } else if (cur === 'family') {
-                list.unshift({
-                    value: 'family',
-                    label: 'Family & Maternity',
-                    subtitle: 'Kategori Klien • Input: 👤 Standar',
-                });
-            } else if (cur === 'newborn') {
-                list.unshift({
-                    value: 'newborn',
-                    label: 'Newborn',
-                    subtitle: 'Kategori Klien • Input: 👶 Nama Anak',
-                });
-            } else {
-                list.push({
-                    value: cur,
-                    label: cur.charAt(0).toUpperCase() + cur.slice(1),
-                    subtitle: 'Kategori Klien',
-                });
-            }
-        }
+    const handleCategoryChange = (val: string) => {
+        const cat = (categories || []).find((c: any) => String(c.id) === String(val) || c.slug === val);
+        setFormData((prev) => ({
+            ...prev,
+            category_id: val,
+            client_type: cat?.slug || val,
+            event_type: cat?.name || 'Dokumentasi',
+        }));
+    };
 
-        return list;
-    }, [categories, formData.client_type]);
+    const availablePackages = useMemo(() => {
+        if (!selectedCategory?.id) return packages;
+        const filtered = (packages || []).filter((p: any) => String(p.category_id) === String(selectedCategory.id));
+        return filtered.length > 0 ? filtered : packages;
+    }, [packages, selectedCategory]);
 
-    const activeFormType = useMemo(() => {
-        const found = (categories || []).find(
-            (c) => c.slug === formData.client_type || String(c.id) === formData.client_type
-        );
-        if (found?.form_type) return found.form_type;
-        if (formData.client_type === 'newborn') return 'newborn';
-        if (formData.client_type === 'wedding' || formData.client_type === 'prewedding') return 'wedding';
-        return 'standard';
-    }, [categories, formData.client_type]);
+    const selectedPackage = useMemo(() => {
+        return (packages || []).find((p: any) => String(p.id) === String(formData.package_id)) || availablePackages[0];
+    }, [packages, formData.package_id, availablePackages]);
 
     const presetTags = [
         'VIP',
@@ -661,41 +725,116 @@ export default function ClientsIndex({
         }
     };
 
+    const createSteps = [
+        { number: 1, id: 'step1', title: 'Informasi Awal & Detail Klien', subtitle: 'Kategori & Data Khusus' },
+        { number: 2, id: 'step2', title: 'Informasi Alamat & Kontak', subtitle: 'Domisili & WhatsApp' },
+        { number: 3, id: 'step3', title: 'Paket & Detail Acara', subtitle: 'Paket, Lokasi & Jadwal' },
+        { number: 4, id: 'step4', title: 'Ringkasan', subtitle: 'Review & Simpan' },
+    ];
 
-    // Filter Trigger
-    const applyFilters = (newParams: Record<string, any> = {}) => {
-        router.get(
-            '/clients',
-            {
-                search: newParams.search !== undefined ? newParams.search : search || undefined,
-                status: (newParams.status !== undefined ? newParams.status : status) !== 'Semua' ? (newParams.status || status) : undefined,
-                city: (newParams.city !== undefined ? newParams.city : city) !== 'Semua' ? (newParams.city || city) : undefined,
-                source: (newParams.source !== undefined ? newParams.source : source) !== 'Semua' ? (newParams.source || source) : undefined,
-                per_page: newParams.per_page !== undefined ? newParams.per_page : perPage,
-                page: newParams.page || 1,
-            },
-            { preserveState: true }
-        );
+    const primaryContactInfo = useMemo(() => {
+        if (activeCategoryKey === 'wedding' || activeCategoryKey === 'engagement') {
+            const isBride = formData.primary_contact === 'cpw' || !formData.primary_contact;
+            return {
+                name: isBride ? (categoryData.bride_name || formData.bride_name || '-') : (categoryData.groom_name || formData.groom_name || '-'),
+                nickname: isBride ? (categoryData.bride_nickname || formData.bride_nickname || '-') : (categoryData.groom_nickname || formData.groom_nickname || '-'),
+                occupation: isBride ? (categoryData.bride_occupation || '-') : (categoryData.groom_occupation || '-'),
+                instagram: isBride ? (categoryData.bride_instagram || formData.instagram || '-') : (categoryData.groom_instagram || formData.instagram || '-'),
+                birth_date: isBride ? (categoryData.bride_birth_date || formData.bride_birth_date || '-') : (categoryData.groom_birth_date || formData.groom_birth_date || '-'),
+                role: isBride ? 'CPW' : 'CPP',
+            };
+        }
+        if (activeCategoryKey === 'prewedding') {
+            const isP1 = formData.primary_contact === 'cpw' || !formData.primary_contact;
+            return {
+                name: isP1 ? (categoryData.partner_1 || categoryData.bride_name || '-') : (categoryData.partner_2 || categoryData.groom_name || '-'),
+                nickname: isP1 ? (categoryData.partner_1_nickname || '-') : (categoryData.partner_2_nickname || '-'),
+                occupation: isP1 ? (categoryData.partner_1_occupation || '-') : (categoryData.partner_2_occupation || '-'),
+                instagram: isP1 ? (categoryData.partner_1_instagram || formData.instagram || '-') : (categoryData.partner_2_instagram || formData.instagram || '-'),
+                birth_date: isP1 ? (categoryData.partner_1_birth_date || '-') : (categoryData.partner_2_birth_date || '-'),
+                role: isP1 ? 'Pasangan 1' : 'Pasangan 2',
+            };
+        }
+        if (activeCategoryKey === 'maternity') {
+            const isMom = formData.primary_contact === 'cpw' || !formData.primary_contact;
+            return {
+                name: isMom ? (categoryData.mom_name || categoryData.mother_name || '-') : (categoryData.partner_name || categoryData.father_name || '-'),
+                nickname: '-',
+                occupation: isMom ? (categoryData.mom_occupation || '-') : (categoryData.partner_occupation || '-'),
+                instagram: isMom ? (categoryData.mom_instagram || formData.instagram || '-') : (categoryData.partner_instagram || formData.instagram || '-'),
+                birth_date: '-',
+                role: isMom ? 'Ibu Hamil' : 'Pasangan',
+            };
+        }
+        if (activeCategoryKey === 'corporate' || activeCategoryKey === 'komunitas') {
+            return {
+                name: categoryData.pic_name || categoryData.contact_person || formData.name || '-',
+                nickname: '-',
+                occupation: categoryData.pic_role || categoryData.pic_position || '-',
+                instagram: categoryData.pic_phone || formData.instagram || '-',
+                birth_date: '-',
+                role: 'PIC',
+            };
+        }
+        if (activeCategoryKey === 'birthday') {
+            return {
+                name: categoryData.celebrant_name || formData.name || '-',
+                nickname: '-',
+                occupation: '-',
+                instagram: '-',
+                birth_date: '-',
+                role: 'Pemesan / Ultah',
+            };
+        }
+        if (activeCategoryKey === 'newborn') {
+            const isFather = formData.primary_contact === 'cpp' || formData.primary_contact === 'father';
+            const parentName = isFather
+                ? (categoryData.father_name || formData.father_name || 'Ayah')
+                : (categoryData.mother_name || formData.mother_name || 'Ibu');
+            const firstBabyName = categoryData.babies?.[0]?.name || categoryData.baby_name || formData.child_name || '-';
+            const firstBabyBirthDate = categoryData.babies?.[0]?.birth_date || categoryData.baby_birth_date || formData.child_birth_date || '-';
+            return {
+                name: parentName,
+                nickname: firstBabyName,
+                occupation: categoryData.father_occupation || categoryData.mother_occupation || '-',
+                instagram: formData.instagram || '-',
+                birth_date: firstBabyBirthDate,
+                role: isFather ? 'Ayah' : 'Ibu',
+            };
+        }
+
+        return {
+            name: categoryData.contact_person || formData.name || '-',
+            nickname: formData.bride_nickname || formData.groom_nickname || '-',
+            occupation: formData.occupation || '-',
+            instagram: formData.instagram || '-',
+            birth_date: '-',
+            role: 'Pemesan',
+        };
+    }, [activeCategoryKey, formData, categoryData]);
+
+    const newTagInput = customTagInput;
+    const setNewTagInput = setCustomTagInput;
+    const handleAddCustomTag = addCustomTag;
+
+    const handleStatusChange = (newStatus: string) => {
+        setStatus(newStatus);
+        router.get('/clients', { search, status: newStatus === 'Semua' ? undefined : newStatus, city: city === 'Semua' ? undefined : city, source: source === 'Semua' ? undefined : source, per_page: perPage }, { preserveState: true, preserveScroll: true });
     };
 
-    const handleSearchChange = (val: string) => {
-        setSearch(val);
-        applyFilters({ search: val, page: 1 });
+    const handleSearchChange = (val: string | React.ChangeEvent<HTMLInputElement>) => {
+        const query = typeof val === 'string' ? val : val.target.value;
+        setSearch(query);
     };
 
-    const handleStatusChange = (val: string) => {
-        setStatus(val);
-        applyFilters({ status: val, page: 1 });
+    const handleCityChange = (newCity: string) => {
+        setCity(newCity);
+        router.get('/clients', { search, status: status === 'Semua' ? undefined : status, city: newCity === 'Semua' ? undefined : newCity, source: source === 'Semua' ? undefined : source, per_page: perPage }, { preserveState: true, preserveScroll: true });
     };
 
-    const handleCityChange = (val: string) => {
-        setCity(val);
-        applyFilters({ city: val, page: 1 });
-    };
-
-    const handleSourceChange = (val: string) => {
-        setSource(val);
-        applyFilters({ source: val, page: 1 });
+    const handleSourceChange = (newSource: string) => {
+        setSource(newSource);
+        router.get('/clients', { search, status: status === 'Semua' ? undefined : status, city: city === 'Semua' ? undefined : city, source: newSource === 'Semua' ? undefined : newSource, per_page: perPage }, { preserveState: true, preserveScroll: true });
     };
 
     const handleReset = () => {
@@ -703,179 +842,145 @@ export default function ClientsIndex({
         setStatus('Semua');
         setCity('Semua');
         setSource('Semua');
-        router.get('/clients', {}, { preserveState: true });
-    };
-
-    const handlePageChange = (newPage: number) => {
-        applyFilters({ page: newPage });
+        router.get('/clients', {}, { preserveState: true, preserveScroll: true });
     };
 
     const handlePerPageChange = (newPerPage: number) => {
         setPerPage(newPerPage);
-        applyFilters({ per_page: newPerPage, page: 1 });
+        router.get('/clients', { search, status: status === 'Semua' ? undefined : status, city: city === 'Semua' ? undefined : city, source: source === 'Semua' ? undefined : source, per_page: newPerPage }, { preserveState: true, preserveScroll: true });
     };
 
-    // Bulk selection helpers
-    const toggleSelectAll = () => {
-        if (selectedClients.length === clients.data.length) {
-            setSelectedClients([]);
-        } else {
-            setSelectedClients(clients.data.map((c) => c.id as number));
-        }
+    const handlePageChange = (newPage: number) => {
+        router.get('/clients', { search, status: status === 'Semua' ? undefined : status, city: city === 'Semua' ? undefined : city, source: source === 'Semua' ? undefined : source, per_page: perPage, page: newPage }, { preserveState: true, preserveScroll: true });
     };
 
-    const toggleSelectClient = (id: number) => {
-        if (selectedClients.includes(id)) {
-            setSelectedClients(selectedClients.filter((item) => item !== id));
-        } else {
-            setSelectedClients([...selectedClients, id]);
-        }
-    };
-
-    const handleAddModalChild = () => {
-        setFormData((prev) => {
-            const nextChildren = [
-                ...(prev.children || []),
-                { name: '', nickname: '', birth_date: '', gender: 'male' as const },
-            ];
-            const names = nextChildren.map((c) => c.name.trim()).filter(Boolean).join(' & ');
-            const isTwin = nextChildren.length > 1;
-            return {
-                ...prev,
-                children: nextChildren,
-                child_name: isTwin && names ? `${names} (Kembar)` : names,
-            };
+    const handleOpenCreateModal = () => {
+        setFormData({
+            ...initialFormData,
+            category_id: String(categories?.find((c: any) => c.slug === 'wedding' || c.name?.toLowerCase().includes('wedding'))?.id || categories?.[0]?.id || ''),
         });
+        setCategoryData({});
+        setCreateCurrentStep(1);
+        setFormErrors({});
+        setCreateModalOpen(true);
     };
 
-    const handleRemoveModalChild = (index: number) => {
-        setFormData((prev) => {
-            const currentChildren = prev.children || [];
-            if (currentChildren.length <= 1) return prev;
-            const nextChildren = currentChildren.filter((_, i) => i !== index);
-            const names = nextChildren.map((c) => c.name.trim()).filter(Boolean).join(' & ');
-            const isTwin = nextChildren.length > 1;
-            return {
-                ...prev,
-                children: nextChildren,
-                child_name: isTwin && names ? `${names} (Kembar)` : names,
-                child_birth_date: nextChildren[0]?.birth_date || '',
-                child_gender: (nextChildren[0]?.gender || 'male') as 'male' | 'female',
-            };
-        });
-    };
-
-    const handleChildModalChange = (index: number, field: string, value: any) => {
-        setFormData((prev) => {
-            const currentChildren = prev.children || [];
-            const nextChildren = currentChildren.map((child, i) =>
-                i === index ? { ...child, [field]: value } : child
-            );
-            const names = nextChildren.map((c) => c.name.trim()).filter(Boolean).join(' & ');
-            const isTwin = nextChildren.length > 1;
-            return {
-                ...prev,
-                children: nextChildren,
-                child_name: isTwin && names ? `${names} (Kembar)` : names,
-                child_birth_date: nextChildren[0]?.birth_date || prev.child_birth_date,
-                child_gender: (nextChildren[0]?.gender || prev.child_gender) as 'male' | 'female',
-            };
-        });
-    };
-
-    const steps = [
-        { id: 'profile', stepNum: 1, title: 'Identitas & Profil', subtitle: 'Kategori & Calon Pengantin' },
-        { id: 'contact', stepNum: 2, title: 'Kontak & Sosmed', subtitle: 'WhatsApp & Instagram' },
-        { id: 'location', stepNum: 3, title: 'Domisili & Wilayah', subtitle: 'Provinsi hingga Kelurahan' },
-        { id: 'event', stepNum: 4, title: 'Acara & Paket', subtitle: 'Jadwal & Venue' },
-        { id: 'preferences', stepNum: 5, title: 'Sumber & Status', subtitle: 'Lead source & Catatan' },
-    ] as const;
-
-    const currentStepIndex = steps.findIndex((s) => s.id === activeFormTab);
-
-    const validateStep = (tabId: string) => {
-        const errs: Record<string, string> = {};
-        if (tabId === 'profile') {
-            if (activeFormType === 'newborn') {
-                if (!formData.child_name.trim() && !formData.name.trim()) {
-                    errs.child_name = 'Nama lengkap bayi / anak wajib diisi';
-                    toast.error('Nama lengkap bayi / anak wajib diisi');
-                }
-            } else if (activeFormType === 'wedding') {
-                const hasWeddingName = formData.name.trim() || formData.bride_name.trim() || formData.groom_name.trim();
-                if (!hasWeddingName) {
-                    errs.name = 'Nama calon pengantin wajib diisi';
+    const validateCreateStep = (stepNum: number) => {
+        if (stepNum === 1) {
+            if (activeCategoryKey === 'wedding') {
+                const hasWeddingName = (categoryData.groom_name || formData.groom_name || '').trim() || (categoryData.bride_name || formData.bride_name || '').trim();
+                if (!hasWeddingName && !formData.name.trim()) {
                     toast.error('Nama calon pengantin (CPP & CPW) wajib diisi');
+                    return false;
+                }
+            } else if (activeCategoryKey === 'newborn') {
+                const firstBaby = (categoryData.babies?.[0]?.name || categoryData.baby_name || formData.child_name || '').trim();
+                if (!firstBaby && !formData.name.trim() && !categoryData.father_name && !categoryData.mother_name) {
+                    toast.error('Nama bayi atau orang tua wajib diisi');
+                    return false;
                 }
             } else {
-                if (!formData.name.trim()) {
-                    errs.name = 'Nama lengkap klien / pemesan wajib diisi';
-                    toast.error('Nama lengkap klien / pemesan wajib diisi');
+                if (!formData.name.trim() && !categoryData.contact_person && !categoryData.company_name && !categoryData.celebrant_name) {
+                    toast.error('Nama klien / pemesan wajib diisi');
+                    return false;
                 }
             }
         }
-        if (tabId === 'contact') {
-            if (!formData.phone.trim()) {
-                errs.phone = 'Nomor WhatsApp / telepon wajib diisi';
-                toast.error('Nomor WhatsApp wajib diisi');
+        if (stepNum === 2) {
+            if (!formData.phone.trim() && !categoryData.pic_phone) {
+                toast.error('Nomor WhatsApp / telepon utama wajib diisi');
+                return false;
             }
         }
-        setFormErrors(errs);
-        return Object.keys(errs).length === 0;
+        return true;
     };
 
-    const goToStep = (targetStepId: 'profile' | 'contact' | 'location' | 'event' | 'preferences') => {
-        const targetIdx = steps.findIndex((s) => s.id === targetStepId);
-        if (targetIdx > currentStepIndex) {
-            if (!validateStep(activeFormTab)) return;
-        }
-        setFormErrors({});
-        setActiveFormTab(targetStepId);
-    };
-
-    const handleNextStep = () => {
-        if (!validateStep(activeFormTab)) return;
-        if (currentStepIndex < steps.length - 1) {
-            setFormErrors({});
-            setActiveFormTab(steps[currentStepIndex + 1].id);
+    const handleNextCreateStep = () => {
+        if (!validateCreateStep(createCurrentStep)) return;
+        if (createCurrentStep < 4) {
+            setCreateCurrentStep((prev) => prev + 1);
         }
     };
 
-    const handlePrevStep = () => {
-        setFormErrors({});
-        if (currentStepIndex > 0) {
-            setActiveFormTab(steps[currentStepIndex - 1].id);
+    const handlePrevCreateStep = () => {
+        if (createCurrentStep > 1) {
+            setCreateCurrentStep((prev) => prev - 1);
         }
     };
+
     // Create Client Action
     const handleCreateClient = (e: React.FormEvent) => {
         e.preventDefault();
 
+        const selectedCat = (categories || []).find((c: any) => String(c.id) === String(formData.category_id) || c.slug === formData.client_type || c.slug === formData.category_id) || categories[0];
+        const activeKey = resolveCategoryKey(selectedCat);
+
+        // Derive client name based on category
         let clientName = formData.name.trim();
         if (!clientName) {
-            if (activeFormType === 'newborn') {
-                clientName = formData.child_name.trim() ? `Baby ${formData.child_name.trim()}` : (formData.partner_name.trim() || 'Client Newborn');
+            if (activeKey === 'wedding') {
+                const groom = (categoryData.groom_name || formData.groom_name || '').trim();
+                const bride = (categoryData.bride_name || formData.bride_name || '').trim();
+                clientName = groom && bride ? `${groom} & ${bride}` : (groom || bride || 'Klien Wedding');
+            } else if (activeKey === 'prewedding') {
+                const p1 = (categoryData.partner_1 || categoryData.bride_name || '').trim();
+                const p2 = (categoryData.partner_2 || categoryData.groom_name || '').trim();
+                clientName = p1 && p2 ? `${p1} & ${p2}` : (p1 || p2 || 'Klien Prewedding');
+            } else if (activeKey === 'maternity') {
+                const mom = (categoryData.mom_name || categoryData.mother_name || '').trim();
+                const partner = (categoryData.partner_name || categoryData.father_name || '').trim();
+                clientName = mom ? `Maternity: ${mom}` : (partner || 'Klien Maternity');
+            } else if (activeKey === 'newborn') {
+                const firstBaby = (categoryData.babies?.[0]?.name || categoryData.baby_name || formData.child_name || '').trim();
+                const parent = (categoryData.mother_name || categoryData.father_name || formData.father_name || '').trim();
+                clientName = firstBaby ? `Baby ${firstBaby}` : (parent ? `Baby of ${parent}` : 'Klien Newborn');
+            } else if (activeKey === 'family') {
+                const fam = (categoryData.family_name || '').trim();
+                clientName = fam ? `Keluarga ${fam}` : (categoryData.father_name || 'Klien Family');
+            } else if (activeKey === 'corporate') {
+                clientName = (categoryData.company_name || formData.company_name || categoryData.pic_name || 'Klien Corporate').trim();
+            } else if (activeKey === 'komunitas') {
+                clientName = (categoryData.community_name || categoryData.pic_name || 'Klien Komunitas').trim();
+            } else if (activeKey === 'birthday') {
+                const cel = (categoryData.celebrant_name || '').trim();
+                clientName = cel ? `Birthday: ${cel}` : 'Klien Birthday';
             } else {
-                const bride = formData.bride_name.trim();
-                const groom = formData.groom_name.trim();
-                if (bride && groom) {
-                    clientName = `${groom} & ${bride}`;
-                } else if (groom) {
-                    clientName = groom;
-                } else if (bride) {
-                    clientName = bride;
-                } else if (formData.contact_person.trim()) {
-                    clientName = formData.contact_person.trim();
-                }
+                clientName = (categoryData.contact_person || formData.contact_person || formData.name || 'Klien Baru').trim();
             }
         }
 
-        const phone = formData.phone.trim() || formData.contact_person.trim() || '081234567890';
+        const validChildren = (Array.isArray(categoryData.babies) && categoryData.babies.length > 0)
+            ? categoryData.babies
+            : (Array.isArray(categoryData.children) && categoryData.children.length > 0
+                ? categoryData.children
+                : (Array.isArray(formData.children) ? formData.children : []));
 
         const payload = {
             ...formData,
             name: clientName || 'Klien Baru',
-            phone: phone,
+            client_type: selectedCat?.slug || formData.client_type || 'wedding',
+            category_id: selectedCat?.id || formData.category_id,
+            package_id: formData.package_id || null,
+            category_data: categoryData,
+            bride_name: categoryData.bride_name || formData.bride_name || null,
+            bride_nickname: categoryData.bride_nickname || formData.bride_nickname || null,
+            groom_name: categoryData.groom_name || formData.groom_name || null,
+            groom_nickname: categoryData.groom_nickname || formData.groom_nickname || null,
+            bride_birth_date: categoryData.bride_birth_date || formData.bride_birth_date || null,
+            groom_birth_date: categoryData.groom_birth_date || formData.groom_birth_date || null,
+            child_name: categoryData.baby_name || formData.child_name || null,
+            child_birth_date: categoryData.baby_birth_date || formData.child_birth_date || null,
+            child_gender: categoryData.baby_gender || formData.child_gender || null,
+            father_name: categoryData.father_name || formData.father_name || null,
+            mother_name: categoryData.mother_name || categoryData.mom_name || formData.mother_name || null,
+            partner_name: categoryData.partner_name || formData.partner_name || null,
+            company_name: categoryData.company_name || formData.company_name || null,
+            children: validChildren.length > 0 ? validChildren : null,
+            event_type: selectedCat?.name || formData.event_type || 'Dokumentasi',
+            event_date: formData.event_date || categoryData.session_date || categoryData.akad_date || categoryData.event_date || categoryData.departure_date || null,
+            event_time: formData.event_time || categoryData.akad_time || categoryData.event_time || null,
+            event_location: formData.event_location || categoryData.session_location || categoryData.akad_location || categoryData.event_location || categoryData.location || formData.address || null,
+            phone: formData.phone.trim() || categoryData.pic_phone || '081234567890',
         };
 
         setIsSubmitting(true);
@@ -883,13 +988,15 @@ export default function ClientsIndex({
 
         const savedClientName = payload.name;
 
-        router.post('/clients', payload, {
+        router.post('/clients', payload as any, {
             preserveScroll: true,
             preserveState: true,
             onSuccess: () => {
                 setCreateModalOpen(false);
                 setIsSubmitting(false);
                 setFormData(initialFormData);
+                setCategoryData({});
+                setCreateCurrentStep(1);
                 toast.success('Berhasil Menambahkan Klien', {
                     description: `Data klien "${savedClientName}" berhasil disimpan ke sistem.`,
                 });
@@ -974,7 +1081,7 @@ export default function ClientsIndex({
 
                         <button
                             type="button"
-                            onClick={() => setCreateModalOpen(true)}
+                            onClick={handleOpenCreateModal}
                             className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#C89445] hover:bg-[#b38136] text-white rounded-xl text-xs font-bold shadow-xs transition-all hover:scale-[1.02] cursor-pointer"
                         >
                             <Plus className="w-4 h-4 text-white" />
@@ -1651,9 +1758,9 @@ export default function ClientsIndex({
                     isOpen={createModalOpen}
                     onClose={() => setCreateModalOpen(false)}
                     title="Tambah Client Baru"
-                    subtitle="Lengkapi data profil, kontak, domisili, acara, dan preferensi klien."
-                    maxWidth="3xl"
-                    className="max-h-[90vh]"
+                    subtitle="Lengkapi data profil, kontak, domisili, acara, dan preferensi klien sesuai formulir intake."
+                    maxWidth="4xl"
+                    className="max-h-[92vh]"
                     footer={
                         <div className="flex items-center justify-between w-full gap-3">
                             <button
@@ -1665,10 +1772,10 @@ export default function ClientsIndex({
                             </button>
 
                             <div className="flex items-center gap-2">
-                                {currentStepIndex > 0 && (
+                                {createCurrentStep > 1 && (
                                     <button
                                         type="button"
-                                        onClick={handlePrevStep}
+                                        onClick={handlePrevCreateStep}
                                         className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
                                     >
                                         <ChevronLeft className="w-4 h-4" />
@@ -1676,13 +1783,13 @@ export default function ClientsIndex({
                                     </button>
                                 )}
 
-                                {currentStepIndex < steps.length - 1 ? (
+                                {createCurrentStep < 4 ? (
                                     <button
                                         type="button"
-                                        onClick={handleNextStep}
+                                        onClick={handleNextCreateStep}
                                         className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
                                     >
-                                        <span>Lanjut: {steps[currentStepIndex + 1].title}</span>
+                                        <span>Lanjut: {createSteps[createCurrentStep]?.title || 'Langkah Berikutnya'}</span>
                                         <ChevronRight className="w-4 h-4" />
                                     </button>
                                 ) : (
@@ -1699,946 +1806,1003 @@ export default function ClientsIndex({
                         </div>
                     }
                 >
-                    <div className="space-y-5 pt-1">
-                        {/* STEPPER HEADER (5 Horizontal Clickable Steps) */}
-                        <div className="flex items-center justify-between gap-1 sm:gap-2 p-1.5 bg-slate-100/90 rounded-2xl overflow-x-auto scrollbar-none">
-                            {steps.map((s, idx) => {
-                                const isActive = activeFormTab === s.id;
-                                const isPassed = currentStepIndex > idx;
-                                return (
-                                    <button
-                                        key={s.id}
-                                        type="button"
-                                        onClick={() => goToStep(s.id as any)}
-                                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex-1 justify-center ${isActive
-                                            ? 'bg-white text-slate-900 shadow-2xs ring-1 ring-slate-200/80 font-extrabold'
-                                            : isPassed
-                                                ? 'text-emerald-700 hover:text-emerald-800 hover:bg-white/50'
-                                                : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'
-                                            }`}
-                                    >
-                                        <span
-                                            className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${isActive
-                                                ? 'bg-[#C89445] text-white'
-                                                : isPassed
-                                                    ? 'bg-emerald-100 text-emerald-700'
-                                                    : 'bg-slate-200 text-slate-600'
+                    <div className="space-y-6 pt-1">
+                        {/* ================================================================= */}
+                        {/* STEPPER HEADER (4 Connected Steps) */}
+                        {/* ================================================================= */}
+                        <div className="relative pb-6 mb-2 border-b border-slate-100">
+                            {/* Connecting background line */}
+                            <div
+                                className="absolute top-[18px] -translate-y-1/2 h-[2px] bg-slate-200 z-0 pointer-events-none"
+                                style={{
+                                    left: `calc(100% / ${createSteps.length * 2})`,
+                                    right: `calc(100% / ${createSteps.length * 2})`,
+                                }}
+                            >
+                                {/* Active progress fill line */}
+                                <div
+                                    className="h-full transition-all duration-300 ease-in-out bg-[#C89445]"
+                                    style={{
+                                        width: `${((createCurrentStep - 1) / (createSteps.length - 1)) * 100}%`,
+                                    }}
+                                />
+                            </div>
+
+                            <div className="flex items-start justify-between relative z-10">
+                                {createSteps.map((s) => {
+                                    const isDone = createCurrentStep > s.number;
+                                    const isCurrent = createCurrentStep === s.number;
+                                    return (
+                                        <div key={s.number} className="flex-1 flex flex-col items-center text-center px-1">
+                                            <div className="relative flex items-center justify-center mb-1.5">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => (isDone ? setCreateCurrentStep(s.number) : null)}
+                                                    disabled={!isDone}
+                                                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all relative z-10 ${
+                                                        isDone
+                                                            ? 'bg-[#C89445] text-white cursor-pointer hover:opacity-90 shadow-md'
+                                                            : isCurrent
+                                                            ? 'bg-[#C89445] text-white ring-4 ring-[#C89445]/20 shadow-md font-extrabold'
+                                                            : 'bg-white border-2 border-slate-300 text-slate-400 cursor-not-allowed'
+                                                    }`}
+                                                >
+                                                    {isDone ? <Check className="w-4 h-4 stroke-[3]" /> : s.number}
+                                                </button>
+                                            </div>
+                                            <span
+                                                className={`text-[11px] sm:text-xs max-w-[130px] line-clamp-2 leading-tight ${
+                                                    isCurrent
+                                                        ? 'font-bold text-[#C89445]'
+                                                        : isDone
+                                                        ? 'text-slate-700 font-semibold'
+                                                        : 'text-slate-400'
                                                 }`}
-                                        >
-                                            {isPassed ? <Check className="w-3 h-3 text-emerald-700 stroke-[3]" /> : s.stepNum}
-                                        </span>
-                                        <span className="hidden sm:inline">{s.title}</span>
-                                    </button>
-                                );
-                            })}
+                                            >
+                                                {s.title}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
 
-                        {/* ========================================================================= */}
-                        {/* TAB 1: IDENTITAS & PROFIL */}
-                        {/* ========================================================================= */}
-                        {activeFormTab === 'profile' && (
-                            <div className="space-y-4 animate-in fade-in duration-150">
-                                {/* Kategori / Tipe Klien Selection (SelectSearch dari Master Data Categories) */}
+                        {/* ================================================================= */}
+                        {/* STEP 1: INFORMASI AWAL & DETAIL KLIEN */}
+                        {/* ================================================================= */}
+                        {createCurrentStep === 1 && (
+                            <div className="space-y-5 animate-in fade-in duration-200">
                                 <div>
-                                    <label className="text-[11px] font-bold text-slate-700 block mb-1.5">
-                                        Kategori / Tipe Klien <span className="text-red-500">*</span>
-                                    </label>
-                                    <SelectSearch
-                                        options={categoryOptions}
-                                        value={formData.client_type}
-                                        onChange={(val) => setFormData({ ...formData, client_type: val })}
-                                        placeholder="Pilih Kategori / Tipe Klien..."
-                                        searchPlaceholder="Cari kategori dari Master Data..."
-                                        clearable={false}
-                                        className="w-full text-xs bg-white"
-                                    />
-                                    <p className="text-[10px] text-slate-400 mt-1">
-                                        Kategori diambil langsung dari Master Data Kategori (<Link href="/master-data/categories" className="text-amber-700 hover:underline font-medium">/master-data/categories</Link>).
+                                    <h3 className="text-base font-bold text-slate-900">
+                                        {activeCategoryKey === 'wedding'
+                                            ? 'Informasi Awal & Calon Pengantin (CPP/CPW)'
+                                            : activeCategoryKey === 'newborn'
+                                            ? 'Informasi Awal & Data Bayi (Newborn)'
+                                            : 'Informasi Awal & Identitas Klien'}
+                                    </h3>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        Pilih kategori project terlebih dahulu, formulir akan otomatis menyesuaikan data yang diperlukan.
                                     </p>
                                 </div>
 
-                                {/* WEDDING FORM FIELDS */}
-                                {activeFormType === 'wedding' && (
-                                    <>
-                                        <div>
-                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                Judul Acara / Nama Project Wedding <span className="text-slate-400 font-normal">(Opsional / Otomatis dari nama CPP &amp; CPW)</span>
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={formData.name}
-                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                                placeholder="Contoh: Kevin Sanjaya & Jessica Mila"
-                                                className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                            />
-                                        </div>
-
-                                        {/* Calon Pengantin (CPW & CPP) Side by Side */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-                                            {/* CPW Card */}
-                                            <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 space-y-3">
-                                                <div className="flex items-center gap-2 text-purple-900">
-                                                    <div className="w-6 h-6 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
-                                                        <User className="w-3.5 h-3.5" />
-                                                    </div>
-                                                    <h4 className="text-xs font-bold text-slate-900">
-                                                        Informasi Calon Pengantin (CPW) <span className="text-red-500">*</span>
-                                                    </h4>
-                                                </div>
-
-                                                <div className="space-y-2.5">
-                                                    <div>
-                                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                            Nama Lengkap CPW
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            value={formData.bride_name}
-                                                            onChange={(e) => setFormData({ ...formData, bride_name: e.target.value })}
-                                                            placeholder="Nama lengkap CPW"
-                                                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                        />
-                                                    </div>
-                                                    <div className="grid grid-cols-2 gap-2">
-                                                        <div>
-                                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                                Panggilan
-                                                            </label>
-                                                            <input
-                                                                type="text"
-                                                                value={formData.bride_nickname}
-                                                                onChange={(e) => setFormData({ ...formData, bride_nickname: e.target.value })}
-                                                                placeholder="Panggilan"
-                                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                                Tanggal Lahir
-                                                            </label>
-                                                            <input
-                                                                type="date"
-                                                                value={formData.bride_birth_date}
-                                                                onChange={(e) => setFormData({ ...formData, bride_birth_date: e.target.value })}
-                                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* CPP Card */}
-                                            <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 space-y-3">
-                                                <div className="flex items-center gap-2 text-purple-900">
-                                                    <div className="w-6 h-6 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
-                                                        <User className="w-3.5 h-3.5" />
-                                                    </div>
-                                                    <h4 className="text-xs font-bold text-slate-900">
-                                                        Informasi Calon Pengantin (CPP) <span className="text-red-500">*</span>
-                                                    </h4>
-                                                </div>
-
-                                                <div className="space-y-2.5">
-                                                    <div>
-                                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                            Nama Lengkap CPP
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            value={formData.groom_name}
-                                                            onChange={(e) => setFormData({ ...formData, groom_name: e.target.value })}
-                                                            placeholder="Nama lengkap CPP"
-                                                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                        />
-                                                    </div>
-                                                    <div className="grid grid-cols-2 gap-2">
-                                                        <div>
-                                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                                Panggilan
-                                                            </label>
-                                                            <input
-                                                                type="text"
-                                                                value={formData.groom_nickname}
-                                                                onChange={(e) => setFormData({ ...formData, groom_nickname: e.target.value })}
-                                                                placeholder="Panggilan"
-                                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                                Tanggal Lahir
-                                                            </label>
-                                                            <input
-                                                                type="date"
-                                                                value={formData.groom_birth_date}
-                                                                onChange={(e) => setFormData({ ...formData, groom_birth_date: e.target.value })}
-                                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Additional / Corporate Details */}
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                    Nama Pasangan / Pendamping Tambahan
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={formData.partner_name}
-                                                    onChange={(e) => setFormData({ ...formData, partner_name: e.target.value })}
-                                                    placeholder="Opsional jika bukan wedding"
-                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                />
+                                {/* 1. PILIH KATEGORI PROJECT */}
+                                <div className="border border-slate-200/90 rounded-2xl p-4 sm:p-5 space-y-3 shadow-2xs bg-slate-50/50">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                                                <Bookmark className="w-4 h-4" />
                                             </div>
                                             <div>
-                                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                    Nama Perusahaan / Brand (B2B)
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={formData.company_name}
-                                                    onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
-                                                    placeholder="Contoh: PT Astra International"
-                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                />
+                                                <h4 className="text-xs font-bold text-slate-900">
+                                                    Pilih Kategori Project <span className="text-red-500">*</span>
+                                                </h4>
+                                                <p className="text-[11px] text-slate-500">
+                                                    Kategori menentukan format isian data profil klien:
+                                                </p>
                                             </div>
                                         </div>
-                                    </>
-                                )}
 
-                                {/* NEWBORN FORM FIELDS */}
-                                {activeFormType === 'newborn' && (
-                                    <div className="space-y-4">
-                                        {/* Baby Data Repeater */}
-                                        <div className="space-y-3">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2 text-amber-900">
-                                                    <div className="w-6 h-6 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-                                                        <Baby className="w-3.5 h-3.5" />
-                                                    </div>
-                                                    <div>
-                                                        <h4 className="text-xs font-bold text-slate-900">
-                                                            Informasi Bayi / Anak (Newborn) <span className="text-red-500">*</span>
-                                                        </h4>
-                                                        <p className="text-[10px] text-slate-500">
-                                                            Dapat mengisi lebih dari satu bayi jika kasus anak kembar.
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                <button
-                                                    type="button"
-                                                    onClick={handleAddModalChild}
-                                                    className="px-2.5 py-1 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer"
-                                                >
-                                                    <Plus className="w-3 h-3" />
-                                                    <span>+ Tambah Bayi (Kembar)</span>
-                                                </button>
-                                            </div>
-
-                                            {(formData.children || []).map((child, idx) => (
-                                                <div
-                                                    key={idx}
-                                                    className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200/70 space-y-3"
-                                                >
-                                                    <div className="flex items-center justify-between pb-1 border-b border-amber-200/50">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span className="px-2 py-0.5 rounded-md bg-amber-200/80 text-amber-900 font-bold text-[10px]">
-                                                                👶 Bayi #{idx + 1} {(formData.children || []).length > 1 ? '(Kembar)' : ''}
-                                                            </span>
-                                                        </div>
-                                                        {(formData.children || []).length > 1 && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleRemoveModalChild(idx)}
-                                                                className="text-red-600 hover:text-red-700 hover:bg-red-50 px-2 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-                                                            >
-                                                                <Trash2 className="w-3 h-3" />
-                                                                <span>Hapus</span>
-                                                            </button>
-                                                        )}
-                                                    </div>
-
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                        <div>
-                                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                                Nama Lengkap Bayi #{idx + 1} <span className="text-red-500">*</span>
-                                                            </label>
-                                                            <input
-                                                                type="text"
-                                                                value={child.name}
-                                                                onChange={(e) => handleChildModalChange(idx, 'name', e.target.value)}
-                                                                placeholder={idx === 0 ? "Contoh: Muhammad Al-Fatih" : "Contoh: Muhammad Al-Haq"}
-                                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                                Tanggal Lahir / HPL
-                                                            </label>
-                                                            <input
-                                                                type="date"
-                                                                value={child.birth_date}
-                                                                onChange={(e) => handleChildModalChange(idx, 'birth_date', e.target.value)}
-                                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                            />
-                                                        </div>
-                                                    </div>
-
-                                                    <div>
-                                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                            Jenis Kelamin
-                                                        </label>
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleChildModalChange(idx, 'gender', 'male')}
-                                                                className={`py-1.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                                                                    child.gender === 'male'
-                                                                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                                                                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                                                                }`}
-                                                            >
-                                                                <span>👦 Laki-laki (Boy)</span>
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleChildModalChange(idx, 'gender', 'female')}
-                                                                className={`py-1.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                                                                    child.gender === 'female'
-                                                                        ? 'bg-pink-600 text-white border-pink-600 shadow-xs'
-                                                                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                                                                }`}
-                                                            >
-                                                                <span>👧 Perempuan (Girl)</span>
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-
-                                            <button
-                                                type="button"
-                                                onClick={handleAddModalChild}
-                                                className="w-full py-2 px-3 rounded-xl border-2 border-dashed border-amber-300 hover:border-amber-400 bg-amber-50/40 hover:bg-amber-50 text-amber-800 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                                            >
-                                                <Plus className="w-3.5 h-3.5 text-amber-600" />
-                                                <span>+ Tambah Bayi Kembar (Twins)</span>
-                                            </button>
-                                        </div>
-
-                                        {/* Data Orang Tua */}
-                                        <div className="p-4 rounded-2xl bg-slate-50/70 border border-slate-200/80 space-y-3">
-                                            <div className="flex items-center gap-2 text-indigo-900">
-                                                <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
-                                                    <User className="w-3.5 h-3.5" />
-                                                </div>
-                                                <div>
-                                                    <h4 className="text-xs font-bold text-slate-900">
-                                                        Data Orang Tua (Ayah &amp; Ibu)
-                                                    </h4>
-                                                    <p className="text-[10px] text-slate-500">
-                                                        Masukkan nama lengkap ayah dan ibu.
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                <div>
-                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                        Nama Lengkap Ayah
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        value={formData.father_name}
-                                                        onChange={(e) => {
-                                                            const f = e.target.value;
-                                                            const m = formData.mother_name;
-                                                            const combined = [f, m].filter(Boolean).join(' & ');
-                                                            setFormData({ ...formData, father_name: f, partner_name: combined, name: formData.child_name ? `Baby ${formData.child_name}` : combined });
-                                                        }}
-                                                        placeholder="Contoh: Dimas Pratama"
-                                                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                        Nama Lengkap Ibu
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        value={formData.mother_name}
-                                                        onChange={(e) => {
-                                                            const m = e.target.value;
-                                                            const f = formData.father_name;
-                                                            const combined = [f, m].filter(Boolean).join(' & ');
-                                                            setFormData({ ...formData, mother_name: m, partner_name: combined, name: formData.child_name ? `Baby ${formData.child_name}` : combined });
-                                                        }}
-                                                        placeholder="Contoh: Amanda Lestari"
-                                                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                    Pekerjaan Orang Tua
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={formData.occupation}
-                                                    onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
-                                                    placeholder="Contoh: Dokter & Dosen"
-                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                />
-                                            </div>
-                                        </div>
+                                        <span className="self-start sm:self-auto inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200 shadow-2xs">
+                                            Kategori: {selectedCategory.name}
+                                        </span>
                                     </div>
-                                )}
 
-                                {/* STANDARD / UMUM FORM FIELDS */}
-                                {activeFormType === 'standard' && (
-                                    <div className="space-y-3">
-                                        <div>
-                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                Nama Lengkap Klien / Pemesan <span className="text-red-500">*</span>
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={formData.name}
-                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                                placeholder="Contoh: Bpk. Aditya Pratama"
-                                                className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                            />
-                                        </div>
-
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            <div>
-                                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                    Nama Panggilan / Alias
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={formData.contact_person}
-                                                    onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
-                                                    placeholder="Contoh: Adit"
-                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                    Pekerjaan / Profesi
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={formData.occupation}
-                                                    onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
-                                                    placeholder="Profesi / Pekerjaan"
-                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                Perusahaan / Brand / Institusi (Opsional)
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={formData.company_name}
-                                                onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
-                                                placeholder="Contoh: PT Surya Dinamika"
-                                                className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* ========================================================================= */}
-                        {/* TAB 2: KONTAK & MEDIA SOSIAL */}
-                        {/* ========================================================================= */}
-                        {activeFormTab === 'contact' && (
-                            <div className="space-y-4 animate-in fade-in duration-150">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {/* 1. No. WhatsApp Utama */}
                                     <div>
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center justify-between mb-1">
-                                            <span>Nomor WhatsApp Utama <span className="text-red-500">*</span></span>
-                                            <span className="text-[10px] text-emerald-600 font-semibold">Prioritas Kontak</span>
-                                        </label>
-                                        <div className="relative">
-                                            <input
-                                                type="text"
-                                                value={formData.phone}
-                                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                                placeholder="Contoh: 081398765432"
-                                                className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all font-mono"
-                                            />
-                                            <Phone className="w-4 h-4 text-emerald-600 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                        </div>
-                                    </div>
-
-                                    {/* 2. No. Telepon Cadangan */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                            Nomor Telepon Cadangan
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={formData.secondary_phone}
-                                            onChange={(e) => setFormData({ ...formData, secondary_phone: e.target.value })}
-                                            placeholder="Contoh: 081234567890 (Pasangan/PIC)"
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all font-mono"
+                                        <SelectSearch
+                                            options={categoryOptions}
+                                                                                      onChange={handleCategoryChange}
+                                            placeholder="Cari atau pilih Kategori Project..."
+                                            searchPlaceholder="Ketik nama kategori (Wedding, Newborn, dll)..."
+                                            clearable={false}
+                                            className="w-full bg-white"
                                         />
                                     </div>
+                                </div>
 
-                                    {/* 3. Email Aktif */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                            Alamat Email Aktif
-                                        </label>
-                                        <div className="relative">
-                                            <input
-                                                type="email"
-                                                value={formData.email}
-                                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                                placeholder="contoh@gmail.com"
-                                                className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                            />
-                                            <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                        </div>
-                                    </div>
-
-                                    {/* 4. Akun Instagram */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                            Akun Instagram
-                                        </label>
-                                        <div className="relative">
-                                            <input
-                                                type="text"
-                                                value={formData.instagram}
-                                                onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
-                                                placeholder="@username"
-                                                className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                            />
-                                            <Instagram className="w-4 h-4 text-pink-600 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                        </div>
-                                    </div>
-
-                                    {/* 5. Preferensi Komunikasi */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                            Saluran Komunikasi Pilihan
-                                        </label>
-                                        <select
-                                            value={formData.preferred_contact}
-                                            onChange={(e) => setFormData({ ...formData, preferred_contact: e.target.value })}
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all cursor-pointer"
-                                        >
-                                            <option value="whatsapp">WhatsApp (Rekomendasi Utama)</option>
-                                            <option value="email">Email Resmi</option>
-                                            <option value="phone">Panggilan Telepon Langsung</option>
-                                        </select>
-                                    </div>
-
-                                    {/* 6. Contact Person / PIC */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                            Nama Contact Person (PIC)
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={formData.contact_person}
-                                            onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
-                                            placeholder="Contoh: Jessica Mila (CPP)"
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                        />
-                                    </div>
-
-                                    {/* 7. Pekerjaan */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                            Pekerjaan / Profesi
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={formData.occupation}
-                                            onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
-                                            placeholder="Contoh: Pengusaha / Dokter / Aktris"
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                        />
-                                    </div>
-
-                                    {/* 8. Sosial Media Lainnya */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                            Sosial Media Lainnya
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={formData.other_social_media}
-                                            onChange={(e) => setFormData({ ...formData, other_social_media: e.target.value })}
-                                            placeholder="TikTok: @user • YouTube: Channel"
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                        />
-                                    </div>
+                                {/* 2. DYNAMIC INPUT FORM BASED ON 15 CATEGORIES */}
+                                <div className="pt-1">
+                                    <CategorySpecificForm
+                                        categoryKey={activeCategoryKey}
+                                        categoryName={selectedCategory?.name}
+                                        data={categoryData}
+                                        onChange={handleCategoryDataChange}
+                                        mode="public"
+                                    />
                                 </div>
                             </div>
                         )}
 
-                        {/* ========================================================================= */}
-                        {/* TAB 3: DOMISILI & WILAYAH */}
-                        {/* ========================================================================= */}
-                        {activeFormTab === 'location' && (
-                            <div className="space-y-4 animate-in fade-in duration-150">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {/* 1. Pilih Provinsi */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">1</span>
-                                            <span>Pilih Provinsi</span>
-                                        </label>
-                                        <select
-                                            value={formData.province_code}
-                                            onChange={(e) => handleProvinceChange(e.target.value)}
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all cursor-pointer"
-                                        >
-                                            <option value="">-- Pilih Provinsi --</option>
-                                            {(regionProvinces || []).map((p) => (
-                                                <option key={p.code} value={p.code}>{p.name}</option>
-                                            ))}
-                                        </select>
+                        {/* ================================================================= */}
+                        {/* STEP 2: INFORMASI ALAMAT & KONTAK */}
+                        {/* ================================================================= */}
+                        {createCurrentStep === 2 && (
+                            <div className="space-y-5 animate-in fade-in duration-200">
+                                <div>
+                                    <h3 className="text-base font-bold text-slate-900">
+                                        Informasi Alamat & Kontak
+                                    </h3>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        Lengkapi informasi domisili wilayah dan pilih kontak utama untuk komunikasi.
+                                    </p>
+                                </div>
+
+                                {/* Blue Info Alert */}
+                                <div className="bg-indigo-50/70 border border-indigo-100/90 rounded-2xl p-4 flex items-center gap-3 text-xs text-indigo-900">
+                                    <Info className="w-4 h-4 text-indigo-600 shrink-0" />
+                                    <span>
+                                        <strong>Informasi penting:</strong> Pastikan semua data alamat dan kontak utama yang diisi sudah benar agar memudahkan komunikasi.
+                                    </span>
+                                </div>
+
+                                {/* Informasi Alamat Card */}
+                                <div className="border border-slate-200/80 rounded-2xl p-4 sm:p-5 space-y-4 shadow-2xs bg-white">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-7 h-7 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+                                            <MapPin className="w-4 h-4" />
+                                        </div>
+                                        <h4 className="text-xs font-bold text-slate-900">
+                                            Informasi Alamat & Domisili
+                                        </h4>
                                     </div>
 
-                                    {/* 2. Pilih Kota/Kabupaten */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">2</span>
-                                            <span>Pilih Kota / Kabupaten</span>
-                                        </label>
-                                        <select
-                                            value={formData.city_code}
-                                            onChange={(e) => handleCitySelectChange(e.target.value)}
-                                            disabled={!formData.province_code || loadingCities}
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all disabled:bg-slate-50 disabled:cursor-not-allowed cursor-pointer"
-                                        >
-                                            <option value="">{loadingCities ? 'Memuat kota...' : '-- Pilih Kota / Kabupaten --'}</option>
-                                            {(regionCities || []).map((c) => (
-                                                <option key={c.code} value={c.code}>{c.name}</option>
-                                            ))}
-                                        </select>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Provinsi <span className="text-red-500">*</span>
+                                            </label>
+                                            <SelectSearch
+                                                options={provinceOptions}
+                                                value={formData.province_code}
+                                                onChange={handleProvinceChange}
+                                                placeholder="Pilih provinsi"
+                                                searchPlaceholder="Cari provinsi..."
+                                                clearable={false}
+                                                className="w-full bg-white"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Kota / Kabupaten <span className="text-red-500">*</span>
+                                            </label>
+                                            <SelectSearch
+                                                options={cityOptions}
+                                                value={formData.city_code}
+                                                onChange={handleCitySelectChange}
+                                                placeholder={formData.province_code ? 'Pilih kota / kabupaten' : 'Pilih provinsi dahulu'}
+                                                searchPlaceholder="Cari kota..."
+                                                disabled={!formData.province_code}
+                                                isLoading={loadingCities}
+                                                clearable={false}
+                                                className="w-full bg-white"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Kecamatan <span className="text-red-500">*</span>
+                                            </label>
+                                            <SelectSearch
+                                                options={districtOptions}
+                                                value={formData.district_code}
+                                                onChange={handleDistrictSelectChange}
+                                                placeholder={formData.city_code ? 'Pilih kecamatan' : 'Pilih kota dahulu'}
+                                                searchPlaceholder="Cari kecamatan..."
+                                                disabled={!formData.city_code}
+                                                isLoading={loadingDistricts}
+                                                clearable={false}
+                                                className="w-full bg-white"
+                                            />
+                                        </div>
                                     </div>
 
-                                    {/* 3. Pilih Kecamatan */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">3</span>
-                                            <span>Pilih Kecamatan</span>
-                                        </label>
-                                        <select
-                                            value={formData.district_code}
-                                            onChange={(e) => handleDistrictSelectChange(e.target.value)}
-                                            disabled={!formData.city_code || loadingDistricts}
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all disabled:bg-slate-50 disabled:cursor-not-allowed cursor-pointer"
-                                        >
-                                            <option value="">{loadingDistricts ? 'Memuat kecamatan...' : '-- Pilih Kecamatan --'}</option>
-                                            {(regionDistricts || []).map((d) => (
-                                                <option key={d.code} value={d.code}>{d.name}</option>
-                                            ))}
-                                        </select>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Kelurahan / Desa <span className="text-red-500">*</span>
+                                            </label>
+                                            <SelectSearch
+                                                options={villageOptions}
+                                                value={formData.village_code}
+                                                onChange={handleVillageSelectChange}
+                                                placeholder={formData.district_code ? 'Pilih kelurahan' : 'Pilih kecamatan dahulu'}
+                                                searchPlaceholder="Cari kelurahan..."
+                                                disabled={!formData.district_code}
+                                                isLoading={loadingVillages}
+                                                clearable={false}
+                                                className="w-full bg-white"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Kode Pos
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={formData.postal_code}
+                                                onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
+                                                placeholder="Masukkan kode pos"
+                                                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
+                                            />
+                                        </div>
                                     </div>
 
-                                    {/* 4. Pilih Kelurahan */}
                                     <div>
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">4</span>
-                                            <span>Pilih Kelurahan</span>
-                                        </label>
-                                        <select
-                                            value={formData.village_code}
-                                            onChange={(e) => handleVillageSelectChange(e.target.value)}
-                                            disabled={!formData.district_code || loadingVillages}
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all disabled:bg-slate-50 disabled:cursor-not-allowed cursor-pointer"
-                                        >
-                                            <option value="">{loadingVillages ? 'Memuat kelurahan...' : '-- Pilih Kelurahan --'}</option>
-                                            {(regionVillages || []).map((v) => (
-                                                <option key={v.code} value={v.code}>{v.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    {/* 5. Kode Pos */}
-                                    <div className="sm:col-span-2">
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">5</span>
-                                            <span>Kode Pos</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={formData.postal_code}
-                                            onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
-                                            placeholder="Masukkan kode pos"
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all font-mono"
+                                        <div className="flex items-center justify-between mb-1">
+                                            <label className="block text-[11px] font-bold text-slate-700">
+                                                Alamat Lengkap <span className="text-red-500">*</span>
+                                            </label>
+                                            <span className="text-[10px] text-slate-400">
+                                                {formData.address.length} / 255
+                                            </span>
+                                        </div>
+                                        <textarea
+                                            rows={2.5}
+                                            maxLength={255}
+                                            value={formData.address}
+                                            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                                            placeholder="Masukkan alamat lengkap (nama jalan, nomor rumah, RT/RW, dsb)"
+                                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all resize-none"
                                         />
                                     </div>
+                                </div>
 
-                                    {/* 6. Tulis Alamat Lengkap */}
-                                    <div className="sm:col-span-2">
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">6</span>
-                                            <span>Tulis Alamat Lengkap</span>
-                                        </label>
-                                        <div className="relative">
-                                            <textarea
-                                                rows={3}
-                                                value={formData.address}
-                                                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                                placeholder="Contoh: Jl. Melawai Raya No.12, RT.03/RW.02, Melawai, Kebayoran Baru, Jakarta Selatan 12160"
-                                                className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all resize-none pr-10"
-                                            />
-                                            <MapPin className="w-4 h-4 text-slate-400 absolute right-3 bottom-3 pointer-events-none" />
+                                {/* Kontak Utama Card */}
+                                <div className="border border-slate-200/80 rounded-2xl p-4 sm:p-5 space-y-4 shadow-2xs bg-white">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-7 h-7 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+                                            <User className="w-4 h-4" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-xs font-bold text-slate-900">
+                                                Kontak Utama untuk Komunikasi
+                                            </h4>
+                                            <p className="text-[11px] text-slate-500">
+                                                Pilih pihak yang paling mudah dihubungi terkait pemesanan ini.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                                        <div className="lg:col-span-6 space-y-3.5">
+                                            <div>
+                                                <NativeSelect
+                                                    label="Pilih Kontak Utama"
+                                                    required
+                                                    value={formData.primary_contact}
+                                                    onChange={(e) => setFormData({ ...formData, primary_contact: e.target.value })}
+                                                    helperText="Data kontak akan terisi otomatis sesuai pilihan Anda."
+                                                >
+                                                    {activeCategoryKey === 'wedding' || activeCategoryKey === 'engagement' ? (
+                                                        <>
+                                                            <option value="cpw">CPW — {categoryData.bride_name || formData.bride_name || 'Calon Pengantin Wanita'}</option>
+                                                            <option value="cpp">CPP — {categoryData.groom_name || formData.groom_name || 'Calon Pengantin Pria'}</option>
+                                                        </>
+                                                    ) : activeCategoryKey === 'prewedding' ? (
+                                                        <>
+                                                            <option value="cpw">Pasangan 1 — {categoryData.partner_1 || categoryData.bride_name || 'Pasangan 1'}</option>
+                                                            <option value="cpp">Pasangan 2 — {categoryData.partner_2 || categoryData.groom_name || 'Pasangan 2'}</option>
+                                                        </>
+                                                    ) : activeCategoryKey === 'maternity' ? (
+                                                        <>
+                                                            <option value="cpw">Ibu — {categoryData.mom_name || categoryData.mother_name || 'Ibu Hamil'}</option>
+                                                            <option value="cpp">Ayah / Pasangan — {categoryData.partner_name || categoryData.father_name || 'Ayah / Pasangan'}</option>
+                                                        </>
+                                                    ) : activeCategoryKey === 'family' ? (
+                                                        <>
+                                                            <option value="cpp">Ayah — {categoryData.father_name || 'Ayah'}</option>
+                                                            <option value="mother">Ibu — {categoryData.mother_name || 'Ibu'}</option>
+                                                            <option value="family">Keluarga — {categoryData.family_name || 'Keluarga'}</option>
+                                                        </>
+                                                    ) : activeCategoryKey === 'corporate' ? (
+                                                        <option value="pic">PIC Perusahaan — {categoryData.pic_name || 'PIC'}</option>
+                                                    ) : activeCategoryKey === 'komunitas' ? (
+                                                        <option value="pic">PIC Komunitas — {categoryData.pic_name || 'PIC'}</option>
+                                                    ) : activeCategoryKey === 'newborn' ? (
+                                                        <>
+                                                            <option value="mother">Ibu — {categoryData.mother_name || formData.mother_name || 'Ibu'}</option>
+                                                            <option value="cpp">Ayah — {categoryData.father_name || formData.father_name || 'Ayah'}</option>
+                                                        </>
+                                                    ) : (
+                                                        <option value="client">Pemesan — {categoryData.contact_person || formData.name || 'Pemesan'}</option>
+                                                    )}
+                                                </NativeSelect>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                    No. WhatsApp <span className="text-red-500">*</span>
+                                                </label>
+                                                <div className="relative">
+                                                    <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                                        <Phone className="w-3.5 h-3.5" />
+                                                    </span>
+                                                    <input
+                                                        type="text"
+                                                        required
+                                                        value={formData.phone}
+                                                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                                        placeholder="+62 812-3456-7890"
+                                                        className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                    Email
+                                                </label>
+                                                <div className="relative">
+                                                    <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                                        <Mail className="w-3.5 h-3.5" />
+                                                    </span>
+                                                    <input
+                                                        type="email"
+                                                        value={formData.email}
+                                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                        placeholder="contoh@gmail.com"
+                                                        className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                    Social Media Lainnya
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.other_social_media}
+                                                    onChange={(e) => setFormData({ ...formData, other_social_media: e.target.value })}
+                                                    placeholder="TikTok: @username, Instagram: @akun"
+                                                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="lg:col-span-6 bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 space-y-2.5">
+                                            <div className="flex items-center gap-1.5 text-slate-800 text-xs font-bold pb-2 border-b border-slate-200/60">
+                                                <span>Data Kontak (Terisi Otomatis)</span>
+                                                <Info className="w-3.5 h-3.5 text-slate-400" />
+                                            </div>
+
+                                            <div className="space-y-2 text-xs">
+                                                <div className="flex justify-between py-0.5 border-b border-slate-100">
+                                                    <span className="text-slate-400">Nama Lengkap</span>
+                                                    <span className="font-semibold text-slate-800 text-right">
+                                                        {primaryContactInfo.name} ({primaryContactInfo.role})
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between py-0.5 border-b border-slate-100">
+                                                    <span className="text-slate-400">Pekerjaan</span>
+                                                    <span className="font-semibold text-slate-800 text-right">
+                                                        {primaryContactInfo.occupation}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between py-0.5 border-b border-slate-100">
+                                                    <span className="text-slate-400">No. WhatsApp</span>
+                                                    <span className="font-semibold text-slate-800 text-right">
+                                                        {formData.phone || '-'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between py-0.5 border-b border-slate-100">
+                                                    <span className="text-slate-400">Akun Instagram</span>
+                                                    <span className="font-semibold text-slate-800 text-right">
+                                                        {primaryContactInfo.instagram}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between py-0.5 border-b border-slate-100">
+                                                    <span className="text-slate-400">Email</span>
+                                                    <span className="font-semibold text-slate-800 text-right">
+                                                        {formData.email || '-'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between py-0.5">
+                                                    <span className="text-slate-400">Social Media Lain</span>
+                                                    <span className="font-semibold text-slate-800 text-right max-w-[180px] truncate">
+                                                        {formData.other_social_media || '-'}
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         )}
 
-                        {/* ========================================================================= */}
-                        {/* TAB 4: INFORMASI ACARA & PAKET PROJECT */}
-                        {/* ========================================================================= */}
-                        {activeFormTab === 'event' && (
-                            <div className="space-y-4 animate-in fade-in duration-150">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {/* Jenis Acara */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">9</span>
-                                            <span>Jenis Acara / Project</span>
-                                        </label>
-                                        <select
-                                            value={formData.event_type}
-                                            onChange={(e) => setFormData({ ...formData, event_type: e.target.value })}
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all cursor-pointer"
-                                        >
-                                            <option value="Wedding">Wedding</option>
-                                            <option value="Prewedding">Prewedding</option>
-                                            <option value="Engagement">Engagement / Lamaran</option>
-                                            <option value="Birthday">Birthday / Ulang Tahun</option>
-                                            <option value="Corporate">Corporate Event</option>
-                                            <option value="Family">Family Session</option>
-                                        </select>
+                        {/* ================================================================= */}
+                        {/* STEP 3: INFORMASI ACARA/PROJECT & MANAJEMEN */}
+                        {/* ================================================================= */}
+                        {createCurrentStep === 3 && (
+                            <div className="space-y-5 animate-in fade-in duration-200">
+                                <div>
+                                    <h3 className="text-base font-bold text-slate-900">
+                                        Paket, Detail Acara &amp; Pengaturan Klien
+                                    </h3>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        Lengkapi detail jadwal, paket, tempat pelaksanaan, sumber lead, dan status klien.
+                                    </p>
+                                </div>
+
+                                {/* Blue Info Alert */}
+                                <div className="bg-indigo-50/70 border border-indigo-100/90 rounded-2xl p-4 flex items-center gap-3 text-xs text-indigo-900">
+                                    <Info className="w-4 h-4 text-indigo-600 shrink-0" />
+                                    <span>
+                                        <strong>Informasi penting:</strong> Informasi yang Anda isi akan membantu tim mempersiapkan sesi dokumentasi dan paket layanan yang sesuai.
+                                    </span>
+                                </div>
+
+                                {/* Detail Acara / Project Card */}
+                                <div className="border border-slate-200/80 rounded-2xl p-4 sm:p-5 space-y-4 shadow-2xs bg-white">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-7 h-7 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+                                            <Calendar className="w-4 h-4" />
+                                        </div>
+                                        <h4 className="text-xs font-bold text-slate-900">
+                                            Detail Acara &amp; Paket Photography
+                                        </h4>
                                     </div>
 
-                                    {/* Tanggal Pelaksanaan Acara */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">10</span>
-                                            <span>Tanggal Pelaksanaan Acara</span>
-                                        </label>
-                                        <input
-                                            type="date"
-                                            value={formData.event_date}
-                                            onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                        />
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Kategori Project
+                                            </label>
+                                            <SelectSearch
+                                                options={categoryOptions}
+                                                value={String(formData.category_id || selectedCategory?.id)}
+                                                onChange={handleCategoryChange}
+                                                placeholder="Pilih kategori project"
+                                                searchPlaceholder="Cari kategori..."
+                                                clearable={false}
+                                                className="w-full bg-white"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Jenis Acara <span className="text-red-500">*</span>
+                                            </label>
+                                            <NativeSelect
+                                                value={formData.event_type}
+                                                onChange={(e) => setFormData({ ...formData, event_type: e.target.value })}
+                                                options={[
+                                                    { value: 'Pernikahan', label: 'Pernikahan' },
+                                                    { value: 'Akad Saja', label: 'Akad Saja' },
+                                                    { value: 'Resepsi Saja', label: 'Resepsi Saja' },
+                                                    { value: 'Akad & Resepsi', label: 'Akad & Resepsi' },
+                                                    { value: 'Lamaran & Engagement', label: 'Lamaran & Engagement' },
+                                                    { value: 'Prewedding', label: 'Prewedding' },
+                                                    { value: 'Siraman & Pengajian', label: 'Siraman & Pengajian' },
+                                                    { value: 'Unduh Mantu', label: 'Unduh Mantu' },
+                                                    { value: 'Family Session', label: 'Family Session' },
+                                                    { value: 'Maternity Session', label: 'Maternity Session' },
+                                                    { value: 'Newborn Session', label: 'Newborn Session' },
+                                                    { value: 'Corporate Documentation', label: 'Corporate Documentation' },
+                                                    { value: 'Event Documentation', label: 'Event Documentation' },
+                                                ]}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Pilihan Paket (Opsional)
+                                            </label>
+                                            <SelectSearch
+                                                options={[
+                                                    ...availablePackages.map((p: any) => ({
+                                                        value: String(p.id),
+                                                        label: p.name,
+                                                        subtitle: p.description
+                                                            ? p.description
+                                                            : p.base_price
+                                                            ? `Rp ${Number(p.base_price).toLocaleString('id-ID')}`
+                                                            : undefined,
+                                                    })),
+                                                ]}
+                                                value={formData.package_id}
+                                                onChange={(val) => setFormData({ ...formData, package_id: val })}
+                                                placeholder="Pilih paket atau layanan"
+                                                searchPlaceholder="Cari paket..."
+                                                clearable={true}
+                                                className="w-full bg-white"
+                                            />
+                                        </div>
                                     </div>
 
-                                    {/* Waktu Pelaksanaan Acara */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">11</span>
-                                            <span>Waktu Pelaksanaan Acara</span>
-                                        </label>
-                                        <input
-                                            type="time"
-                                            value={formData.event_time}
-                                            onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                        />
-                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Tanggal Acara / Sesi
+                                            </label>
+                                            <input
+                                                type="date"
+                                                value={formData.event_date}
+                                                onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
+                                                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
+                                            />
+                                        </div>
 
-                                    {/* Tempat Acara */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">12</span>
-                                            <span>Tempat / Lokasi Acara</span>
-                                        </label>
-                                        <div className="relative">
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Waktu / Jam Sesi / Acara
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={formData.event_time}
+                                                onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
+                                                placeholder="Contoh: 08:00 - 14:00 WIB"
+                                                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Tempat / Lokasi Sesi
+                                            </label>
                                             <input
                                                 type="text"
                                                 value={formData.event_location}
                                                 onChange={(e) => setFormData({ ...formData, event_location: e.target.value })}
-                                                placeholder="Contoh: The Ritz Carlton Jakarta"
-                                                className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all pr-10"
+                                                placeholder="Contoh: Grand Ballroom Hotel Hilton"
+                                                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
                                             />
-                                            <MapPin className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                                         </div>
                                     </div>
 
-                                    {/* Paket Dipilih */}
-                                    <div className="sm:col-span-2">
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">13</span>
-                                            <span>Pilihan Paket Photography</span>
+                                    <div className={`grid grid-cols-1 ${activeCategoryKey === 'wedding' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-3.5`}>
+                                        {activeCategoryKey === 'wedding' && (
+                                            <div>
+                                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                    Lokasi Resepsi (Jika berbeda)
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.reception_location}
+                                                    onChange={(e) => setFormData({ ...formData, reception_location: e.target.value })}
+                                                    placeholder="Contoh: Gedung Pernikahan..."
+                                                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
+                                                />
+                                            </div>
+                                        )}
+
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Estimasi Jumlah Tamu
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={formData.estimated_guests}
+                                                onChange={(e) => setFormData({ ...formData, estimated_guests: e.target.value })}
+                                                placeholder="Contoh: 300 - 500 Pax"
+                                                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Warna Tema / Konsep Acara
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={formData.concept_theme}
+                                                onChange={(e) => setFormData({ ...formData, concept_theme: e.target.value })}
+                                                placeholder="Contoh: Emerald Green & White"
+                                                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                            Vendor Lain yang Terlibat
                                         </label>
-                                        <select
-                                            value={formData.package_id}
-                                            onChange={(e) => setFormData({ ...formData, package_id: e.target.value })}
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all cursor-pointer"
-                                        >
-                                            <option value="">-- Pilih Paket (Opsional) --</option>
-                                            {(packages && packages.length > 0) ? (
-                                                packages.map((pkg) => (
-                                                    <option key={pkg.id} value={pkg.id}>
-                                                        {pkg.name} {pkg.base_price ? `(${formatRupiah(pkg.base_price)})` : ''}
-                                                    </option>
-                                                ))
+                                        <input
+                                            type="text"
+                                            value={formData.other_vendors}
+                                            onChange={(e) => setFormData({ ...formData, other_vendors: e.target.value })}
+                                            placeholder="Contoh: WO: Aruna Organizer, MUA: Bubah Alfian, Decor: Lotus"
+                                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Informasi Tambahan, Manajemen & Status Card */}
+                                <div className="border border-slate-200/80 rounded-2xl p-4 sm:p-5 space-y-4 shadow-2xs bg-white">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-7 h-7 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+                                            <FileText className="w-4 h-4" />
+                                        </div>
+                                        <h4 className="text-xs font-bold text-slate-900">
+                                            Manajemen Klien &amp; Catatan Khusus
+                                        </h4>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Sumber Klien (Lead Source) <span className="text-red-500">*</span>
+                                            </label>
+                                            {client_sources && client_sources.length > 0 ? (
+                                                <select
+                                                    value={formData.client_source_id || ''}
+                                                    onChange={(e) => {
+                                                        const selected = client_sources.find(cs => cs.id === e.target.value);
+                                                        setFormData({
+                                                            ...formData,
+                                                            client_source_id: e.target.value,
+                                                            source: selected?.name || formData.source,
+                                                        });
+                                                    }}
+                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all cursor-pointer"
+                                                >
+                                                    <option value="">— Pilih Sumber Klien —</option>
+                                                    {client_sources.map((cs) => (
+                                                        <option key={cs.id} value={cs.id}>
+                                                            {cs.name} {cs.type ? `(${cs.type})` : ''}
+                                                        </option>
+                                                    ))}
+                                                </select>
                                             ) : (
-                                                <>
-                                                    <option value="1">Wedding Gold Package (Rp 45.000.000)</option>
-                                                    <option value="2">Wedding Silver Package (Rp 25.000.000)</option>
-                                                    <option value="3">Prewedding Premium (Rp 15.000.000)</option>
-                                                    <option value="4">Custom Package</option>
-                                                </>
+                                                <select
+                                                    value={formData.source}
+                                                    onChange={(e) => setFormData({ ...formData, source: e.target.value })}
+                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all cursor-pointer"
+                                                >
+                                                    <option value="Instagram">Instagram Ads / Organik</option>
+                                                    <option value="TikTok">TikTok</option>
+                                                    <option value="Google">Google Search / SEO</option>
+                                                    <option value="Wedding Organizer">Vendor Partner / Wedding Organizer</option>
+                                                    <option value="Rekomendasi Teman">Rekomendasi Klien / Teman</option>
+                                                    <option value="Website">Website Resmi Arams</option>
+                                                    <option value="Bridestory">Bridestory</option>
+                                                </select>
                                             )}
-                                        </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Status Klien
+                                            </label>
+                                            <select
+                                                value={formData.status}
+                                                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                                                className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all cursor-pointer"
+                                            >
+                                                <option value="active">Aktif (Sedang Berjalan)</option>
+                                                <option value="lead">Lead / Calon Klien (Follow-up)</option>
+                                                <option value="completed">Selesai (Arsip)</option>
+                                                <option value="blocked">Diblokir (Nonaktif)</option>
+                                            </select>
+                                        </div>
+
+                                        {formData.source === 'Wedding Organizer' && (
+                                            <div className="sm:col-span-2">
+                                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                    Pilih Wedding Organizer (Partner)
+                                                </label>
+                                                <select
+                                                    value={formData.wedding_organizer_id}
+                                                    onChange={(e) => setFormData({ ...formData, wedding_organizer_id: e.target.value })}
+                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all cursor-pointer"
+                                                >
+                                                    <option value="">-- Pilih Partner WO --</option>
+                                                    {(wedding_organizers || []).map((wo: any) => (
+                                                        <option key={wo.id} value={wo.id}>
+                                                            {wo.name} ({wo.city || 'Partner'})
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
+
+                                        {formData.source === 'Rekomendasi Teman' && (
+                                            <div className="sm:col-span-2">
+                                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                    Direferensikan oleh Klien
+                                                </label>
+                                                <select
+                                                    value={formData.referred_by_client_id}
+                                                    onChange={(e) => setFormData({ ...formData, referred_by_client_id: e.target.value })}
+                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all cursor-pointer"
+                                                >
+                                                    <option value="">-- Pilih Klien Referrer --</option>
+                                                    {(all_clients || []).map((cl: any) => (
+                                                        <option key={cl.id} value={cl.id}>
+                                                            {cl.name} ({cl.phone || cl.city || 'Klien'})
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
+
+                                        <div className="sm:col-span-2">
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1.5">
+                                                Tag / Label Klien
+                                            </label>
+                                            <div className="flex flex-wrap gap-1.5 mb-2">
+                                                {presetTags.map((tag) => {
+                                                    const isSelected = formData.tags.includes(tag);
+                                                    return (
+                                                        <button
+                                                            key={tag}
+                                                            type="button"
+                                                            onClick={() => toggleTag(tag)}
+                                                            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                                                                isSelected
+                                                                    ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                                                    : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
+                                                            }`}
+                                                        >
+                                                            #{tag}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={newTagInput}
+                                                    onChange={(e) => setNewTagInput(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                            e.preventDefault();
+                                                            handleAddCustomTag();
+                                                        }
+                                                    }}
+                                                    placeholder="Tambah tag kustom (tekan Enter)..."
+                                                    className="flex-1 px-3.5 py-2 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={handleAddCustomTag}
+                                                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                                                >
+                                                    Tambah Tag
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="sm:col-span-2">
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Link Moodboard / Referensi Foto (Pinterest/Drive)
+                                            </label>
+                                            <div className="relative">
+                                                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                                    <Globe className="w-3.5 h-3.5" />
+                                                </span>
+                                                <input
+                                                    type="url"
+                                                    value={formData.reference_url}
+                                                    onChange={(e) => setFormData({ ...formData, reference_url: e.target.value })}
+                                                    placeholder="https://pinterest.com/... atau https://drive.google.com/..."
+                                                    className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="sm:col-span-2">
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Permintaan Khusus &amp; Catatan Acara
+                                            </label>
+                                            <textarea
+                                                rows={3}
+                                                value={formData.project_notes}
+                                                onChange={(e) => setFormData({ ...formData, project_notes: e.target.value })}
+                                                placeholder="Contoh: Klien menginginkan pencahayaan natural warm tone, fokus foto candid keluarga, dll."
+                                                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         )}
 
-                        {/* ========================================================================= */}
-                        {/* TAB 5: SUMBER, STATUS & CATATAN */}
-                        {/* ========================================================================= */}
-                        {activeFormTab === 'preferences' && (
-                            <div className="space-y-4 animate-in fade-in duration-150">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {/* Sumber Klien */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">14</span>
-                                            <span>Sumber Klien (Lead Source) <span className="text-red-500">*</span></span>
-                                        </label>
-                                        <select
-                                            value={formData.source}
-                                            onChange={(e) => setFormData({ ...formData, source: e.target.value })}
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all cursor-pointer"
+                        {/* ================================================================= */}
+                        {/* STEP 4: RINGKASAN & KONFIRMASI */}
+                        {/* ================================================================= */}
+                        {createCurrentStep === 4 && (
+                            <div className="space-y-5 animate-in fade-in duration-200">
+                                <div>
+                                    <h3 className="text-base font-bold text-slate-900">
+                                        Ringkasan &amp; Konfirmasi Data Klien
+                                    </h3>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        Silakan tinjau kembali data yang telah diisi sebelum menyimpan data ke database.
+                                    </p>
+                                </div>
+
+                                {/* Blue Info Alert */}
+                                <div className="bg-indigo-50/70 border border-indigo-100/90 rounded-2xl p-4 flex items-center gap-3 text-xs text-indigo-900">
+                                    <Info className="w-4 h-4 text-indigo-600 shrink-0" />
+                                    <span>
+                                        <strong>Pastikan semua data sudah benar.</strong> Periksa kembali data profil, kontak, dan detail acara sebelum menyimpan data klien.
+                                    </span>
+                                </div>
+
+                                {/* CARD 1: DETAIL KATEGORI & PROFIL */}
+                                <div className="border border-slate-200/80 rounded-2xl p-4 sm:p-5 space-y-3 bg-white shadow-2xs">
+                                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                                                <Bookmark className="w-3.5 h-3.5" />
+                                            </div>
+                                            <h4 className="text-xs font-bold text-slate-900">
+                                                Profil Kategori: {selectedCategory?.name}
+                                            </h4>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setCreateCurrentStep(1)}
+                                            className="text-xs font-bold text-[#C89445] hover:underline cursor-pointer"
                                         >
-                                            <option value="Instagram">Instagram Ads / Organik</option>
-                                            <option value="TikTok">TikTok</option>
-                                            <option value="Google">Google Search / SEO</option>
-                                            <option value="Wedding Organizer">Vendor Partner / Wedding Organizer</option>
-                                            <option value="Rekomendasi Teman">Rekomendasi Klien / Teman</option>
-                                            <option value="Website">Website Resmi Arams</option>
-                                            <option value="Bridestory">Bridestory</option>
-                                        </select>
+                                            Ubah Data
+                                        </button>
                                     </div>
 
-                                    {/* Status Klien */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                            Status Klien
-                                        </label>
-                                        <select
-                                            value={formData.status}
-                                            onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all cursor-pointer"
+                                    <CategorySpecificView
+                                        project={{
+                                            category: {
+                                                name: selectedCategory?.name || 'Wedding',
+                                                form_type: activeCategoryKey,
+                                            },
+                                            category_data: categoryData,
+                                            client: {
+                                                name: primaryContactInfo.name,
+                                                email: formData.email,
+                                                phone: formData.phone,
+                                                instagram: primaryContactInfo.instagram,
+                                                address: formData.address,
+                                                city: formData.city,
+                                                province: formData.province,
+                                            },
+                                        }}
+                                    />
+                                </div>
+
+                                {/* CARD 2: ALAMAT & KONTAK UTAMA */}
+                                <div className="border border-slate-200/80 rounded-2xl p-4 sm:p-5 space-y-3 bg-white shadow-2xs">
+                                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
+                                                <MapPin className="w-3.5 h-3.5" />
+                                            </div>
+                                            <h4 className="text-xs font-bold text-slate-900">
+                                                Informasi Alamat &amp; Kontak Utama
+                                            </h4>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setCreateCurrentStep(2)}
+                                            className="text-xs font-bold text-[#C89445] hover:underline cursor-pointer"
                                         >
-                                            <option value="active">Aktif (Sedang Berjalan)</option>
-                                            <option value="lead">Lead / Calon Klien (Follow-up)</option>
-                                            <option value="completed">Selesai (Arsip)</option>
-                                            <option value="blocked">Diblokir (Nonaktif)</option>
-                                        </select>
+                                            Ubah Alamat / Kontak
+                                        </button>
                                     </div>
 
-                                    {/* Conditional Wedding Organizer Referral */}
-                                    {formData.source === 'Wedding Organizer' && (
-                                        <div className="sm:col-span-2">
-                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                Pilih Wedding Organizer (Partner)
-                                            </label>
-                                            <select
-                                                value={formData.wedding_organizer_id}
-                                                onChange={(e) => setFormData({ ...formData, wedding_organizer_id: e.target.value })}
-                                                className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all cursor-pointer"
-                                            >
-                                                <option value="">-- Pilih Partner WO --</option>
-                                                {(wedding_organizers || []).map((wo) => (
-                                                    <option key={wo.id} value={wo.id}>
-                                                        {wo.name} ({wo.city || 'Partner'})
-                                                    </option>
-                                                ))}
-                                            </select>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                        <div className="p-3 bg-slate-50/70 rounded-xl space-y-1">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                                Wilayah Domisili
+                                            </span>
+                                            <p className="font-semibold text-slate-800">
+                                                {[formData.village, formData.district, formData.city, formData.province].filter(Boolean).join(', ') || '-'}
+                                            </p>
+                                            {formData.postal_code && (
+                                                <p className="text-[11px] text-slate-500">Kode Pos: {formData.postal_code}</p>
+                                            )}
+                                        </div>
+
+                                        <div className="p-3 bg-slate-50/70 rounded-xl space-y-1">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                                Kontak Utama ({primaryContactInfo.role})
+                                            </span>
+                                            <p className="font-semibold text-slate-800">
+                                                {primaryContactInfo.name} • {formData.phone || '-'}
+                                            </p>
+                                            {formData.email && (
+                                                <p className="text-[11px] text-slate-500">Email: {formData.email}</p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="p-3 bg-slate-50/70 rounded-xl text-xs space-y-1">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                            Alamat Lengkap
+                                        </span>
+                                        <p className="text-slate-800 font-medium leading-relaxed">
+                                            {formData.address || 'Belum diisi.'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* CARD 3: ACARA & MANAJEMEN */}
+                                <div className="border border-slate-200/80 rounded-2xl p-4 sm:p-5 space-y-3 bg-white shadow-2xs">
+                                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+                                                <Calendar className="w-3.5 h-3.5" />
+                                            </div>
+                                            <h4 className="text-xs font-bold text-slate-900">
+                                                Detail Acara, Paket &amp; Status
+                                            </h4>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setCreateCurrentStep(3)}
+                                            className="text-xs font-bold text-[#C89445] hover:underline cursor-pointer"
+                                        >
+                                            Ubah Acara
+                                        </button>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                                        <div className="p-3 bg-slate-50/70 rounded-xl">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                                Jenis Acara
+                                            </span>
+                                            <span className="font-semibold text-slate-800">{formData.event_type}</span>
+                                        </div>
+                                        <div className="p-3 bg-slate-50/70 rounded-xl">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                                Tanggal &amp; Waktu
+                                            </span>
+                                            <span className="font-semibold text-slate-800">
+                                                {formData.event_date || '-'} {formData.event_time ? `(${formData.event_time})` : ''}
+                                            </span>
+                                        </div>
+                                        <div className="p-3 bg-slate-50/70 rounded-xl">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                                Lokasi Acara
+                                            </span>
+                                            <span className="font-semibold text-slate-800">{formData.event_location || '-'}</span>
+                                        </div>
+                                        <div className="p-3 bg-slate-50/70 rounded-xl">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                                Sumber Lead
+                                            </span>
+                                            <span className="font-semibold text-slate-800">{formData.source}</span>
+                                        </div>
+                                        <div className="p-3 bg-slate-50/70 rounded-xl">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                                Status
+                                            </span>
+                                            <span className="font-semibold text-emerald-700 capitalize">{formData.status}</span>
+                                        </div>
+                                        <div className="p-3 bg-slate-50/70 rounded-xl">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                                Estimasi Tamu
+                                            </span>
+                                            <span className="font-semibold text-slate-800">{formData.estimated_guests || '-'}</span>
+                                        </div>
+                                    </div>
+
+                                    {formData.project_notes && (
+                                        <div className="p-3 bg-slate-50/70 rounded-xl text-xs space-y-1">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                                Catatan Khusus
+                                            </span>
+                                            <p className="text-slate-800 leading-relaxed">{formData.project_notes}</p>
                                         </div>
                                     )}
-
-                                    {/* Conditional Referred By Client */}
-                                    {formData.source === 'Rekomendasi Teman' && (
-                                        <div className="sm:col-span-2">
-                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                Direferensikan oleh Klien
-                                            </label>
-                                            <select
-                                                value={formData.referred_by_client_id}
-                                                onChange={(e) => setFormData({ ...formData, referred_by_client_id: e.target.value })}
-                                                className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all cursor-pointer"
-                                            >
-                                                <option value="">-- Pilih Klien Referrer --</option>
-                                                {(all_clients || []).map((cl) => (
-                                                    <option key={cl.id} value={cl.id}>
-                                                        {cl.name} ({cl.phone || cl.city || 'Klien'})
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    )}
-
-                                    {/* Tags Selection */}
-                                    <div className="sm:col-span-2">
-                                        <label className="text-[11px] font-bold text-slate-700 block mb-1.5">
-                                            Tag / Label Klien
-                                        </label>
-                                        <div className="flex flex-wrap gap-1.5 mb-2">
-                                            {presetTags.map((tag) => {
-                                                const isSelected = formData.tags.includes(tag);
-                                                return (
-                                                    <button
-                                                        key={tag}
-                                                        type="button"
-                                                        onClick={() => toggleTag(tag)}
-                                                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${isSelected
-                                                            ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                                                            : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
-                                                            }`}
-                                                    >
-                                                        {tag}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-
-                                    {/* Catatan Umum */}
-                                    <div className="sm:col-span-2">
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">15</span>
-                                            <span>Catatan Umum / Permintaan Khusus</span>
-                                        </label>
-                                        <textarea
-                                            rows={3}
-                                            value={formData.notes}
-                                            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                                            placeholder="Contoh: Klien menginginkan konsep timeless & elegant. Request sesi outdoor."
-                                            className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all resize-none"
-                                        />
-                                    </div>
                                 </div>
                             </div>
                         )}
@@ -2646,15 +2810,15 @@ export default function ClientsIndex({
                 </Modal>
 
                 {/* ========================================================================= */}
-                {/* MODAL 2: DETAIL RINGKASAN KLIEN (Quick View) */}
+                {/* MODAL 2: DETAIL RINGKASAN KLIEN (Quick View with CategorySpecificView) */}
                 {/* ========================================================================= */}
                 {detailModalClient && (
                     <Modal
                         isOpen={!!detailModalClient}
                         onClose={() => setDetailModalClient(null)}
                         title={`Profil: ${detailModalClient.name}`}
-                        subtitle={`ID Klien: #${detailModalClient.id} • ${[detailModalClient.district, detailModalClient.city, detailModalClient.province].filter(Boolean).join(', ') || detailModalClient.city}`}
-                        maxWidth="2xl"
+                        subtitle={`ID Klien: #${detailModalClient.id} • ${[detailModalClient.district, detailModalClient.city, detailModalClient.province].filter(Boolean).join(', ') || detailModalClient.city || 'Domisili'}`}
+                        maxWidth="3xl"
                         icon={
                             <img
                                 src={
@@ -2666,68 +2830,44 @@ export default function ClientsIndex({
                             />
                         }
                         footer={
-                            <Link
-                                href={`/clients/${detailModalClient.id}`}
-                                className="px-5 py-2 rounded-xl bg-[#0B1527] hover:bg-[#152238] text-white font-bold text-xs shadow-md flex items-center gap-1.5 cursor-pointer"
-                            >
-                                <span>Buka Halaman Detail Penuh</span>
-                                <ExternalLink className="w-3.5 h-3.5" />
-                            </Link>
+                            <div className="flex items-center justify-between w-full">
+                                <button
+                                    type="button"
+                                    onClick={() => setDetailModalClient(null)}
+                                    className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-bold text-xs cursor-pointer shadow-2xs"
+                                >
+                                    Tutup
+                                </button>
+                                <Link
+                                    href={`/clients/${detailModalClient.id}`}
+                                    className="px-5 py-2 rounded-xl bg-[#0B1527] hover:bg-[#152238] text-white font-bold text-xs shadow-md flex items-center gap-1.5 cursor-pointer"
+                                >
+                                    <span>Buka Halaman Detail Penuh</span>
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                </Link>
+                            </div>
                         }
                     >
                         <div className="space-y-4 text-xs">
-                            {(detailModalClient.child_name || (detailModalClient.children && detailModalClient.children.length > 0)) && (
-                                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-2 text-xs">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <Baby className="w-4 h-4 text-amber-600" />
-                                            <span className="font-bold text-amber-900">
-                                                Data Bayi: {detailModalClient.child_name || 'Newborn'}
-                                            </span>
-                                        </div>
-                                        {detailModalClient.children && detailModalClient.children.length > 1 && (
-                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-200 text-amber-900">
-                                                Kembar ({detailModalClient.children.length} Bayi)
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    {detailModalClient.children && detailModalClient.children.length > 0 ? (
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                                            {detailModalClient.children.map((ch, idx) => (
-                                                <div key={idx} className="p-2 bg-white rounded-lg border border-amber-200/80 text-[11px] space-y-0.5">
-                                                    <div className="font-bold text-amber-900 flex justify-between">
-                                                        <span>Bayi #{idx + 1}</span>
-                                                        <span className="text-amber-700 font-semibold">{ch.gender || '-'}</span>
-                                                    </div>
-                                                    <div className="text-slate-800 font-medium">{ch.name || '-'}</div>
-                                                    {ch.birth_date && <div className="text-slate-500 text-[10px]">Lahir: {ch.birth_date}</div>}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        detailModalClient.child_gender && (
-                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white border border-amber-200 text-amber-800 inline-block">
-                                                {detailModalClient.child_gender === 'male' ? 'Laki-laki (Boy)' : 'Perempuan (Girl)'}
-                                            </span>
-                                        )
-                                    )}
-
-                                    {(detailModalClient.father_name || detailModalClient.mother_name) && (
-                                        <div className="text-[11px] text-slate-700 pt-1 border-t border-amber-200/60 flex flex-wrap gap-x-4">
-                                            {detailModalClient.father_name && <span><strong>Ayah:</strong> {detailModalClient.father_name}</span>}
-                                            {detailModalClient.mother_name && <span><strong>Ibu:</strong> {detailModalClient.mother_name}</span>}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {detailModalClient.bride_name && detailModalClient.groom_name && (
-                                <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl flex items-center gap-2 text-xs text-purple-900 font-bold">
-                                    <Heart className="w-4 h-4 text-purple-600" />
-                                    <span>Pasangan Wedding: {detailModalClient.groom_name} &amp; {detailModalClient.bride_name}</span>
-                                </div>
-                            )}
+                            <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4">
+                                <CategorySpecificView
+                                    project={
+                                        detailModalClient.projects?.[0] || {
+                                            category: detailModalClient.category || {
+                                                name: detailModalClient.client_type || 'Wedding',
+                                                form_type: resolveCategoryKey(
+                                                    detailModalClient.category || {
+                                                        slug: detailModalClient.client_type,
+                                                        form_type: detailModalClient.client_type,
+                                                    }
+                                                ),
+                                            },
+                                            category_data: detailModalClient.category_data || detailModalClient,
+                                            client: detailModalClient,
+                                        }
+                                    }
+                                />
+                            </div>
 
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200/80">
                                 <div>

@@ -28,6 +28,9 @@ import {
     Box,
     Receipt,
     Camera,
+    Bookmark,
+    Info,
+    Globe,
     ChevronRight,
     ChevronLeft,
     Edit3,
@@ -93,6 +96,14 @@ import {
     DropdownMenuItem,
     DropdownMenuSeparator,
 } from '@/components/ui';
+import { SelectSearchOption } from '@/components/ui/select-search';
+import { CategorySpecificForm } from '@/components/projects/CategorySpecificForm';
+import { CategorySpecificView } from '@/components/projects/CategorySpecificView';
+import {
+    CategoryFormKey,
+    resolveCategoryKey,
+    AnyCategorySpecificData,
+} from '@/types/category-forms';
 
 interface ClientDetailProps {
     client: {
@@ -113,6 +124,9 @@ interface ClientDetailProps {
         children?: Array<{ name: string; nickname?: string; birth_date?: string; gender?: string }> | null;
         company_name?: string;
         client_type?: string;
+        category_id?: string | number | null;
+        category?: any;
+        category_data?: AnyCategorySpecificData | any;
         email: string;
         instagram?: string;
         partner_instagram?: string;
@@ -130,6 +144,15 @@ interface ClientDetailProps {
         postal_code?: string;
         address: string;
         source: string;
+        client_source_id?: string;
+        client_source?: {
+            id: string;
+            name: string;
+            type?: string;
+            avatar?: string;
+            phone?: string;
+            email?: string;
+        };
         occupation?: string;
         contact_person?: string;
         other_social_media?: string;
@@ -216,6 +239,14 @@ interface ClientDetailProps {
         groom_name?: string;
         child_name?: string;
     }>;
+    client_sources?: Array<{
+        id: string;
+        name: string;
+        type?: string;
+        avatar?: string;
+        status?: string;
+        is_primary?: boolean;
+    }>;
 }
 
 interface RegionItem {
@@ -233,41 +264,49 @@ export default function ClientDetail({
     payment_methods = [],
     wedding_organizers = [],
     all_clients = [],
+    client_sources = [],
 }: ClientDetailProps) {
+    const primaryProject = client.projects?.[0];
+
     // Active Main Tab
     const [mainTab, setMainTab] = useState<
         'ringkasan' | 'projects' | 'pembayaran' | 'files' | 'catatan' | 'komunikasi' | 'akun'
     >('ringkasan');
 
-    // Modal Edit Data Klien States
+    // Modal Edit Data Klien States (4-Step Wizard matching ClientIntakeForm)
     const [isEditClientModalOpen, setIsEditClientModalOpen] = useState(false);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [submittingEdit, setSubmittingEdit] = useState(false);
-    const [editActiveFormTab, setEditActiveFormTab] = useState<'profile' | 'contact' | 'location' | 'event' | 'preferences'>('profile');
+    const [editCurrentStep, setEditCurrentStep] = useState<number>(1);
+    const [editCategoryData, setEditCategoryData] = useState<AnyCategorySpecificData>({});
 
     const editSteps = [
-        { id: 'profile', title: 'Identitas & Profil', stepNum: 1 },
-        { id: 'contact', title: 'Kontak & Medsos', stepNum: 2 },
-        { id: 'location', title: 'Domisili & Alamat', stepNum: 3 },
-        { id: 'event', title: 'Acara & Project', stepNum: 4 },
-        { id: 'preferences', title: 'Preferensi & Tag', stepNum: 5 },
+        { number: 1, title: 'Informasi Awal & Detail Klien', subtitle: 'Kategori & Data Khusus' },
+        { number: 2, title: 'Informasi Alamat & Kontak', subtitle: 'Domisili & WhatsApp' },
+        { number: 3, title: 'Paket & Detail Acara', subtitle: 'Paket, Lokasi & Jadwal' },
+        { number: 4, title: 'Ringkasan', subtitle: 'Review & Simpan' },
     ];
-    const currentEditStepIndex = editSteps.findIndex((s) => s.id === editActiveFormTab);
 
-    const handleNextEditStep = () => {
-        if (currentEditStepIndex < editSteps.length - 1) {
-            setEditActiveFormTab(editSteps[currentEditStepIndex + 1].id as any);
-        }
-    };
-
-    const handlePrevEditStep = () => {
-        if (currentEditStepIndex > 0) {
-            setEditActiveFormTab(editSteps[currentEditStepIndex - 1].id as any);
-        }
-    };
-
-    const goToEditStep = (stepId: 'profile' | 'contact' | 'location' | 'event' | 'preferences') => {
-        setEditActiveFormTab(stepId);
+    const handleEditCategoryDataChange = (field: string, value: any) => {
+        setEditCategoryData((prev) => {
+            const next = { ...prev, [field]: value };
+            if (field === 'session_date' || field === 'akad_date' || field === 'event_date' || field === 'departure_date') {
+                if (value) {
+                    setEditFormData((f) => ({ ...f, event_date: value }));
+                }
+            }
+            if (field === 'session_location' || field === 'location' || field === 'akad_location' || field === 'event_location' || field === 'destination_city_country') {
+                if (value) {
+                    setEditFormData((f) => ({ ...f, event_location: value }));
+                }
+            }
+            if (field === 'reception_location') {
+                if (value) {
+                    setEditFormData((f) => ({ ...f, reception_location: value }));
+                }
+            }
+            return next;
+        });
     };
 
     const presetTags = ['VIP', 'Wedding 2026', 'High Budget', 'Referral WO', 'Outdoor Session', 'Album Mewah', 'Repeat Client'];
@@ -282,6 +321,7 @@ export default function ClientDetail({
     };
 
     const [editFormData, setEditFormData] = useState({
+        category_id: (client.category_id ? String(client.category_id) : '') || categories[0]?.id || '',
         name: client.name || '',
         client_type: client.client_type || 'wedding',
         partner_name: client.partner_name || '',
@@ -302,9 +342,11 @@ export default function ClientDetail({
         company_name: client.company_name || '',
         email: client.email || '',
         instagram: client.instagram || '',
+        partner_instagram: client.partner_instagram || '',
         phone: client.phone || '',
         secondary_phone: client.secondary_phone || '',
         preferred_contact: client.preferred_contact || 'WhatsApp',
+        primary_contact: 'cpw' as string,
         province: client.province || '',
         province_code: client.province_code || '',
         city: client.city || '',
@@ -322,8 +364,14 @@ export default function ClientDetail({
         event_date: client.projects?.[0]?.event_date ? String(client.projects[0].event_date).substring(0, 10) : '',
         event_time: client.projects?.[0]?.event_time || '16:00',
         event_location: client.projects?.[0]?.location || '',
-        package_id: client.projects?.[0]?.package_id ? String(client.projects[0].package_id) : '',
+        reception_location: (client.projects?.[0]?.category_data as any)?.reception_location || '',
+        estimated_guests: (client.projects?.[0]?.category_data as any)?.estimated_guests || '',
+        concept_theme: (client.projects?.[0]?.category_data as any)?.concept || (client.projects?.[0]?.category_data as any)?.theme || '',
+        other_vendors: '',
+        reference_url: (client.projects?.[0]?.category_data as any)?.reference_url || '',
+        package_id: client.projects?.[0]?.package_id ? String(client.projects[0].package_id) : (packages[0]?.id || ''),
         source: client.source || 'Instagram',
+        client_source_id: client.client_source_id || '',
         referred_by_client_id: client.referred_by_client_id || '',
         wedding_organizer_id: client.wedding_organizer_id || '',
         referral_name: client.referral_name || '',
@@ -537,59 +585,220 @@ export default function ClientDetail({
         }));
     };
 
-    // Category options for Edit Client Form (Master Data Categories)
-    const categoryOptions = useMemo(() => {
-        const list = (categories || []).map((cat: any) => {
-            const formLabel = cat.form_type === 'wedding' ? '👰🤵 CPP & CPW' : cat.form_type === 'newborn' ? '👶 Nama Anak' : '👤 Standar';
+    // Regional SelectSearch Options
+    const provinceOptions: SelectSearchOption[] = useMemo(() => {
+        return (regionProvinces || []).map((p) => ({
+            value: p.code,
+            label: p.name,
+        }));
+    }, [regionProvinces]);
+
+    const cityOptions: SelectSearchOption[] = useMemo(() => {
+        return (regionCities || []).map((c) => ({
+            value: c.code,
+            label: c.name,
+        }));
+    }, [regionCities]);
+
+    const districtOptions: SelectSearchOption[] = useMemo(() => {
+        return (regionDistricts || []).map((d) => ({
+            value: d.code,
+            label: d.name,
+        }));
+    }, [regionDistricts]);
+
+    const villageOptions: SelectSearchOption[] = useMemo(() => {
+        return (regionVillages || []).map((v) => ({
+            value: v.code,
+            label: v.name,
+            subtitle: v.postal_code ? `Kode Pos: ${v.postal_code}` : undefined,
+        }));
+    }, [regionVillages]);
+
+    // Category options for Edit Client Form
+    const editCategorySelectOptions: SelectSearchOption[] = useMemo(() => {
+        return (categories || []).map((cat) => ({
+            value: String(cat.id),
+            label: cat.name,
+            subtitle: cat.description || `Kategori Layanan: ${cat.name}`,
+        }));
+    }, [categories]);
+
+    const editActiveCategory = useMemo(() => {
+        return (categories || []).find((c) => String(c.id) === String(editFormData.category_id)) ||
+               (categories || []).find((c) => c.slug === editFormData.client_type || c.name.toLowerCase() === (editFormData.client_type || '').toLowerCase()) ||
+               categories[0] ||
+               { name: 'Wedding', form_type: 'wedding' };
+    }, [categories, editFormData.category_id, editFormData.client_type]);
+
+    const editActiveCategoryKey: CategoryFormKey = useMemo(() => {
+        return resolveCategoryKey(editActiveCategory);
+    }, [editActiveCategory]);
+
+    const editFilteredPackages = useMemo(() => {
+        if (!editFormData.category_id) return packages;
+        return packages.filter((pkg) => String(pkg.category_id) === String(editFormData.category_id));
+    }, [packages, editFormData.category_id]);
+
+    const handleAddChild = () => {
+        setEditFormData((prev) => ({
+            ...prev,
+            children: [...prev.children, { name: '', nickname: '', birth_date: '', gender: 'male' }],
+        }));
+    };
+
+    const handleRemoveChild = (index: number) => {
+        setEditFormData((prev) => {
+            const nextChildren = prev.children.filter((_, idx) => idx !== index);
             return {
-                value: cat.slug || String(cat.id),
-                label: cat.name,
-                subtitle: `${cat.description || `Master Kategori: ${cat.name}`} • Input: ${formLabel}`,
+                ...prev,
+                children: nextChildren,
             };
         });
+    };
 
-        const cur = editFormData.client_type;
-        if (cur && !list.some((o: any) => o.value === cur)) {
-            if (cur === 'personal') {
-                const perorangan = list.find((o: any) => o.value === 'perorangan');
-                list.unshift({
-                    value: 'personal',
-                    label: perorangan ? `${perorangan.label} (Personal)` : 'Personal Portrait',
-                    subtitle: 'Kategori Klien • Input: 👤 Standar',
-                });
-            } else if (cur === 'family') {
-                list.unshift({
-                    value: 'family',
-                    label: 'Family & Maternity',
-                    subtitle: 'Kategori Klien • Input: 👤 Standar',
-                });
-            } else if (cur === 'newborn') {
-                list.unshift({
-                    value: 'newborn',
-                    label: 'Newborn',
-                    subtitle: 'Kategori Klien • Input: 👶 Nama Anak',
-                });
-            } else {
-                list.push({
-                    value: cur,
-                    label: cur.charAt(0).toUpperCase() + cur.slice(1),
-                    subtitle: 'Kategori Klien',
-                });
+    const handleChildChange = (index: number, field: string, value: any) => {
+        setEditFormData((prev) => {
+            const nextChildren = [...prev.children];
+            nextChildren[index] = { ...nextChildren[index], [field]: value };
+            const names = nextChildren.map((c) => c.name).filter(Boolean).join(' & ');
+            const isTwin = nextChildren.length > 1;
+            return {
+                ...prev,
+                children: nextChildren,
+                child_name: isTwin && names ? `${names} (Kembar)` : names,
+                child_birth_date: nextChildren[0]?.birth_date || prev.child_birth_date,
+                child_gender: (nextChildren[0]?.gender || prev.child_gender) as 'male' | 'female',
+            };
+        });
+    };
+
+    const [editNewTagInput, setEditNewTagInput] = useState('');
+    const handleAddEditCustomTag = () => {
+        if (!editNewTagInput.trim()) return;
+        const tag = editNewTagInput.trim();
+        if (!editFormData.tags.includes(tag)) {
+            setEditFormData((prev) => ({
+                ...prev,
+                tags: [...prev.tags, tag],
+            }));
+        }
+        setEditNewTagInput('');
+    };
+
+    const editPrimaryContactInfo = useMemo(() => {
+        if (editActiveCategoryKey === 'wedding' || editActiveCategoryKey === 'engagement') {
+            const isBride = editFormData.primary_contact === 'cpw' || !editFormData.primary_contact;
+            return {
+                name: isBride ? ((editCategoryData as any).bride_name || editFormData.bride_name || '-') : ((editCategoryData as any).groom_name || editFormData.groom_name || '-'),
+                nickname: isBride ? ((editCategoryData as any).bride_nickname || editFormData.bride_nickname || '-') : ((editCategoryData as any).groom_nickname || editFormData.groom_nickname || '-'),
+                occupation: isBride ? ((editCategoryData as any).bride_occupation || '-') : ((editCategoryData as any).groom_occupation || '-'),
+                instagram: isBride ? ((editCategoryData as any).bride_instagram || editFormData.instagram || '-') : ((editCategoryData as any).groom_instagram || editFormData.instagram || '-'),
+                birth_date: isBride ? ((editCategoryData as any).bride_birth_date || editFormData.bride_birth_date || '-') : ((editCategoryData as any).groom_birth_date || editFormData.groom_birth_date || '-'),
+                role: isBride ? 'CPW' : 'CPP',
+            };
+        }
+        if (editActiveCategoryKey === 'prewedding') {
+            const isP1 = editFormData.primary_contact === 'cpw' || !editFormData.primary_contact;
+            return {
+                name: isP1 ? ((editCategoryData as any).partner_1 || (editCategoryData as any).bride_name || '-') : ((editCategoryData as any).partner_2 || (editCategoryData as any).groom_name || '-'),
+                nickname: isP1 ? ((editCategoryData as any).partner_1_nickname || '-') : ((editCategoryData as any).partner_2_nickname || '-'),
+                occupation: isP1 ? ((editCategoryData as any).partner_1_occupation || '-') : ((editCategoryData as any).partner_2_occupation || '-'),
+                instagram: isP1 ? ((editCategoryData as any).partner_1_instagram || editFormData.instagram || '-') : ((editCategoryData as any).partner_2_instagram || editFormData.instagram || '-'),
+                birth_date: isP1 ? ((editCategoryData as any).partner_1_birth_date || '-') : ((editCategoryData as any).partner_2_birth_date || '-'),
+                role: isP1 ? 'Pasangan 1' : 'Pasangan 2',
+            };
+        }
+        if (editActiveCategoryKey === 'maternity') {
+            const isMom = editFormData.primary_contact === 'cpw' || !editFormData.primary_contact;
+            return {
+                name: isMom ? ((editCategoryData as any).mom_name || (editCategoryData as any).mother_name || '-') : ((editCategoryData as any).partner_name || (editCategoryData as any).father_name || '-'),
+                nickname: '-',
+                occupation: isMom ? ((editCategoryData as any).mom_occupation || '-') : ((editCategoryData as any).partner_occupation || '-'),
+                instagram: isMom ? ((editCategoryData as any).mom_instagram || editFormData.instagram || '-') : ((editCategoryData as any).partner_instagram || editFormData.instagram || '-'),
+                birth_date: '-',
+                role: isMom ? 'Ibu Hamil' : 'Pasangan',
+            };
+        }
+        if (editActiveCategoryKey === 'corporate' || editActiveCategoryKey === 'komunitas') {
+            return {
+                name: (editCategoryData as any).pic_name || (editCategoryData as any).contact_person || editFormData.name || '-',
+                nickname: '-',
+                occupation: (editCategoryData as any).pic_role || (editCategoryData as any).pic_position || '-',
+                instagram: (editCategoryData as any).pic_phone || editFormData.instagram || '-',
+                birth_date: '-',
+                role: 'PIC / Koordinator',
+            };
+        }
+        if (editActiveCategoryKey === 'newborn') {
+            const isMother = editFormData.primary_contact === 'mother' || !editFormData.primary_contact;
+            return {
+                name: isMother ? ((editCategoryData as any).mother_name || editFormData.mother_name || '-') : ((editCategoryData as any).father_name || editFormData.father_name || '-'),
+                nickname: '-',
+                occupation: '-',
+                instagram: editFormData.instagram || '-',
+                birth_date: '-',
+                role: isMother ? 'Ibu' : 'Ayah',
+            };
+        }
+        return {
+            name: (editCategoryData as any).contact_person || (editCategoryData as any).client_name || editFormData.name || '-',
+            nickname: '-',
+            occupation: (editCategoryData as any).client_occupation || editFormData.occupation || '-',
+            instagram: (editCategoryData as any).client_instagram || editFormData.instagram || '-',
+            birth_date: '-',
+            role: 'Pemesan / Klien',
+        };
+    }, [editActiveCategoryKey, editCategoryData, editFormData]);
+
+    // Auto-sync primary contact data into phone/email/instagram
+    useEffect(() => {
+        if (editFormData.primary_contact === 'cpw') {
+            const phoneVal = (editCategoryData as any).bride_phone || editFormData.phone;
+            const emailVal = (editCategoryData as any).bride_email || editFormData.email;
+            const igVal = (editCategoryData as any).bride_instagram || editFormData.instagram;
+            if (phoneVal || emailVal || igVal) {
+                setEditFormData((prev) => ({
+                    ...prev,
+                    phone: phoneVal || prev.phone,
+                    email: emailVal || prev.email,
+                    instagram: igVal || prev.instagram,
+                }));
+            }
+        } else if (editFormData.primary_contact === 'cpp') {
+            const phoneVal = (editCategoryData as any).groom_phone || editFormData.phone;
+            const emailVal = (editCategoryData as any).groom_email || editFormData.email;
+            const igVal = (editCategoryData as any).groom_instagram || editFormData.instagram;
+            if (phoneVal || emailVal || igVal) {
+                setEditFormData((prev) => ({
+                    ...prev,
+                    phone: phoneVal || prev.phone,
+                    email: emailVal || prev.email,
+                    instagram: igVal || prev.instagram,
+                }));
+            }
+        } else if (editFormData.primary_contact === 'mother') {
+            const phoneVal = (editCategoryData as any).mother_phone || editFormData.phone;
+            const emailVal = (editCategoryData as any).mother_email || editFormData.email;
+            if (phoneVal || emailVal) {
+                setEditFormData((prev) => ({
+                    ...prev,
+                    phone: phoneVal || prev.phone,
+                    email: emailVal || prev.email,
+                }));
+            }
+        } else if (editFormData.primary_contact === 'pic') {
+            const phoneVal = (editCategoryData as any).pic_phone || editFormData.phone;
+            const emailVal = (editCategoryData as any).pic_email || editFormData.email;
+            if (phoneVal || emailVal) {
+                setEditFormData((prev) => ({
+                    ...prev,
+                    phone: phoneVal || prev.phone,
+                    email: emailVal || prev.email,
+                }));
             }
         }
-
-        return list;
-    }, [categories, editFormData.client_type]);
-
-    const activeEditFormType = useMemo(() => {
-        const found = (categories || []).find(
-            (c: any) => c.slug === editFormData.client_type || String(c.id) === editFormData.client_type
-        );
-        if (found?.form_type) return found.form_type;
-        if (editFormData.client_type === 'newborn') return 'newborn';
-        if (editFormData.client_type === 'wedding' || editFormData.client_type === 'prewedding') return 'wedding';
-        return 'standard';
-    }, [categories, editFormData.client_type]);
+    }, [editFormData.primary_contact, editCategoryData]);
 
     // Modal Tambah Pembayaran States
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -776,37 +985,69 @@ export default function ClientDetail({
 
     // Submit Edit Client Modal
     const handleSaveClientEdit = () => {
-        if (!editFormData.name.trim()) {
-            toast.error('Nama lengkap klien wajib diisi');
+        let clientName = editFormData.name;
+        if (editActiveCategoryKey === 'wedding' || editActiveCategoryKey === 'engagement' || editActiveCategoryKey === 'prewedding') {
+            const bName = (editCategoryData as any).bride_name || (editCategoryData as any).partner_1 || editFormData.bride_name;
+            const gName = (editCategoryData as any).groom_name || (editCategoryData as any).partner_2 || editFormData.groom_name;
+            if (bName && gName) {
+                clientName = `${bName} & ${gName}`;
+            } else if (bName) {
+                clientName = bName;
+            } else if (gName) {
+                clientName = gName;
+            }
+        } else if (editActiveCategoryKey === 'corporate' || editActiveCategoryKey === 'commercial' || editActiveCategoryKey === 'komunitas') {
+            clientName = (editCategoryData as any).company_name || (editCategoryData as any).community_name || (editCategoryData as any).brand_name || editFormData.company_name || editFormData.name;
+        } else if (editActiveCategoryKey === 'newborn') {
+            clientName = (editCategoryData as any).child_name || (editCategoryData as any).baby_name || editFormData.child_name || editFormData.name;
+        }
+
+        if (!clientName && !editFormData.name) {
+            toast.error('Nama klien wajib diisi');
+            return;
+        }
+
+        if (!editFormData.phone) {
+            toast.error('Nomor telepon / WhatsApp wajib diisi');
             return;
         }
 
         setSubmittingEdit(true);
 
+        const validChildren = (editFormData.children || []).filter(
+            (c: any) => c && c.name && typeof c.name === 'string' && c.name.trim() !== ''
+        );
+        const isNewbornCategory = editActiveCategoryKey === 'newborn' || editFormData.client_type === 'newborn';
+        const childrenPayload = isNewbornCategory && validChildren.length > 0 ? validChildren : null;
+
         router.put(
             `/clients/${client.id}`,
             {
-                name: editFormData.name,
+                name: clientName || editFormData.name,
                 client_type: editFormData.client_type,
-                partner_name: editFormData.partner_name || null,
-                bride_name: editFormData.bride_name || null,
-                bride_nickname: editFormData.bride_nickname || null,
-                groom_name: editFormData.groom_name || null,
-                groom_nickname: editFormData.groom_nickname || null,
-                bride_birth_date: editFormData.bride_birth_date || null,
-                groom_birth_date: editFormData.groom_birth_date || null,
-                child_name: editFormData.child_name || null,
-                child_birth_date: editFormData.child_birth_date || null,
-                child_gender: editFormData.child_gender || null,
-                father_name: editFormData.father_name || null,
-                mother_name: editFormData.mother_name || null,
-                children: editFormData.children || null,
-                company_name: editFormData.company_name || null,
+                category_id: editFormData.category_id || null,
+                category_data: editCategoryData,
+                partner_name: editFormData.partner_name || (editCategoryData as any).groom_name || (editCategoryData as any).partner_2 || null,
+                bride_name: editFormData.bride_name || (editCategoryData as any).bride_name || (editCategoryData as any).partner_1 || null,
+                bride_nickname: editFormData.bride_nickname || (editCategoryData as any).bride_nickname || null,
+                groom_name: editFormData.groom_name || (editCategoryData as any).groom_name || (editCategoryData as any).partner_2 || null,
+                groom_nickname: editFormData.groom_nickname || (editCategoryData as any).groom_nickname || null,
+                bride_birth_date: editFormData.bride_birth_date || (editCategoryData as any).bride_birth_date || null,
+                groom_birth_date: editFormData.groom_birth_date || (editCategoryData as any).groom_birth_date || null,
+                child_name: editFormData.child_name || (editCategoryData as any).child_name || (editCategoryData as any).baby_name || null,
+                child_birth_date: editFormData.child_birth_date || (editCategoryData as any).child_birth_date || (editCategoryData as any).birth_date || null,
+                child_gender: editFormData.child_gender || (editCategoryData as any).child_gender || (editCategoryData as any).gender || null,
+                father_name: editFormData.father_name || (editCategoryData as any).father_name || null,
+                mother_name: editFormData.mother_name || (editCategoryData as any).mother_name || (editCategoryData as any).mom_name || null,
+                children: childrenPayload,
+                company_name: editFormData.company_name || (editCategoryData as any).company_name || (editCategoryData as any).community_name || (editCategoryData as any).brand_name || null,
                 email: editFormData.email || null,
-                instagram: editFormData.instagram || null,
-                phone: editFormData.phone || null,
+                instagram: editFormData.instagram || (editCategoryData as any).bride_instagram || (editCategoryData as any).instagram || null,
+                partner_instagram: editFormData.partner_instagram || (editCategoryData as any).groom_instagram || null,
+                phone: editFormData.phone,
                 secondary_phone: editFormData.secondary_phone || null,
                 preferred_contact: editFormData.preferred_contact,
+                primary_contact: editFormData.primary_contact,
                 province: editFormData.province || null,
                 province_code: editFormData.province_code || null,
                 city: editFormData.city || null,
@@ -817,15 +1058,21 @@ export default function ClientDetail({
                 village_code: editFormData.village_code || null,
                 postal_code: editFormData.postal_code || null,
                 address: editFormData.address || null,
-                contact_person: editFormData.contact_person || null,
-                occupation: editFormData.occupation || null,
+                contact_person: editFormData.contact_person || (editCategoryData as any).contact_person || (editCategoryData as any).pic_name || null,
+                occupation: editFormData.occupation || (editCategoryData as any).bride_occupation || (editCategoryData as any).occupation || null,
                 other_social_media: editFormData.other_social_media || null,
                 event_type: editFormData.event_type || null,
-                event_date: editFormData.event_date || null,
-                event_time: editFormData.event_time || null,
-                event_location: editFormData.event_location || null,
+                event_date: editFormData.event_date || (editCategoryData as any).session_date || (editCategoryData as any).akad_date || (editCategoryData as any).event_date || null,
+                event_time: editFormData.event_time || (editCategoryData as any).session_time || (editCategoryData as any).akad_time || null,
+                event_location: editFormData.event_location || (editCategoryData as any).session_location || (editCategoryData as any).akad_location || (editCategoryData as any).location || null,
+                reception_location: editFormData.reception_location || (editCategoryData as any).reception_location || null,
+                estimated_guests: editFormData.estimated_guests || (editCategoryData as any).estimated_guests || null,
+                concept_theme: editFormData.concept_theme || (editCategoryData as any).theme || (editCategoryData as any).concept || null,
+                other_vendors: editFormData.other_vendors || null,
+                reference_url: editFormData.reference_url || (editCategoryData as any).reference_url || null,
                 package_id: editFormData.package_id || null,
                 source: editFormData.source || 'Instagram',
+                client_source_id: editFormData.client_source_id || null,
                 referred_by_client_id: editFormData.referred_by_client_id || null,
                 wedding_organizer_id: editFormData.wedding_organizer_id || null,
                 referral_name: editFormData.referral_name || null,
@@ -959,9 +1206,37 @@ export default function ClientDetail({
     }, [client.payments, client.projects, client.created_at]);
 
     const openEditModal = () => {
+        const activeCat = (categories || []).find((c) =>
+            String(c.id) === String(client.category_id || (client.category as any)?.id) ||
+            c.slug === client.client_type ||
+            c.name.toLowerCase() === (client.client_type || '').toLowerCase()
+        ) || categories[0];
+
+        const initialCategoryData: AnyCategorySpecificData = {
+            ...(client.category_data || {}),
+            ...(client.projects?.[0]?.category_data || {}),
+            bride_name: client.bride_name || client.category_data?.bride_name || client.name,
+            bride_nickname: client.bride_nickname || client.category_data?.bride_nickname || '',
+            bride_birth_date: client.bride_birth_date ? String(client.bride_birth_date).substring(0, 10) : (client.category_data?.bride_birth_date || ''),
+            bride_instagram: client.instagram || client.category_data?.bride_instagram || '',
+            groom_name: client.groom_name || client.partner_name || client.category_data?.groom_name || '',
+            groom_nickname: client.groom_nickname || client.category_data?.groom_nickname || '',
+            groom_birth_date: client.groom_birth_date ? String(client.groom_birth_date).substring(0, 10) : (client.category_data?.groom_birth_date || ''),
+            groom_instagram: client.partner_instagram || client.category_data?.groom_instagram || '',
+            child_name: client.child_name || client.category_data?.child_name || '',
+            child_birth_date: client.child_birth_date ? String(client.child_birth_date).substring(0, 10) : (client.category_data?.child_birth_date || ''),
+            child_gender: client.child_gender || client.category_data?.child_gender || 'male',
+            father_name: client.father_name || client.partner_name || client.category_data?.father_name || '',
+            mother_name: client.mother_name || client.category_data?.mother_name || '',
+            company_name: client.company_name || client.category_data?.company_name || '',
+            contact_person: client.contact_person || client.category_data?.contact_person || '',
+            occupation: client.occupation || client.category_data?.occupation || '',
+        };
+
         setEditFormData({
+            category_id: (client.category_id ? String(client.category_id) : '') || activeCat?.id || categories[0]?.id || '',
             name: client.name || '',
-            client_type: client.client_type || 'wedding',
+            client_type: client.client_type || activeCat?.slug || 'wedding',
             partner_name: client.partner_name || '',
             bride_name: client.bride_name || '',
             bride_nickname: client.bride_nickname || '',
@@ -974,15 +1249,17 @@ export default function ClientDetail({
             child_gender: (client.child_gender || 'male') as 'male' | 'female',
             father_name: client.father_name || '',
             mother_name: client.mother_name || '',
-            children: (client.children && Array.isArray(client.children) && client.children.length > 0)
-                ? client.children
+            children: (client.children && Array.isArray(client.children) && client.children.filter((c: any) => c && c.name && typeof c.name === 'string' && c.name.trim() !== '').length > 0)
+                ? client.children.filter((c: any) => c && c.name && typeof c.name === 'string' && c.name.trim() !== '')
                 : [{ name: client.child_name || '', nickname: '', birth_date: client.child_birth_date ? String(client.child_birth_date).substring(0, 10) : '', gender: (client.child_gender || 'male') }],
             company_name: client.company_name || '',
             email: client.email || '',
             instagram: client.instagram || '',
+            partner_instagram: client.partner_instagram || '',
             phone: client.phone || '',
             secondary_phone: client.secondary_phone || '',
             preferred_contact: client.preferred_contact || 'WhatsApp',
+            primary_contact: 'cpw' as string,
             province: client.province || '',
             province_code: client.province_code || '',
             city: client.city || '',
@@ -1000,8 +1277,14 @@ export default function ClientDetail({
             event_date: client.projects?.[0]?.event_date ? String(client.projects[0].event_date).substring(0, 10) : '',
             event_time: client.projects?.[0]?.event_time || '16:00',
             event_location: client.projects?.[0]?.location || '',
-            package_id: client.projects?.[0]?.package_id ? String(client.projects[0].package_id) : '',
+            reception_location: (client.projects?.[0]?.category_data as any)?.reception_location || '',
+            estimated_guests: (client.projects?.[0]?.category_data as any)?.estimated_guests || '',
+            concept_theme: (client.projects?.[0]?.category_data as any)?.concept || (client.projects?.[0]?.category_data as any)?.theme || '',
+            other_vendors: '',
+            reference_url: (client.projects?.[0]?.category_data as any)?.reference_url || '',
+            package_id: client.projects?.[0]?.package_id ? String(client.projects[0].package_id) : (packages[0]?.id || ''),
             source: client.source || 'Instagram',
+            client_source_id: client.client_source_id || '',
             referred_by_client_id: client.referred_by_client_id || '',
             wedding_organizer_id: client.wedding_organizer_id || '',
             referral_name: client.referral_name || '',
@@ -1009,9 +1292,89 @@ export default function ClientDetail({
             notes: client.notes || '',
             tags: (Array.isArray(client.tags) ? client.tags : []) as string[],
         });
-        setEditActiveFormTab('profile');
+        setEditCategoryData(initialCategoryData);
+        setEditCurrentStep(1);
         setFormErrors({});
         setIsEditClientModalOpen(true);
+    };
+
+    // -------------------------------------------------------------
+    // CLIENT TIER & STATUS CONSTANTS & HELPERS
+    // -------------------------------------------------------------
+    const CLIENT_TIER_OPTIONS = [
+        { value: 'regular', label: 'Klien Regular', dotColor: 'bg-slate-400', textColor: 'text-slate-700' },
+        { value: 'premium', label: 'Klien Premium', dotColor: 'bg-purple-500', textColor: 'text-purple-700' },
+        { value: 'vip', label: 'Klien VIP', dotColor: 'bg-amber-500', textColor: 'text-amber-700' },
+        { value: 'corporate', label: 'Klien Corporate', dotColor: 'bg-blue-500', textColor: 'text-blue-700' },
+    ];
+
+    const CLIENT_STATUS_OPTIONS = [
+        { value: 'active', label: 'Aktif (Sedang Berjalan)', dotColor: 'bg-emerald-500', textColor: 'text-emerald-700' },
+        { value: 'lead', label: 'Lead / Calon Klien', dotColor: 'bg-amber-500', textColor: 'text-amber-700' },
+        { value: 'completed', label: 'Selesai (Arsip)', dotColor: 'bg-blue-500', textColor: 'text-blue-700' },
+        { value: 'blocked', label: 'Diblokir / Nonaktif', dotColor: 'bg-rose-500', textColor: 'text-rose-700' },
+    ];
+
+    const clientTierValue = useMemo(() => {
+        if (client.client_type === 'corporate' || client.company_name) return 'corporate';
+        if (client.client_type === 'vip' || client.tags?.includes('VIP') || client.tags?.includes('vip')) return 'vip';
+        if (client.client_type === 'premium' || client.tags?.includes('Premium') || client.tags?.includes('premium') || (client as any).total_value > 40000000) return 'premium';
+        return 'regular';
+    }, [client.client_type, client.company_name, client.tags, (client as any).total_value]);
+
+    const clientTierLabel = useMemo(() => {
+        switch (clientTierValue) {
+            case 'corporate': return 'Klien Corporate';
+            case 'vip': return 'Klien VIP';
+            case 'premium': return 'Klien Premium';
+            default: return 'Klien Regular';
+        }
+    }, [clientTierValue]);
+
+    const handleUpdateClientTier = (newTier: string) => {
+        const currentTags = Array.isArray(client.tags) ? [...client.tags] : [];
+        const cleanTags = currentTags.filter((t) => !['Premium', 'premium', 'VIP', 'vip'].includes(t));
+        if (newTier === 'premium') cleanTags.push('Premium');
+        if (newTier === 'vip') cleanTags.push('VIP');
+
+        router.put(
+            `/clients/${client.id}`,
+            {
+                name: client.name,
+                phone: client.phone || '-',
+                client_type: newTier === 'regular' ? (client.client_type === 'wedding' || client.client_type === 'family' ? client.client_type : 'personal') : newTier,
+                tags: cleanTags,
+            },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: () => {
+                    const label = newTier === 'corporate' ? 'Klien Corporate' : newTier === 'vip' ? 'Klien VIP' : newTier === 'premium' ? 'Klien Premium' : 'Klien Regular';
+                    toast.success(`Tingkatan klien diperbarui menjadi "${label}"`);
+                },
+                onError: () => toast.error('Gagal memperbarui tingkatan klien.'),
+            }
+        );
+    };
+
+    const handleUpdateClientStatus = (newStatus: string) => {
+        router.put(
+            `/clients/${client.id}`,
+            {
+                name: client.name,
+                phone: client.phone || '-',
+                status: newStatus,
+            },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: () => {
+                    const label = newStatus === 'completed' ? 'Selesai' : newStatus === 'lead' ? 'Lead' : newStatus === 'blocked' ? 'Diblokir' : 'Aktif';
+                    toast.success(`Status klien berhasil diubah menjadi "${label}"`);
+                },
+                onError: () => toast.error('Gagal memperbarui status klien.'),
+            }
+        );
     };
 
     // -------------------------------------------------------------
@@ -2101,21 +2464,107 @@ export default function ClientDetail({
 
                             {/* Identity Header & 6 Chips */}
                             <div className="space-y-3 flex-1 min-w-0">
-                                {/* Top Row: Name + Klien Premium + [Aktif] Badge on Far Right */}
+                                {/* Top Row: Name + Klien Tier Badge + Status Badge side by side (No LDR!) */}
                                 <div className="flex items-center justify-between gap-3 flex-wrap">
-                                    <div className="flex items-center gap-2.5 flex-wrap">
+                                    <div className="flex items-center gap-2 flex-wrap">
                                         <h2 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
                                             {client.name || '-'}
                                         </h2>
-                                        <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-[#F3E8FF] text-[#7E22CE]">
-                                            {client.client_type === 'corporate' ? 'Klien Corporate' : 'Klien Premium'}
-                                        </span>
-                                    </div>
 
-                                    {/* Status Badge right-aligned before Aksi Cepat */}
-                                    <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-[#DCFCE7] text-[#15803D]">
-                                        {client.status === 'completed' ? 'Selesai' : client.status === 'lead' ? 'Lead' : 'Aktif'}
-                                    </span>
+                                        {/* 1. Tingkatan / Tier Klien (Dropdown Quick Switcher) */}
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <button
+                                                    type="button"
+                                                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-bold border transition-all cursor-pointer shadow-2xs hover:scale-105 ${
+                                                        clientTierValue === 'corporate'
+                                                            ? 'bg-blue-50 text-blue-700 border-blue-200/80'
+                                                            : clientTierValue === 'vip'
+                                                            ? 'bg-amber-50 text-amber-700 border-amber-200/80'
+                                                            : clientTierValue === 'premium'
+                                                            ? 'bg-[#F3E8FF] text-[#7E22CE] border-purple-200/80'
+                                                            : 'bg-slate-100 text-slate-700 border-slate-200/80'
+                                                    }`}
+                                                    title="Klik untuk mengubah tingkatan klien"
+                                                >
+                                                    <Sparkles className="w-3 h-3 opacity-80" />
+                                                    <span>{clientTierLabel}</span>
+                                                    <ChevronDown className="w-2.5 h-2.5 opacity-60" />
+                                                </button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="start" className="w-48 p-1.5 text-xs bg-white shadow-xl rounded-xl border border-slate-200 z-50">
+                                                <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                                    Ubah Tingkatan Klien
+                                                </div>
+                                                {CLIENT_TIER_OPTIONS.map((opt) => (
+                                                    <DropdownMenuItem
+                                                        key={opt.value}
+                                                        onClick={() => handleUpdateClientTier(opt.value)}
+                                                        className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                                            clientTierValue === opt.value ? 'bg-slate-100 font-bold' : 'hover:bg-slate-50'
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`w-2 h-2 rounded-full ${opt.dotColor}`} />
+                                                            <span className={opt.textColor}>{opt.label}</span>
+                                                        </div>
+                                                        {clientTierValue === opt.value && <Check className="w-3.5 h-3.5 text-slate-600" />}
+                                                    </DropdownMenuItem>
+                                                ))}
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+
+                                        {/* 2. Status Klien (Dropdown Quick Switcher - LANGSUNG DI SEBELAH TIER) */}
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <button
+                                                    type="button"
+                                                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-bold border transition-all cursor-pointer shadow-2xs hover:scale-105 ${
+                                                        client.status === 'completed'
+                                                            ? 'bg-blue-50 text-blue-700 border-blue-200/80'
+                                                            : client.status === 'lead'
+                                                            ? 'bg-amber-50 text-amber-700 border-amber-200/80'
+                                                            : client.status === 'blocked'
+                                                            ? 'bg-rose-50 text-rose-700 border-rose-200/80'
+                                                            : 'bg-[#DCFCE7] text-[#15803D] border-emerald-200/80'
+                                                    }`}
+                                                    title="Klik untuk mengubah status aktif klien"
+                                                >
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                                                    <span>
+                                                        {client.status === 'completed'
+                                                            ? 'Selesai'
+                                                            : client.status === 'lead'
+                                                            ? 'Lead'
+                                                            : client.status === 'blocked'
+                                                            ? 'Diblokir'
+                                                            : 'Aktif'}
+                                                    </span>
+                                                    <ChevronDown className="w-2.5 h-2.5 opacity-60" />
+                                                </button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="start" className="w-52 p-1.5 text-xs bg-white shadow-xl rounded-xl border border-slate-200 z-50">
+                                                <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                                    Ubah Status Klien
+                                                </div>
+                                                {CLIENT_STATUS_OPTIONS.map((opt) => (
+                                                    <DropdownMenuItem
+                                                        key={opt.value}
+                                                        onClick={() => handleUpdateClientStatus(opt.value)}
+                                                        className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                                            client.status === opt.value ? 'bg-slate-100 font-bold' : 'hover:bg-slate-50'
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`w-2 h-2 rounded-full ${opt.dotColor}`} />
+                                                            <span className={opt.textColor}>{opt.label}</span>
+                                                        </div>
+                                                        {client.status === opt.value && <Check className="w-3.5 h-3.5 text-slate-600" />}
+                                                    </DropdownMenuItem>
+                                                ))}
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </div>
                                 </div>
 
                                 {/* 6 Information Chips (3 atas 3 bawah) */}
@@ -2165,10 +2614,20 @@ export default function ClientDetail({
                                             <Users className="w-3.5 h-3.5" />
                                         </div>
                                         <div className="min-w-0">
-                                            <span className="text-[10px] text-slate-400 font-semibold block leading-tight">Sumber Klien</span>
-                                            <span className="font-extrabold text-slate-900 text-[11px] block leading-tight truncate">
-                                                {client.source || '-'}
-                                            </span>
+                                            <span className="text-[10px] text-slate-400 font-semibold block leading-tight">Sumber / Referral</span>
+                                            {client.client_source ? (
+                                                <Link
+                                                    href={`/client-sources/${client.client_source.id}`}
+                                                    className="font-extrabold text-[#7C3AED] hover:underline text-[11px] block leading-tight truncate"
+                                                    title={`Lihat master data referral: ${client.client_source.name}`}
+                                                >
+                                                    {client.client_source.name}
+                                                </Link>
+                                            ) : (
+                                                <span className="font-extrabold text-slate-900 text-[11px] block leading-tight truncate">
+                                                    {client.source || '-'}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
 
@@ -2291,531 +2750,403 @@ export default function ClientDetail({
                                 })}
                             </div>
 
-                            {/* TAB 1: RINGKASAN (INFORMASI DETAIL KLIEN - EXACT MATCH TO SCREENSHOT) */}
-                            {mainTab === 'ringkasan' && (
-                                <div className="p-6 space-y-5 animate-in fade-in duration-150 flex-1 flex flex-col justify-between">
-                                    <h3 className="text-sm font-extrabold text-slate-900 tracking-tight">
-                                        Informasi Detail Klien
-                                    </h3>
+                            {/* TAB 1: RINGKASAN (INFORMASI DETAIL KLIEN DENGAN CATEGORY SPECIFIC VIEW) */}
+                            {mainTab === 'ringkasan' && (() => {
+                                const clientCategory = (categories || []).find((c) =>
+                                    String(c.id) === String(client.category_id || (client.category as any)?.id) ||
+                                    c.slug === client.client_type ||
+                                    c.name.toLowerCase() === (client.client_type || '').toLowerCase()
+                                ) || client.category || {
+                                    name: client.client_type || 'Wedding',
+                                    form_type: resolveCategoryKey(client.category || { slug: client.client_type, form_type: client.client_type }),
+                                };
 
-                                    {/* SECTION 1 & 2: Dynamic Cards based on client category */}
-                                    {Boolean(client.child_name || (client.children && client.children.length > 0) || client.client_type === 'newborn') ? (
-                                        /* NEWBORN CARDS: Bayi & Orang Tua */
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
-                                            {/* Data Bayi Card */}
-                                            <div className="bg-amber-50/50 border border-amber-200/80 rounded-2xl p-4.5 space-y-3.5 flex flex-col justify-between h-full">
-                                                <div className="flex items-center justify-between pb-1 border-b border-amber-200/70">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-6 h-6 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 border border-amber-200">
-                                                            <Baby className="w-3.5 h-3.5" />
+                                const syntheticProject = {
+                                    category: clientCategory,
+                                    category_data: client.category_data || client,
+                                    client: client,
+                                    name: client.name,
+                                };
+
+                                return (
+                                    <div className="p-6 space-y-5 animate-in fade-in duration-150 flex-1 flex flex-col justify-between">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="text-sm font-extrabold text-slate-900 tracking-tight">
+                                                Informasi Detail Klien
+                                            </h3>
+                                            <span className="text-[11px] font-semibold text-slate-500">
+                                                ID Klien: <span className="font-mono text-slate-700">#{client.id}</span>
+                                            </span>
+                                        </div>
+
+                                        {/* SECTION 1: Dynamic Category Specific Details */}
+                                        <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-2xs">
+                                            <CategorySpecificView project={client.projects?.[0] || syntheticProject} />
+                                        </div>
+
+                                        {/* SECTION 3: Informasi Alamat & Kontak (Numbered 1-12 Badges) */}
+                                        <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5">
+                                            <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
+                                                <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
+                                                    <MapPin className="w-3.5 h-3.5" />
+                                                </div>
+                                                <h4 className="text-xs font-bold text-slate-900">
+                                                    Informasi Alamat &amp; Kontak
+                                                </h4>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 sm:gap-x-8 gap-y-3 text-xs">
+                                                {/* Column 1: Items 1 to 6 */}
+                                                <div className="space-y-2.5">
+                                                    <div className="flex items-start">
+                                                        <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
+                                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">1</span>
+                                                            <span className="text-[11px]">Provinsi</span>
                                                         </div>
-                                                        <h4 className="text-xs font-bold text-amber-950">
-                                                            Informasi Bayi / Anak (Newborn)
-                                                        </h4>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.province || '-'}</span>
                                                     </div>
-                                                    {client.children && client.children.length > 1 && (
-                                                        <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 font-bold text-[10px]">
-                                                            👶 Kembar ({client.children.length} Bayi)
+                                                    <div className="flex items-start">
+                                                        <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
+                                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">2</span>
+                                                            <span className="text-[11px]">Kota/Kabupaten</span>
+                                                        </div>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.city || '-'}</span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
+                                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">3</span>
+                                                            <span className="text-[11px]">Kecamatan</span>
+                                                        </div>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.district || '-'}</span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
+                                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">4</span>
+                                                            <span className="text-[11px]">Kelurahan</span>
+                                                        </div>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.village || '-'}</span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
+                                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">5</span>
+                                                            <span className="text-[11px]">Kode Pos</span>
+                                                        </div>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0">:</span>
+                                                        <span className="font-mono font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.postal_code || '-'}</span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500 pt-0.5">
+                                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">6</span>
+                                                            <span className="text-[11px]">Alamat Lengkap</span>
+                                                        </div>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-relaxed flex-1 min-w-0">
+                                                            {client.address || '-'}
                                                         </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Column 2: Items 7 to 12 */}
+                                                <div className="space-y-2.5">
+                                                    <div className="flex items-start">
+                                                        <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
+                                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">7</span>
+                                                            <span className="text-[11px]">No. WhatsApp / HP</span>
+                                                        </div>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 font-mono">
+                                                            {client.phone ? (
+                                                                <a
+                                                                    href={`https://wa.me/${String(client.phone).replace(/[^0-9]/g, '').replace(/^0/, '62')}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-1 font-bold"
+                                                                >
+                                                                    <span>{client.phone}</span>
+                                                                    <ExternalLink className="w-3 h-3 text-emerald-600" />
+                                                                </a>
+                                                            ) : '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
+                                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">8</span>
+                                                            <span className="text-[11px]">No. HP Alternatif</span>
+                                                        </div>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 font-mono">
+                                                            {client.secondary_phone || '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
+                                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">9</span>
+                                                            <span className="text-[11px]">Preferensi Kontak</span>
+                                                        </div>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug capitalize flex-1 min-w-0">
+                                                            {client.preferred_contact === 'email' ? 'Email' : client.preferred_contact === 'phone' ? 'Telepon' : 'WhatsApp'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
+                                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">10</span>
+                                                            <span className="text-[11px]">Email Aktif</span>
+                                                        </div>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 truncate" title={client.email || '-'}>
+                                                            {client.email ? (
+                                                                <a href={`mailto:${client.email}`} className="text-indigo-600 hover:underline">
+                                                                    {client.email}
+                                                                </a>
+                                                            ) : '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
+                                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">11</span>
+                                                            <span className="text-[11px]">Akun Instagram</span>
+                                                        </div>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 whitespace-nowrap">
+                                                            {client.instagram ? (
+                                                                <a
+                                                                    href={`https://instagram.com/${client.instagram.replace(/^@/, '')}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="text-pink-600 hover:underline flex items-center gap-1"
+                                                                >
+                                                                    <span>{client.instagram.startsWith('@') ? client.instagram : `@${client.instagram}`}</span>
+                                                                    <ExternalLink className="w-3 h-3" />
+                                                                </a>
+                                                            ) : '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500 pt-0.5">
+                                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">12</span>
+                                                            <span className="text-[11px]">Media Sosial Lain</span>
+                                                        </div>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 whitespace-pre-line">
+                                                            {client.other_social_media || '-'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* SECTION 4: Informasi Acara / Project & Paket */}
+                                        <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5">
+                                            <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
+                                                <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
+                                                    <Calendar className="w-3.5 h-3.5" />
+                                                </div>
+                                                <h4 className="text-xs font-bold text-slate-900">
+                                                    Informasi Acara / Project &amp; Paket Layanan
+                                                </h4>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2.5 text-xs">
+                                                <div className="space-y-2.5">
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-44 sm:w-48 shrink-0 text-[11px] pt-0.5">Jenis Acara</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {primaryProject?.category?.name || client.client_type || '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-44 sm:w-48 shrink-0 text-[11px] pt-0.5">Tanggal Pelaksanaan</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {primaryProject?.event_date ? formatDate(primaryProject.event_date) : '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-44 sm:w-48 shrink-0 text-[11px] pt-0.5">Waktu Pelaksanaan</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {primaryProject?.event_time || '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-44 sm:w-48 shrink-0 text-[11px] pt-0.5">Tempat / Lokasi Acara</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {primaryProject?.location || client.address || '-'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-2.5">
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-36 sm:w-40 shrink-0 text-[11px] pt-0.5">Paket Dipilih</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {primaryProject?.package?.name || '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-36 sm:w-40 shrink-0 text-[11px] pt-0.5">Kategori Layanan</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {primaryProject?.category?.name || '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-36 sm:w-40 shrink-0 text-[11px] pt-0.5">Total Nilai Project</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-emerald-700 leading-snug flex-1 min-w-0">
+                                                            {primaryProject?.total_amount ? formatRupiah(primaryProject.total_amount) : '-'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-36 sm:w-40 shrink-0 text-[11px] pt-0.5">Status Pembayaran</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug capitalize flex-1 min-w-0">
+                                                            {primaryProject?.payment_status === 'paid' ? 'Lunas' : primaryProject?.payment_status === 'partial' ? 'DP / Sebagian' : 'Belum Dibayar'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* SECTION 5: Sumber Lead & Partner Referral */}
+                                        <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5">
+                                            <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
+                                                <div className="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100/80">
+                                                    <Users className="w-3.5 h-3.5" />
+                                                </div>
+                                                <h4 className="text-xs font-bold text-slate-900">
+                                                    Sumber Lead &amp; Partner Referral
+                                                </h4>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2.5 text-xs">
+                                                <div className="space-y-2.5">
+                                                    <div className="flex items-start">
+                                                        <span className="text-slate-500 w-44 sm:w-48 shrink-0 text-[11px] pt-0.5">Sumber Pendaftaran</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <div className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+                                                            <span>{client.source || 'Formulir Online (Client Intake)'}</span>
+                                                            {client.client_source && (
+                                                                <Link
+                                                                    href={`/client-sources/${client.client_source.id}`}
+                                                                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-violet-50 text-violet-700 border border-violet-200 hover:bg-violet-100 transition-colors"
+                                                                >
+                                                                    Master: {client.client_source.name}
+                                                                </Link>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    {client.wedding_organizer && (
+                                                        <>
+                                                            <div className="flex items-start">
+                                                                <span className="text-slate-500 w-44 sm:w-48 shrink-0 text-[11px] pt-0.5">Partner WO / EO</span>
+                                                                <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                                <span className="font-semibold text-indigo-700 leading-snug flex-1 min-w-0">
+                                                                    {client.wedding_organizer.name} ({client.wedding_organizer.tier || 'Partner'})
+                                                                </span>
+                                                            </div>
+                                                            {client.wedding_organizer.pic_name && (
+                                                                <div className="flex items-start">
+                                                                    <span className="text-slate-500 w-44 sm:w-48 shrink-0 text-[11px] pt-0.5">PIC Wedding Organizer</span>
+                                                                    <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                                        {client.wedding_organizer.pic_name} {client.wedding_organizer.phone ? `(${client.wedding_organizer.phone})` : ''}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                        </>
                                                     )}
                                                 </div>
 
-                                                <div className="space-y-3 text-xs flex-1">
-                                                    {client.children && client.children.length > 0 ? (
-                                                        <div className="space-y-2.5">
-                                                            {client.children.map((child, idx) => (
-                                                                <div key={idx} className="p-2.5 rounded-xl bg-white/90 border border-amber-200/70 space-y-1.5">
-                                                                    <div className="flex items-center justify-between pb-1 border-b border-amber-100 text-[11px] font-bold text-amber-950">
-                                                                        <span>Bayi #{idx + 1} {client.children && client.children.length > 1 ? '(Kembar)' : ''}</span>
-                                                                        <span className="text-amber-700 font-semibold">{child.gender || '-'}</span>
-                                                                    </div>
-                                                                    <div className="flex items-start">
-                                                                        <span className="text-slate-500 w-24 shrink-0 text-[11px]">Nama Lengkap</span>
-                                                                        <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                                        <span className="font-semibold text-slate-900 flex-1">{child.name || '-'}</span>
-                                                                    </div>
-                                                                    {child.nickname && (
-                                                                        <div className="flex items-start">
-                                                                            <span className="text-slate-500 w-24 shrink-0 text-[11px]">Panggilan</span>
-                                                                            <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                                            <span className="font-semibold text-slate-900 flex-1">{child.nickname}</span>
-                                                                        </div>
-                                                                    )}
-                                                                    <div className="flex items-start">
-                                                                        <span className="text-slate-500 w-24 shrink-0 text-[11px]">Tanggal Lahir</span>
-                                                                        <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                                        <span className="font-semibold text-slate-900 flex-1">{child.birth_date ? formatDate(child.birth_date) : '-'}</span>
-                                                                    </div>
+                                                <div className="space-y-2.5">
+                                                    {client.referred_by_client && (
+                                                        <>
+                                                            <div className="flex items-start">
+                                                                <span className="text-slate-500 w-36 sm:w-40 shrink-0 text-[11px] pt-0.5">Direferensikan Klien</span>
+                                                                <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                                <span className="font-semibold text-indigo-700 leading-snug flex-1 min-w-0">
+                                                                    {client.referred_by_client.name}
+                                                                </span>
+                                                            </div>
+                                                            {client.referred_by_client.phone && (
+                                                                <div className="flex items-start">
+                                                                    <span className="text-slate-500 w-36 sm:w-40 shrink-0 text-[11px] pt-0.5">Kontak Referrer</span>
+                                                                    <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 font-mono">
+                                                                        {client.referred_by_client.phone}
+                                                                    </span>
                                                                 </div>
+                                                            )}
+                                                        </>
+                                                    )}
+                                                    {client.referral_name && (
+                                                        <div className="flex items-start">
+                                                            <span className="text-slate-500 w-36 sm:w-40 shrink-0 text-[11px] pt-0.5">Nama Kerabat / Rekan</span>
+                                                            <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                            <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                                {client.referral_name}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    {!client.wedding_organizer && !client.referred_by_client && !client.referral_name && (
+                                                        <div className="flex items-start">
+                                                            <span className="text-slate-500 w-36 sm:w-40 shrink-0 text-[11px] pt-0.5">Jenis Referral</span>
+                                                            <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                            <span className="font-medium text-slate-600 leading-snug flex-1 min-w-0">
+                                                                Organik / Pendaftaran Langsung
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* SECTION 6: Catatan Tambahan & Tag */}
+                                        <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3">
+                                            <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
+                                                <div className="w-6 h-6 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-100/80">
+                                                    <FileText className="w-3.5 h-3.5" />
+                                                </div>
+                                                <h4 className="text-xs font-bold text-slate-900">
+                                                    Catatan Khusus &amp; Label Tag
+                                                </h4>
+                                            </div>
+
+                                            <div className="space-y-2.5 text-xs">
+                                                <div className="flex items-start">
+                                                    <span className="text-slate-500 w-32 sm:w-36 shrink-0 text-[11px] pt-0.5">Catatan Klien</span>
+                                                    <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                    <div className="font-medium text-slate-700 leading-relaxed flex-1 min-w-0 whitespace-pre-line bg-white/70 p-3 rounded-xl border border-slate-200/60">
+                                                        {client.notes || 'Tidak ada catatan khusus.'}
+                                                    </div>
+                                                </div>
+
+                                                {client.tags && client.tags.length > 0 && (
+                                                    <div className="flex items-start pt-1">
+                                                        <span className="text-slate-500 w-32 sm:w-36 shrink-0 text-[11px] pt-0.5">Tag / Label</span>
+                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
+                                                        <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
+                                                            {client.tags.map((t, idx) => (
+                                                                <span key={idx} className="px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200/70 text-indigo-700 text-[11px] font-bold">
+                                                                    #{t}
+                                                                </span>
                                                             ))}
                                                         </div>
-                                                    ) : (
-                                                        <div className="space-y-2.5">
-                                                            <div className="flex items-start">
-                                                                <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Nama Lengkap</span>
-                                                                <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                                <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                                    {client.child_name || client.name || '-'}
-                                                                </span>
-                                                            </div>
-                                                            <div className="flex items-start">
-                                                                <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Tanggal Lahir / HPL</span>
-                                                                <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                                <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                                    {client.child_birth_date ? formatDate(client.child_birth_date) : '-'}
-                                                                </span>
-                                                            </div>
-                                                            <div className="flex items-start">
-                                                                <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Jenis Kelamin</span>
-                                                                <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                                <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                                    {client.child_gender === 'male' ? '👦 Laki-laki (Boy)' : client.child_gender === 'female' ? '👧 Perempuan (Girl)' : '-'}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Data Orang Tua Card */}
-                                            <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5 flex flex-col justify-between h-full">
-                                                <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
-                                                    <div className="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100/80">
-                                                        <User className="w-3.5 h-3.5" />
                                                     </div>
-                                                    <h4 className="text-xs font-bold text-slate-900">
-                                                        Data Orang Tua / Wali
-                                                    </h4>
-                                                </div>
-
-                                                <div className="space-y-2.5 text-xs flex-1">
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Nama Ayah</span>
-                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {client.father_name || client.partner_name || client.name || '-'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Nama Ibu</span>
-                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {client.mother_name || '-'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Pekerjaan</span>
-                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {client.occupation || '-'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Akun Instagram</span>
-                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {client.instagram || client.partner_instagram || '-'}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ) : Boolean(client.bride_name || client.groom_name || client.client_type === 'wedding' || client.client_type === 'prewedding') ? (
-                                        /* WEDDING CARDS: CPW & CPP Side by Side */
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
-                                            {/* CPW Card */}
-                                            <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5 flex flex-col justify-between h-full">
-                                                <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
-                                                    <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
-                                                        <User className="w-3.5 h-3.5" />
-                                                    </div>
-                                                    <h4 className="text-xs font-bold text-slate-900">
-                                                        Informasi Calon Pengantin (CPW)
-                                                    </h4>
-                                                </div>
-
-                                                <div className="space-y-2.5 text-xs flex-1">
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Nama Lengkap</span>
-                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {client.bride_name || client.name || '-'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Panggilan</span>
-                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {client.bride_nickname || '-'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Tanggal Lahir</span>
-                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {client.bride_birth_date ? formatDate(client.bride_birth_date) : '-'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Pekerjaan</span>
-                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {client.occupation || '-'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Akun Instagram</span>
-                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {client.instagram || '-'}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* CPP Card */}
-                                            <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5 flex flex-col justify-between h-full">
-                                                <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
-                                                    <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
-                                                        <User className="w-3.5 h-3.5" />
-                                                    </div>
-                                                    <h4 className="text-xs font-bold text-slate-900">
-                                                        Informasi Calon Pengantin (CPP)
-                                                    </h4>
-                                                </div>
-
-                                                <div className="space-y-2.5 text-xs flex-1">
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Nama Lengkap</span>
-                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {client.groom_name || client.partner_name || '-'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Panggilan</span>
-                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {client.groom_nickname || '-'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Tanggal Lahir</span>
-                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {client.groom_birth_date ? formatDate(client.groom_birth_date) : '-'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Pekerjaan</span>
-                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {client.occupation || '-'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Akun Instagram</span>
-                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {client.partner_instagram || '-'}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        /* STANDARD CARDS: Klien Pemesan Umum */
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
-                                            <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5 flex flex-col justify-between h-full">
-                                                <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
-                                                    <div className="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100/80">
-                                                        <User className="w-3.5 h-3.5" />
-                                                    </div>
-                                                    <h4 className="text-xs font-bold text-slate-900">
-                                                        Informasi Pemesan / Klien
-                                                    </h4>
-                                                </div>
-
-                                                <div className="space-y-2.5 text-xs flex-1">
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Nama Lengkap</span>
-                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {client.name}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Kontak PIC</span>
-                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {client.contact_person || client.partner_name || '-'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Perusahaan / Brand</span>
-                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {client.company_name || '-'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Pekerjaan / Bidang</span>
-                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {client.occupation || '-'}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5 flex flex-col justify-between h-full">
-                                                <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
-                                                    <div className="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100/80">
-                                                        <Tag className="w-3.5 h-3.5" />
-                                                    </div>
-                                                    <h4 className="text-xs font-bold text-slate-900">
-                                                        Informasi Tambahan
-                                                    </h4>
-                                                </div>
-
-                                                <div className="space-y-2.5 text-xs flex-1">
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Sumber Lead</span>
-                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {client.source || '-'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Instagram</span>
-                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {client.instagram || '-'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 shrink-0 text-[11px] pt-0.5">Catatan</span>
-                                                        <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-medium text-slate-600 leading-snug flex-1 min-w-0">
-                                                            {client.notes || 'Tidak ada catatan.'}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* SECTION 3: Informasi Alamat & Kontak (Numbered 1-12 Badges) */}
-                                    <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5">
-                                        <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
-                                            <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
-                                                <MapPin className="w-3.5 h-3.5" />
-                                            </div>
-                                            <h4 className="text-xs font-bold text-slate-900">
-                                                Informasi Alamat &amp; Kontak
-                                            </h4>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 sm:gap-x-8 gap-y-3 text-xs">
-                                            {/* Column 1: Items 1 to 6 */}
-                                            <div className="space-y-2.5">
-                                                <div className="flex items-start">
-                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
-                                                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">1</span>
-                                                        <span className="text-[11px]">Provinsi</span>
-                                                    </div>
-                                                    <span className="text-slate-400 mr-2.5 shrink-0">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.province || '-'}</span>
-                                                </div>
-                                                <div className="flex items-start">
-                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
-                                                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">2</span>
-                                                        <span className="text-[11px]">Kota/Kabupaten</span>
-                                                    </div>
-                                                    <span className="text-slate-400 mr-2.5 shrink-0">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.city || '-'}</span>
-                                                </div>
-                                                <div className="flex items-start">
-                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
-                                                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">3</span>
-                                                        <span className="text-[11px]">Kecamatan</span>
-                                                    </div>
-                                                    <span className="text-slate-400 mr-2.5 shrink-0">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.district || '-'}</span>
-                                                </div>
-                                                <div className="flex items-start">
-                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
-                                                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">4</span>
-                                                        <span className="text-[11px]">Kelurahan</span>
-                                                    </div>
-                                                    <span className="text-slate-400 mr-2.5 shrink-0">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.village || '-'}</span>
-                                                </div>
-                                                <div className="flex items-start">
-                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
-                                                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">5</span>
-                                                        <span className="text-[11px]">Kode Pos</span>
-                                                    </div>
-                                                    <span className="text-slate-400 mr-2.5 shrink-0">:</span>
-                                                    <span className="font-mono font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.postal_code || '-'}</span>
-                                                </div>
-                                                <div className="flex items-start">
-                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500 pt-0.5">
-                                                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">6</span>
-                                                        <span className="text-[11px]">Alamat Lengkap</span>
-                                                    </div>
-                                                    <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-relaxed flex-1 min-w-0">
-                                                        {client.address || '-'}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            {/* Column 2: Items 7 to 12 */}
-                                            <div className="space-y-2.5">
-                                                <div className="flex items-start">
-                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
-                                                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">7</span>
-                                                        <span className="text-[11px]">Contact Person</span>
-                                                    </div>
-                                                    <span className="text-slate-400 mr-2.5 shrink-0">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 whitespace-nowrap">{client.contact_person || client.name || '-'}</span>
-                                                </div>
-                                                <div className="flex items-start">
-                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
-                                                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">8</span>
-                                                        <span className="text-[11px]">Preferensi Kontak</span>
-                                                    </div>
-                                                    <span className="text-slate-400 mr-2.5 shrink-0">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug capitalize flex-1 min-w-0">
-                                                        {client.preferred_contact === 'email' ? 'Email' : client.preferred_contact === 'phone' ? 'Telepon' : 'WhatsApp'}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-start">
-                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
-                                                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">9</span>
-                                                        <span className="text-[11px]">Pekerjaan</span>
-                                                    </div>
-                                                    <span className="text-slate-400 mr-2.5 shrink-0">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.occupation || '-'}</span>
-                                                </div>
-                                                <div className="flex items-start">
-                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
-                                                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">10</span>
-                                                        <span className="text-[11px]">Email Aktif</span>
-                                                    </div>
-                                                    <span className="text-slate-400 mr-2.5 shrink-0">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 truncate" title={client.email || '-'}>
-                                                        {client.email || '-'}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-start">
-                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
-                                                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">11</span>
-                                                        <span className="text-[11px]">Akun Instagram</span>
-                                                    </div>
-                                                    <span className="text-slate-400 mr-2.5 shrink-0">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 whitespace-nowrap">
-                                                        {client.instagram || '-'}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-start">
-                                                    <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500 pt-0.5">
-                                                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">12</span>
-                                                        <span className="text-[11px]">Media Sosial Lain</span>
-                                                    </div>
-                                                    <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 whitespace-pre-line">
-                                                        {client.other_social_media || '-'}
-                                                    </span>
-                                                </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
-
-                                    {/* SECTION 4: Informasi Acara / Project */}
-                                    <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5">
-                                        <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
-                                            <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
-                                                <Calendar className="w-3.5 h-3.5" />
-                                            </div>
-                                            <h4 className="text-xs font-bold text-slate-900">
-                                                Informasi Acara / Project
-                                            </h4>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2.5 text-xs">
-                                            <div className="space-y-2.5">
-                                                <div className="flex items-start">
-                                                    <span className="text-slate-500 w-44 sm:w-48 shrink-0 text-[11px] pt-0.5">Jenis Acara</span>
-                                                    <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                        {client.projects?.[0]?.category?.name || '-'}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-start">
-                                                    <span className="text-slate-500 w-44 sm:w-48 shrink-0 text-[11px] pt-0.5">Tanggal Pelaksanaan Acara</span>
-                                                    <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                        {client.projects?.[0]?.event_date ? formatDate(client.projects[0].event_date) : '-'}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-start">
-                                                    <span className="text-slate-500 w-44 sm:w-48 shrink-0 text-[11px] pt-0.5">Waktu Pelaksanaan Acara</span>
-                                                    <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                        {client.projects?.[0]?.event_time || '-'}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            <div className="space-y-2.5">
-                                                <div className="flex items-start">
-                                                    <span className="text-slate-500 w-32 sm:w-36 shrink-0 text-[11px] pt-0.5">Tempat Acara</span>
-                                                    <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                        {client.projects?.[0]?.location || '-'}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-start">
-                                                    <span className="text-slate-500 w-32 sm:w-36 shrink-0 text-[11px] pt-0.5">Paket Dipilih</span>
-                                                    <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                        {client.projects?.[0]?.package?.name || '-'}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-start">
-                                                    <span className="text-slate-500 w-32 sm:w-36 shrink-0 text-[11px] pt-0.5">Kategori Project</span>
-                                                    <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                        {client.projects?.[0]?.category?.name || '-'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* SECTION 5: Informasi Tambahan */}
-                                    <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-2.5">
-                                        <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
-                                            <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
-                                                <FileText className="w-3.5 h-3.5" />
-                                            </div>
-                                            <h4 className="text-xs font-bold text-slate-900">
-                                                Informasi Tambahan
-                                            </h4>
-                                        </div>
-
-                                        <div className="flex items-start text-xs">
-                                            <span className="text-slate-500 w-44 sm:w-48 shrink-0 text-[11px] pt-0.5">Catatan</span>
-                                            <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
-                                            <p className="font-semibold text-slate-900 leading-relaxed flex-1 min-w-0">
-                                                {client.notes || '-'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                                );
+                            })()}
 
                             {/* TAB 2: PROJECTS & ORDERS (Gambar 4) */}
                             {mainTab === 'projects' && (
@@ -3431,16 +3762,26 @@ export default function ClientDetail({
                                                                         )}
                                                                     </div>
 
-                                                                    <span
-                                                                        className={`text-[11px] font-bold line-clamp-2 max-w-[110px] leading-tight transition-colors ${isStepSelected
-                                                                                ? 'text-primary-accent font-extrabold'
-                                                                                : s.status === 'active'
-                                                                                    ? 'text-slate-900 font-extrabold'
-                                                                                    : 'text-slate-700 group-hover:text-slate-900'
-                                                                            }`}
-                                                                    >
-                                                                        {s.title}
-                                                                    </span>
+                                                                    <div className="h-8 sm:h-9 flex items-center justify-center text-center w-full px-0.5">
+                                                                        <span
+                                                                            className={`text-[11px] font-bold line-clamp-2 max-w-[110px] leading-tight transition-colors ${isStepSelected
+                                                                                    ? 'text-primary-accent font-extrabold'
+                                                                                    : s.status === 'active'
+                                                                                        ? 'text-slate-900 font-extrabold'
+                                                                                        : 'text-slate-700 group-hover:text-slate-900'
+                                                                                }`}
+                                                                        >
+                                                                            {s.title === 'Penyerahan Final' ? (
+                                                                                <>
+                                                                                    Penyerahan
+                                                                                    <br />
+                                                                                    File Final
+                                                                                </>
+                                                                            ) : (
+                                                                                s.title
+                                                                            )}
+                                                                        </span>
+                                                                    </div>
                                                                 </button>
 
                                                                 {/* Direct Stage Status Update Dropdown Trigger (Gambar 1) */}
@@ -4885,15 +5226,15 @@ Terima kasih!`}
                 </div>
 
                 {/* ========================================================================= */}
-                {/* MODAL 1: EDIT CLIENT (5 continuous sections matching Tambah Client) */}
+                {/* MODAL 1: EDIT CLIENT (4-Step Wizard matching ClientIntakeForm & Index.tsx) */}
                 {/* ========================================================================= */}
                 <Modal
                     isOpen={isEditClientModalOpen}
                     onClose={() => setIsEditClientModalOpen(false)}
                     title="Edit Informasi Klien"
-                    subtitle="Perbarui data profil, kontak, domisili, acara, dan preferensi klien."
-                    maxWidth="3xl"
-                    className="max-h-[90vh]"
+                    subtitle="Perbarui data kategori, identitas khusus, wilayah domisili, kontak, paket, dan acara."
+                    maxWidth="4xl"
+                    className="max-h-[92vh]"
                     footer={
                         <div className="flex items-center justify-between w-full gap-3">
                             <button
@@ -4905,10 +5246,10 @@ Terima kasih!`}
                             </button>
 
                             <div className="flex items-center gap-2">
-                                {currentEditStepIndex > 0 && (
+                                {editCurrentStep > 1 && (
                                     <button
                                         type="button"
-                                        onClick={handlePrevEditStep}
+                                        onClick={() => setEditCurrentStep((s) => Math.max(1, s - 1))}
                                         className="px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
                                     >
                                         <ChevronLeft className="w-4 h-4" />
@@ -4916,13 +5257,13 @@ Terima kasih!`}
                                     </button>
                                 )}
 
-                                {currentEditStepIndex < editSteps.length - 1 ? (
+                                {editCurrentStep < 4 ? (
                                     <button
                                         type="button"
-                                        onClick={handleNextEditStep}
+                                        onClick={() => setEditCurrentStep((s) => Math.min(4, s + 1))}
                                         className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
                                     >
-                                        <span>Lanjut: {editSteps[currentEditStepIndex + 1].title}</span>
+                                        <span>Lanjut: {editSteps[editCurrentStep]?.title || 'Langkah Berikutnya'}</span>
                                         <ChevronRight className="w-4 h-4" />
                                     </button>
                                 ) : (
@@ -4939,945 +5280,1072 @@ Terima kasih!`}
                         </div>
                     }
                 >
-                    <div className="space-y-5 pt-1">
-                        {/* STEPPER HEADER (5 Horizontal Clickable Steps) */}
-                        <div className="flex items-center justify-between gap-1 sm:gap-2 p-1.5 bg-slate-100/90 rounded-2xl overflow-x-auto scrollbar-none">
-                            {editSteps.map((s, idx) => {
-                                const isActive = editActiveFormTab === s.id;
-                                const isPassed = currentEditStepIndex > idx;
-                                return (
-                                    <button
-                                        key={s.id}
-                                        type="button"
-                                        onClick={() => goToEditStep(s.id as any)}
-                                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex-1 justify-center ${isActive
-                                            ? 'bg-white text-slate-900 shadow-2xs ring-1 ring-slate-200/80 font-extrabold'
-                                            : isPassed
-                                                ? 'text-emerald-700 hover:text-emerald-800 hover:bg-white/50'
-                                                : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'
-                                            }`}
-                                    >
-                                        <span
-                                            className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${isActive
-                                                ? 'bg-[#C89445] text-white'
-                                                : isPassed
-                                                    ? 'bg-emerald-100 text-emerald-700'
-                                                    : 'bg-slate-200 text-slate-600'
-                                                }`}
-                                        >
-                                            {isPassed ? <Check className="w-3 h-3 text-emerald-700 stroke-[3]" /> : s.stepNum}
-                                        </span>
-                                        <span className="hidden sm:inline">{s.title}</span>
-                                    </button>
-                                );
-                            })}
-                        </div>
+                    <div className="space-y-6 pt-1">
+                        {/* ================================================================= */}
+                        {/* STEPPER HEADER (4 Connected Steps) */}
+                        {/* ================================================================= */}
+                        <div className="relative pb-6 mb-2 border-b border-slate-100">
+                            {/* Connecting background line */}
+                            <div
+                                className="absolute top-[18px] -translate-y-1/2 h-[2px] bg-slate-200 z-0 pointer-events-none"
+                                style={{
+                                    left: `calc(100% / ${editSteps.length * 2})`,
+                                    right: `calc(100% / ${editSteps.length * 2})`,
+                                }}
+                            >
+                                {/* Active progress fill line */}
+                                <div
+                                    className="h-full transition-all duration-300 ease-in-out bg-[#C89445]"
+                                    style={{
+                                        width: `${((editCurrentStep - 1) / (editSteps.length - 1)) * 100}%`,
+                                    }}
+                                />
+                            </div>
 
-                        {/* ========================================================================= */}
-                        {/* TAB 1: IDENTITAS & PROFIL */}
-                        {/* ========================================================================= */}
-                        {editActiveFormTab === 'profile' && (
-                            <div className="space-y-4 animate-in fade-in duration-150">
-                                {/* Kategori / Tipe Klien Selection (SelectSearch dari Master Data Categories) */}
-                                <div>
-                                    <label className="text-[11px] font-bold text-slate-700 block mb-1.5">
-                                        Kategori / Tipe Klien <span className="text-red-500">*</span>
-                                    </label>
-                                    <SelectSearch
-                                        options={categoryOptions}
-                                        value={editFormData.client_type}
-                                        onChange={(val) => setEditFormData({ ...editFormData, client_type: val })}
-                                        placeholder="Pilih Kategori / Tipe Klien..."
-                                        searchPlaceholder="Cari kategori dari Master Data..."
-                                        clearable={false}
-                                        className="w-full text-xs bg-white"
-                                    />
-                                    <p className="text-[10px] text-slate-400 mt-1">
-                                        Kategori diambil langsung dari Master Data Kategori (<Link href="/master-data/categories" className="text-amber-700 hover:underline font-medium">/master-data/categories</Link>).
-                                    </p>
-                                </div>
-
-                                {/* WEDDING EDIT FIELDS */}
-                                {activeEditFormType === 'wedding' && (
-                                    <>
-                                        <div>
-                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                Judul Acara / Nama Project Wedding <span className="text-slate-400 font-normal">(Opsional)</span>
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={editFormData.name}
-                                                onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                                                placeholder="Contoh: Kevin Sanjaya & Jessica Mila"
-                                                className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                            />
-                                        </div>
-
-                                        {/* Calon Pengantin (CPW & CPP) Side by Side */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-                                            {/* CPW Card */}
-                                            <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 space-y-3">
-                                                <div className="flex items-center gap-2 text-purple-900">
-                                                    <div className="w-6 h-6 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
-                                                        <User className="w-3.5 h-3.5" />
-                                                    </div>
-                                                    <h4 className="text-xs font-bold text-slate-900">
-                                                        Informasi Calon Pengantin (CPW)
-                                                    </h4>
-                                                </div>
-
-                                                <div className="space-y-2.5">
-                                                    <div>
-                                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                            Nama Lengkap CPW
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            value={editFormData.bride_name}
-                                                            onChange={(e) => setEditFormData({ ...editFormData, bride_name: e.target.value })}
-                                                            placeholder="Nama lengkap CPW"
-                                                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                        />
-                                                    </div>
-                                                    <div className="grid grid-cols-2 gap-2">
-                                                        <div>
-                                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                                Panggilan
-                                                            </label>
-                                                            <input
-                                                                type="text"
-                                                                value={editFormData.bride_nickname}
-                                                                onChange={(e) => setEditFormData({ ...editFormData, bride_nickname: e.target.value })}
-                                                                placeholder="Panggilan"
-                                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                                Tanggal Lahir
-                                                            </label>
-                                                            <input
-                                                                type="date"
-                                                                value={editFormData.bride_birth_date}
-                                                                onChange={(e) => setEditFormData({ ...editFormData, bride_birth_date: e.target.value })}
-                                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* CPP Card */}
-                                            <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 space-y-3">
-                                                <div className="flex items-center gap-2 text-purple-900">
-                                                    <div className="w-6 h-6 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
-                                                        <User className="w-3.5 h-3.5" />
-                                                    </div>
-                                                    <h4 className="text-xs font-bold text-slate-900">
-                                                        Informasi Calon Pengantin (CPP)
-                                                    </h4>
-                                                </div>
-
-                                                <div className="space-y-2.5">
-                                                    <div>
-                                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                            Nama Lengkap CPP
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            value={editFormData.groom_name}
-                                                            onChange={(e) => setEditFormData({ ...editFormData, groom_name: e.target.value })}
-                                                            placeholder="Nama lengkap CPP"
-                                                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                        />
-                                                    </div>
-                                                    <div className="grid grid-cols-2 gap-2">
-                                                        <div>
-                                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                                Panggilan
-                                                            </label>
-                                                            <input
-                                                                type="text"
-                                                                value={editFormData.groom_nickname}
-                                                                onChange={(e) => setEditFormData({ ...editFormData, groom_nickname: e.target.value })}
-                                                                placeholder="Panggilan"
-                                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                                Tanggal Lahir
-                                                            </label>
-                                                            <input
-                                                                type="date"
-                                                                value={editFormData.groom_birth_date}
-                                                                onChange={(e) => setEditFormData({ ...editFormData, groom_birth_date: e.target.value })}
-                                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Additional / Corporate Details */}
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                    Nama Pasangan / Pendamping Tambahan
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={editFormData.partner_name}
-                                                    onChange={(e) => setEditFormData({ ...editFormData, partner_name: e.target.value })}
-                                                    placeholder="Opsional jika bukan wedding"
-                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                    Nama Perusahaan / Brand (B2B)
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={editFormData.company_name}
-                                                    onChange={(e) => setEditFormData({ ...editFormData, company_name: e.target.value })}
-                                                    placeholder="Contoh: PT Astra International"
-                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                />
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
-
-                                {/* NEWBORN EDIT FIELDS */}
-                                {activeEditFormType === 'newborn' && (
-                                    <div className="space-y-4">
-                                        {/* Baby Data Repeater */}
-                                        <div className="space-y-3">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-2 text-amber-900">
-                                                    <div className="w-6 h-6 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
-                                                        <Baby className="w-3.5 h-3.5" />
-                                                    </div>
-                                                    <div>
-                                                        <h4 className="text-xs font-bold text-slate-900">
-                                                            Informasi Bayi / Anak (Newborn) <span className="text-red-500">*</span>
-                                                        </h4>
-                                                        <p className="text-[10px] text-slate-500">
-                                                            Dapat mengisi lebih dari satu bayi jika kasus anak kembar.
-                                                        </p>
-                                                    </div>
-                                                </div>
-
+                            <div className="flex items-start justify-between relative z-10">
+                                {editSteps.map((s) => {
+                                    const isDone = editCurrentStep > s.number;
+                                    const isCurrent = editCurrentStep === s.number;
+                                    return (
+                                        <div key={s.number} className="flex-1 flex flex-col items-center text-center px-1">
+                                            <div className="relative flex items-center justify-center mb-1.5">
                                                 <button
                                                     type="button"
-                                                    onClick={handleAddEditChild}
-                                                    className="px-2.5 py-1 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                                                    onClick={() => (isDone ? setEditCurrentStep(s.number) : null)}
+                                                    disabled={!isDone}
+                                                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all relative z-10 ${
+                                                        isDone
+                                                            ? 'bg-[#C89445] text-white cursor-pointer hover:opacity-90 shadow-md'
+                                                            : isCurrent
+                                                            ? 'bg-[#C89445] text-white ring-4 ring-[#C89445]/20 shadow-md font-extrabold'
+                                                            : 'bg-white border-2 border-slate-300 text-slate-400 cursor-not-allowed'
+                                                    }`}
                                                 >
-                                                    <Plus className="w-3 h-3" />
-                                                    <span>+ Tambah Bayi (Kembar)</span>
+                                                    {isDone ? <Check className="w-4 h-4 stroke-[3]" /> : s.number}
                                                 </button>
                                             </div>
+                                            <span
+                                                className={`text-[11px] sm:text-xs max-w-[130px] line-clamp-2 leading-tight ${
+                                                    isCurrent
+                                                        ? 'font-bold text-[#C89445]'
+                                                        : isDone
+                                                        ? 'text-slate-700 font-semibold'
+                                                        : 'text-slate-400'
+                                                }`}
+                                            >
+                                                {s.title}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
 
+                        {/* ================================================================= */}
+                        {/* STEP 1: INFORMASI AWAL & DETAIL KLIEN */}
+                        {/* ================================================================= */}
+                        {editCurrentStep === 1 && (
+                            <div className="space-y-5 animate-in fade-in duration-200">
+                                <div>
+                                    <h3 className="text-base font-bold text-slate-900">
+                                        {editActiveCategoryKey === 'wedding'
+                                            ? 'Informasi Awal & Calon Pengantin (CPP/CPW)'
+                                            : editActiveCategoryKey === 'newborn'
+                                            ? 'Informasi Awal & Data Bayi (Newborn)'
+                                            : 'Informasi Awal & Identitas Klien'}
+                                    </h3>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        Pilih kategori project terlebih dahulu, formulir akan otomatis menyesuaikan data yang diperlukan.
+                                    </p>
+                                </div>
+                                {/* Kategori Project Selection */}
+                                <div className="border border-slate-200/80 rounded-2xl p-4 sm:p-5 space-y-4 shadow-2xs bg-white">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-7 h-7 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                                            <Tag className="w-4 h-4" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-xs font-bold text-slate-900">
+                                                Kategori Layanan / Project
+                                            </h4>
+                                            <p className="text-[11px] text-slate-500">
+                                                Pilih kategori untuk menyesuaikan formulir isian detail secara dinamis.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                            Pilih Kategori <span className="text-red-500">*</span>
+                                        </label>
+                                        <SelectSearch
+                                            options={editCategorySelectOptions}
+                                            value={editFormData.category_id}
+                                            onChange={(val) => {
+                                                const cat = categories.find((c) => String(c.id) === String(val));
+                                                setEditFormData({
+                                                    ...editFormData,
+                                                    category_id: val,
+                                                    client_type: cat?.slug || editFormData.client_type,
+                                                });
+                                            }}
+                                            placeholder="Pilih Kategori Project..."
+                                            searchPlaceholder="Cari kategori..."
+                                            clearable={false}
+                                            className="w-full bg-white"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Dynamic Category Specific Form Fields */}
+                                <div className="border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-2xs bg-white">
+                                    <CategorySpecificForm
+                                        categoryKey={editActiveCategoryKey}
+                                        data={editCategoryData}
+                                        onChange={handleEditCategoryDataChange}
+                                        errors={formErrors}
+                                    />
+                                </div>
+
+                                {/* Extra Newborn multiple children manager if newborn */}
+                                {editActiveCategoryKey === 'newborn' && (
+                                    <div className="border border-amber-200/80 bg-amber-50/40 rounded-2xl p-4 sm:p-5 space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <Baby className="w-4 h-4 text-amber-700" />
+                                                <h4 className="text-xs font-bold text-amber-950">Daftar Bayi / Anak (Mendukung Kembar)</h4>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={handleAddChild}
+                                                className="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold flex items-center gap-1 cursor-pointer"
+                                            >
+                                                <Plus className="w-3 h-3" />
+                                                <span>Tambah Bayi Kembar</span>
+                                            </button>
+                                        </div>
+
+                                        <div className="space-y-3">
                                             {(editFormData.children || []).map((child, idx) => (
-                                                <div
-                                                    key={idx}
-                                                    className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200/70 space-y-3"
-                                                >
-                                                    <div className="flex items-center justify-between pb-1 border-b border-amber-200/50">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span className="px-2 py-0.5 rounded-md bg-amber-200/80 text-amber-900 font-bold text-[10px]">
-                                                                👶 Bayi #{idx + 1} {(editFormData.children || []).length > 1 ? '(Kembar)' : ''}
-                                                            </span>
-                                                        </div>
+                                                <div key={idx} className="p-3 bg-white rounded-xl border border-amber-200 space-y-2.5">
+                                                    <div className="flex items-center justify-between pb-1 border-b border-slate-100">
+                                                        <span className="text-[11px] font-bold text-slate-800">Bayi #{idx + 1}</span>
                                                         {(editFormData.children || []).length > 1 && (
-                                                            <button
+                                                             <button
                                                                 type="button"
-                                                                onClick={() => handleRemoveEditChild(idx)}
-                                                                className="text-red-600 hover:text-red-700 hover:bg-red-50 px-2 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                                                                onClick={() => handleRemoveChild(idx)}
+                                                                className="text-red-500 hover:text-red-700 text-[11px] flex items-center gap-1 cursor-pointer"
                                                             >
                                                                 <Trash2 className="w-3 h-3" />
                                                                 <span>Hapus</span>
                                                             </button>
                                                         )}
                                                     </div>
-
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                                                         <div>
-                                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                                Nama Lengkap Bayi #{idx + 1} <span className="text-red-500">*</span>
-                                                            </label>
+                                                            <label className="block text-[10px] font-bold text-slate-600 mb-1">Nama Bayi</label>
                                                             <input
                                                                 type="text"
                                                                 value={child.name}
-                                                                onChange={(e) => handleChildEditChange(idx, 'name', e.target.value)}
-                                                                placeholder="Nama bayi / anak"
-                                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                                onChange={(e) => handleChildChange(idx, 'name', e.target.value)}
+                                                                placeholder="Nama lengkap bayi"
+                                                                className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
                                                             />
                                                         </div>
                                                         <div>
-                                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                                Tanggal Lahir / HPL
-                                                            </label>
+                                                            <label className="block text-[10px] font-bold text-slate-600 mb-1">Tanggal Lahir / HPL</label>
                                                             <input
                                                                 type="date"
                                                                 value={child.birth_date}
-                                                                onChange={(e) => handleChildEditChange(idx, 'birth_date', e.target.value)}
-                                                                className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
+                                                                onChange={(e) => handleChildChange(idx, 'birth_date', e.target.value)}
+                                                                className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
                                                             />
                                                         </div>
-                                                    </div>
-
-                                                    <div>
-                                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                            Jenis Kelamin
-                                                        </label>
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleChildEditChange(idx, 'gender', 'male')}
-                                                                className={`py-1.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                                                                    child.gender === 'male'
-                                                                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                                                                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                                                                }`}
+                                                        <div>
+                                                            <label className="block text-[10px] font-bold text-slate-600 mb-1">Jenis Kelamin</label>
+                                                            <select
+                                                                value={child.gender}
+                                                                onChange={(e) => handleChildChange(idx, 'gender', e.target.value)}
+                                                                className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
                                                             >
-                                                                <span>👦 Laki-laki (Boy)</span>
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleChildEditChange(idx, 'gender', 'female')}
-                                                                className={`py-1.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                                                                    child.gender === 'female'
-                                                                        ? 'bg-pink-600 text-white border-pink-600 shadow-xs'
-                                                                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                                                                }`}
-                                                            >
-                                                                <span>👧 Perempuan (Girl)</span>
-                                                            </button>
+                                                                <option value="male">Laki-laki</option>
+                                                                <option value="female">Perempuan</option>
+                                                            </select>
                                                         </div>
                                                     </div>
                                                 </div>
                                             ))}
-
-                                            <button
-                                                type="button"
-                                                onClick={handleAddEditChild}
-                                                className="w-full py-2 px-3 rounded-xl border-2 border-dashed border-amber-300 hover:border-amber-400 bg-amber-50/40 hover:bg-amber-50 text-amber-800 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                                            >
-                                                <Plus className="w-3.5 h-3.5 text-amber-600" />
-                                                <span>+ Tambah Bayi Kembar (Twins)</span>
-                                            </button>
-                                        </div>
-
-                                        {/* Data Orang Tua */}
-                                        <div className="p-4 rounded-2xl bg-slate-50/70 border border-slate-200/80 space-y-3">
-                                            <div className="flex items-center gap-2 text-indigo-900">
-                                                <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
-                                                    <User className="w-3.5 h-3.5" />
-                                                </div>
-                                                <div>
-                                                    <h4 className="text-xs font-bold text-slate-900">
-                                                        Data Orang Tua (Ayah &amp; Ibu)
-                                                    </h4>
-                                                    <p className="text-[10px] text-slate-500">
-                                                        Masukkan nama lengkap ayah dan ibu.
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                <div>
-                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                        Nama Lengkap Ayah
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        value={editFormData.father_name}
-                                                        onChange={(e) => {
-                                                            const f = e.target.value;
-                                                            const m = editFormData.mother_name;
-                                                            const combined = [f, m].filter(Boolean).join(' & ');
-                                                            setEditFormData({ ...editFormData, father_name: f, partner_name: combined, name: editFormData.child_name ? `Baby ${editFormData.child_name}` : combined });
-                                                        }}
-                                                        placeholder="Nama ayah"
-                                                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                        Nama Lengkap Ibu
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        value={editFormData.mother_name}
-                                                        onChange={(e) => {
-                                                            const m = e.target.value;
-                                                            const f = editFormData.father_name;
-                                                            const combined = [f, m].filter(Boolean).join(' & ');
-                                                            setEditFormData({ ...editFormData, mother_name: m, partner_name: combined, name: editFormData.child_name ? `Baby ${editFormData.child_name}` : combined });
-                                                        }}
-                                                        placeholder="Nama ibu"
-                                                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                    Pekerjaan Orang Tua
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={editFormData.occupation}
-                                                    onChange={(e) => setEditFormData({ ...editFormData, occupation: e.target.value })}
-                                                    placeholder="Pekerjaan"
-                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* STANDARD EDIT FIELDS */}
-                                {activeEditFormType === 'standard' && (
-                                    <div className="space-y-3">
-                                        <div>
-                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                Nama Lengkap Klien / Pemesan <span className="text-red-500">*</span>
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={editFormData.name}
-                                                onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                                                placeholder="Nama Klien"
-                                                className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                            />
-                                        </div>
-
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            <div>
-                                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                    Nama Panggilan / Alias
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={editFormData.contact_person}
-                                                    onChange={(e) => setEditFormData({ ...editFormData, contact_person: e.target.value })}
-                                                    placeholder="Panggilan"
-                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                    Pekerjaan / Profesi
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={editFormData.occupation}
-                                                    onChange={(e) => setEditFormData({ ...editFormData, occupation: e.target.value })}
-                                                    placeholder="Profesi"
-                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                Perusahaan / Brand / Institusi
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={editFormData.company_name}
-                                                onChange={(e) => setEditFormData({ ...editFormData, company_name: e.target.value })}
-                                                placeholder="Nama Perusahaan"
-                                                className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                            />
                                         </div>
                                     </div>
                                 )}
                             </div>
                         )}
 
-                        {/* ========================================================================= */}
-                        {/* TAB 2: KONTAK & MEDIA SOSIAL */}
-                        {/* ========================================================================= */}
-                        {editActiveFormTab === 'contact' && (
-                            <div className="space-y-4 animate-in fade-in duration-150">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {/* 1. No. WhatsApp Utama */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center justify-between mb-1">
-                                            <span>Nomor WhatsApp Utama <span className="text-red-500">*</span></span>
-                                            <span className="text-[10px] text-emerald-600 font-semibold">Prioritas Kontak</span>
-                                        </label>
-                                        <div className="relative">
-                                            <input
-                                                type="text"
-                                                value={editFormData.phone}
-                                                onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
-                                                placeholder="Contoh: 081398765432"
-                                                className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all font-mono"
-                                            />
-                                            <Phone className="w-4 h-4 text-emerald-600 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                        </div>
-                                    </div>
-
-                                    {/* 2. No. Telepon Cadangan */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                            Nomor Telepon Cadangan
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={editFormData.secondary_phone}
-                                            onChange={(e) => setEditFormData({ ...editFormData, secondary_phone: e.target.value })}
-                                            placeholder="Contoh: 081234567890 (Pasangan/PIC)"
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all font-mono"
-                                        />
-                                    </div>
-
-                                    {/* 3. Email Aktif */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                            Alamat Email Aktif
-                                        </label>
-                                        <div className="relative">
-                                            <input
-                                                type="email"
-                                                value={editFormData.email}
-                                                onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                                                placeholder="contoh@gmail.com"
-                                                className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                            />
-                                            <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                        </div>
-                                    </div>
-
-                                    {/* 4. Akun Instagram */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                            Akun Instagram
-                                        </label>
-                                        <div className="relative">
-                                            <input
-                                                type="text"
-                                                value={editFormData.instagram}
-                                                onChange={(e) => setEditFormData({ ...editFormData, instagram: e.target.value })}
-                                                placeholder="@username"
-                                                className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                            />
-                                            <Instagram className="w-4 h-4 text-pink-600 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                        </div>
-                                    </div>
-
-                                    {/* 5. Preferensi Komunikasi */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                            Saluran Komunikasi Pilihan
-                                        </label>
-                                        <select
-                                            value={editFormData.preferred_contact}
-                                            onChange={(e) => setEditFormData({ ...editFormData, preferred_contact: e.target.value })}
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all cursor-pointer"
-                                        >
-                                            <option value="WhatsApp">WhatsApp (Rekomendasi Utama)</option>
-                                            <option value="Email">Email Resmi</option>
-                                            <option value="Phone">Panggilan Telepon Langsung</option>
-                                        </select>
-                                    </div>
-
-                                    {/* 6. Contact Person / PIC */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                            Nama Contact Person (PIC)
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={editFormData.contact_person}
-                                            onChange={(e) => setEditFormData({ ...editFormData, contact_person: e.target.value })}
-                                            placeholder="Contoh: Jessica Mila (CPP)"
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                        />
-                                    </div>
-
-                                    {/* 7. Pekerjaan */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                            Pekerjaan / Profesi
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={editFormData.occupation}
-                                            onChange={(e) => setEditFormData({ ...editFormData, occupation: e.target.value })}
-                                            placeholder="Contoh: Pengusaha / Dokter / Aktris"
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                        />
-                                    </div>
-
-                                    {/* 8. Sosial Media Lainnya */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                            Sosial Media Lainnya
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={editFormData.other_social_media}
-                                            onChange={(e) => setEditFormData({ ...editFormData, other_social_media: e.target.value })}
-                                            placeholder="TikTok: @user • YouTube: Channel"
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                        />
-                                    </div>
+                        {/* STEP 2: INFORMASI ALAMAT & KONTAK */}
+                        {editCurrentStep === 2 && (
+                            <div className="space-y-5 animate-in fade-in duration-200">
+                                <div>
+                                    <h3 className="text-base font-bold text-slate-900">
+                                        Informasi Alamat & Kontak
+                                    </h3>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        Lengkapi informasi domisili wilayah dan pilih kontak utama untuk komunikasi.
+                                    </p>
                                 </div>
-                            </div>
-                        )}
 
-                        {/* ========================================================================= */}
-                        {/* TAB 3: DOMISILI & WILAYAH */}
-                        {/* ========================================================================= */}
-                        {editActiveFormTab === 'location' && (
-                            <div className="space-y-4 animate-in fade-in duration-150">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {/* 1. Pilih Provinsi */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">1</span>
-                                            <span>Pilih Provinsi</span>
-                                        </label>
-                                        <select
-                                            value={editFormData.province_code}
-                                            onChange={(e) => handleProvinceChange(e.target.value)}
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all cursor-pointer"
-                                        >
-                                            <option value="">-- Pilih Provinsi --</option>
-                                            {(regionProvinces || []).map((p) => (
-                                                <option key={p.code} value={p.code}>{p.name}</option>
-                                            ))}
-                                        </select>
+                                {/* Blue Info Alert */}
+                                <div className="bg-indigo-50/70 border border-indigo-100/90 rounded-2xl p-4 flex items-center gap-3 text-xs text-indigo-900">
+                                    <Info className="w-4 h-4 text-indigo-600 shrink-0" />
+                                    <span>
+                                        <strong>Informasi penting:</strong> Pastikan semua data alamat dan kontak utama yang diisi sudah benar agar memudahkan komunikasi.
+                                    </span>
+                                </div>
+
+                                {/* Regional Cascading Address */}
+                                <div className="border border-slate-200/80 rounded-2xl p-4 sm:p-5 space-y-4 shadow-2xs bg-white">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-7 h-7 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
+                                            <MapPin className="w-4 h-4" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-xs font-bold text-slate-900">
+                                                Wilayah Domisili / Alamat Klien
+                                            </h4>
+                                            <p className="text-[11px] text-slate-500">
+                                                Pilih Provinsi, Kota, Kecamatan, dan Kelurahan Indonesia secara bertingkat.
+                                            </p>
+                                        </div>
                                     </div>
 
-                                    {/* 2. Pilih Kota/Kabupaten */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">2</span>
-                                            <span>Pilih Kota / Kabupaten</span>
-                                        </label>
-                                        <select
-                                            value={editFormData.city_code}
-                                            onChange={(e) => handleCitySelectChange(e.target.value)}
-                                            disabled={!editFormData.province_code || loadingCities}
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all disabled:bg-slate-50 disabled:cursor-not-allowed cursor-pointer"
-                                        >
-                                            <option value="">{loadingCities ? 'Memuat kota...' : '-- Pilih Kota / Kabupaten --'}</option>
-                                            {(regionCities || []).map((c) => (
-                                                <option key={c.code} value={c.code}>{c.name}</option>
-                                            ))}
-                                        </select>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Provinsi <span className="text-red-500">*</span>
+                                            </label>
+                                            <SelectSearch
+                                                options={provinceOptions}
+                                                value={editFormData.province_code}
+                                                onChange={handleProvinceChange}
+                                                placeholder="Pilih Provinsi..."
+                                                searchPlaceholder="Cari provinsi..."
+                                                clearable={false}
+                                                className="w-full bg-white"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Kota / Kabupaten <span className="text-red-500">*</span>
+                                            </label>
+                                            <SelectSearch
+                                                options={cityOptions}
+                                                value={editFormData.city_code}
+                                                onChange={handleCitySelectChange}
+                                                placeholder={loadingCities ? 'Memuat kota...' : 'Pilih Kota...'}
+                                                searchPlaceholder="Cari kota/kabupaten..."
+                                                disabled={!editFormData.province_code || loadingCities}
+                                                clearable={false}
+                                                className="w-full bg-white"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Kecamatan
+                                            </label>
+                                            <SelectSearch
+                                                options={districtOptions}
+                                                value={editFormData.district_code}
+                                                onChange={handleDistrictSelectChange}
+                                                placeholder={loadingDistricts ? 'Memuat kecamatan...' : 'Pilih Kecamatan...'}
+                                                searchPlaceholder="Cari kecamatan..."
+                                                disabled={!editFormData.city_code || loadingDistricts}
+                                                clearable={false}
+                                                className="w-full bg-white"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Kelurahan / Desa
+                                            </label>
+                                            <SelectSearch
+                                                options={villageOptions}
+                                                value={editFormData.village_code}
+                                                onChange={handleVillageSelectChange}
+                                                placeholder={loadingVillages ? 'Memuat kelurahan...' : 'Pilih Kelurahan...'}
+                                                searchPlaceholder="Cari kelurahan/desa..."
+                                                disabled={!editFormData.district_code || loadingVillages}
+                                                clearable={false}
+                                                className="w-full bg-white"
+                                            />
+                                        </div>
                                     </div>
 
-                                    {/* 3. Pilih Kecamatan */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">3</span>
-                                            <span>Pilih Kecamatan</span>
-                                        </label>
-                                        <select
-                                            value={editFormData.district_code}
-                                            onChange={(e) => handleDistrictSelectChange(e.target.value)}
-                                            disabled={!editFormData.city_code || loadingDistricts}
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all disabled:bg-slate-50 disabled:cursor-not-allowed cursor-pointer"
-                                        >
-                                            <option value="">{loadingDistricts ? 'Memuat kecamatan...' : '-- Pilih Kecamatan --'}</option>
-                                            {(regionDistricts || []).map((d) => (
-                                                <option key={d.code} value={d.code}>{d.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    {/* 4. Pilih Kelurahan */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">4</span>
-                                            <span>Pilih Kelurahan</span>
-                                        </label>
-                                        <select
-                                            value={editFormData.village_code}
-                                            onChange={(e) => handleVillageSelectChange(e.target.value)}
-                                            disabled={!editFormData.district_code || loadingVillages}
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all disabled:bg-slate-50 disabled:cursor-not-allowed cursor-pointer"
-                                        >
-                                            <option value="">{loadingVillages ? 'Memuat kelurahan...' : '-- Pilih Kelurahan --'}</option>
-                                            {(regionVillages || []).map((v) => (
-                                                <option key={v.code} value={v.code}>{v.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    {/* 5. Kode Pos */}
-                                    <div className="sm:col-span-2">
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">5</span>
-                                            <span>Kode Pos</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={editFormData.postal_code}
-                                            onChange={(e) => setEditFormData({ ...editFormData, postal_code: e.target.value })}
-                                            placeholder="Masukkan kode pos"
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all font-mono"
-                                        />
-                                    </div>
-
-                                    {/* 6. Tulis Alamat Lengkap */}
-                                    <div className="sm:col-span-2">
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">6</span>
-                                            <span>Tulis Alamat Lengkap</span>
-                                        </label>
-                                        <div className="relative">
-                                            <textarea
-                                                rows={3}
+                                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3.5 pt-1">
+                                        <div className="sm:col-span-3">
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Alamat Lengkap (Jalan, No. Rumah, RT/RW, Patokan)
+                                            </label>
+                                            <input
+                                                type="text"
                                                 value={editFormData.address}
                                                 onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
-                                                placeholder="Contoh: Jl. Melawai Raya No.12, RT.03/RW.02, Melawai, Kebayoran Baru, Jakarta Selatan 12160"
-                                                className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all resize-none pr-10"
+                                                placeholder="Jl. Melati No. 12, RT 02 / RW 05"
+                                                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
                                             />
-                                            <MapPin className="w-4 h-4 text-slate-400 absolute right-3 bottom-3 pointer-events-none" />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Kode Pos
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={editFormData.postal_code}
+                                                onChange={(e) => setEditFormData({ ...editFormData, postal_code: e.target.value })}
+                                                placeholder="12345"
+                                                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Kontak & Live Preview */}
+                                <div className="border border-slate-200/80 rounded-2xl p-4 sm:p-5 space-y-4 shadow-2xs bg-white">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-7 h-7 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
+                                            <Phone className="w-4 h-4" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-xs font-bold text-slate-900">
+                                                Kontak Utama &amp; Komunikasi
+                                            </h4>
+                                            <p className="text-[11px] text-slate-500">
+                                                Pilih kontak utama dan lengkapi kontak komunikasi WhatsApp / Email.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                                        <div className="lg:col-span-6 space-y-3.5">
+                                            <div>
+                                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                    Pilih Kontak Utama <span className="text-red-500">*</span>
+                                                </label>
+                                                <NativeSelect
+                                                    value={editFormData.primary_contact}
+                                                    onChange={(e) => setEditFormData({ ...editFormData, primary_contact: e.target.value })}
+                                                >
+                                                    {editActiveCategoryKey === 'wedding' || editActiveCategoryKey === 'engagement' ? (
+                                                        <>
+                                                            <option value="cpw">Calon Pengantin Wanita (CPW) — {(editCategoryData as any).bride_name || editFormData.bride_name || 'CPW'}</option>
+                                                            <option value="cpp">Calon Pengantin Pria (CPP) — {(editCategoryData as any).groom_name || editFormData.groom_name || 'CPP'}</option>
+                                                        </>
+                                                    ) : editActiveCategoryKey === 'prewedding' ? (
+                                                        <>
+                                                            <option value="cpw">Pasangan 1 — {(editCategoryData as any).partner_1 || editFormData.bride_name || 'Pasangan 1'}</option>
+                                                            <option value="cpp">Pasangan 2 — {(editCategoryData as any).partner_2 || editFormData.groom_name || 'Pasangan 2'}</option>
+                                                        </>
+                                                    ) : editActiveCategoryKey === 'maternity' ? (
+                                                        <>
+                                                            <option value="cpw">Ibu Hamil — {(editCategoryData as any).mom_name || editFormData.mother_name || 'Ibu Hamil'}</option>
+                                                            <option value="cpp">Pasangan / Ayah — {(editCategoryData as any).partner_name || editFormData.father_name || 'Pasangan'}</option>
+                                                        </>
+                                                    ) : editActiveCategoryKey === 'corporate' ? (
+                                                        <option value="pic">PIC Perusahaan — {(editCategoryData as any).pic_name || 'PIC'}</option>
+                                                    ) : editActiveCategoryKey === 'komunitas' ? (
+                                                        <option value="pic">PIC Komunitas — {(editCategoryData as any).pic_name || 'PIC'}</option>
+                                                    ) : editActiveCategoryKey === 'newborn' ? (
+                                                        <>
+                                                            <option value="mother">Ibu — {(editCategoryData as any).mother_name || editFormData.mother_name || 'Ibu'}</option>
+                                                            <option value="cpp">Ayah — {(editCategoryData as any).father_name || editFormData.father_name || 'Ayah'}</option>
+                                                        </>
+                                                    ) : (
+                                                        <option value="client">Pemesan — {(editCategoryData as any).contact_person || editFormData.name || 'Pemesan'}</option>
+                                                    )}
+                                                </NativeSelect>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                    No. WhatsApp <span className="text-red-500">*</span>
+                                                </label>
+                                                <div className="relative">
+                                                    <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                                        <Phone className="w-3.5 h-3.5" />
+                                                    </span>
+                                                    <input
+                                                        type="text"
+                                                        required
+                                                        value={editFormData.phone}
+                                                        onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                                                        placeholder="+62 812-3456-7890"
+                                                        className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                    Email
+                                                </label>
+                                                <div className="relative">
+                                                    <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                                        <Mail className="w-3.5 h-3.5" />
+                                                    </span>
+                                                    <input
+                                                        type="email"
+                                                        value={editFormData.email}
+                                                        onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                                                        placeholder="contoh@gmail.com"
+                                                        className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                    Social Media Lainnya
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={editFormData.other_social_media}
+                                                    onChange={(e) => setEditFormData({ ...editFormData, other_social_media: e.target.value })}
+                                                    placeholder="TikTok: @username, Instagram: @akun"
+                                                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="lg:col-span-6 bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 space-y-2.5">
+                                            <div className="flex items-center gap-1.5 text-slate-800 text-xs font-bold pb-2 border-b border-slate-200/60">
+                                                <span>Data Kontak (Terisi Otomatis)</span>
+                                                <Info className="w-3.5 h-3.5 text-slate-400" />
+                                            </div>
+
+                                            <div className="space-y-2 text-xs">
+                                                <div className="flex justify-between py-0.5 border-b border-slate-100">
+                                                    <span className="text-slate-400">Nama Lengkap</span>
+                                                    <span className="font-semibold text-slate-800 text-right">
+                                                        {editPrimaryContactInfo.name} ({editPrimaryContactInfo.role})
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between py-0.5 border-b border-slate-100">
+                                                    <span className="text-slate-400">Pekerjaan</span>
+                                                    <span className="font-semibold text-slate-800 text-right">
+                                                        {editPrimaryContactInfo.occupation}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between py-0.5 border-b border-slate-100">
+                                                    <span className="text-slate-400">No. WhatsApp</span>
+                                                    <span className="font-semibold text-slate-800 text-right">
+                                                        {editFormData.phone || '-'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between py-0.5 border-b border-slate-100">
+                                                    <span className="text-slate-400">Akun Instagram</span>
+                                                    <span className="font-semibold text-slate-800 text-right">
+                                                        {editPrimaryContactInfo.instagram}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between py-0.5 border-b border-slate-100">
+                                                    <span className="text-slate-400">Email</span>
+                                                    <span className="font-semibold text-slate-800 text-right">
+                                                        {editFormData.email || '-'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between py-0.5">
+                                                    <span className="text-slate-400">Social Media Lain</span>
+                                                    <span className="font-semibold text-slate-800 text-right max-w-[180px] truncate">
+                                                        {editFormData.other_social_media || '-'}
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         )}
 
-                        {/* ========================================================================= */}
-                        {/* TAB 4: INFORMASI ACARA & PAKET PROJECT */}
-                        {/* ========================================================================= */}
-                        {editActiveFormTab === 'event' && (
-                            <div className="space-y-4 animate-in fade-in duration-150">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {/* Jenis Acara */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">9</span>
-                                            <span>Jenis Acara / Project</span>
-                                        </label>
-                                        <select
-                                            value={editFormData.event_type}
-                                            onChange={(e) => setEditFormData({ ...editFormData, event_type: e.target.value })}
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all cursor-pointer"
-                                        >
-                                            <option value="Wedding">Wedding</option>
-                                            <option value="Prewedding">Prewedding</option>
-                                            <option value="Engagement">Engagement / Lamaran</option>
-                                            <option value="Birthday">Birthday / Ulang Tahun</option>
-                                            <option value="Corporate">Corporate Event</option>
-                                            <option value="Family">Family Session</option>
-                                        </select>
+                        {/* STEP 3: INFORMASI ACARA/PROJECT & MANAJEMEN */}
+                        {editCurrentStep === 3 && (
+                            <div className="space-y-5 animate-in fade-in duration-200">
+                                <div>
+                                    <h3 className="text-base font-bold text-slate-900">
+                                        Paket, Detail Acara &amp; Pengaturan Klien
+                                    </h3>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        Lengkapi detail jadwal, paket, tempat pelaksanaan, sumber lead, dan status klien.
+                                    </p>
+                                </div>
+
+                                {/* Blue Info Alert */}
+                                <div className="bg-indigo-50/70 border border-indigo-100/90 rounded-2xl p-4 flex items-center gap-3 text-xs text-indigo-900">
+                                    <Info className="w-4 h-4 text-indigo-600 shrink-0" />
+                                    <span>
+                                        <strong>Informasi penting:</strong> Informasi yang Anda isi akan membantu tim mempersiapkan sesi dokumentasi dan paket layanan yang sesuai.
+                                    </span>
+                                </div>
+
+                                {/* Detail Acara / Project Card */}
+                                <div className="border border-slate-200/80 rounded-2xl p-4 sm:p-5 space-y-4 shadow-2xs bg-white">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-7 h-7 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+                                            <Calendar className="w-4 h-4" />
+                                        </div>
+                                        <h4 className="text-xs font-bold text-slate-900">
+                                            Detail Acara &amp; Paket Photography
+                                        </h4>
                                     </div>
 
-                                    {/* Tanggal Pelaksanaan Acara */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">10</span>
-                                            <span>Tanggal Pelaksanaan Acara</span>
-                                        </label>
-                                        <input
-                                            type="date"
-                                            value={editFormData.event_date}
-                                            onChange={(e) => setEditFormData({ ...editFormData, event_date: e.target.value })}
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                        />
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Kategori Project
+                                            </label>
+                                            <SelectSearch
+                                                options={editCategorySelectOptions}
+                                                value={String(editFormData.category_id || editActiveCategory?.id)}
+                                                onChange={(val) => {
+                                                    const cat = categories.find((c) => String(c.id) === String(val));
+                                                    setEditFormData({
+                                                        ...editFormData,
+                                                        category_id: val,
+                                                        client_type: cat?.slug || editFormData.client_type,
+                                                    });
+                                                }}
+                                                placeholder="Pilih kategori project"
+                                                searchPlaceholder="Cari kategori..."
+                                                clearable={false}
+                                                className="w-full bg-white"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Jenis Acara <span className="text-red-500">*</span>
+                                            </label>
+                                            <NativeSelect
+                                                value={editFormData.event_type}
+                                                onChange={(e) => setEditFormData({ ...editFormData, event_type: e.target.value })}
+                                                options={[
+                                                    { value: 'Pernikahan', label: 'Pernikahan' },
+                                                    { value: 'Akad Saja', label: 'Akad Saja' },
+                                                    { value: 'Resepsi Saja', label: 'Resepsi Saja' },
+                                                    { value: 'Akad & Resepsi', label: 'Akad & Resepsi' },
+                                                    { value: 'Lamaran & Engagement', label: 'Lamaran & Engagement' },
+                                                    { value: 'Prewedding', label: 'Prewedding' },
+                                                    { value: 'Siraman & Pengajian', label: 'Siraman & Pengajian' },
+                                                    { value: 'Unduh Mantu', label: 'Unduh Mantu' },
+                                                    { value: 'Family Session', label: 'Family Session' },
+                                                    { value: 'Maternity Session', label: 'Maternity Session' },
+                                                    { value: 'Newborn Session', label: 'Newborn Session' },
+                                                    { value: 'Corporate Documentation', label: 'Corporate Documentation' },
+                                                    { value: 'Event Documentation', label: 'Event Documentation' },
+                                                ]}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Pilihan Paket (Opsional)
+                                            </label>
+                                            <SelectSearch
+                                                options={[
+                                                    ...editFilteredPackages.map((p: any) => ({
+                                                        value: String(p.id),
+                                                        label: p.name,
+                                                        subtitle: p.description
+                                                            ? p.description
+                                                            : p.base_price
+                                                            ? `Rp ${Number(p.base_price).toLocaleString('id-ID')}`
+                                                            : undefined,
+                                                    })),
+                                                ]}
+                                                value={editFormData.package_id}
+                                                onChange={(val) => setEditFormData({ ...editFormData, package_id: val })}
+                                                placeholder="Pilih paket atau layanan"
+                                                searchPlaceholder="Cari paket..."
+                                                clearable={true}
+                                                className="w-full bg-white"
+                                            />
+                                        </div>
                                     </div>
 
-                                    {/* Waktu Pelaksanaan Acara */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">11</span>
-                                            <span>Waktu Pelaksanaan Acara</span>
-                                        </label>
-                                        <input
-                                            type="time"
-                                            value={editFormData.event_time}
-                                            onChange={(e) => setEditFormData({ ...editFormData, event_time: e.target.value })}
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all"
-                                        />
-                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Tanggal Acara / Sesi
+                                            </label>
+                                            <input
+                                                type="date"
+                                                value={editFormData.event_date}
+                                                onChange={(e) => setEditFormData({ ...editFormData, event_date: e.target.value })}
+                                                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
+                                            />
+                                        </div>
 
-                                    {/* Tempat Acara */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">12</span>
-                                            <span>Tempat / Lokasi Acara</span>
-                                        </label>
-                                        <div className="relative">
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Waktu / Jam Sesi / Acara
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={editFormData.event_time}
+                                                onChange={(e) => setEditFormData({ ...editFormData, event_time: e.target.value })}
+                                                placeholder="Contoh: 08:00 - 14:00 WIB"
+                                                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Tempat / Lokasi Sesi
+                                            </label>
                                             <input
                                                 type="text"
                                                 value={editFormData.event_location}
                                                 onChange={(e) => setEditFormData({ ...editFormData, event_location: e.target.value })}
-                                                placeholder="Contoh: The Ritz Carlton Jakarta"
-                                                className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all pr-10"
+                                                placeholder="Contoh: Grand Ballroom Hotel Hilton"
+                                                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
                                             />
-                                            <MapPin className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                                         </div>
                                     </div>
 
-                                    {/* Paket Dipilih */}
-                                    <div className="sm:col-span-2">
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">13</span>
-                                            <span>Pilihan Paket Photography</span>
+                                    <div className={`grid grid-cols-1 ${editActiveCategoryKey === 'wedding' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-3.5`}>
+                                        {editActiveCategoryKey === 'wedding' && (
+                                            <div>
+                                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                    Lokasi Resepsi (Jika berbeda)
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={editFormData.reception_location}
+                                                    onChange={(e) => setEditFormData({ ...editFormData, reception_location: e.target.value })}
+                                                    placeholder="Contoh: Gedung Pernikahan..."
+                                                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
+                                                />
+                                            </div>
+                                        )}
+
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Estimasi Jumlah Tamu
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={editFormData.estimated_guests}
+                                                onChange={(e) => setEditFormData({ ...editFormData, estimated_guests: e.target.value })}
+                                                placeholder="Contoh: 300 - 500 Pax"
+                                                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Warna Tema / Konsep Acara
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={editFormData.concept_theme}
+                                                onChange={(e) => setEditFormData({ ...editFormData, concept_theme: e.target.value })}
+                                                placeholder="Contoh: Emerald Green & White"
+                                                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                            Vendor Lain yang Terlibat
                                         </label>
-                                        <select
-                                            value={editFormData.package_id}
-                                            onChange={(e) => setEditFormData({ ...editFormData, package_id: e.target.value })}
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all cursor-pointer"
-                                        >
-                                            <option value="">-- Pilih Paket (Opsional) --</option>
-                                            {(packages && packages.length > 0) ? (
-                                                packages.map((pkg) => (
-                                                    <option key={pkg.id} value={pkg.id}>
-                                                        {pkg.name} {pkg.base_price ? `(${formatRupiah(pkg.base_price)})` : ''}
-                                                    </option>
-                                                ))
+                                        <input
+                                            type="text"
+                                            value={editFormData.other_vendors}
+                                            onChange={(e) => setEditFormData({ ...editFormData, other_vendors: e.target.value })}
+                                            placeholder="Contoh: WO: Aruna Organizer, MUA: Bubah Alfian, Decor: Lotus"
+                                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Informasi Tambahan, Manajemen & Status Card */}
+                                <div className="border border-slate-200/80 rounded-2xl p-4 sm:p-5 space-y-4 shadow-2xs bg-white">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-7 h-7 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+                                            <FileText className="w-4 h-4" />
+                                        </div>
+                                        <h4 className="text-xs font-bold text-slate-900">
+                                            Manajemen Klien &amp; Catatan Khusus
+                                        </h4>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Sumber Klien (Lead Source) <span className="text-red-500">*</span>
+                                            </label>
+                                            {client_sources && client_sources.length > 0 ? (
+                                                <select
+                                                    value={editFormData.client_source_id || ''}
+                                                    onChange={(e) => {
+                                                        const selected = client_sources.find((cs) => cs.id === e.target.value);
+                                                        setEditFormData({
+                                                            ...editFormData,
+                                                            client_source_id: e.target.value,
+                                                            source: selected?.name || editFormData.source,
+                                                        });
+                                                    }}
+                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all cursor-pointer"
+                                                >
+                                                    <option value="">— Pilih Sumber Klien —</option>
+                                                    {client_sources.map((cs) => (
+                                                        <option key={cs.id} value={cs.id}>
+                                                            {cs.name} {cs.type ? `(${cs.type})` : ''}
+                                                        </option>
+                                                    ))}
+                                                </select>
                                             ) : (
-                                                <>
-                                                    <option value="1">Wedding Gold Package (Rp 45.000.000)</option>
-                                                    <option value="2">Wedding Silver Package (Rp 25.000.000)</option>
-                                                    <option value="3">Prewedding Premium (Rp 15.000.000)</option>
-                                                    <option value="4">Custom Package</option>
-                                                </>
+                                                <select
+                                                    value={editFormData.source}
+                                                    onChange={(e) => setEditFormData({ ...editFormData, source: e.target.value })}
+                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all cursor-pointer"
+                                                >
+                                                    <option value="Instagram">Instagram Ads / Organik</option>
+                                                    <option value="TikTok">TikTok</option>
+                                                    <option value="Google">Google Search / SEO</option>
+                                                    <option value="Wedding Organizer">Vendor Partner / Wedding Organizer</option>
+                                                    <option value="Rekomendasi Teman">Rekomendasi Klien / Teman</option>
+                                                    <option value="Website">Website Resmi Arams</option>
+                                                    <option value="Bridestory">Bridestory</option>
+                                                </select>
                                             )}
-                                        </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Status Klien
+                                            </label>
+                                            <select
+                                                value={editFormData.status}
+                                                onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                                                className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all cursor-pointer"
+                                            >
+                                                <option value="active">Aktif (Sedang Berjalan)</option>
+                                                <option value="lead">Lead / Calon Klien (Follow-up)</option>
+                                                <option value="completed">Selesai (Arsip)</option>
+                                                <option value="blocked">Diblokir (Nonaktif)</option>
+                                            </select>
+                                        </div>
+
+                                        {editFormData.source === 'Wedding Organizer' && (
+                                            <div className="sm:col-span-2">
+                                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                    Pilih Wedding Organizer (Partner)
+                                                </label>
+                                                <select
+                                                    value={editFormData.wedding_organizer_id}
+                                                    onChange={(e) => setEditFormData({ ...editFormData, wedding_organizer_id: e.target.value })}
+                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all cursor-pointer"
+                                                >
+                                                    <option value="">-- Pilih Partner WO --</option>
+                                                    {(wedding_organizers || []).map((wo: any) => (
+                                                        <option key={wo.id} value={wo.id}>
+                                                            {wo.name} ({wo.city || 'Partner'})
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
+
+                                        {editFormData.source === 'Rekomendasi Teman' && (
+                                            <div className="sm:col-span-2">
+                                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                    Direferensikan oleh Klien
+                                                </label>
+                                                <select
+                                                    value={editFormData.referred_by_client_id}
+                                                    onChange={(e) => setEditFormData({ ...editFormData, referred_by_client_id: e.target.value })}
+                                                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all cursor-pointer"
+                                                >
+                                                    <option value="">-- Pilih Klien Referrer --</option>
+                                                    {(all_clients || []).map((cl: any) => (
+                                                        <option key={cl.id} value={cl.id}>
+                                                            {cl.name} ({cl.phone || cl.city || 'Klien'})
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
+
+                                        <div className="sm:col-span-2">
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1.5">
+                                                Tag / Label Klien
+                                            </label>
+                                            <div className="flex flex-wrap gap-1.5 mb-2">
+                                                {presetTags.map((tag) => {
+                                                    const isSelected = editFormData.tags.includes(tag);
+                                                    return (
+                                                        <button
+                                                            key={tag}
+                                                            type="button"
+                                                            onClick={() => toggleEditTag(tag)}
+                                                            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                                                                isSelected
+                                                                    ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                                                    : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
+                                                            }`}
+                                                        >
+                                                            #{tag}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={editNewTagInput}
+                                                    onChange={(e) => setEditNewTagInput(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                            e.preventDefault();
+                                                            handleAddEditCustomTag();
+                                                        }
+                                                    }}
+                                                    placeholder="Tambah tag kustom (tekan Enter)..."
+                                                    className="flex-1 px-3.5 py-2 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={handleAddEditCustomTag}
+                                                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                                                >
+                                                    Tambah Tag
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="sm:col-span-2">
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Link Moodboard / Referensi Foto (Pinterest/Drive)
+                                            </label>
+                                            <div className="relative">
+                                                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                                    <Globe className="w-3.5 h-3.5" />
+                                                </span>
+                                                <input
+                                                    type="url"
+                                                    value={editFormData.reference_url}
+                                                    onChange={(e) => setEditFormData({ ...editFormData, reference_url: e.target.value })}
+                                                    placeholder="https://pinterest.com/... atau https://drive.google.com/..."
+                                                    className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="sm:col-span-2">
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Permintaan Khusus &amp; Catatan Acara
+                                            </label>
+                                            <textarea
+                                                rows={3}
+                                                value={editFormData.notes}
+                                                onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
+                                                placeholder="Contoh: Klien menginginkan pencahayaan natural warm tone, fokus foto candid keluarga, dll."
+                                                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all resize-none"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         )}
 
-                        {/* ========================================================================= */}
-                        {/* TAB 5: SUMBER, STATUS & CATATAN */}
-                        {/* ========================================================================= */}
-                        {editActiveFormTab === 'preferences' && (
-                            <div className="space-y-4 animate-in fade-in duration-150">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {/* Sumber Klien */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">14</span>
-                                            <span>Sumber Klien (Lead Source) <span className="text-red-500">*</span></span>
-                                        </label>
-                                        <select
-                                            value={editFormData.source}
-                                            onChange={(e) => setEditFormData({ ...editFormData, source: e.target.value })}
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all cursor-pointer"
+                        {/* STEP 4: RINGKASAN & KONFIRMASI */}
+                        {editCurrentStep === 4 && (
+                            <div className="space-y-5 animate-in fade-in duration-200">
+                                <div>
+                                    <h3 className="text-base font-bold text-slate-900">
+                                        Ringkasan &amp; Konfirmasi Data Klien
+                                    </h3>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        Silakan tinjau kembali data yang telah diisi sebelum menyimpan perubahan data.
+                                    </p>
+                                </div>
+
+                                {/* Blue Info Alert */}
+                                <div className="bg-indigo-50/70 border border-indigo-100/90 rounded-2xl p-4 flex items-center gap-3 text-xs text-indigo-900">
+                                    <Info className="w-4 h-4 text-indigo-600 shrink-0" />
+                                    <span>
+                                        <strong>Pastikan semua data sudah benar.</strong> Periksa kembali data profil, kontak, dan detail acara sebelum menyimpan perubahan data.
+                                    </span>
+                                </div>
+
+                                {/* CARD 1: DETAIL KATEGORI & PROFIL */}
+                                <div className="border border-slate-200/80 rounded-2xl p-4 sm:p-5 space-y-3 bg-white shadow-2xs">
+                                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                                                <Bookmark className="w-3.5 h-3.5" />
+                                            </div>
+                                            <h4 className="text-xs font-bold text-slate-900">
+                                                Profil Kategori: {editActiveCategory?.name}
+                                            </h4>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditCurrentStep(1)}
+                                            className="text-xs font-bold text-[#C89445] hover:underline cursor-pointer"
                                         >
-                                            <option value="Instagram">Instagram Ads / Organik</option>
-                                            <option value="TikTok">TikTok</option>
-                                            <option value="Google">Google Search / SEO</option>
-                                            <option value="Wedding Organizer">Vendor Partner / Wedding Organizer</option>
-                                            <option value="Rekomendasi Teman">Rekomendasi Klien / Teman</option>
-                                            <option value="Website">Website Resmi Arams</option>
-                                            <option value="Bridestory">Bridestory</option>
-                                        </select>
+                                            Ubah Data
+                                        </button>
                                     </div>
 
-                                    {/* Status Klien */}
-                                    <div>
-                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                            Status Klien
-                                        </label>
-                                        <select
-                                            value={editFormData.status}
-                                            onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
-                                            className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all cursor-pointer"
+                                    <CategorySpecificView
+                                        project={{
+                                            category: {
+                                                name: editActiveCategory?.name || 'Wedding',
+                                                form_type: editActiveCategoryKey,
+                                            },
+                                            category_data: editCategoryData,
+                                            client: {
+                                                name: editPrimaryContactInfo.name,
+                                                email: editFormData.email,
+                                                phone: editFormData.phone,
+                                                instagram: editPrimaryContactInfo.instagram,
+                                                address: editFormData.address,
+                                                city: editFormData.city,
+                                                province: editFormData.province,
+                                            },
+                                        }}
+                                    />
+                                </div>
+
+                                {/* CARD 2: ALAMAT & KONTAK UTAMA */}
+                                <div className="border border-slate-200/80 rounded-2xl p-4 sm:p-5 space-y-3 bg-white shadow-2xs">
+                                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
+                                                <MapPin className="w-3.5 h-3.5" />
+                                            </div>
+                                            <h4 className="text-xs font-bold text-slate-900">
+                                                Informasi Alamat &amp; Kontak Utama
+                                            </h4>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditCurrentStep(2)}
+                                            className="text-xs font-bold text-[#C89445] hover:underline cursor-pointer"
                                         >
-                                            <option value="active">Aktif (Sedang Berjalan)</option>
-                                            <option value="lead">Lead / Calon Klien (Follow-up)</option>
-                                            <option value="completed">Selesai (Arsip)</option>
-                                        </select>
+                                            Ubah Alamat / Kontak
+                                        </button>
                                     </div>
 
-                                    {/* Conditional Wedding Organizer Referral */}
-                                    {editFormData.source === 'Wedding Organizer' && (
-                                        <div className="sm:col-span-2">
-                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                Pilih Wedding Organizer (Partner)
-                                            </label>
-                                            <select
-                                                value={editFormData.wedding_organizer_id}
-                                                onChange={(e) => setEditFormData({ ...editFormData, wedding_organizer_id: e.target.value })}
-                                                className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all cursor-pointer"
-                                            >
-                                                <option value="">-- Pilih Partner WO --</option>
-                                                {(wedding_organizers || []).map((wo) => (
-                                                    <option key={wo.id} value={wo.id}>
-                                                        {wo.name} ({wo.city || 'Partner'})
-                                                    </option>
-                                                ))}
-                                            </select>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                        <div className="p-3 bg-slate-50/70 rounded-xl space-y-1">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                                Wilayah Domisili
+                                            </span>
+                                            <p className="font-semibold text-slate-800">
+                                                {[editFormData.village, editFormData.district, editFormData.city, editFormData.province].filter(Boolean).join(', ') || '-'}
+                                            </p>
+                                            {editFormData.postal_code && (
+                                                <p className="text-[11px] text-slate-500">Kode Pos: {editFormData.postal_code}</p>
+                                            )}
+                                        </div>
+
+                                        <div className="p-3 bg-slate-50/70 rounded-xl space-y-1">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                                Kontak Utama ({editPrimaryContactInfo.role})
+                                            </span>
+                                            <p className="font-semibold text-slate-800">
+                                                {editPrimaryContactInfo.name} • {editFormData.phone || '-'}
+                                            </p>
+                                            {editFormData.email && (
+                                                <p className="text-[11px] text-slate-500">Email: {editFormData.email}</p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="p-3 bg-slate-50/70 rounded-xl text-xs space-y-1">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                            Alamat Lengkap
+                                        </span>
+                                        <p className="text-slate-800 font-medium leading-relaxed">
+                                            {editFormData.address || 'Belum diisi.'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* CARD 3: ACARA & MANAJEMEN */}
+                                <div className="border border-slate-200/80 rounded-2xl p-4 sm:p-5 space-y-3 bg-white shadow-2xs">
+                                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+                                                <Calendar className="w-3.5 h-3.5" />
+                                            </div>
+                                            <h4 className="text-xs font-bold text-slate-900">
+                                                Detail Acara, Paket &amp; Status
+                                            </h4>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditCurrentStep(3)}
+                                            className="text-xs font-bold text-[#C89445] hover:underline cursor-pointer"
+                                        >
+                                            Ubah Acara
+                                        </button>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                                        <div className="p-3 bg-slate-50/70 rounded-xl">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                                Jenis Acara
+                                            </span>
+                                            <span className="font-semibold text-slate-800">{editFormData.event_type}</span>
+                                        </div>
+                                        <div className="p-3 bg-slate-50/70 rounded-xl">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                                Tanggal &amp; Waktu
+                                            </span>
+                                            <span className="font-semibold text-slate-800">
+                                                {editFormData.event_date || '-'} {editFormData.event_time ? `(${editFormData.event_time})` : ''}
+                                            </span>
+                                        </div>
+                                        <div className="p-3 bg-slate-50/70 rounded-xl">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                                Lokasi Acara
+                                            </span>
+                                            <span className="font-semibold text-slate-800">{editFormData.event_location || '-'}</span>
+                                        </div>
+                                        <div className="p-3 bg-slate-50/70 rounded-xl">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                                Sumber Lead
+                                            </span>
+                                            <span className="font-semibold text-slate-800">{editFormData.source}</span>
+                                        </div>
+                                        <div className="p-3 bg-slate-50/70 rounded-xl">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                                Status
+                                            </span>
+                                            <span className="font-semibold text-emerald-700 capitalize">{editFormData.status}</span>
+                                        </div>
+                                        <div className="p-3 bg-slate-50/70 rounded-xl">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                                Estimasi Tamu
+                                            </span>
+                                            <span className="font-semibold text-slate-800">{editFormData.estimated_guests || '-'}</span>
+                                        </div>
+                                    </div>
+
+                                    {editFormData.notes && (
+                                        <div className="p-3 bg-slate-50/70 rounded-xl text-xs space-y-1">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                                Catatan Khusus
+                                            </span>
+                                            <p className="text-slate-800 leading-relaxed">{editFormData.notes}</p>
                                         </div>
                                     )}
-
-                                    {/* Conditional Referred By Client */}
-                                    {editFormData.source === 'Rekomendasi Teman' && (
-                                        <div className="sm:col-span-2">
-                                            <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                Direferensikan oleh Klien
-                                            </label>
-                                            <select
-                                                value={editFormData.referred_by_client_id}
-                                                onChange={(e) => setEditFormData({ ...editFormData, referred_by_client_id: e.target.value })}
-                                                className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all cursor-pointer"
-                                            >
-                                                <option value="">-- Pilih Klien Referrer --</option>
-                                                {(all_clients || []).map((cl) => (
-                                                    <option key={cl.id} value={cl.id}>
-                                                        {cl.name} ({cl.phone || cl.city || 'Klien'})
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    )}
-
-                                    {/* Tags Selection */}
-                                    <div className="sm:col-span-2">
-                                        <label className="text-[11px] font-bold text-slate-700 block mb-1.5">
-                                            Tag / Label Klien
-                                        </label>
-                                        <div className="flex flex-wrap gap-1.5 mb-2">
-                                            {presetTags.map((tag) => {
-                                                const isSelected = editFormData.tags.includes(tag);
-                                                return (
-                                                    <button
-                                                        key={tag}
-                                                        type="button"
-                                                        onClick={() => toggleEditTag(tag)}
-                                                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${isSelected
-                                                            ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                                                            : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
-                                                            }`}
-                                                    >
-                                                        {tag}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-
-                                    {/* Catatan Umum */}
-                                    <div className="sm:col-span-2">
-                                        <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 mb-1">
-                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">15</span>
-                                            <span>Catatan Umum / Permintaan Khusus</span>
-                                        </label>
-                                        <textarea
-                                            rows={3}
-                                            value={editFormData.notes}
-                                            onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })}
-                                            placeholder="Contoh: Klien menginginkan konsep timeless & elegant. Request sesi outdoor."
-                                            className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all resize-none"
-                                        />
-                                    </div>
                                 </div>
                             </div>
                         )}

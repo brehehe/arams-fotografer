@@ -173,6 +173,7 @@ Route::middleware(['auth'])->group(function () {
 
     // 8. Reports
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
 
     // 9. Files & Expiration Management
     Route::resource('files', FileLinkController::class)->only(['index', 'store', 'destroy']);

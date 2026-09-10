@@ -90,9 +90,17 @@ export default function AdminSettingsPage({ settings = {}, settingsMap = {} }: S
         company_email: getVal('company_email', 'info@arams.com'),
         company_phone: getVal('company_phone', '+62 812-3456-7890'),
         company_whatsapp: getVal('company_whatsapp', '+62 812-3456-7890'),
+        company_instagram: getVal('company_instagram', 'aramspictures'),
+        company_tiktok: getVal('company_tiktok', 'aramspictures'),
+        company_youtube: getVal('company_youtube', ''),
+        company_facebook: getVal('company_facebook', ''),
+        company_gdrive_url: getVal('company_gdrive_url', ''),
         company_website: getVal('company_website', 'https://www.arams.com'),
         company_address: getVal('company_address', 'Jl. Senopati No. 45, Kebayoran Baru, Jakarta Selatan 12190'),
         company_city: getVal('company_city', 'Jakarta Selatan'),
+        invoice_director_name: getVal('invoice_director_name', getVal('company_director_name', 'Aditya Pratama')),
+        invoice_director_title: getVal('invoice_director_title', 'Direktur Utama / Finance Studio'),
+        invoice_signature_city: getVal('invoice_signature_city', getVal('company_city', 'Jakarta Selatan')),
         timezone: getVal('timezone', '(GMT+07:00) Jakarta'),
         company_description: getVal('company_description', getVal('company_tagline', 'Jasa fotografi & videografi profesional untuk mengabadikan setiap momen berharga Anda dengan kualitas sinematik terbaik.')),
         company_operational_hours: getVal('company_operational_hours', 'Senin - Minggu, 09.00 - 18.00 WIB'),
@@ -706,62 +714,153 @@ export default function AdminSettingsPage({ settings = {}, settingsMap = {} }: S
                                     />
                                 </div>
 
-                                {/* Row 3: Website & Email */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                                            Website Resmi
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={form.company_website}
-                                            onChange={(e) => setForm({ ...form, company_website: e.target.value })}
-                                            className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:border-[#C89445] focus:ring-2 focus:ring-[#C89445]/20 outline-hidden transition-all"
-                                            placeholder="https://www.arams.com"
-                                        />
+                                {/* Row 3: Kontak Resmi (Email, No. Telepon, WhatsApp) */}
+                                <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/80 space-y-3">
+                                    <div className="flex items-center gap-2 pb-1 border-b border-slate-200/60">
+                                        <Phone className="w-4 h-4 text-[#3C0E0E]" />
+                                        <span className="text-xs font-bold text-slate-800">Kontak &amp; Komunikasi Studio</span>
                                     </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                                No. WhatsApp (Chat Klien)
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={form.company_whatsapp}
+                                                onChange={(e) => setForm({ ...form, company_whatsapp: e.target.value })}
+                                                className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:border-[#C89445] focus:ring-2 focus:ring-[#C89445]/20 outline-hidden transition-all"
+                                                placeholder="+62 812-3456-7890"
+                                            />
+                                        </div>
 
-                                    <div>
-                                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                                            Email Kontak
-                                        </label>
-                                        <input
-                                            type="email"
-                                            value={form.company_email}
-                                            onChange={(e) => setForm({ ...form, company_email: e.target.value })}
-                                            className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:border-[#C89445] focus:ring-2 focus:ring-[#C89445]/20 outline-hidden transition-all"
-                                            placeholder="info@arams.com"
-                                        />
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                                No. Telepon Studio
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={form.company_phone}
+                                                onChange={(e) => setForm({ ...form, company_phone: e.target.value })}
+                                                className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:border-[#C89445] focus:ring-2 focus:ring-[#C89445]/20 outline-hidden transition-all"
+                                                placeholder="+62 812-3456-7890"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                                Email Resmi
+                                            </label>
+                                            <input
+                                                type="email"
+                                                value={form.company_email}
+                                                onChange={(e) => setForm({ ...form, company_email: e.target.value })}
+                                                className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:border-[#C89445] focus:ring-2 focus:ring-[#C89445]/20 outline-hidden transition-all"
+                                                placeholder="info@arams.com"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* Row 4: No. Telepon & WhatsApp + Jam Operasional */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                                            No. Telepon / WhatsApp
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={form.company_phone}
-                                            onChange={(e) => setForm({ ...form, company_phone: e.target.value, company_whatsapp: e.target.value })}
-                                            className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:border-[#C89445] focus:ring-2 focus:ring-[#C89445]/20 outline-hidden transition-all"
-                                            placeholder="+62 812-3456-7890"
-                                        />
+                                {/* Row 4: Sosial Media & Cloud Storage */}
+                                <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/80 space-y-3">
+                                    <div className="flex items-center gap-2 pb-1 border-b border-slate-200/60">
+                                        <Instagram className="w-4 h-4 text-[#3C0E0E]" />
+                                        <span className="text-xs font-bold text-slate-800">Media Sosial &amp; Cloud Drive</span>
                                     </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                                Instagram (Username / URL)
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={form.company_instagram}
+                                                onChange={(e) => setForm({ ...form, company_instagram: e.target.value })}
+                                                className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:border-[#C89445] focus:ring-2 focus:ring-[#C89445]/20 outline-hidden transition-all"
+                                                placeholder="@aramspictures atau https://instagram.com/aramspictures"
+                                            />
+                                        </div>
 
-                                    <div>
-                                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                                            Jam Operasional (Footer Portal Klien)
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={form.company_operational_hours}
-                                            onChange={(e) => setForm({ ...form, company_operational_hours: e.target.value })}
-                                            className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:border-[#C89445] focus:ring-2 focus:ring-[#C89445]/20 outline-hidden transition-all"
-                                            placeholder="Senin - Minggu, 09.00 - 18.00 WIB"
-                                        />
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                                TikTok (Username / URL)
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={form.company_tiktok}
+                                                onChange={(e) => setForm({ ...form, company_tiktok: e.target.value })}
+                                                className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:border-[#C89445] focus:ring-2 focus:ring-[#C89445]/20 outline-hidden transition-all"
+                                                placeholder="@aramspictures atau https://tiktok.com/@aramspictures"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                                YouTube Channel URL
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={form.company_youtube}
+                                                onChange={(e) => setForm({ ...form, company_youtube: e.target.value })}
+                                                className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:border-[#C89445] focus:ring-2 focus:ring-[#C89445]/20 outline-hidden transition-all"
+                                                placeholder="https://youtube.com/@aramspictures"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                                Facebook Page URL
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={form.company_facebook}
+                                                onChange={(e) => setForm({ ...form, company_facebook: e.target.value })}
+                                                className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:border-[#C89445] focus:ring-2 focus:ring-[#C89445]/20 outline-hidden transition-all"
+                                                placeholder="https://facebook.com/aramspictures"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                                Website Resmi
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={form.company_website}
+                                                onChange={(e) => setForm({ ...form, company_website: e.target.value })}
+                                                className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:border-[#C89445] focus:ring-2 focus:ring-[#C89445]/20 outline-hidden transition-all"
+                                                placeholder="https://www.arams.com"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                                Google Drive Master / Client Link
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={form.company_gdrive_url}
+                                                onChange={(e) => setForm({ ...form, company_gdrive_url: e.target.value })}
+                                                className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:border-[#C89445] focus:ring-2 focus:ring-[#C89445]/20 outline-hidden transition-all"
+                                                placeholder="https://drive.google.com/drive/folders/..."
+                                            />
+                                        </div>
                                     </div>
+                                </div>
+
+                                {/* Row 5: Jam Operasional */}
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                        Jam Operasional (Ditampilkan pada Footer Portal Klien)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={form.company_operational_hours}
+                                        onChange={(e) => setForm({ ...form, company_operational_hours: e.target.value })}
+                                        className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:border-[#C89445] focus:ring-2 focus:ring-[#C89445]/20 outline-hidden transition-all"
+                                        placeholder="Senin - Minggu, 09.00 - 18.00 WIB"
+                                    />
                                 </div>
 
                                 {/* Row 5: Alamat Lengkap & Kota */}
@@ -806,6 +905,57 @@ export default function AdminSettingsPage({ settings = {}, settingsMap = {} }: S
                                                 <option value="(GMT+08:00) Makassar / Bali">WITA - (GMT+08:00) Bali, Makassar, Balikpapan</option>
                                                 <option value="(GMT+09:00) Jayapura">WIT - (GMT+09:00) Jayapura, Ambon</option>
                                             </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Row 6: Penandatangan Dokumen & Invoice (TTD) */}
+                                <div className="p-4 rounded-xl bg-purple-50/60 border border-purple-200/80 space-y-3">
+                                    <div className="flex items-center gap-2 pb-1 border-b border-purple-200/60">
+                                        <FileText className="w-4 h-4 text-[#5B21B6]" />
+                                        <span className="text-xs font-bold text-slate-800">Penandatangan Invoice &amp; Dokumen Resmi (TTD)</span>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                                Nama Direktur / Penandatangan
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={form.invoice_director_name}
+                                                onChange={(e) => setForm({ ...form, invoice_director_name: e.target.value })}
+                                                className="w-full px-3.5 py-2.5 bg-white border border-purple-200 rounded-xl text-xs text-slate-800 focus:border-[#5B21B6] focus:ring-2 focus:ring-[#5B21B6]/20 outline-hidden transition-all font-medium"
+                                                placeholder="Contoh: Aditya Pratama"
+                                            />
+                                            <p className="text-[10px] text-slate-500 mt-1">Nama yang tercantum pada kolom tanda tangan invoice.</p>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                                Jabatan Penandatangan
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={form.invoice_director_title}
+                                                onChange={(e) => setForm({ ...form, invoice_director_title: e.target.value })}
+                                                className="w-full px-3.5 py-2.5 bg-white border border-purple-200 rounded-xl text-xs text-slate-800 focus:border-[#5B21B6] focus:ring-2 focus:ring-[#5B21B6]/20 outline-hidden transition-all"
+                                                placeholder="Contoh: Direktur Utama / Finance Studio"
+                                            />
+                                            <p className="text-[10px] text-slate-500 mt-1">Gelar atau jabatan di bawah tanda tangan.</p>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                                Kota Tanda Tangan
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={form.invoice_signature_city}
+                                                onChange={(e) => setForm({ ...form, invoice_signature_city: e.target.value })}
+                                                className="w-full px-3.5 py-2.5 bg-white border border-purple-200 rounded-xl text-xs text-slate-800 focus:border-[#5B21B6] focus:ring-2 focus:ring-[#5B21B6]/20 outline-hidden transition-all"
+                                                placeholder="Contoh: Jakarta Selatan"
+                                            />
+                                            <p className="text-[10px] text-slate-500 mt-1">Lokasi penerbitan pada baris tanggal TTD.</p>
                                         </div>
                                     </div>
                                 </div>

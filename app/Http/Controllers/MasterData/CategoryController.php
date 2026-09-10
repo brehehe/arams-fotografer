@@ -22,8 +22,8 @@ class CategoryController extends Controller
         $query = Category::withCount(['projects', 'packages', 'services']);
 
         if ($search = $request->input('search')) {
-            $query->where('name', 'like', "%{$search}%")
-                ->orWhere('description', 'like', "%{$search}%");
+            $query->where('name', 'ilike', "%{$search}%")
+                ->orWhere('description', 'ilike', "%{$search}%");
         }
 
         $perPage = (int) $request->input('per_page', 10);

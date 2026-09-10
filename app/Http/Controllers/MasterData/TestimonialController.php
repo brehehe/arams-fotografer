@@ -22,9 +22,9 @@ class TestimonialController extends Controller
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('client_name', 'like', "%{$search}%")
-                    ->orWhere('package_name', 'like', "%{$search}%")
-                    ->orWhere('comment', 'like', "%{$search}%");
+                $q->where('client_name', 'ilike', "%{$search}%")
+                    ->orWhere('package_name', 'ilike', "%{$search}%")
+                    ->orWhere('comment', 'ilike', "%{$search}%");
             });
         }
 

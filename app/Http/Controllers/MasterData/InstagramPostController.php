@@ -19,7 +19,7 @@ class InstagramPostController extends Controller
         $query = InstagramPost::query();
 
         if ($search = $request->input('search')) {
-            $query->where('caption', 'like', "%{$search}%");
+            $query->where('caption', 'ilike', "%{$search}%");
         }
 
         $perPage = (int) $request->input('per_page', 12);

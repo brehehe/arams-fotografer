@@ -19,6 +19,7 @@ class Project extends Model
         'project_number',
         'name',
         'client_id',
+        'client_source_id',
         'wedding_organizer_id',
         'category_id',
         'package_id',
@@ -70,6 +71,11 @@ class Project extends Model
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class)->withTrashed();
+    }
+
+    public function clientSource(): BelongsTo
+    {
+        return $this->belongsTo(ClientSource::class, 'client_source_id')->withTrashed();
     }
 
     public function weddingOrganizer(): BelongsTo

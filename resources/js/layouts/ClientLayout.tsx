@@ -17,8 +17,30 @@ import {
     Star,
     MessageCircle,
     Clock,
+    Download,
+    AlertTriangle,
+    Receipt,
+    Calendar,
+    Sparkles,
+    Loader2,
+    ArrowRight,
 } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
+interface NotificationItem {
+    id: string;
+    type: string;
+    category: string;
+    title: string;
+    message: string;
+    time_ago: string;
+    url: string;
+    priority: string;
+    icon: string;
+    color: string;
+    is_read: boolean;
+    created_at: string;
+}
 
 interface ClientLayoutProps {
     children: React.ReactNode;
@@ -31,6 +53,45 @@ export function ClientLayout({ children }: ClientLayoutProps) {
 
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
+    const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [loadingNotifs, setLoadingNotifs] = useState(false);
+
+    const fetchNotifications = async () => {
+        try {
+            setLoadingNotifs(true);
+            const res = await fetch('/api/notifications?portal=client');
+            if (res.ok) {
+                const data = await res.json();
+                setNotifications(data.notifications || []);
+                setUnreadCount(data.unread_count || 0);
+            }
+        } catch (err) {
+            console.error('Failed to fetch client notifications', err);
+        } finally {
+            setLoadingNotifs(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchNotifications();
+    }, []);
+
+    const handleMarkAllRead = async () => {
+        try {
+            await fetch('/api/notifications/mark-read', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as any)?.content || '',
+                },
+            });
+            setUnreadCount(0);
+            setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+        } catch (err) {
+            console.error('Failed to mark notifications as read', err);
+        }
+    };
 
     // Dynamic Theme Tokens from Settings
     const portalBg = appSettings.portal_bg_color || '#FBF6F0';
@@ -97,6 +158,31 @@ export function ClientLayout({ children }: ClientLayoutProps) {
 
     const cleanWhatsapp = companyWhatsapp.replace(/[^0-9]/g, '');
     const whatsappLink = cleanWhatsapp ? `https://wa.me/${cleanWhatsapp}` : '#';
+
+    // Format Social URLs from Admin Settings
+    const formatSocialUrl = (value: string | undefined, platform: 'instagram' | 'youtube' | 'tiktok' | 'facebook') => {
+        if (!value || !value.trim()) return null;
+        const clean = value.trim();
+        if (clean.startsWith('http://') || clean.startsWith('https://')) return clean;
+        const handle = clean.replace(/^@/, '');
+        switch (platform) {
+            case 'instagram':
+                return `https://instagram.com/${handle}`;
+            case 'youtube':
+                return handle.startsWith('@') || handle.startsWith('channel/') ? `https://youtube.com/${handle}` : `https://youtube.com/@${handle}`;
+            case 'tiktok':
+                return `https://tiktok.com/@${handle}`;
+            case 'facebook':
+                return `https://facebook.com/${handle}`;
+            default:
+                return `https://${clean}`;
+        }
+    };
+
+    const instagramUrl = formatSocialUrl(appSettings.company_instagram, 'instagram') || 'https://instagram.com';
+    const youtubeUrl = formatSocialUrl(appSettings.company_youtube, 'youtube') || 'https://youtube.com';
+    const tiktokUrl = formatSocialUrl(appSettings.company_tiktok, 'tiktok') || 'https://tiktok.com';
+    const facebookUrl = formatSocialUrl(appSettings.company_facebook, 'facebook') || 'https://facebook.com';
 
     // Safe hex to rgba converter for smooth transparent gradients and opacity
     const hexToRgba = (hex: string, alpha: number) => {
@@ -392,40 +478,108 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                         <div className="relative">
                             <button
                                 type="button"
-                                onClick={() => setNotificationsOpen(!notificationsOpen)}
+                                onClick={() => {
+                                    if (!notificationsOpen) fetchNotifications();
+                                    setNotificationsOpen(!notificationsOpen);
+                                }}
                                 className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center relative transition-colors cursor-pointer"
                                 style={{ color: portalNavText }}
+                                aria-label="Notifikasi"
                             >
                                 <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                <span
-                                    style={{
-                                        backgroundColor: '#E11D48',
-                                        borderColor: portalNavBg,
-                                    }}
-                                    className="absolute top-1 right-1 w-2 h-2 rounded-full border border-[#3C0E0E]"
-                                />
+                                {unreadCount > 0 && (
+                                    <span
+                                        style={{
+                                            backgroundColor: '#E11D48',
+                                            borderColor: portalNavBg,
+                                        }}
+                                        className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full border-2 border-[#3C0E0E] flex items-center justify-center"
+                                    />
+                                )}
                             </button>
 
                             {/* Notifications Dropdown */}
                             {notificationsOpen && (
                                 <>
                                     <div className="fixed inset-0 z-40" onClick={() => setNotificationsOpen(false)} />
-                                    <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-100 p-3 z-50 text-xs animate-in fade-in zoom-in-95">
-                                        <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2">
-                                            <span className="font-bold text-slate-900">Notifikasi</span>
-                                            <span className="text-[10px] text-[#3C0E0E] font-semibold">Tandai sudah dibaca</span>
+                                    <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-100 p-3 z-50 text-xs animate-in fade-in zoom-in-95">
+                                        <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-bold text-slate-900 text-sm">Notifikasi</span>
+                                                {notifications.length > 0 && (
+                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#F4EBE4] text-[#3C0E0E]">
+                                                        {notifications.length}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {notifications.length > 0 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleMarkAllRead}
+                                                    className="text-[10px] text-[#3C0E0E] hover:underline font-bold cursor-pointer"
+                                                >
+                                                    Tandai sudah dibaca
+                                                </button>
+                                            )}
                                         </div>
-                                        <div className="space-y-2">
-                                            <div className="p-2.5 rounded-xl bg-[#F4EBE4]/60 border border-[#F4EBE4]">
-                                                <p className="font-bold text-slate-900 text-[11px]">Preview Foto Siap Dilihat</p>
-                                                <p className="text-[10px] text-slate-500 mt-0.5">Editor telah mengunggah preview foto untuk Wedding Anda.</p>
-                                                <span className="text-[9px] text-slate-400 mt-1 block">5 menit yang lalu</span>
-                                            </div>
-                                            <div className="p-2.5 rounded-xl bg-slate-50">
-                                                <p className="font-bold text-slate-900 text-[11px]">Pembayaran Terverifikasi</p>
-                                                <p className="text-[10px] text-slate-500 mt-0.5">Pembayaran termin DP telah berhasil diverifikasi oleh admin.</p>
-                                                <span className="text-[9px] text-slate-400 mt-1 block">2 jam yang lalu</span>
-                                            </div>
+
+                                        <div className="space-y-1.5 max-h-80 overflow-y-auto divide-y divide-slate-50">
+                                            {loadingNotifs ? (
+                                                <div className="py-8 text-center text-xs text-slate-400 space-y-1">
+                                                    <Loader2 className="w-5 h-5 mx-auto animate-spin text-[#3C0E0E]" />
+                                                    <p>Memuat notifikasi...</p>
+                                                </div>
+                                            ) : notifications.length === 0 ? (
+                                                <div className="py-8 text-center space-y-1.5">
+                                                    <Sparkles className="w-7 h-7 text-emerald-500 mx-auto" />
+                                                    <p className="text-xs font-bold text-slate-800">Tidak ada notifikasi baru</p>
+                                                    <p className="text-[11px] text-slate-400">Progres pengerjaan dan file drive Anda aman.</p>
+                                                </div>
+                                            ) : (
+                                                notifications.map((notif) => (
+                                                    <Link
+                                                        key={notif.id}
+                                                        href={notif.url}
+                                                        onClick={() => setNotificationsOpen(false)}
+                                                        className="p-2.5 rounded-xl hover:bg-[#FBF6F0] transition-colors flex items-start gap-3 group block cursor-pointer"
+                                                    >
+                                                        <div
+                                                            className={`w-7 h-7 rounded-lg shrink-0 flex items-center justify-center border mt-0.5 ${
+                                                                notif.color === 'rose'
+                                                                    ? 'bg-rose-50 text-rose-600 border-rose-100'
+                                                                    : notif.color === 'amber'
+                                                                    ? 'bg-amber-50 text-amber-600 border-amber-100'
+                                                                    : notif.color === 'emerald'
+                                                                    ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                                                                    : notif.color === 'blue'
+                                                                    ? 'bg-blue-50 text-blue-600 border-blue-100'
+                                                                    : 'bg-purple-50 text-purple-600 border-purple-100'
+                                                            }`}
+                                                        >
+                                                            {notif.icon === 'Download' && <Download className="w-3.5 h-3.5" />}
+                                                            {notif.icon === 'Clock' && <Clock className="w-3.5 h-3.5" />}
+                                                            {notif.icon === 'Calendar' && <Calendar className="w-3.5 h-3.5" />}
+                                                            {notif.icon === 'CheckCircle2' && <CheckCircle2 className="w-3.5 h-3.5" />}
+                                                            {notif.icon === 'Receipt' && <Receipt className="w-3.5 h-3.5" />}
+                                                            {notif.icon === 'AlertTriangle' && <AlertTriangle className="w-3.5 h-3.5" />}
+                                                        </div>
+
+                                                        <div className="flex-1 min-w-0 space-y-0.5">
+                                                            <div className="flex items-center justify-between gap-1">
+                                                                <span className="text-[11px] font-bold text-slate-900 group-hover:text-[#3C0E0E] transition-colors truncate">
+                                                                    {notif.title}
+                                                                </span>
+                                                                <span className="text-[9.5px] text-slate-400 font-mono shrink-0">
+                                                                    {notif.time_ago}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-[10.5px] text-slate-600 leading-snug line-clamp-2">
+                                                                {notif.message}
+                                                            </p>
+                                                        </div>
+                                                    </Link>
+                                                ))
+                                            )}
                                         </div>
                                     </div>
                                 </>
@@ -439,15 +593,15 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                                 onClick={() => setDropdownOpen(!dropdownOpen)}
                                 className="flex items-center gap-1.5 sm:gap-2.5 p-1 pr-1.5 sm:pr-3 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer"
                             >
-                                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-amber-600 text-white flex items-center justify-center text-xs font-bold uppercase overflow-hidden shadow-2xs shrink-0">
+                                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#3C0E0E] border border-white/20 text-white flex items-center justify-center text-xs font-bold uppercase overflow-hidden shadow-2xs shrink-0">
                                     {user?.avatar ? (
                                         <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
                                     ) : (
-                                        <img src="/images/wedding-couple.jpg" alt="User" className="w-full h-full object-cover" />
+                                        <span>{(user?.name || 'Klien').substring(0, 2).toUpperCase()}</span>
                                     )}
                                 </div>
                                 <span className="text-xs font-bold text-white max-w-[130px] truncate hidden sm:inline">
-                                    {user?.name || 'Andi Pratama'}
+                                    {user?.name || 'Klien Arams'}
                                 </span>
                                 <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white/70 shrink-0" />
                             </button>
@@ -458,10 +612,10 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                                     <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
                                     <div className="absolute right-0 mt-2 w-56 bg-white text-slate-800 rounded-2xl shadow-xl border border-slate-100 p-2 z-50 text-xs animate-in fade-in zoom-in-95 divide-y divide-slate-100">
                                         <div className="px-3 py-2">
-                                            <p className="font-bold text-slate-900 truncate">{user?.name || 'Andi Pratama'}</p>
-                                            <p className="text-[11px] text-slate-500 truncate">{user?.email || 'andi.pratama@gmail.com'}</p>
+                                            <p className="font-bold text-slate-900 truncate">{user?.name || 'Klien Arams'}</p>
+                                            <p className="text-[11px] text-slate-500 truncate">{user?.email || '-'}</p>
                                             <span className="inline-block px-2 py-0.5 mt-1 rounded-full text-[9px] font-bold bg-[#F4EBE4] text-[#3C0E0E]">
-                                                Akun Klien
+                                                {user?.roles?.[0] || 'Akun Klien'}
                                             </span>
                                         </div>
 
@@ -791,7 +945,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                             </p>
                             <div className="flex items-center gap-2.5 pt-1 lg:justify-end">
                                 <a
-                                    href="https://instagram.com"
+                                    href={instagramUrl}
                                     target="_blank"
                                     rel="noreferrer"
                                     style={{
@@ -805,7 +959,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                                     <Instagram className="w-4 h-4 group-hover:text-white transition-colors" />
                                 </a>
                                 <a
-                                    href="https://youtube.com"
+                                    href={youtubeUrl}
                                     target="_blank"
                                     rel="noreferrer"
                                     style={{
@@ -819,7 +973,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                                     <Youtube className="w-4 h-4 group-hover:text-white transition-colors" />
                                 </a>
                                 <a
-                                    href="https://tiktok.com"
+                                    href={tiktokUrl}
                                     target="_blank"
                                     rel="noreferrer"
                                     style={{
@@ -833,7 +987,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                                     <span className="text-xs font-bold group-hover:text-white transition-colors">♪</span>
                                 </a>
                                 <a
-                                    href="https://facebook.com"
+                                    href={facebookUrl}
                                     target="_blank"
                                     rel="noreferrer"
                                     style={{
@@ -845,20 +999,6 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                                     aria-label="Facebook"
                                 >
                                     <Facebook className="w-4 h-4 group-hover:text-white transition-colors" />
-                                </a>
-                                <a
-                                    href="https://pinterest.com"
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    style={{
-                                        backgroundColor: footerItemBg,
-                                        borderColor: footerBorderColor,
-                                        color: footerItemIconColor,
-                                    }}
-                                    className="w-8 h-8 rounded-full border flex items-center justify-center hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] transition-all shadow-2xs group cursor-pointer"
-                                    aria-label="Pinterest"
-                                >
-                                    <span className="text-xs font-serif font-bold group-hover:text-white transition-colors">P</span>
                                 </a>
                             </div>
                         </div>

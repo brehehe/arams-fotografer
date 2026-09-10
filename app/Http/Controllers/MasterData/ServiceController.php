@@ -19,8 +19,8 @@ class ServiceController extends Controller
         $query = Service::with('category:id,name,color');
 
         if ($search = $request->input('search')) {
-            $query->where('name', 'like', "%{$search}%")
-                ->orWhere('description', 'like', "%{$search}%");
+            $query->where('name', 'ilike', "%{$search}%")
+                ->orWhere('description', 'ilike', "%{$search}%");
         }
 
         if ($categoryId = $request->input('category_id')) {

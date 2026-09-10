@@ -23,7 +23,7 @@ class ActivityLogController extends Controller
         }
 
         if ($search = $request->input('search')) {
-            $query->where('description', 'like', "%{$search}%");
+            $query->where('description', 'ilike', "%{$search}%");
         }
 
         $activities = $query->latest()->paginate(20)->withQueryString();

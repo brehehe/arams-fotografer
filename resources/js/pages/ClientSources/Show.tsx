@@ -32,6 +32,8 @@ import {
 
 interface ReferralHistoryItem {
     id: number | string;
+    client_id?: string | null;
+    project_id?: string | null;
     client: string;
     project: string;
     project_category: string;
@@ -590,12 +592,32 @@ export default function ClientSourceShow({
                                                     {idx + 1}
                                                 </td>
                                                 <td className="py-3 px-3.5 font-bold text-slate-900">
-                                                    {item.client}
+                                                    {item.client_id ? (
+                                                        <Link
+                                                            href={`/clients/${item.client_id}`}
+                                                            className="text-slate-900 hover:text-purple-600 hover:underline transition-colors"
+                                                            title="Lihat profil detail klien"
+                                                        >
+                                                            {item.client}
+                                                        </Link>
+                                                    ) : (
+                                                        item.client
+                                                    )}
                                                 </td>
                                                 <td className="py-3 px-3.5">
-                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-lg text-[11px] font-bold border ${getCategoryBadgeColor(item.project_category)}`}>
-                                                        {item.project}
-                                                    </span>
+                                                    {item.project_id ? (
+                                                        <Link
+                                                            href={`/projects/${item.project_id}`}
+                                                            className={`inline-flex items-center px-2.5 py-0.5 rounded-lg text-[11px] font-bold border hover:opacity-80 transition-opacity ${getCategoryBadgeColor(item.project_category)}`}
+                                                            title="Lihat detail project"
+                                                        >
+                                                            {item.project}
+                                                        </Link>
+                                                    ) : (
+                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-lg text-[11px] font-bold border ${getCategoryBadgeColor(item.project_category)}`}>
+                                                            {item.project}
+                                                        </span>
+                                                    )}
                                                 </td>
                                                 <td className="py-3 px-3.5 text-slate-500 font-medium">
                                                     {item.event_date}

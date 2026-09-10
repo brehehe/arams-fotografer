@@ -62,8 +62,15 @@ import {
     Baby,
 } from 'lucide-react';
 import { formatRupiah, formatDate } from '@/lib/formatters';
-import { FormattedNumberInput } from '@/components/ui/formatted-number-input';
-import { CategorySpecificView } from '@/components/projects/CategorySpecificView';
+import {
+    RecordPaymentModal,
+    ProofViewerModal,
+    AddDriveLinkModal,
+    AddNoteModal,
+    AddHighlightModal,
+    ProjectSlideModal,
+    CategorySpecificView,
+} from '@/components/projects';
 
 interface FileLinkItem {
     id: string;
@@ -111,87 +118,17 @@ export default function ProjectDetail({
 
     // Modals
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-    const [paymentSubmitting, setPaymentSubmitting] = useState(false);
+    const [paymentModalData, setPaymentModalData] = useState<{ amount?: number; notes?: string }>({});
     const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
-    const [paymentFormData, setPaymentFormData] = useState<{
-        amount: string;
-        payment_date: string;
-        payment_method_id: string;
-        reference_number: string;
-        notes: string;
-        proof_file: File | null;
-    }>({
-        amount: '',
-        payment_date: new Date().toISOString().split('T')[0],
-        payment_method_id: payment_methods[0]?.id || '',
-        reference_number: '',
-        notes: 'Pembayaran Project',
-        proof_file: null,
-    });
 
     const openPaymentModal = (defaultAmount?: number, defaultNotes?: string) => {
-        setPaymentFormData({
-            amount: defaultAmount && defaultAmount > 0 ? String(Math.round(defaultAmount)) : '',
-            payment_date: new Date().toISOString().split('T')[0],
-            payment_method_id: payment_methods[0]?.id || '',
-            reference_number: '',
-            notes: defaultNotes || `Pembayaran untuk project ${project?.name || ''}`,
-            proof_file: null,
-        });
+        setPaymentModalData({ amount: defaultAmount, notes: defaultNotes });
         setIsPaymentModalOpen(true);
     };
 
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
-    const [linkSubmitting, setLinkSubmitting] = useState(false);
-    const [linkFormData, setLinkFormData] = useState({
-        name: 'Master Dokumentasi Google Drive',
-        drive_url: '',
-        file_type: 'google_drive',
-        expiry_days: '30',
-    });
-
     const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
-    const [newNoteText, setNewNoteText] = useState('');
-
-    // Highlight Project Modal State & Handlers
     const [isHighlightModalOpen, setIsHighlightModalOpen] = useState(false);
-    const [highlightSubmitting, setHighlightSubmitting] = useState(false);
-    const [highlightFormData, setHighlightFormData] = useState({
-        title: '',
-        caption: '',
-        image_url: '',
-        image_file: null as File | null,
-        is_cover: false,
-    });
-    const [highlightFilePreview, setHighlightFilePreview] = useState('');
-
-    const handleHighlightSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        setHighlightSubmitting(true);
-        const form = new FormData();
-        form.append('title', highlightFormData.title || 'Momen Acara');
-        form.append('caption', highlightFormData.caption);
-        form.append('is_cover', highlightFormData.is_cover ? '1' : '0');
-        if (highlightFormData.image_file) {
-            form.append('image_file', highlightFormData.image_file);
-        } else if (highlightFormData.image_url) {
-            form.append('image_url', highlightFormData.image_url);
-        }
-
-        router.post(`/projects/${project?.id}/highlights`, form, {
-            onSuccess: () => {
-                toast.success('Foto highlight berhasil ditambahkan ke project');
-                setIsHighlightModalOpen(false);
-                setHighlightSubmitting(false);
-                setHighlightFormData({ title: '', caption: '', image_url: '', image_file: null, is_cover: false });
-                setHighlightFilePreview('');
-            },
-            onError: (err) => {
-                toast.error(Object.values(err)[0] as string || 'Gagal menambahkan foto highlight');
-                setHighlightSubmitting(false);
-            },
-        });
-    };
 
     const handleSetCover = (highlightId: string) => {
         router.post(`/projects/${project?.id}/highlights/${highlightId}/cover`, {}, {
@@ -211,101 +148,16 @@ export default function ProjectDetail({
     // ── SLIDE PROJECT STATE & HANDLERS ──────────────────────────────────────
     const [isSlideModalOpen, setIsSlideModalOpen] = useState(false);
     const [editingSlide, setEditingSlide] = useState<any | null>(null);
-    const [slideSubmitting, setSlideSubmitting] = useState(false);
     const [slidePreviewIndex, setSlidePreviewIndex] = useState(0);
-    const [slideFormData, setSlideFormData] = useState({
-        title: '',
-        tag: 'EXCLUSIVE PROJECT',
-        description: '',
-        button_text: 'Lihat Detail Project',
-        button_url: '',
-        image_url: '',
-        image_file: null as File | null,
-        is_active: true,
-        sort_order: 1,
-    });
-    const [slideFilePreview, setSlideFilePreview] = useState('');
 
     const openCreateSlideModal = () => {
         setEditingSlide(null);
-        setSlideFormData({
-            title: `Eksklusif: ${project?.name || 'Project Spesial'}`,
-            tag: 'EXCLUSIVE PROJECT',
-            description: `Dokumentasi dan momen berharga Anda telah siap. Buka galeri untuk melihat hasil karya terbaik dari studio kami.`,
-            button_text: 'Lihat Detail Project',
-            button_url: `/client/projects/${project?.id || ''}`,
-            image_url: project?.thumbnail || '',
-            image_file: null,
-            is_active: true,
-            sort_order: (project?.promo_slides?.length || 0) + 1,
-        });
-        setSlideFilePreview(project?.thumbnail || '');
         setIsSlideModalOpen(true);
     };
 
     const openEditSlideModal = (slide: any) => {
         setEditingSlide(slide);
-        setSlideFormData({
-            title: slide.title,
-            tag: slide.tag,
-            description: slide.description || '',
-            button_text: slide.button_text,
-            button_url: slide.button_url,
-            image_url: slide.image || '',
-            image_file: null,
-            is_active: Boolean(slide.is_active),
-            sort_order: slide.sort_order || 1,
-        });
-        setSlideFilePreview(slide.image || '');
         setIsSlideModalOpen(true);
-    };
-
-    const handleSlideSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        setSlideSubmitting(true);
-        const form = new FormData();
-        form.append('title', slideFormData.title);
-        form.append('tag', slideFormData.tag);
-        form.append('description', slideFormData.description);
-        form.append('button_text', slideFormData.button_text);
-        form.append('button_url', slideFormData.button_url);
-        form.append('is_active', slideFormData.is_active ? '1' : '0');
-        form.append('sort_order', String(slideFormData.sort_order));
-
-        if (slideFormData.image_file) {
-            form.append('image_file', slideFormData.image_file);
-        } else if (slideFormData.image_url) {
-            form.append('image_url', slideFormData.image_url);
-        }
-
-        if (editingSlide) {
-            form.append('_method', 'PATCH');
-            router.post(`/projects/${project?.id}/promo-slides/${editingSlide.id}`, form, {
-                preserveScroll: true,
-                onSuccess: () => {
-                    toast.success('Slide banner project berhasil diperbarui');
-                    setIsSlideModalOpen(false);
-                    setSlideSubmitting(false);
-                },
-                onError: (err) => {
-                    toast.error(Object.values(err)[0] as string || 'Gagal memperbarui slide banner');
-                    setSlideSubmitting(false);
-                },
-            });
-        } else {
-            router.post(`/projects/${project?.id}/promo-slides`, form, {
-                preserveScroll: true,
-                onSuccess: () => {
-                    toast.success('Slide banner project berhasil ditambahkan');
-                    setIsSlideModalOpen(false);
-                    setSlideSubmitting(false);
-                },
-                onError: (err) => {
-                    toast.error(Object.values(err)[0] as string || 'Gagal menambahkan slide banner');
-                    setSlideSubmitting(false);
-                },
-            });
-        }
     };
 
     const handleToggleSlideActive = (slide: any) => {
@@ -701,83 +553,6 @@ export default function ProjectDetail({
                 },
                 onError: () => {
                     toast.error('Gagal mengubah status project');
-                },
-            }
-        );
-    };
-
-    // Handle Payment Submission (Connected to Finance)
-    const handlePaymentSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!paymentFormData.amount || Number(paymentFormData.amount) <= 0) {
-            toast.error('Silakan masukkan jumlah pembayaran yang valid');
-            return;
-        }
-
-        const methodId = paymentFormData.payment_method_id || payment_methods[0]?.id;
-        if (!methodId) {
-            toast.error('Silakan pilih metode pembayaran');
-            return;
-        }
-
-        setPaymentSubmitting(true);
-
-        const payload: Record<string, any> = {
-            project_id: project.id,
-            amount: paymentFormData.amount,
-            payment_date: paymentFormData.payment_date,
-            payment_method_id: methodId,
-            reference_number: paymentFormData.reference_number,
-            notes: paymentFormData.notes,
-            invoice_id: project.invoices?.[0]?.id,
-        };
-
-        if (paymentFormData.proof_file) {
-            payload.proof_file = paymentFormData.proof_file;
-        }
-
-        router.post(
-            '/finance/payments',
-            payload,
-            {
-                forceFormData: true,
-                preserveScroll: true,
-                onSuccess: () => {
-                    setPaymentSubmitting(false);
-                    setIsPaymentModalOpen(false);
-                    toast.success('Pembayaran dan bukti transfer berhasil dicatat dan masuk ke modul Keuangan!');
-                },
-                onError: (errors: any) => {
-                    setPaymentSubmitting(false);
-                    const errorMsg = Object.values(errors || {})[0] as string;
-                    toast.error(errorMsg || 'Gagal mencatat pembayaran');
-                },
-            }
-        );
-    };
-
-    // Handle File Link Submission
-    const handleLinkSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!linkFormData.drive_url) {
-            toast.error('Silakan masukkan URL Link Google Drive');
-            return;
-        }
-
-        setLinkSubmitting(true);
-        router.post(
-            `/projects/${project.id}/file-links`,
-            linkFormData,
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    setLinkSubmitting(false);
-                    setIsLinkModalOpen(false);
-                    toast.success('Link Google Drive berhasil ditambahkan!');
-                },
-                onError: () => {
-                    setLinkSubmitting(false);
-                    toast.error('Gagal menambahkan link');
                 },
             }
         );
@@ -1408,17 +1183,7 @@ export default function ProjectDetail({
                                     {!isDpPaid ? (
                                         <button
                                             type="button"
-                                            onClick={() => {
-                                                setPaymentFormData({
-                                                    amount: String(Math.round(nominalDP)),
-                                                    payment_date: new Date().toISOString().split('T')[0],
-                                                    payment_method_id: payment_methods[0]?.id || '',
-                                                    reference_number: '',
-                                                    notes: `Pembayaran DP (${dpPercent}%) project ${project.name}`,
-                                                    proof_file: null,
-                                                });
-                                                setIsPaymentModalOpen(true);
-                                            }}
+                                            onClick={() => openPaymentModal(nominalDP, `Pembayaran DP (${dpPercent}%) project ${project.name}`)}
                                             className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-bold rounded-lg shadow-2xs transition-all cursor-pointer flex items-center gap-1 shrink-0 whitespace-nowrap"
                                         >
                                             <CheckCircle2 className="w-3 h-3" />
@@ -1952,11 +1717,7 @@ export default function ProjectDetail({
                         </div>
                         <button
                             type="button"
-                            onClick={() => {
-                                setHighlightFormData({ title: '', caption: '', image_url: '', image_file: null, is_cover: false });
-                                setHighlightFilePreview('');
-                                setIsHighlightModalOpen(true);
-                            }}
+                            onClick={() => setIsHighlightModalOpen(true)}
                             className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#3B46F1] text-white rounded-xl text-xs font-bold shadow-xs hover:bg-[#323BD8] cursor-pointer"
                         >
                             <Plus className="w-3.5 h-3.5" />
@@ -2055,11 +1816,7 @@ export default function ProjectDetail({
                             </p>
                             <button
                                 type="button"
-                                onClick={() => {
-                                    setHighlightFormData({ title: '', caption: '', image_url: '', image_file: null, is_cover: false });
-                                    setHighlightFilePreview('');
-                                    setIsHighlightModalOpen(true);
-                                }}
+                                onClick={() => setIsHighlightModalOpen(true)}
                                 className="inline-flex items-center gap-2 px-4 py-2 bg-[#3B46F1] text-white rounded-xl text-xs font-bold hover:bg-[#323BD8] cursor-pointer"
                             >
                                 <Plus className="w-4 h-4" />
@@ -2360,688 +2117,49 @@ export default function ProjectDetail({
                 </div>
             )}
 
-            {/* ── MODAL: CATAT PEMBAYARAN ───────────────────────────────────────── */}
-            {isPaymentModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in">
-                    <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
-                        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                            <h3 className="font-bold text-sm text-slate-900">Catat Pembayaran Klien</h3>
-                            <button
-                                type="button"
-                                onClick={() => setIsPaymentModalOpen(false)}
-                                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 cursor-pointer"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
-                        <form onSubmit={handlePaymentSubmit} className="space-y-3.5 text-xs">
-                            {/* Summary Finansial Singkat */}
-                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center justify-between text-xs">
-                                <div>
-                                    <span className="text-slate-400 block text-[10px] font-medium">Total Nilai Project</span>
-                                    <span className="font-bold text-slate-900 font-mono">{formatRupiah(totalProject)}</span>
-                                </div>
-                                <div className="text-center">
-                                    <span className="text-slate-400 block text-[10px] font-medium">Sudah Dibayar</span>
-                                    <span className="font-bold text-emerald-600 font-mono">{formatRupiah(paidAmount)}</span>
-                                </div>
-                                <div className="text-right">
-                                    <span className="text-slate-400 block text-[10px] font-medium">Sisa Tagihan</span>
-                                    <span className="font-bold text-amber-700 font-mono">{formatRupiah(sisaPelunasan)}</span>
-                                </div>
-                            </div>
+            {/* ── MODALS (STRUCTURED & REUSABLE) ─────────────────────────────────── */}
+            <RecordPaymentModal
+                isOpen={isPaymentModalOpen}
+                onClose={() => {
+                    setIsPaymentModalOpen(false);
+                    setPaymentModalData({});
+                }}
+                project={project}
+                paymentMethods={payment_methods}
+                initialAmount={paymentModalData.amount}
+                initialNotes={paymentModalData.notes}
+            />
 
-                            {/* Shortcut Pilihan Cepat Nominal */}
-                            <div className="space-y-1.5">
-                                <div className="flex items-center justify-between text-[11px]">
-                                    <label className="font-bold text-slate-700">Pilihan Cepat Nominal (Shortcut):</label>
-                                    <span className="text-[10px] text-slate-400">Klik untuk isi otomatis</span>
-                                </div>
-                                <div className="flex flex-wrap gap-1.5">
-                                    {nominalDP > 0 && paidAmount < nominalDP && (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setPaymentFormData({
-                                                    ...paymentFormData,
-                                                    amount: String(Math.round(nominalDP)),
-                                                    notes: `Pembayaran Uang Muka (DP ${dpPercent}%) untuk ${project?.name || ''}`,
-                                                });
-                                            }}
-                                            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer border ${
-                                                Number(paymentFormData.amount) === Math.round(nominalDP)
-                                                    ? 'bg-indigo-50 text-[#3B46F1] border-indigo-300 ring-1 ring-indigo-200'
-                                                    : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
-                                            }`}
-                                        >
-                                            Bayar DP ({formatRupiah(nominalDP)})
-                                        </button>
-                                    )}
+            <ProofViewerModal
+                isOpen={Boolean(selectedProofUrl)}
+                proofUrl={selectedProofUrl}
+                onClose={() => setSelectedProofUrl(null)}
+            />
 
-                                    {sisaPelunasan > 0 && (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setPaymentFormData({
-                                                    ...paymentFormData,
-                                                    amount: String(Math.round(sisaPelunasan)),
-                                                    notes: `Pelunasan Sisa Tagihan untuk ${project?.name || ''}`,
-                                                });
-                                            }}
-                                            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer border ${
-                                                Number(paymentFormData.amount) === Math.round(sisaPelunasan)
-                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-300 ring-1 ring-emerald-200'
-                                                    : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
-                                            }`}
-                                        >
-                                            Pelunasan Sisa ({formatRupiah(sisaPelunasan)})
-                                        </button>
-                                    )}
+            <AddDriveLinkModal
+                isOpen={isLinkModalOpen}
+                onClose={() => setIsLinkModalOpen(false)}
+                projectId={project?.id}
+            />
 
-                                    {totalProject > 0 && paidAmount === 0 && (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setPaymentFormData({
-                                                    ...paymentFormData,
-                                                    amount: String(Math.round(totalProject)),
-                                                    notes: `Pembayaran Lunas Penuh (100%) untuk ${project?.name || ''}`,
-                                                });
-                                            }}
-                                            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer border ${
-                                                Number(paymentFormData.amount) === Math.round(totalProject)
-                                                    ? 'bg-purple-50 text-purple-700 border-purple-300 ring-1 ring-purple-200'
-                                                    : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
-                                            }`}
-                                        >
-                                            Lunas Penuh 100% ({formatRupiah(totalProject)})
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
+            <AddNoteModal
+                isOpen={isNoteModalOpen}
+                onClose={() => setIsNoteModalOpen(false)}
+            />
 
-                            {/* Input Jumlah Pembayaran dengan Format Otomatis */}
-                            <div className="space-y-1">
-                                <label className="font-bold text-slate-700">Jumlah Pembayaran *</label>
-                                <FormattedNumberInput
-                                    value={Number(paymentFormData.amount) || ''}
-                                    onChange={(val) => setPaymentFormData({ ...paymentFormData, amount: String(val) })}
-                                    prefix="Rp"
-                                    placeholder="0"
-                                    className="w-full text-sm font-mono font-bold focus:border-[#3B46F1] focus:ring-2 focus:ring-[#3B46F1]/20"
-                                    required
-                                />
-                                {Number(paymentFormData.amount) > 0 && (
-                                    <p className="text-[11px] text-slate-500 italic">
-                                        Nominal: <strong className="text-slate-800 font-semibold">{formatRupiah(Number(paymentFormData.amount))}</strong>
-                                    </p>
-                                )}
-                            </div>
-                            <div className="space-y-1">
-                                <label className="font-bold text-slate-700">Tanggal Pembayaran *</label>
-                                <input
-                                    type="date"
-                                    value={paymentFormData.payment_date}
-                                    onChange={(e) => setPaymentFormData({ ...paymentFormData, payment_date: e.target.value })}
-                                    className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden"
-                                    required
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="font-bold text-slate-700">Metode Pembayaran / Rekening Bank *</label>
-                                <select
-                                    value={paymentFormData.payment_method_id}
-                                    onChange={(e) => setPaymentFormData({ ...paymentFormData, payment_method_id: e.target.value })}
-                                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#3B46F1] outline-hidden bg-white"
-                                    required
-                                >
-                                    {payment_methods.length > 0 ? (
-                                        payment_methods.map((pm) => (
-                                            <option key={pm.id} value={pm.id}>
-                                                {pm.name} {pm.account_number ? `(${pm.account_number} a.n. ${pm.account_holder})` : ''}
-                                            </option>
-                                        ))
-                                    ) : (
-                                        <option value="">Pilih Metode Pembayaran</option>
-                                    )}
-                                </select>
-                            </div>
-                            <div className="space-y-1">
-                                <label className="font-bold text-slate-700">Nomor Referensi Transfer / Bukti (Opsional)</label>
-                                <input
-                                    type="text"
-                                    value={paymentFormData.reference_number}
-                                    onChange={(e) => setPaymentFormData({ ...paymentFormData, reference_number: e.target.value })}
-                                    placeholder="Contoh: REF-BCA-82910"
-                                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#3B46F1] outline-hidden"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="font-bold text-slate-700">Catatan / Keterangan</label>
-                                <input
-                                    type="text"
-                                    value={paymentFormData.notes}
-                                    onChange={(e) => setPaymentFormData({ ...paymentFormData, notes: e.target.value })}
-                                    className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden"
-                                />
-                            </div>
+            <AddHighlightModal
+                isOpen={isHighlightModalOpen}
+                onClose={() => setIsHighlightModalOpen(false)}
+                projectId={project?.id}
+            />
 
-                            {/* Upload Bukti Transfer */}
-                            <div className="space-y-1">
-                                <label className="font-bold text-slate-700">Upload Bukti Transfer / Pembayaran (Opsional)</label>
-                                {paymentFormData.proof_file ? (
-                                    <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-between">
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            <Receipt className="w-4 h-4 text-indigo-600 shrink-0" />
-                                            <div className="min-w-0">
-                                                <p className="font-bold text-slate-900 truncate text-xs">
-                                                    {paymentFormData.proof_file.name}
-                                                </p>
-                                                <span className="text-[10px] text-slate-500">
-                                                    {(paymentFormData.proof_file.size / 1024).toFixed(1)} KB
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => setPaymentFormData({ ...paymentFormData, proof_file: null })}
-                                            className="p-1 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-red-500 cursor-pointer"
-                                        >
-                                            <X className="w-3.5 h-3.5" />
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <label className="border-2 border-dashed border-slate-200 hover:border-[#3B46F1] rounded-xl p-3 flex flex-col items-center justify-center text-center bg-slate-50/60 hover:bg-slate-50 transition-all cursor-pointer group">
-                                        <Upload className="w-4 h-4 text-slate-400 group-hover:text-[#3B46F1] mb-1" />
-                                        <span className="text-xs font-bold text-slate-700 group-hover:text-[#3B46F1]">
-                                            Pilih Foto atau Dokumen Bukti Transfer
-                                        </span>
-                                        <span className="text-[10px] text-slate-400">
-                                            JPG, PNG, WEBP, atau PDF (Maks. 10MB)
-                                        </span>
-                                        <input
-                                            type="file"
-                                            accept="image/jpeg,image/png,image/webp,application/pdf"
-                                            onChange={(e) => {
-                                                const file = e.target.files?.[0] || null;
-                                                setPaymentFormData({ ...paymentFormData, proof_file: file });
-                                            }}
-                                            className="hidden"
-                                        />
-                                    </label>
-                                )}
-                            </div>
-
-                            <div className="pt-2 flex justify-end gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsPaymentModalOpen(false)}
-                                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={paymentSubmitting}
-                                    className="px-4 py-2 bg-[#3B46F1] text-white rounded-xl font-bold hover:bg-[#323BD8] cursor-pointer"
-                                >
-                                    {paymentSubmitting ? 'Menyimpan ke Finance...' : 'Simpan Pembayaran ke Finance'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* ── MODAL: LIHAT BUKTI PEMBAYARAN ─────────────────────────────────── */}
-            {selectedProofUrl && (
-                <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-                    <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-                        <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Receipt className="w-4 h-4 text-[#3B46F1]" />
-                                <h3 className="font-bold text-sm text-slate-900">Bukti Pembayaran / Transfer</h3>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setSelectedProofUrl(null)}
-                                className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
-                        <div className="p-4 overflow-y-auto flex items-center justify-center bg-slate-900/5 min-h-[300px]">
-                            {selectedProofUrl.toLowerCase().endsWith('.pdf') ? (
-                                <iframe
-                                    src={selectedProofUrl}
-                                    title="Bukti Pembayaran PDF"
-                                    className="w-full h-[400px] rounded-xl border border-slate-200 bg-white"
-                                />
-                            ) : (
-                                <img
-                                    src={selectedProofUrl}
-                                    alt="Bukti Transfer"
-                                    className="max-h-[500px] w-auto max-w-full rounded-xl object-contain shadow-md"
-                                />
-                            )}
-                        </div>
-                        <div className="p-3.5 px-5 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-                            <a
-                                href={selectedProofUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:underline"
-                            >
-                                <ExternalLink className="w-3.5 h-3.5" />
-                                <span>Buka File Asli di Tab Baru</span>
-                            </a>
-                            <button
-                                type="button"
-                                onClick={() => setSelectedProofUrl(null)}
-                                className="px-4 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-xl cursor-pointer hover:bg-slate-800"
-                            >
-                                Tutup
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* ── MODAL: TAMBAH LINK FILE ───────────────────────────────────────── */}
-            {isLinkModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in">
-                    <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
-                        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                            <h3 className="font-bold text-sm text-slate-900">Tambah Link Google Drive / File</h3>
-                            <button
-                                type="button"
-                                onClick={() => setIsLinkModalOpen(false)}
-                                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 cursor-pointer"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
-                        <form onSubmit={handleLinkSubmit} className="space-y-3 text-xs">
-                            <div className="space-y-1">
-                                <label className="font-bold text-slate-700">Nama Link / Dokumen *</label>
-                                <input
-                                    type="text"
-                                    value={linkFormData.name}
-                                    onChange={(e) => setLinkFormData({ ...linkFormData, name: e.target.value })}
-                                    className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden"
-                                    required
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="font-bold text-slate-700">URL Google Drive *</label>
-                                <input
-                                    type="url"
-                                    value={linkFormData.drive_url}
-                                    onChange={(e) => setLinkFormData({ ...linkFormData, drive_url: e.target.value })}
-                                    placeholder="https://drive.google.com/..."
-                                    className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden"
-                                    required
-                                />
-                            </div>
-                            <div className="pt-2 flex justify-end gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsLinkModalOpen(false)}
-                                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={linkSubmitting}
-                                    className="px-4 py-2 bg-[#3B46F1] text-white rounded-xl font-bold hover:bg-[#323BD8] cursor-pointer"
-                                >
-                                    {linkSubmitting ? 'Menyimpan...' : 'Simpan Link'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* ── MODAL: TAMBAH CATATAN ─────────────────────────────────────────── */}
-            {isNoteModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in">
-                    <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
-                        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                            <h3 className="font-bold text-sm text-slate-900">Tambah Catatan Khusus Project</h3>
-                            <button
-                                type="button"
-                                onClick={() => setIsNoteModalOpen(false)}
-                                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 cursor-pointer"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
-                        <div className="space-y-3 text-xs">
-                            <div className="space-y-1">
-                                <label className="font-bold text-slate-700">Isi Catatan</label>
-                                <textarea
-                                    value={newNoteText}
-                                    onChange={(e) => setNewNoteText(e.target.value)}
-                                    placeholder="Tuliskan catatan brief atau instruksi pengerjaan..."
-                                    rows={4}
-                                    className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden"
-                                />
-                            </div>
-                            <div className="pt-2 flex justify-end gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsNoteModalOpen(false)}
-                                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        toast.success('Catatan berhasil ditambahkan!');
-                                        setIsNoteModalOpen(false);
-                                        setNewNoteText('');
-                                    }}
-                                    className="px-4 py-2 bg-[#3B46F1] text-white rounded-xl font-bold hover:bg-[#323BD8] cursor-pointer"
-                                >
-                                    Simpan Catatan
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* ── MODAL: UNGGAH / TAMBAH FOTO HIGHLIGHT ────────────────────────── */}
-            {isHighlightModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in">
-                    <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
-                        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                            <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                                <Sparkles className="w-4 h-4 text-amber-500" />
-                                <span>Tambah Foto Highlight Project</span>
-                            </h3>
-                            <button
-                                type="button"
-                                onClick={() => setIsHighlightModalOpen(false)}
-                                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 cursor-pointer"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
-                        <form onSubmit={handleHighlightSubmit} className="space-y-3.5 text-xs">
-                            <div className="space-y-1">
-                                <label className="font-bold text-slate-700 uppercase text-[10px]">Judul Foto / Momen</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={highlightFormData.title}
-                                    onChange={(e) => setHighlightFormData({ ...highlightFormData, title: e.target.value })}
-                                    placeholder="Contoh: First Look &amp; Tukar Cincin"
-                                    className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden"
-                                />
-                            </div>
-
-                            <div className="space-y-1">
-                                <label className="font-bold text-slate-700 uppercase text-[10px]">Unggah Foto (WebP Optimized)</label>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                            setHighlightFormData({ ...highlightFormData, image_file: file });
-                                            setHighlightFilePreview(URL.createObjectURL(file));
-                                        }
-                                    }}
-                                    className="w-full text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
-                                />
-                            </div>
-
-                            <div className="space-y-1">
-                                <label className="font-bold text-slate-700 uppercase text-[10px]">Atau Gunakan URL Foto</label>
-                                <input
-                                    type="text"
-                                    value={highlightFormData.image_url}
-                                    onChange={(e) => {
-                                        setHighlightFormData({ ...highlightFormData, image_url: e.target.value });
-                                        setHighlightFilePreview(e.target.value);
-                                    }}
-                                    placeholder="https://... atau /images/..."
-                                    className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden"
-                                />
-                            </div>
-
-                            {highlightFilePreview && (
-                                <div className="aspect-[16/9] rounded-xl overflow-hidden bg-slate-100 border relative">
-                                    <img src={highlightFilePreview} alt="Preview" className="w-full h-full object-cover" />
-                                </div>
-                            )}
-
-                            <div className="space-y-1">
-                                <label className="font-bold text-slate-700 uppercase text-[10px]">Caption / Cerita Momen</label>
-                                <textarea
-                                    value={highlightFormData.caption}
-                                    onChange={(e) => setHighlightFormData({ ...highlightFormData, caption: e.target.value })}
-                                    placeholder="Tuliskan keterangan singkat foto highlight ini..."
-                                    rows={3}
-                                    className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden resize-none"
-                                />
-                            </div>
-
-                            <div className="flex items-center justify-between pt-1">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={highlightFormData.is_cover}
-                                        onChange={(e) => setHighlightFormData({ ...highlightFormData, is_cover: e.target.checked })}
-                                        className="w-4 h-4 rounded text-[#3B46F1] focus:ring-[#3B46F1]"
-                                    />
-                                    <span className="font-bold text-slate-800 text-xs">Jadikan Foto Cover Utama Project</span>
-                                </label>
-                            </div>
-
-                            <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsHighlightModalOpen(false)}
-                                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={highlightSubmitting}
-                                    className="px-4 py-2 bg-[#3B46F1] text-white rounded-xl font-bold hover:bg-[#323BD8] disabled:opacity-50 cursor-pointer"
-                                >
-                                    {highlightSubmitting ? 'Menyimpan...' : 'Simpan Foto Highlight'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* ── MODAL: TAMBAH / EDIT SLIDE PROJECT ────────────────────────────── */}
-            {isSlideModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in">
-                    <div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-                        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                            <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                                <Layers className="w-4 h-4 text-indigo-600" />
-                                <span>{editingSlide ? 'Edit Slide Banner Project' : 'Tambah Slide Banner Project'}</span>
-                            </h3>
-                            <button
-                                type="button"
-                                onClick={() => setIsSlideModalOpen(false)}
-                                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 cursor-pointer"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleSlideSubmit} className="space-y-3.5 text-xs">
-                            <div className="space-y-1">
-                                <label className="font-bold text-slate-700 uppercase text-[10px]">
-                                    Judul Slide Banner <span className="text-rose-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={slideFormData.title}
-                                    onChange={(e) => setSlideFormData({ ...slideFormData, title: e.target.value })}
-                                    placeholder={`Contoh: Eksklusif: ${project?.name || 'Pernikahan Anda'}`}
-                                    className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden text-xs"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div className="space-y-1">
-                                    <label className="font-bold text-slate-700 uppercase text-[10px]">
-                                        Tag / Kategori Label <span className="text-rose-500">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={slideFormData.tag}
-                                        onChange={(e) => setSlideFormData({ ...slideFormData, tag: e.target.value.toUpperCase() })}
-                                        placeholder="EXCLUSIVE PROJECT"
-                                        className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden text-xs font-mono"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="font-bold text-slate-700 uppercase text-[10px]">
-                                        Urutan Tampil (Sort Order)
-                                    </label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={slideFormData.sort_order}
-                                        onChange={(e) => setSlideFormData({ ...slideFormData, sort_order: parseInt(e.target.value) || 0 })}
-                                        className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden text-xs"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-1">
-                                <label className="font-bold text-slate-700 uppercase text-[10px]">
-                                    Deskripsi Banner
-                                </label>
-                                <textarea
-                                    rows={2}
-                                    value={slideFormData.description}
-                                    onChange={(e) => setSlideFormData({ ...slideFormData, description: e.target.value })}
-                                    placeholder="Tuliskan ucapan atau pesan singkat untuk klien..."
-                                    className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden text-xs resize-none"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div className="space-y-1">
-                                    <label className="font-bold text-slate-700 uppercase text-[10px]">
-                                        Teks Tombol CTA <span className="text-rose-500">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={slideFormData.button_text}
-                                        onChange={(e) => setSlideFormData({ ...slideFormData, button_text: e.target.value })}
-                                        placeholder="Lihat Detail Project"
-                                        className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden text-xs"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="font-bold text-slate-700 uppercase text-[10px]">
-                                        URL Tujuan Tombol
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={slideFormData.button_url}
-                                        onChange={(e) => setSlideFormData({ ...slideFormData, button_url: e.target.value })}
-                                        placeholder={`/client/projects/${project?.id}`}
-                                        className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden text-xs font-mono"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Foto Banner */}
-                            <div className="space-y-2 pt-1 border-t border-slate-100">
-                                <label className="font-bold text-slate-700 uppercase text-[10px] block">
-                                    Foto Background Banner (Otomatis Kompresi WebP)
-                                </label>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                            setSlideFormData({ ...slideFormData, image_file: file });
-                                            setSlideFilePreview(URL.createObjectURL(file));
-                                        }
-                                    }}
-                                    className="w-full text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
-                                />
-
-                                <div className="space-y-1">
-                                    <span className="text-[10px] text-slate-500">Atau Gunakan URL Gambar:</span>
-                                    <input
-                                        type="text"
-                                        value={slideFormData.image_url}
-                                        onChange={(e) => {
-                                            setSlideFormData({ ...slideFormData, image_url: e.target.value });
-                                            setSlideFilePreview(e.target.value);
-                                        }}
-                                        placeholder="https://... atau /images/..."
-                                        className="w-full p-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden text-xs"
-                                    />
-                                </div>
-
-                                {slideFilePreview && (
-                                    <div className="aspect-[16/9] rounded-xl overflow-hidden bg-slate-900 border relative shadow-inner">
-                                        <img src={slideFilePreview} alt="Preview" className="w-full h-full object-cover" />
-                                        <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/60 text-white text-[10px]">
-                                            Pratinjau Foto
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="flex items-center justify-between pt-1">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={slideFormData.is_active}
-                                        onChange={(e) => setSlideFormData({ ...slideFormData, is_active: e.target.checked })}
-                                        className="w-4 h-4 rounded text-[#3B46F1] focus:ring-[#3B46F1]"
-                                    />
-                                    <span className="font-bold text-slate-800 text-xs">
-                                        Aktifkan slide banner ini di Portal Klien
-                                    </span>
-                                </label>
-                            </div>
-
-                            <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsSlideModalOpen(false)}
-                                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={slideSubmitting}
-                                    className="px-4 py-2 bg-[#3B46F1] text-white rounded-xl font-bold hover:bg-[#323BD8] disabled:opacity-50 cursor-pointer"
-                                >
-                                    {slideSubmitting ? 'Menyimpan...' : (editingSlide ? 'Simpan Perubahan' : 'Buat Slide Banner')}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            <ProjectSlideModal
+                isOpen={isSlideModalOpen}
+                onClose={() => setIsSlideModalOpen(false)}
+                projectId={project?.id}
+                projectName={project?.name}
+                editingSlide={editingSlide}
+            />
         </div>
     );
 }

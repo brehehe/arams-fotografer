@@ -53,6 +53,7 @@ import {
     Maximize2,
     Building2,
     Eye,
+    Image as ImageIcon,
 } from 'lucide-react';
 import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
@@ -561,135 +562,19 @@ export default function ClientProjectDetail({
     const categoryDisplayName = project?.category_name || project?.category?.name || 'Wedding';
     const packageDisplayName = project?.package_name || project?.package?.name || 'Wedding Day';
 
-    const projectNotesForFiles = project?.notes;
-    const displayFiles = useMemo(() => {
-        if (fileList.length > 0) {
-            return fileList;
-        }
-
-        return [
-            {
-                id: 'f-1',
-                name: 'Preview Foto (Low Resolution)',
-                file_type: 'Folder Drive',
-                is_link: true,
-                date_label: '05 Jun 2026',
-                drive_url: projectNotesForFiles?.match(/https?:\/\/[^\s]+/)?.[0] || 'https://drive.google.com',
-            },
-            {
-                id: 'f-2',
-                name: 'Behind The Scene',
-                file_type: 'Video Drive',
-                is_link: true,
-                date_label: '23 Mei 2026',
-                drive_url: 'https://drive.google.com',
-            },
-            {
-                id: 'f-3',
-                name: 'Foto Hari H (RAW)',
-                file_type: 'Cloud RAW',
-                is_link: false,
-                date_label: '23 Mei 2026',
-                drive_url: 'https://drive.google.com',
-            },
-            {
-                id: 'f-4',
-                name: 'Drive Link (Full Resolution)',
-                file_type: 'Google Drive',
-                is_link: true,
-                date_label: '20 Jun 2026',
-                drive_url: 'https://drive.google.com',
-            },
-        ];
-    }, [fileList, projectNotesForFiles]);
-
-    const displayNotes = useMemo(() => {
-        if (notesList.length > 0) {
-            return notesList;
-        }
-
-        return [
-            {
-                id: 'n-1',
-                title: 'Project Selesai & File Dikirim',
-                content: 'Terima kasih telah mempercayakan momen bahagia Anda kepada Arams Pictures. Semoga hasilnya berkesan dan bisa menjadi kenangan indah selamanya. 😊',
-                created_at_formatted: '27 Jul 2026',
-                author_name: supervisorName || 'Bima Arams',
-                author_role: 'Supervisor',
-            },
-            {
-                id: 'n-2',
-                title: 'Finalisasi & Persiapan Pengiriman',
-                content: 'Revisi terakhir telah selesai dan semua file sudah kami siapkan. File akan segera kami kirim melalui Google Drive.',
-                created_at_formatted: '15 Jul 2026',
-                author_name: editorName || 'Arams Team',
-                author_role: 'Editor',
-            },
-            {
-                id: 'n-3',
-                title: 'Preview Hasil Editing',
-                content: 'Berikut adalah preview hasil editing. Silakan beri tahu jika ada yang perlu direvisi.',
-                created_at_formatted: '05 Jul 2026',
-                author_name: editorName || 'Arams Team',
-                author_role: 'Editor',
-            },
-        ];
-    }, [notesList, supervisorName, editorName]);
-
-    const projectThumbnail = project?.thumbnail;
-    const displayPhotos = useMemo(() => {
-        if (highlightPhotos.length >= 6) {
-            return highlightPhotos;
-        }
-
-        const fallbacks = [
-            { id: 101, title: 'The Sacred Vows', caption: 'The Sacred Vows', image_url: projectThumbnail || '/images/wedding-couple.jpg', is_cover: false },
-            { id: 102, title: 'Intimate Embrace', caption: 'Intimate Embrace', image_url: '/images/wedding-couple.jpg', is_cover: false },
-            { id: 103, title: 'Celebration of Love', caption: 'Celebration of Love', image_url: '/images/wedding-couple.jpg', is_cover: false },
-            { id: 104, title: 'The Royal Hall', caption: 'The Royal Hall', image_url: '/images/wedding-couple.jpg', is_cover: false },
-            { id: 105, title: 'Serene Elegance', caption: 'Serene Elegance', image_url: '/images/wedding-couple.jpg', is_cover: false },
-            { id: 106, title: 'Golden Hour Smile', caption: 'Golden Hour Smile', image_url: '/images/wedding-couple.jpg', is_cover: false },
-        ];
-
-        return [...highlightPhotos, ...fallbacks.slice(highlightPhotos.length)];
-    }, [highlightPhotos, projectThumbnail]);
-
-
+    const displayFiles = fileList;
+    const displayNotes = notesList;
+    const displayPhotos = highlightPhotos;
 
     const projectStatus = project.status;
     const projectWorkflowStep = project.workflow_step;
-    const projectUpdatedAtFormatted = project.updated_at_formatted;
     const timelineSteps = timeline?.steps;
     const displaySteps = useMemo(() => {
-        const defaultSteps = [
-            { step: 1, title: 'Booking & DP', name: 'Booking & DP', status: 'completed', status_label: 'Selesai', date: '05 Okt 2026' },
-            { step: 2, title: 'Hari H (Shooting)', name: 'Hari H (Shooting)', status: 'completed', status_label: 'Selesai', date: '12 Des 2026' },
-            { step: 3, title: 'Preview Foto', name: 'Preview Foto', status: 'completed', status_label: 'Selesai', date: '05 Jun 2026' },
-            { step: 4, title: 'Editing & Seleksi', name: 'Editing & Seleksi', status: 'completed', status_label: 'Selesai', date: '20 Jun 2026' },
-            { step: 5, title: 'Preview Hasil', name: 'Preview Hasil', status: 'completed', status_label: 'Selesai', date: '05 Jul 2026' },
-            { step: 6, title: 'Revisi', name: 'Revisi', status: 'completed', status_label: 'Selesai', date: '15 Jul 2026' },
-            { step: 7, title: 'Finalisasi', name: 'Finalisasi', status: 'completed', status_label: 'Selesai', date: '25 Jul 2026' },
-            {
-                step: 8,
-                title: 'Selesai & Pengiriman',
-                name: 'Selesai & Pengiriman',
-                status: projectStatus === 'completed' || projectWorkflowStep === 'selesai' ? 'completed' : 'pending',
-                status_label: projectStatus === 'completed' || projectWorkflowStep === 'selesai' ? 'Selesai' : 'Menunggu',
-                date: projectUpdatedAtFormatted || '27 Jul 2026',
-            },
-        ];
-
-        if (timelineSteps && timelineSteps.length >= 8) {
-            return timelineSteps.map((st, i) => ({
-                ...defaultSteps[i],
-                ...st,
-                title: st.title || st.name || defaultSteps[i]?.title,
-                date: st.date || defaultSteps[i]?.date,
-            }));
+        if (timelineSteps && timelineSteps.length > 0) {
+            return timelineSteps;
         }
-
-        return defaultSteps;
-    }, [timelineSteps, projectStatus, projectWorkflowStep, projectUpdatedAtFormatted]);
+        return [];
+    }, [timelineSteps]);
 
     return (
         <ClientLayout>
@@ -930,16 +815,42 @@ export default function ClientProjectDetail({
                                     </div>
                                 </div>
 
-                                {/* Green Status Alert Banner */}
-                                <div className="bg-[#EAF5EC] border border-[#C5E8CA] rounded-2xl p-3.5 sm:p-4 flex items-center gap-3 text-xs hover:shadow-2xs transition-shadow">
-                                    <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                                        <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                {/* Status Alert Banner */}
+                                {projectStatus === 'completed' || projectWorkflowStep === 'selesai' || projectStatus === 'delivered' ? (
+                                    <div className="bg-[#EAF5EC] border border-[#C5E8CA] rounded-2xl p-3.5 sm:p-4 flex items-center gap-3 text-xs hover:shadow-2xs transition-shadow">
+                                        <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                                            <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                        </div>
+                                        <div>
+                                            <strong className="font-bold text-stone-900 block text-xs sm:text-sm">Project telah selesai!</strong>
+                                            <p className="text-[11.5px] text-stone-600">Terima kasih telah mempercayakan momen berharga Anda kepada Arams Pictures.</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <strong className="font-bold text-stone-900 block text-xs sm:text-sm">Project telah selesai!</strong>
-                                        <p className="text-[11.5px] text-stone-600">Terima kasih telah mempercayakan momen berharga Anda kepada Arams Pictures.</p>
+                                ) : projectStatus === 'cancelled' ? (
+                                    <div className="bg-rose-50 border border-rose-200 rounded-2xl p-3.5 sm:p-4 flex items-center gap-3 text-xs hover:shadow-2xs transition-shadow">
+                                        <div className="w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center shrink-0">
+                                            <X className="w-3.5 h-3.5 stroke-[3]" />
+                                        </div>
+                                        <div>
+                                            <strong className="font-bold text-rose-900 block text-xs sm:text-sm">Project Dibatalkan</strong>
+                                            <p className="text-[11.5px] text-rose-700">Project ini telah berstatus dibatalkan.</p>
+                                        </div>
                                     </div>
-                                </div>
+                                ) : (
+                                    <div className="bg-[#FAF7F2] border border-[#E8E1D7] rounded-2xl p-3.5 sm:p-4 flex items-center gap-3 text-xs hover:shadow-2xs transition-shadow">
+                                        <div className="w-6 h-6 rounded-full bg-[#3C0E0E] text-white flex items-center justify-center shrink-0">
+                                            <Clock className="w-3.5 h-3.5" />
+                                        </div>
+                                        <div>
+                                            <strong className="font-bold text-stone-900 block text-xs sm:text-sm">
+                                                Tahap Saat Ini: {timeline?.current_step_name || project.workflow_step || 'Dalam Proses'}
+                                            </strong>
+                                            <p className="text-[11.5px] text-stone-600">
+                                                {timeline?.active_step_desc || 'Tim kami sedang memproses dan menyiapkan hasil dokumentasi terbaik untuk Anda.'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
                             </section>
                         </div>
 
@@ -1360,36 +1271,50 @@ export default function ClientProjectDetail({
                                     </span>
                                 </div>
 
-                                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-3.5">
-                                    {displayPhotos.map((hl, i) => (
-                                        <button
-                                            type="button"
-                                            key={hl.id || i}
-                                            onClick={() => setLightboxIndex(i)}
-                                            className="group relative aspect-4/5 rounded-2xl overflow-hidden bg-stone-100 border border-stone-200/80 shadow-2xs hover:shadow-xl hover:shadow-[#3C0E0E]/15 hover:-translate-y-1.5 hover:border-[#3C0E0E]/40 transition-all duration-300 cursor-pointer block text-left"
-                                        >
-                                            <img
-                                                src={hl.image_url}
-                                                alt={hl.caption || `Highlight ${i + 1}`}
-                                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-108"
-                                                loading="lazy"
-                                            />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-3 text-white">
-                                                <div className="self-end">
-                                                    <div className="w-7 h-7 rounded-full bg-white/30 backdrop-blur-md flex items-center justify-center text-white">
-                                                        <Maximize2 className="w-3.5 h-3.5" />
+                                {displayPhotos.length === 0 ? (
+                                    <div className="py-12 text-center text-stone-500 text-xs bg-[#FAF7F2] rounded-xl border border-[#E8E1D7] space-y-3 p-6">
+                                        <div className="w-12 h-12 rounded-2xl bg-white border border-stone-200 flex items-center justify-center mx-auto text-stone-400 shadow-2xs">
+                                            <ImageIcon className="w-6 h-6" />
+                                        </div>
+                                        <div>
+                                            <strong className="text-sm text-stone-800 block font-bold">Belum Ada Highlight Foto</strong>
+                                            <p className="text-stone-500 text-xs mt-1 max-w-md mx-auto">
+                                                Foto pilihan dan cuplikan terbaik akan diunggah oleh fotografer setelah kurasi selesai.
+                                            </p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-3.5">
+                                        {displayPhotos.map((hl, i) => (
+                                            <button
+                                                type="button"
+                                                key={hl.id || i}
+                                                onClick={() => setLightboxIndex(i)}
+                                                className="group relative aspect-4/5 rounded-2xl overflow-hidden bg-stone-100 border border-stone-200/80 shadow-2xs hover:shadow-xl hover:shadow-[#3C0E0E]/15 hover:-translate-y-1.5 hover:border-[#3C0E0E]/40 transition-all duration-300 cursor-pointer block text-left"
+                                            >
+                                                <img
+                                                    src={hl.image_url}
+                                                    alt={hl.caption || `Highlight ${i + 1}`}
+                                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-108"
+                                                    loading="lazy"
+                                                />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-3 text-white">
+                                                    <div className="self-end">
+                                                        <div className="w-7 h-7 rounded-full bg-white/30 backdrop-blur-md flex items-center justify-center text-white">
+                                                            <Maximize2 className="w-3.5 h-3.5" />
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-[10px] font-bold block truncate">
+                                                            {hl.caption || `Foto ${i + 1}`}
+                                                        </span>
+                                                        <span className="text-[9px] text-white/80">Klik untuk perbesar</span>
                                                     </div>
                                                 </div>
-                                                <div>
-                                                    <span className="text-[10px] font-bold block truncate">
-                                                        {hl.caption || `Foto ${i + 1}`}
-                                                    </span>
-                                                    <span className="text-[9px] text-white/80">Klik untuk perbesar</span>
-                                                </div>
-                                            </div>
-                                        </button>
-                                    ))}
-                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </section>
                         </div>
 

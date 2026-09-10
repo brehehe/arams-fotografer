@@ -6,6 +6,7 @@ use App\Http\Requests\Client\StoreClientRequest;
 use App\Http\Requests\Client\UpdateClientRequest;
 use App\Models\Category;
 use App\Models\Client;
+use App\Models\ClientSource;
 use App\Models\Package;
 use App\Models\PaymentMethod;
 use App\Models\User;
@@ -50,6 +51,9 @@ class ClientController extends Controller
             ->select('id', 'name', 'phone', 'city', 'email', 'bride_name', 'groom_name', 'child_name', 'father_name', 'mother_name', 'children')
             ->orderBy('name')
             ->get();
+        $clientSources = ClientSource::orderBy('name')
+            ->select('id', 'name', 'type', 'status', 'is_primary', 'avatar')
+            ->get();
         $workflows = \App\Http\Controllers\MasterData\WorkflowController::getWorkflowDefinitions();
 
         return Inertia::render('Clients/Detail', [
@@ -60,6 +64,7 @@ class ClientController extends Controller
             'payment_methods' => $paymentMethods,
             'wedding_organizers' => $weddingOrganizers,
             'all_clients' => $allClients,
+            'client_sources' => $clientSources,
             'workflows' => $workflows,
         ]);
     }
@@ -69,18 +74,24 @@ class ClientController extends Controller
         $this->authorize('update', $client);
 
         $clientDetail = $this->clientService->getClientDetail($client);
-        $categories = Category::where('status', 'active')->select('id', 'name', 'slug', 'description', 'color')->orderBy('sort_order')->get();
+        $categories = Category::where('status', 'active')->select('id', 'name', 'slug', 'description', 'color', 'form_type')->orderBy('sort_order')->get();
+        $packages = Package::where('status', 'active')->select('id', 'name', 'category_id', 'base_price', 'duration_hours', 'description')->get();
         $weddingOrganizers = WeddingOrganizer::whereIn('status', ['partner', 'active'])->select('id', 'name', 'pic_name', 'phone', 'city', 'tier')->orderBy('name')->get();
         $allClients = Client::where('id', '!=', $client->id)
-            ->select('id', 'name', 'phone', 'city', 'email', 'bride_name', 'groom_name')
+            ->select('id', 'name', 'phone', 'city', 'email', 'bride_name', 'groom_name', 'child_name', 'father_name', 'mother_name', 'children')
             ->orderBy('name')
+            ->get();
+        $clientSources = ClientSource::orderBy('name')
+            ->select('id', 'name', 'type', 'status', 'is_primary', 'avatar')
             ->get();
 
         return Inertia::render('Clients/Edit', [
             'client' => $clientDetail,
             'categories' => $categories,
+            'packages' => $packages,
             'wedding_organizers' => $weddingOrganizers,
             'all_clients' => $allClients,
+            'client_sources' => $clientSources,
         ]);
     }
 

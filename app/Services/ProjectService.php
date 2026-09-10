@@ -33,14 +33,14 @@ class ProjectService
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('project_number', 'like', "%{$search}%")
+                $q->where('name', 'ilike', "%{$search}%")
+                    ->orWhere('project_number', 'ilike', "%{$search}%")
                     ->orWhereHas('client', function ($cq) use ($search) {
-                        $cq->where('name', 'like', "%{$search}%")
-                            ->orWhere('phone', 'like', "%{$search}%");
+                        $cq->where('name', 'ilike', "%{$search}%")
+                            ->orWhere('phone', 'ilike', "%{$search}%");
                     })
                     ->orWhereHas('invoices', function ($iq) use ($search) {
-                        $iq->where('invoice_number', 'like', "%{$search}%");
+                        $iq->where('invoice_number', 'ilike', "%{$search}%");
                     });
             });
         }
@@ -214,7 +214,8 @@ class ProjectService
     public function getProjectDetail(Project $project): array
     {
         $project->load([
-            'client',
+            'client.clientSource',
+            'clientSource',
             'weddingOrganizer',
             'category',
             'package',
@@ -287,7 +288,7 @@ class ProjectService
 
         // Find all existing project numbers matching prefixPart (including soft deleted)
         $allMatching = Project::withTrashed()
-            ->where('project_number', 'like', "{$prefixPart}%")
+            ->where('project_number', 'ilike', "{$prefixPart}%")
             ->pluck('project_number')
             ->map(function ($num) use ($prefixPart, $suffixPart) {
                 $mid = substr((string) $num, strlen($prefixPart));
@@ -355,6 +356,12 @@ class ProjectService
             \App\Models\Client::where('id', $data['client_id'])->update(
                 array_filter($clientOverrides, fn($v) => $v !== null)
             );
+        }
+
+        if (!empty($data['client_source_id']) && !empty($data['client_id'])) {
+            \App\Models\Client::where('id', $data['client_id'])
+                ->whereNull('client_source_id')
+                ->update(['client_source_id' => $data['client_source_id']]);
         }
 
 
@@ -476,6 +483,12 @@ class ProjectService
             );
         }
 
+        if (!empty($data['client_source_id']) && !empty($project->client_id)) {
+            \App\Models\Client::where('id', $project->client_id)
+                ->whereNull('client_source_id')
+                ->update(['client_source_id' => $data['client_source_id']]);
+        }
+
         if (array_key_exists('thumbnail', $data)) {
             if (!empty($data['thumbnail']) && is_string($data['thumbnail']) && str_starts_with($data['thumbnail'], 'data:image')) {
                 try {
@@ -564,7 +577,7 @@ class ProjectService
      */
     public function getProjectFormData(): array
     {
-        $clients = Client::select('id', 'name', 'email', 'phone', 'city', 'instagram', 'bride_name', 'bride_nickname', 'groom_name', 'groom_nickname', 'child_name', 'child_birth_date', 'child_gender', 'father_name', 'mother_name', 'children', 'client_type')->orderBy('name')->get();
+        $clients = Client::select('id', 'name', 'email', 'phone', 'city', 'instagram', 'bride_name', 'bride_nickname', 'groom_name', 'groom_nickname', 'child_name', 'child_birth_date', 'child_gender', 'father_name', 'mother_name', 'children', 'client_type', 'client_source_id', 'source')->orderBy('name')->get();
         $categories = Category::where('status', 'active')->select('id', 'name', 'slug', 'color', 'workflow_type', 'form_type')->orderBy('sort_order')->get();
         $packages = Package::where('status', 'active')->select('id', 'name', 'category_id', 'base_price', 'duration_hours', 'description', 'included_services', 'included_deliverables')->get();
         $weddingOrganizers = \App\Models\WeddingOrganizer::whereIn('status', ['partner', 'active'])->select('id', 'name', 'pic_name', 'phone', 'city', 'tier')->orderBy('name')->get();
@@ -708,6 +721,9 @@ class ProjectService
             'address' => \App\Models\Setting::get('company_address', 'Jl. Senopati No. 45, Kebayoran Baru, Jakarta Selatan 12190'),
             'instagram' => \App\Models\Setting::get('company_instagram', 'aramspictures'),
             'website' => \App\Models\Setting::get('company_website', 'https://www.arams.com'),
+            'director_name' => \App\Models\Setting::get('invoice_director_name', \App\Models\Setting::get('company_director_name', 'Aditya Pratama')),
+            'director_title' => \App\Models\Setting::get('invoice_director_title', 'Direktur Utama / Finance Studio'),
+            'signature_city' => \App\Models\Setting::get('invoice_signature_city', \App\Models\Setting::get('company_city', 'Jakarta Selatan')),
         ];
 
         return [

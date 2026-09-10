@@ -22,34 +22,45 @@ class ClientPortalService
     {
         $user = $request->user();
 
-        // Retrieve linked client, or fallback to first client with project for preview/admins
+        // Retrieve linked client
         $client = null;
         if ($user?->client_id) {
             $client = Client::find($user->client_id);
         } elseif ($user?->email) {
             $client = Client::where('email', $user->email)->first();
+            if ($client && $user && !$user->client_id) {
+                $user->updateQuietly(['client_id' => $client->id]);
+            }
         }
 
-        if (!$client) {
+        $isClientUser = $user && ($user->client_id || $user->hasRole('Client') || $user->hasRole('client'));
+
+        // If admin/super-admin/staff without a linked client, allow previewing first available client
+        if (!$client && !$isClientUser) {
             $client = Client::whereHas('projects')->first() ?? Client::first();
         }
 
         // Retrieve active / latest project
         $activeProject = null;
 
-        // If specific project requested via query param (e.g. from admin preview)
+        // If specific project requested via query param (e.g. from admin preview or direct link)
         if ($projectId = ($request->input('project_id') ?? $request->input('project'))) {
-            $specificProject = Project::where('id', $projectId)
+            $specificProjectQuery = Project::where('id', $projectId)
                 ->with([
                     'category',
                     'package',
                     'client',
-                    'fileLinks' => fn ($q) => $q->active()->latest()->limit(5),
+                    'fileLinks' => fn ($q) => $q->active()->latest()->limit(10),
                     'payments' => fn ($q) => $q->with('paymentMethod')->latest('payment_date')->limit(10),
-                    'invoices' => fn ($q) => $q->latest()->limit(5),
-                    'highlights' => fn ($q) => $q->orderBy('sort_order')->limit(8),
-                ])
-                ->first();
+                    'invoices' => fn ($q) => $q->latest()->limit(10),
+                    'highlights' => fn ($q) => $q->orderBy('sort_order')->limit(12),
+                ]);
+
+            if ($isClientUser && $client) {
+                $specificProjectQuery->where('client_id', $client->id);
+            }
+
+            $specificProject = $specificProjectQuery->first();
             if ($specificProject) {
                 $activeProject = $specificProject;
                 $client = $specificProject->client ?? $client;
@@ -61,23 +72,24 @@ class ClientPortalService
                 ->with([
                     'category',
                     'package',
-                    'fileLinks' => fn ($q) => $q->active()->latest()->limit(5),
+                    'fileLinks' => fn ($q) => $q->active()->latest()->limit(10),
                     'payments' => fn ($q) => $q->with('paymentMethod')->latest('payment_date')->limit(10),
-                    'invoices' => fn ($q) => $q->latest()->limit(5),
-                    'highlights' => fn ($q) => $q->orderBy('sort_order')->limit(8),
+                    'invoices' => fn ($q) => $q->latest()->limit(10),
+                    'highlights' => fn ($q) => $q->orderBy('sort_order')->limit(12),
                 ])
                 ->latest('event_date')
                 ->first();
         }
 
-        if (!$activeProject) {
+        // For non-clients (e.g. admin preview mode), fallback to latest project if none exists
+        if (!$activeProject && !$isClientUser) {
             $activeProject = Project::with([
                 'category',
                 'package',
-                'fileLinks' => fn ($q) => $q->active()->latest()->limit(5),
+                'fileLinks' => fn ($q) => $q->active()->latest()->limit(10),
                 'payments' => fn ($q) => $q->with('paymentMethod')->latest('payment_date')->limit(10),
-                'invoices' => fn ($q) => $q->latest()->limit(5),
-                'highlights' => fn ($q) => $q->orderBy('sort_order')->limit(8),
+                'invoices' => fn ($q) => $q->latest()->limit(10),
+                'highlights' => fn ($q) => $q->orderBy('sort_order')->limit(12),
             ])->latest()->first();
         }
 
@@ -199,13 +211,13 @@ class ClientPortalService
             'gdrive_url' => Setting::get('company_gdrive_url', 'https://drive.google.com'),
         ];
 
-        $totalProjects = $client ? Project::where('client_id', $client->id)->count() : Project::count();
-        $totalInvoices = $activeProject ? $activeProject->invoices()->count() : ($client ? \App\Models\Invoice::where('client_id', $client->id)->count() : 1);
-        $totalPayments = $activeProject ? $activeProject->payments()->count() : 0;
+        $totalProjects = $client ? Project::where('client_id', $client->id)->count() : 0;
+        $totalInvoices = $client ? \App\Models\Invoice::where('client_id', $client->id)->count() : ($activeProject ? $activeProject->invoices()->count() : 0);
+        $totalPayments = $client ? \App\Models\Payment::whereHas('project', fn($q) => $q->where('client_id', $client->id))->count() : ($activeProject ? $activeProject->payments()->count() : 0);
 
-        $fileLinksCollection = ($activeProject && $activeProject->fileLinks && $activeProject->fileLinks->isNotEmpty())
+        $fileLinksCollection = ($activeProject && $activeProject->fileLinks)
             ? $activeProject->fileLinks
-            : \App\Models\FileLink::latest()->limit(3)->get();
+            : collect();
 
         return [
             'client' => $client ? [
@@ -274,13 +286,7 @@ class ClientPortalService
                         'image_url' => $h->image_url,
                         'is_cover' => (bool) $h->is_cover,
                     ])
-                    : \App\Models\ProjectHighlight::orderByDesc('is_cover')->latest()->limit(4)->get()->map(fn($h) => [
-                        'id' => $h->id,
-                        'title' => $h->title,
-                        'caption' => $h->caption,
-                        'image_url' => $h->image_url,
-                        'is_cover' => (bool) $h->is_cover,
-                    ]),
+                    : [],
                 'payments' => $activeProject->payments->map(fn($p) => [
                     'id' => $p->id,
                     'payment_number' => $p->payment_number,
@@ -328,22 +334,13 @@ class ClientPortalService
         $projectsQuery = Project::query();
         if ($client) {
             $projectsQuery->where('client_id', $client->id);
+        } else {
+            $projectsQuery->whereRaw('1 = 0');
         }
 
         $projectsCollection = $projectsQuery->with(['category', 'package', 'highlights'])
             ->latest('event_date')
             ->get();
-
-        // If client has no projects AND user is not an actual client (e.g. admin previewing), get latest active projects
-        $user = $request->user();
-        $isActualClient = $user && ($user->client_id || Client::where('email', $user->email)->exists());
-
-        if ($projectsCollection->isEmpty() && !$isActualClient) {
-            $projectsCollection = Project::with(['category', 'package', 'highlights'])
-                ->latest('event_date')
-                ->limit(6)
-                ->get();
-        }
 
         $projects = $projectsCollection->map(function ($p) {
             $timelineData = $this->computeTimeline($p);

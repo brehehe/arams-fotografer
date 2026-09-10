@@ -182,20 +182,8 @@ export default function ClientDashboard({
     client,
     metrics,
     active_project,
-    timeline = {
-        current_step: 3,
-        active_step_title: 'Preview Foto',
-        active_step_desc: 'Kami sedang menyiapkan preview foto terbaik untuk Anda. Nantikan update selanjutnya!',
-        steps: [],
-    },
-    payment_summary = {
-        total_amount: 50000000,
-        paid_amount: 25000000,
-        remaining_amount: 25000000,
-        paid_percentage: 50,
-        last_payment_label: 'DP (50%)',
-        last_payment_date: '26 Mei 2026',
-    },
+    timeline,
+    payment_summary,
     promo_slides = [],
     recommended_projects = [],
     recommended_packages = [],
@@ -241,7 +229,7 @@ export default function ClientDashboard({
     };
 
     // Safe WhatsApp Link Generator
-    const rawPhone = company?.phone || appSettings?.company_phone || '081234567890';
+    const rawPhone = company?.phone || appSettings?.company_whatsapp || appSettings?.company_phone || '081234567890';
     const cleanPhone = String(rawPhone).replace(/[^0-9]/g, '');
     const waPhone = cleanPhone.startsWith('0') ? '62' + cleanPhone.slice(1) : cleanPhone;
     const generalWhatsAppUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent('Halo Admin Arams Pictures, saya ingin menanyakan tentang paket layanan dokumentasi.')}`;
@@ -276,68 +264,24 @@ export default function ClientDashboard({
         }
     }, [isLightboxOpen, isPaymentModalOpen]);
 
-    // Timeline Steps (5 Steps as per client dashboard design)
-    const defaultSteps: TimelineStep[] = [
-        {
-            step: 1,
-            title: '1. Booking & DP',
-            name: 'Booking & DP',
-            desc: 'Pembayaran DP telah terverifikasi dan slot jadwal berhasil dibooking.',
-            status: 'completed',
-            status_label: 'Selesai',
-            date: '10 Jan 2026',
-        },
-        {
-            step: 2,
-            title: '2. Hari H (Shooting)',
-            name: 'Hari H (Shooting)',
-            desc: 'Sesi dokumentasi foto dan video hari H telah selesai dilaksanakan.',
-            status: 'completed',
-            status_label: 'Selesai',
-            date: '22 Mei 2026',
-        },
-        {
-            step: 3,
-            title: '3. Preview Foto',
-            name: 'Preview Foto',
-            desc: 'Kami sedang menyiapkan preview foto terbaik untuk Anda. Nantikan update selanjutnya!',
-            status: 'active',
-            status_label: 'Sedang Dikerjakan',
-            date: 'Estimasi: 05 Jun 2026',
-        },
-        {
-            step: 4,
-            title: '4. Editing & Seleksi',
-            name: 'Editing & Seleksi',
-            desc: 'Proses editing menyeluruh, retouching, dan color grading semua file pilihan.',
-            status: 'upcoming',
-            status_label: 'Menunggu',
-            date: 'Estimasi: 20 Jun 2026',
-        },
-        {
-            step: 5,
-            title: '5. Final Delivery',
-            name: 'Final Delivery',
-            desc: 'Penyerahan seluruh hasil foto/video resolusi tinggi dan cetak album fisik.',
-            status: 'upcoming',
-            status_label: 'Menunggu',
-            date: 'Estimasi: 05 Jul 2026',
-        },
-    ];
-
-    const timelineSteps = (timeline.steps && timeline.steps.length > 0)
-        ? timeline.steps
-        : defaultSteps;
-
+    // Timeline Steps
+    const timelineSteps = timeline?.steps || [];
     const isProjectCompleted = active_project?.status === 'completed' || active_project?.workflow_step === 'selesai' || active_project?.status === 'delivered';
-    const totalTimelineSteps = timelineSteps.length;
-    const currentStepNum = isProjectCompleted ? totalTimelineSteps : (timeline.current_step || 1);
-    const activeStepObj = timelineSteps.find((s) => s.step === currentStepNum) || timelineSteps.find((s) => s.status === 'active') || timelineSteps[0];
+    const totalTimelineSteps = Math.max(1, timelineSteps.length);
+    const currentStepNum = isProjectCompleted ? totalTimelineSteps : (timeline?.current_step || 1);
+    const activeStepObj = timelineSteps.find((s) => s.step === currentStepNum) || timelineSteps.find((s) => s.status === 'active') || timelineSteps[0] || {
+        step: 1,
+        name: active_project ? 'Persiapan Project' : 'Belum Ada Project Aktif',
+        title: active_project ? 'Persiapan Project' : 'Belum Ada Project Aktif',
+        desc: active_project ? 'Project sedang dalam proses persiapan dan koordinasi tim.' : 'Anda belum memiliki project aktif yang sedang berjalan.',
+        status: 'active' as const,
+        status_label: isProjectCompleted ? 'Selesai' : (active_project ? 'Dalam Proses' : 'Menunggu'),
+    };
     const progressPercent = active_project?.progress_percentage ?? active_project?.progress ?? (
-        isProjectCompleted ? 100 : Math.min(100, Math.max(0, Math.round((currentStepNum / totalTimelineSteps) * 100)))
+        isProjectCompleted ? 100 : (timelineSteps.length > 0 ? Math.min(100, Math.max(0, Math.round((currentStepNum / totalTimelineSteps) * 100))) : 0)
     );
 
-    // Promo Slides Fallback (Multi-slide support for carousel)
+    // Promo Slides
     const promoSlides: PromoSlideItem[] = (promo_slides && promo_slides.length > 0)
         ? promo_slides
         : [
@@ -348,25 +292,7 @@ export default function ClientDashboard({
                 description: 'Promo spesial untuk setiap momen berharga Anda. Dapatkan penawaran terbaik untuk paket pernikahan & prewedding pilihan.',
                 button_text: 'Lihat Promo Selengkapnya',
                 button_url: '/form-klien',
-                image: 'https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=1920&auto=format&fit=crop&q=85',
-            },
-            {
-                id: '2',
-                tag: 'EXCLUSIVE PREWEDDING',
-                title: 'Dokumentasi Cinta Abadi di Destinasi Impian',
-                description: 'Paket sinematografi prewedding eksklusif ke Bromo, Bali & Yogyakarta dengan arahan pose profesional & gaun premium.',
-                button_text: 'Jelajahi Paket Prewedding',
-                button_url: '/form-klien',
-                image: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=1920&auto=format&fit=crop&q=85',
-            },
-            {
-                id: '3',
-                tag: 'LUXURY WEDDING',
-                title: 'Kisah Hari Bahagia yang Mewah & Tak Lekang Waktu',
-                description: 'Dokumentasi resepsi & akad elegan dengan multi-camera cinematic 4K, album cetak premium, dan drone aerial coverage.',
-                button_text: 'Konsultasi Sekarang',
-                button_url: '/form-klien',
-                image: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=1920&auto=format&fit=crop&q=85',
+                image: '/images/wedding-couple.jpg',
             },
         ];
 
@@ -379,143 +305,46 @@ export default function ClientDashboard({
         return () => clearInterval(timer);
     }, [promoSlides.length, isHoveredPromo]);
 
-    // File Links Fallback
-    const fileList: FileLinkItem[] = (active_project?.file_links && active_project.file_links.length > 0)
-        ? active_project.file_links
-        : [
-            {
-                id: '1',
-                name: 'Preview Foto (Low Resolution)',
-                drive_url: '#',
-                file_type: 'image',
-                created_at_formatted: '05 Jun 2026',
-            },
-            {
-                id: '2',
-                name: 'Behind The Scene',
-                drive_url: '#',
-                file_type: 'video',
-                created_at_formatted: '23 Mei 2026',
-            },
-            {
-                id: '3',
-                name: 'Foto Hari H (RAW)',
-                drive_url: '#',
-                file_type: 'zip',
-                created_at_formatted: '23 Mei 2026',
-            },
-        ];
+    // Real File Links from Database
+    const fileList: FileLinkItem[] = active_project?.file_links || [];
 
-    // Highlights Fallback (4 photos for 2x2 grid)
-    const highlightPhotos = (active_project?.highlights && active_project.highlights.length > 0)
-        ? active_project.highlights.slice(0, 4)
-        : [
-            { id: '1', title: 'Highlight 1', image_url: 'https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=600&auto=format&fit=crop&q=80' },
-            { id: '2', title: 'Highlight 2', image_url: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&auto=format&fit=crop&q=80' },
-            { id: '3', title: 'Highlight 3', image_url: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=600&auto=format&fit=crop&q=80' },
-            { id: '4', title: 'Highlight 4', image_url: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?w=600&auto=format&fit=crop&q=80' },
-        ];
+    // Real Highlights from Database
+    const highlightPhotos = active_project?.highlights || [];
 
-    // Portfolio Gallery (4 photos from backend real Portfolios or fallback)
-    const totalPortfoliosCount = (pageProps as any)?.total_portfolios ?? portfolios?.length ?? 7;
+    // Portfolio Gallery
+    const totalPortfoliosCount = (pageProps as any)?.total_portfolios ?? portfolios?.length ?? 0;
     const portfolioPhotos = (portfolios && portfolios.length > 0)
         ? portfolios.slice(0, 4).map((item, idx) => ({
             id: item.id || String(idx + 1),
-            image: item.image || item.image_url || 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&auto=format&fit=crop&q=80',
-            isOverlay: idx === 3,
+            image: item.image || item.image_url || '/images/wedding-couple.jpg',
+            isOverlay: idx === 3 && totalPortfoliosCount > 4,
             count: `+${Math.max(1, totalPortfoliosCount - 3)}`,
         }))
-        : [
-            { id: '1', image: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&auto=format&fit=crop&q=80' },
-            { id: '2', image: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=600&auto=format&fit=crop&q=80' },
-            { id: '3', image: 'https://images.unsplash.com/photo-1537633552985-df8429e8048b?w=600&auto=format&fit=crop&q=80' },
-            { id: '4', image: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?w=600&auto=format&fit=crop&q=80', isOverlay: true, count: '+25' },
-        ];
+        : [];
 
-    // Testimonials Fallback
-    const testimonialList: TestimonialItem[] = (testimonials && testimonials.length > 0)
-        ? testimonials
-        : [
-            {
-                id: '1',
-                client_name: 'Raka & Dinda',
-                package_name: 'Paket Prewedding',
-                rating: 5,
-                comment: 'Hasil fotonya luar biasa, melebihi ekspektasi! Tim Arams Pictures sangat profesional dan friendly. Prosesnya juga mudah dan terorganisir.',
-                avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-            },
-            {
-                id: '2',
-                client_name: 'Aditya & Sarah',
-                package_name: 'Paket Wedding Royal',
-                rating: 5,
-                comment: 'Video cinematic hari H kami sangat mengharukan dan detail. Semua keluarga memuji hasilnya. Terima kasih banyak tim Arams!',
-                avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
-            },
-            {
-                id: '3',
-                client_name: 'Dimas & Clarissa',
-                package_name: 'Paket Maternity & Newborn',
-                rating: 5,
-                comment: 'Sangat sabar saat sesi foto newborn si kecil. Hasil editing warnanya hangat, natural, dan sangat berkesan bagi keluarga kami.',
-                avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&auto=format&fit=crop&q=80',
-            },
-        ];
+    // Testimonials
+    const testimonialList: TestimonialItem[] = testimonials || [];
 
-    // Auto-advance Testimonials Carousel every 3 seconds (pauses on hover)
+    // Auto-advance Testimonials Carousel every 4 seconds (pauses on hover)
     useEffect(() => {
         if (testimonialList.length <= 1 || isHoveredTestimonial) return;
         const timer = setInterval(() => {
             setCurrentTestimonialIndex((prev) => (prev + 1) % testimonialList.length);
-        }, 3000);
+        }, 4000);
         return () => clearInterval(timer);
     }, [testimonialList.length, isHoveredTestimonial]);
 
-    // 5 Package Recommendations (From Real Database Packages)
-    const packageRecommendations: RecommendedItem[] = (recommended_projects && recommended_projects.length > 0)
-        ? recommended_projects.slice(0, 5)
-        : (recommended_packages && (recommended_packages as RecommendedItem[]).length > 0)
-        ? (recommended_packages as RecommendedItem[]).slice(0, 5)
-        : [
-            {
-                id: '1',
-                title: 'Paket Foto Wedding',
-                description: 'Abadikan hari bahagia Anda dengan konsep elegan dan timeless.',
-                price: 'Rp38.000.000',
-                image: 'https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=600&auto=format&fit=crop&q=80',
-            },
-            {
-                id: '2',
-                title: 'Paket Maternity',
-                description: 'Momen kehamilan penuh kehangatan yang tak terlupakan.',
-                price: 'Rp15.000.000',
-                image: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&auto=format&fit=crop&q=80',
-            },
-            {
-                id: '3',
-                title: 'Paket Newborn',
-                description: 'Abadikan momen pertama si kecil dengan penuh cinta dan kelembutan.',
-                price: 'Rp13.500.000',
-                image: 'https://images.unsplash.com/photo-1511895426328-dc8714191300?w=600&auto=format&fit=crop&q=80',
-            },
-            {
-                id: '4',
-                title: 'Paket Family',
-                description: 'Ciptakan kenangan indah bersama keluarga tercinta untuk selamanya.',
-                price: 'Rp12.700.000',
-                image: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=600&auto=format&fit=crop&q=80',
-            },
-            {
-                id: '5',
-                title: 'Paket Engagement',
-                description: 'Rayakan momen spesial sebelum hari bahagia Anda.',
-                price: 'Rp10.500.000',
-                image: 'https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?w=600&auto=format&fit=crop&q=80',
-            },
-        ];
+    // Recommendations
+    const packageRecommendations = (recommended_packages && recommended_packages.length > 0)
+        ? recommended_packages
+        : (recommended_projects && recommended_projects.length > 0)
+        ? recommended_projects
+        : [];
 
     const activePromo = promoSlides[currentPromoIndex % promoSlides.length] || promoSlides[0];
-    const activeTestimonial = testimonialList[currentTestimonialIndex % testimonialList.length] || testimonialList[0];
+    const activeTestimonial = testimonialList.length > 0
+        ? (testimonialList[currentTestimonialIndex % testimonialList.length] || testimonialList[0])
+        : null;
 
     return (
         <ClientLayout>
@@ -753,33 +582,41 @@ export default function ClientDashboard({
                             </div>
 
                             <div className="space-y-2.5">
-                                {fileList.slice(0, 3).map((file, idx) => (
-                                    <div
-                                        key={file.id || idx}
-                                        className="p-2.5 rounded-lg bg-[#FBF6F0] border border-[#F4EBE4] flex items-center justify-between hover:bg-white hover:border-[#3C0E0E]/30 hover:shadow-2xs transition-all duration-200"
-                                    >
-                                        <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                                            <Folder className="w-4 h-4 text-slate-400 shrink-0" />
-                                            <div className="min-w-0">
-                                                <p className="text-xs font-bold text-slate-800 truncate">
-                                                    {file.name}
-                                                </p>
-                                                <span className="text-[10px] text-slate-400 block">
-                                                    Dibagikan pada {file.created_at_formatted || '05 Jun 2026'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <a
-                                            href={file.drive_url || '#'}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="px-2.5 py-1 rounded-md border border-[#E8DDD5] bg-[#F4EBE4] text-[#3C0E0E] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-[10px] font-bold inline-flex items-center gap-1 transition-all duration-200 shrink-0 shadow-2xs cursor-pointer group/buka"
-                                        >
-                                            <span>Buka</span>
-                                            <ArrowUpRight className="w-3 h-3 text-[#3C0E0E] group-hover/buka:text-white transition-colors" />
-                                        </a>
+                                {fileList.length === 0 ? (
+                                    <div className="py-6 px-4 text-center rounded-lg bg-[#FBF6F0] border border-[#F4EBE4] space-y-1">
+                                        <Folder className="w-5 h-5 text-slate-400 mx-auto" />
+                                        <p className="text-xs font-bold text-slate-700">Belum ada file dibagikan</p>
+                                        <p className="text-[10px] text-slate-500">Link Google Drive akan muncul setelah sesi pengerjaan dimulai.</p>
                                     </div>
-                                ))}
+                                ) : (
+                                    fileList.slice(0, 3).map((file, idx) => (
+                                        <div
+                                            key={file.id || idx}
+                                            className="p-2.5 rounded-lg bg-[#FBF6F0] border border-[#F4EBE4] flex items-center justify-between hover:bg-white hover:border-[#3C0E0E]/30 hover:shadow-2xs transition-all duration-200"
+                                        >
+                                            <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                                                <Folder className="w-4 h-4 text-slate-400 shrink-0" />
+                                                <div className="min-w-0">
+                                                    <p className="text-xs font-bold text-slate-800 truncate">
+                                                        {file.name}
+                                                    </p>
+                                                    <span className="text-[10px] text-slate-400 block">
+                                                        {file.created_at_formatted ? `Dibagikan pada ${file.created_at_formatted}` : (file.created_at ? `Dibagikan pada ${formatDate(file.created_at)}` : 'Tersedia')}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <a
+                                                href={file.drive_url || '#'}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="px-2.5 py-1 rounded-md border border-[#E8DDD5] bg-[#F4EBE4] text-[#3C0E0E] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-[10px] font-bold inline-flex items-center gap-1 transition-all duration-200 shrink-0 shadow-2xs cursor-pointer group/buka"
+                                            >
+                                                <span>Buka</span>
+                                                <ArrowUpRight className="w-3 h-3 text-[#3C0E0E] group-hover/buka:text-white transition-colors" />
+                                            </a>
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         </div>
 
@@ -829,19 +666,19 @@ export default function ClientDashboard({
                                 <div className="flex justify-between items-center py-0.5">
                                     <span className="text-slate-500 font-medium">Total Project</span>
                                     <span className="font-bold text-slate-900">
-                                        {formatRupiah(payment_summary?.total_amount || 50000000)}
+                                        {formatRupiah(payment_summary?.total_amount ?? active_project?.total_amount ?? 0)}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center py-0.5">
                                     <span className="text-slate-500 font-medium">Total Dibayar</span>
                                     <span className="font-bold text-emerald-600">
-                                        {formatRupiah(payment_summary?.paid_amount || 25000000)}
+                                        {formatRupiah(payment_summary?.paid_amount ?? active_project?.paid_amount ?? 0)}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center py-0.5">
                                     <span className="text-slate-500 font-medium">Sisa Tagihan</span>
                                     <span style={{ color: COLOR_BURGUNDY }} className="font-bold">
-                                        {formatRupiah(payment_summary?.remaining_amount || 25000000)}
+                                        {formatRupiah(payment_summary?.remaining_amount ?? Math.max(0, (active_project?.total_amount ?? 0) - (active_project?.paid_amount ?? 0)))}
                                     </span>
                                 </div>
                             </div>
@@ -852,13 +689,15 @@ export default function ClientDashboard({
                                     <div
                                         className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-[#3C0E0E] to-[#8B2635]"
                                         style={{
-                                            width: `${payment_summary?.paid_percentage || 50}%`,
+                                            width: `${payment_summary?.paid_percentage ?? (active_project?.total_amount ? Math.min(100, Math.round(((active_project?.paid_amount || 0) / active_project.total_amount) * 100)) : 0)}%`,
                                         }}
                                     />
                                 </div>
                                 <div className="flex justify-between items-center text-[10px] text-slate-500 font-semibold">
                                     <span>Status Tagihan</span>
-                                    <span>{payment_summary?.paid_percentage || 50}% Terbayar</span>
+                                    <span>
+                                        {payment_summary?.paid_percentage ?? (active_project?.total_amount ? Math.min(100, Math.round(((active_project?.paid_amount || 0) / active_project.total_amount) * 100)) : 0)}% Terbayar
+                                    </span>
                                 </div>
                             </div>
 
@@ -874,15 +713,15 @@ export default function ClientDashboard({
                                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                                     <div>
                                         <span className="font-bold text-slate-800 block text-[11px]">
-                                            Pembayaran Terakhir
+                                            Status Pembayaran
                                         </span>
                                         <span className="text-[10px] text-slate-500">
-                                            {payment_summary?.last_payment_label || 'DP (50%)'}
+                                            {payment_summary?.last_payment_label || ((active_project?.paid_amount ?? 0) > 0 ? 'DP / Pembayaran Terverifikasi' : 'Belum Ada Pembayaran')}
                                         </span>
                                     </div>
                                 </div>
                                 <span className="text-[10px] text-slate-500 font-medium">
-                                    {payment_summary?.last_payment_date || '26 Mei 2026'}
+                                    {payment_summary?.last_payment_date || ((active_project?.paid_amount ?? 0) > 0 ? 'Terkonfirmasi' : '-')}
                                 </span>
                             </div>
                         </div>
@@ -922,25 +761,33 @@ export default function ClientDashboard({
                                 </p>
                             </div>
 
-                            {/* 2x2 Photo Grid */}
-                            <div className="grid grid-cols-2 gap-2">
-                                {highlightPhotos.map((photo, idx) => (
-                                    <div
-                                        key={photo.id || idx}
-                                        onClick={() => {
-                                            setActiveLightboxIndex(idx);
-                                            setIsLightboxOpen(true);
-                                        }}
-                                        className="aspect-[4/3] rounded-lg overflow-hidden bg-slate-100 relative group/photo cursor-pointer"
-                                    >
-                                        <img
-                                            src={photo.image_url}
-                                            alt={photo.title || `Highlight ${idx + 1}`}
-                                            className="w-full h-full object-cover group-hover/photo:scale-108 transition-transform duration-500"
-                                        />
-                                    </div>
-                                ))}
-                            </div>
+                            {/* 2x2 Photo Grid or Empty State */}
+                            {highlightPhotos.length === 0 ? (
+                                <div className="py-8 px-4 text-center rounded-lg bg-[#FBF6F0] border border-[#F4EBE4] space-y-1">
+                                    <ImageIcon className="w-5 h-5 text-slate-400 mx-auto" />
+                                    <p className="text-xs font-bold text-slate-700">Belum ada highlight foto</p>
+                                    <p className="text-[10px] text-slate-500">Momen foto pilihan akan diunggah oleh tim fotografer.</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-2 gap-2">
+                                    {highlightPhotos.slice(0, 4).map((photo, idx) => (
+                                        <div
+                                            key={photo.id || idx}
+                                            onClick={() => {
+                                                setActiveLightboxIndex(idx);
+                                                setIsLightboxOpen(true);
+                                            }}
+                                            className="aspect-[4/3] rounded-lg overflow-hidden bg-slate-100 relative group/photo cursor-pointer"
+                                        >
+                                            <img
+                                                src={photo.image_url}
+                                                alt={photo.title || `Highlight ${idx + 1}`}
+                                                className="w-full h-full object-cover group-hover/photo:scale-108 transition-transform duration-500"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
 
                             {/* Dots */}
                             <div className="flex justify-center items-center gap-1 pt-1">
@@ -1049,91 +896,99 @@ export default function ClientDashboard({
                                         Kata mereka tentang pengalaman bersama kami.
                                     </p>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                    <button
-                                        type="button"
-                                        onClick={() => setCurrentTestimonialIndex((prev) => (prev === 0 ? testimonialList.length - 1 : prev - 1))}
-                                        className="w-6 h-6 rounded-full border border-[#E8DDD5] bg-[#F4EBE4] flex items-center justify-center text-[#3C0E0E] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] transition-all cursor-pointer group"
-                                        aria-label="Previous testimonial"
-                                    >
-                                        <ChevronLeft className="w-3.5 h-3.5 text-[#3C0E0E] group-hover:text-white transition-colors" />
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setCurrentTestimonialIndex((prev) => (prev + 1) % testimonialList.length)}
-                                        className="w-6 h-6 rounded-full border border-[#E8DDD5] bg-[#F4EBE4] flex items-center justify-center text-[#3C0E0E] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] transition-all cursor-pointer group"
-                                        aria-label="Next testimonial"
-                                    >
-                                        <ChevronRight className="w-3.5 h-3.5 text-[#3C0E0E] group-hover:text-white transition-colors" />
-                                    </button>
-                                </div>
+                                {testimonialList.length > 1 && (
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => setCurrentTestimonialIndex((prev) => (prev === 0 ? testimonialList.length - 1 : prev - 1))}
+                                            className="w-6 h-6 rounded-full border border-[#E8DDD5] bg-[#F4EBE4] flex items-center justify-center text-[#3C0E0E] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] transition-all cursor-pointer group"
+                                            aria-label="Previous testimonial"
+                                        >
+                                            <ChevronLeft className="w-3.5 h-3.5 text-[#3C0E0E] group-hover:text-white transition-colors" />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setCurrentTestimonialIndex((prev) => (prev + 1) % testimonialList.length)}
+                                            className="w-6 h-6 rounded-full border border-[#E8DDD5] bg-[#F4EBE4] flex items-center justify-center text-[#3C0E0E] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] transition-all cursor-pointer group"
+                                            aria-label="Next testimonial"
+                                        >
+                                            <ChevronRight className="w-3.5 h-3.5 text-[#3C0E0E] group-hover:text-white transition-colors" />
+                                        </button>
+                                    </div>
+                                )}
                             </div>
 
-                            <AnimatePresence mode="wait">
-                                <motion.div
-                                    key={activeTestimonial.id || currentTestimonialIndex}
-                                    initial={{ opacity: 0, y: 6 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -6 }}
-                                    transition={{ duration: 0.28, ease: 'easeOut' }}
-                                    className="space-y-3"
-                                >
-                                    {/* Stars */}
-                                    <div className="flex items-center gap-1 text-rose-600">
-                                        {Array.from({ length: activeTestimonial.rating || 5 }).map((_, i) => (
-                                            <Star
-                                                key={i}
-                                                className="w-3.5 h-3.5 text-rose-600 fill-rose-600"
-                                            />
-                                        ))}
-                                    </div>
-
-                                    {/* Quote */}
-                                    <p className="text-xs text-slate-700 leading-relaxed italic line-clamp-3 min-h-[48px]">
-                                        "{activeTestimonial.comment}"
-                                    </p>
-
-                                    {/* Client Avatar + Name + Slide Dots */}
-                                    <div className="flex items-center justify-between pt-1">
-                                        <div className="flex items-center gap-2.5">
-                                            <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-200 shrink-0 ring-1 ring-slate-200">
-                                                <img
-                                                    src={activeTestimonial.avatar}
-                                                    alt={activeTestimonial.client_name}
-                                                    className="w-full h-full object-cover"
+                            {activeTestimonial ? (
+                                <AnimatePresence mode="wait">
+                                    <motion.div
+                                        key={activeTestimonial.id || currentTestimonialIndex}
+                                        initial={{ opacity: 0, y: 6 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -6 }}
+                                        transition={{ duration: 0.28, ease: 'easeOut' }}
+                                        className="space-y-3"
+                                    >
+                                        {/* Stars */}
+                                        <div className="flex items-center gap-1 text-rose-600">
+                                            {Array.from({ length: activeTestimonial.rating || 5 }).map((_, i) => (
+                                                <Star
+                                                    key={i}
+                                                    className="w-3.5 h-3.5 text-rose-600 fill-rose-600"
                                                 />
-                                            </div>
-                                            <div>
-                                                <p className="text-xs font-bold text-slate-900 leading-none">
-                                                    {activeTestimonial.client_name}
-                                                </p>
-                                                <span className="text-[10px] text-slate-400 block mt-0.5">
-                                                    {activeTestimonial.package_name || 'Wedding Day Luxury'}
-                                                </span>
-                                            </div>
+                                            ))}
                                         </div>
 
-                                        {/* Testimonial Page Slider Indicator Dots */}
-                                        {testimonialList.length > 1 && (
-                                            <div className="flex items-center gap-1">
-                                                {testimonialList.map((_, dotIdx) => (
-                                                    <button
-                                                        key={dotIdx}
-                                                        type="button"
-                                                        onClick={() => setCurrentTestimonialIndex(dotIdx)}
-                                                        className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                                                            (currentTestimonialIndex % testimonialList.length) === dotIdx
-                                                                ? 'w-4 bg-[#3C0E0E]'
-                                                                : 'w-1.5 bg-slate-200 hover:bg-slate-300'
-                                                        }`}
-                                                        aria-label={`Testimoni ${dotIdx + 1}`}
+                                        {/* Quote */}
+                                        <p className="text-xs text-slate-700 leading-relaxed italic line-clamp-3 min-h-[48px]">
+                                            "{activeTestimonial.comment}"
+                                        </p>
+
+                                        {/* Client Avatar + Name + Slide Dots */}
+                                        <div className="flex items-center justify-between pt-1">
+                                            <div className="flex items-center gap-2.5">
+                                                <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-200 shrink-0 ring-1 ring-slate-200">
+                                                    <img
+                                                        src={activeTestimonial.avatar || '/images/wedding-couple.jpg'}
+                                                        alt={activeTestimonial.client_name}
+                                                        className="w-full h-full object-cover"
                                                     />
-                                                ))}
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-bold text-slate-900 leading-none">
+                                                        {activeTestimonial.client_name}
+                                                    </p>
+                                                    <span className="text-[10px] text-slate-400 block mt-0.5">
+                                                        {activeTestimonial.package_name || 'Dokumentasi Spesial'}
+                                                    </span>
+                                                </div>
                                             </div>
-                                        )}
-                                    </div>
-                                </motion.div>
-                            </AnimatePresence>
+
+                                            {/* Testimonial Page Slider Indicator Dots */}
+                                            {testimonialList.length > 1 && (
+                                                <div className="flex items-center gap-1">
+                                                    {testimonialList.map((_, dotIdx) => (
+                                                        <button
+                                                            key={dotIdx}
+                                                            type="button"
+                                                            onClick={() => setCurrentTestimonialIndex(dotIdx)}
+                                                            className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                                                                (currentTestimonialIndex % testimonialList.length) === dotIdx
+                                                                    ? 'w-4 bg-[#3C0E0E]'
+                                                                    : 'w-1.5 bg-slate-200 hover:bg-slate-300'
+                                                            }`}
+                                                            aria-label={`Testimoni ${dotIdx + 1}`}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                </AnimatePresence>
+                            ) : (
+                                <div className="py-8 text-center text-xs text-slate-400">
+                                    Belum ada testimoni ulasan yang dipublikasikan.
+                                </div>
+                            )}
                         </div>
                     </div>
                 </section>

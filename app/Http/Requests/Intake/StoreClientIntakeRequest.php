@@ -67,6 +67,7 @@ class StoreClientIntakeRequest extends FormRequest
             'notes' => 'nullable|string',
             'referred_by_client_id' => 'nullable',
             'wedding_organizer_id' => 'nullable',
+            'client_source_id' => 'nullable|exists:client_sources,id',
             'referral_name' => 'nullable|string|max:255',
             'source_info' => 'nullable|string|max:255',
             'reference_url' => 'nullable|string',

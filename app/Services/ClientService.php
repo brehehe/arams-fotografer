@@ -23,11 +23,11 @@ class ClientService
         // Filters
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('phone', 'like', "%{$search}%")
-                    ->orWhere('bride_name', 'like', "%{$search}%")
-                    ->orWhere('groom_name', 'like', "%{$search}%");
+                $q->where('name', 'ilike', "%{$search}%")
+                    ->orWhere('email', 'ilike', "%{$search}%")
+                    ->orWhere('phone', 'ilike', "%{$search}%")
+                    ->orWhere('bride_name', 'ilike', "%{$search}%")
+                    ->orWhere('groom_name', 'ilike', "%{$search}%");
             });
         }
 
@@ -84,6 +84,11 @@ class ClientService
         $allClients = Client::select('id', 'name', 'phone', 'city', 'email', 'bride_name', 'groom_name', 'child_name', 'father_name', 'mother_name', 'children')
             ->orderBy('name')
             ->get();
+        $clientSources = \App\Models\ClientSource::where('status', 'active')
+            ->select('id', 'name', 'type', 'avatar', 'is_primary')
+            ->orderByDesc('is_primary')
+            ->orderBy('name')
+            ->get();
 
         return [
             'clients' => $clients,
@@ -94,6 +99,7 @@ class ClientService
             'packages' => $packages,
             'wedding_organizers' => $weddingOrganizers,
             'all_clients' => $allClients,
+            'client_sources' => $clientSources,
             'stats' => [
                 'total_clients' => (int) ($clientStats->total ?? 0),
                 'active_clients' => (int) ($clientStats->active ?? 0),
@@ -117,6 +123,7 @@ class ClientService
             'referredByClient:id,name,phone,city,email,bride_name,groom_name',
             'referrals:id,name,phone,city,referred_by_client_id,created_at',
             'weddingOrganizer:id,name,pic_name,phone,email,city,tier',
+            'clientSource:id,name,type,avatar,phone,email',
             'projects' => function ($q) {
                 $q->with(['category', 'package', 'fileLinks' => function ($q) {
                     $q->latest();
@@ -140,6 +147,11 @@ class ClientService
      */
     public function createClient(array $data, ?User $causer = null): Client
     {
+        if (isset($data['children']) && is_array($data['children'])) {
+            $filtered = array_values(array_filter($data['children'], fn($c) => !empty(trim($c['name'] ?? ''))));
+            $data['children'] = !empty($filtered) ? $filtered : null;
+        }
+
         $clientFillable = (new Client())->getFillable();
         $clientData = array_intersect_key($data, array_flip($clientFillable));
 
@@ -156,7 +168,7 @@ class ClientService
             try {
                 $category = null;
                 if (!empty($data['event_type'])) {
-                    $category = \App\Models\Category::where('name', 'like', "%{$data['event_type']}%")->first();
+                    $category = \App\Models\Category::where('name', 'ilike', "%{$data['event_type']}%")->first();
                 }
 
                 $package = null;
@@ -169,6 +181,7 @@ class ClientService
                 app(ProjectService::class)->createProject([
                     'client_id' => $client->id,
                     'wedding_organizer_id' => $client->wedding_organizer_id,
+                    'client_source_id' => $client->client_source_id,
                     'category_id' => $category?->id ?? ($package?->category_id ?? null),
                     'package_id' => $package?->id ?? null,
                     'name' => ($data['event_type'] ?: 'Event') . ' - ' . $client->name,
@@ -194,7 +207,15 @@ class ClientService
      */
     public function updateClient(Client $client, array $data, ?User $causer = null): Client
     {
-        $client->update($data);
+        if (isset($data['children']) && is_array($data['children'])) {
+            $filtered = array_values(array_filter($data['children'], fn($c) => !empty(trim($c['name'] ?? ''))));
+            $data['children'] = !empty($filtered) ? $filtered : null;
+        }
+
+        $clientFillable = (new Client())->getFillable();
+        $clientData = array_intersect_key($data, array_flip($clientFillable));
+
+        $client->update($clientData);
 
         activity()
             ->causedBy($causer ?? auth()->user())

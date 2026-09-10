@@ -32,8 +32,8 @@ import {
 } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
 import { toast } from 'sonner';
-import { FormattedNumberInput } from '@/components/ui/formatted-number-input';
 import { formatRupiah } from '@/lib/formatters';
+import RecordPaymentModal from '@/components/projects/RecordPaymentModal';
 
 interface InvoiceItem {
     id: string;
@@ -72,8 +72,12 @@ interface CompanySettings {
     phone?: string;
     email?: string;
     address?: string;
+    city?: string;
     instagram?: string;
     website?: string;
+    director_name?: string;
+    director_title?: string;
+    signature_city?: string;
 }
 
 interface LineItem {
@@ -169,6 +173,10 @@ export default function ProjectInvoice({
         setTimeout(() => setCopiedAccount(false), 2000);
     };
 
+    const directorName = company_settings?.director_name || appSettings?.invoice_director_name || 'Aditya Pratama';
+    const directorTitle = company_settings?.director_title || appSettings?.invoice_director_title || 'Direktur Utama / Finance Studio';
+    const signatureCity = company_settings?.signature_city || appSettings?.invoice_signature_city || company_settings?.city || appSettings?.company_city || 'Jakarta';
+
     // ── KUSTOMISASI TEKS & CATATAN INVOICE ────────────────────────────────────
     const initialCustomTexts = {
         invoiceTitle: 'INVOICE',
@@ -182,8 +190,10 @@ export default function ProjectInvoice({
         autoSendNote: 'Invoice ini akan dikirim otomatis ke klien setelah Anda mengirimkan melalui WhatsApp atau Email.',
         reminderTitle: 'HARAP LAKUKAN PEMBAYARAN SEBELUM',
         reminderSub: 'Agar booking tanggal tetap kami amankan.',
-        thankYouTitle: 'Thank You',
-        thankYouSub: 'Terima kasih atas kepercayaan Anda.',
+        signatureSalutation: 'Hormat Kami,',
+        directorName: directorName,
+        directorTitle: directorTitle,
+        signatureCity: signatureCity,
         badge1Title: 'Profesional',
         badge1Sub: '& Terpercaya',
         badge2Title: 'Kualitas Terbaik',
@@ -202,8 +212,8 @@ export default function ProjectInvoice({
     // Format dates
     const formatDateIndo = (dateStr?: string) => {
         if (!dateStr) {
-return '27 Agustus 2026';
-}
+            return '27 Agustus 2026';
+        }
 
         try {
             const d = new Date(dateStr);
@@ -277,75 +287,6 @@ return '27 Agustus 2026';
     const isInvoicePaid = inv.status === 'paid' || project?.payment_status === 'paid' || (Number(inv.paid_amount || 0) >= Number(inv.total || 0) && Number(inv.total || 0) > 0);
 
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-    const [paymentSubmitting, setPaymentSubmitting] = useState(false);
-    const [paymentFormData, setPaymentFormData] = useState<{
-        amount: string;
-        payment_date: string;
-        payment_method_id: string;
-        reference_number: string;
-        notes: string;
-        proof_file: File | null;
-    }>({
-        amount: String(Math.round(dpAmount)),
-        payment_date: new Date().toISOString().split('T')[0],
-        payment_method_id: defaultPaymentMethod?.id || payment_methods[0]?.id || '',
-        reference_number: '',
-        notes: `Pembayaran ${inv.notes || `Invoice ${inv.invoice_number}`}`,
-        proof_file: null,
-    });
-
-    const handlePaymentSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (!paymentFormData.amount || Number(paymentFormData.amount) <= 0) {
-            toast.error('Silakan masukkan jumlah pembayaran yang valid');
-
-            return;
-        }
-
-        const methodId = paymentFormData.payment_method_id || defaultPaymentMethod?.id || payment_methods[0]?.id;
-
-        if (!methodId) {
-            toast.error('Silakan pilih metode pembayaran');
-
-            return;
-        }
-
-        setPaymentSubmitting(true);
-
-        const payload: Record<string, any> = {
-            project_id: project.id,
-            amount: paymentFormData.amount,
-            payment_date: paymentFormData.payment_date,
-            payment_method_id: methodId,
-            reference_number: paymentFormData.reference_number,
-            notes: paymentFormData.notes,
-            invoice_id: inv.id,
-        };
-
-        if (paymentFormData.proof_file) {
-            payload.proof_file = paymentFormData.proof_file;
-        }
-
-        router.post(
-            '/finance/payments',
-            payload,
-            {
-                forceFormData: true,
-                preserveScroll: true,
-                onSuccess: () => {
-                    setPaymentSubmitting(false);
-                    setIsPaymentModalOpen(false);
-                    toast.success('Pembayaran dan bukti transfer berhasil dikonfirmasi dan dicatat ke Finance!');
-                },
-                onError: (errors: any) => {
-                    setPaymentSubmitting(false);
-                    const errorMsg = Object.values(errors || {})[0] as string;
-                    toast.error(errorMsg || 'Gagal mencatat pembayaran');
-                },
-            }
-        );
-    };
 
     // Status Label & Styling
     const getInvoiceStatus = () => {
@@ -539,7 +480,7 @@ return '27 Agustus 2026';
                         width: 100% !important;
                         height: auto !important;
                         margin: 0 !important;
-                        padding: 12px 16px !important;
+                        padding: 0 !important;
                         box-shadow: none !important;
                         border: none !important;
                         border-radius: 0 !important;
@@ -653,17 +594,15 @@ return '27 Agustus 2026';
                     <button
                         type="button"
                         onClick={() => setInvoiceVersion('payment')}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border ${
-                            invoiceVersion === 'payment'
-                                ? 'bg-[#5B21B6] text-white border-[#5B21B6] shadow-xs'
-                                : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
-                        }`}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border ${invoiceVersion === 'payment'
+                            ? 'bg-[#5B21B6] text-white border-[#5B21B6] shadow-xs'
+                            : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                            }`}
                     >
                         <CreditCard className="w-3.5 h-3.5" />
                         <span>Versi 1: Pembayaran (Tagihan DP)</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${
-                            invoiceVersion === 'payment' ? 'bg-white/20 text-white' : 'bg-purple-100 text-purple-700'
-                        }`}>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${invoiceVersion === 'payment' ? 'bg-white/20 text-white' : 'bg-purple-100 text-purple-700'
+                            }`}>
                             Kwitansi / DP
                         </span>
                     </button>
@@ -672,17 +611,15 @@ return '27 Agustus 2026';
                     <button
                         type="button"
                         onClick={() => setInvoiceVersion('full')}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border ${
-                            invoiceVersion === 'full'
-                                ? 'bg-[#5B21B6] text-white border-[#5B21B6] shadow-xs'
-                                : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
-                        }`}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer border ${invoiceVersion === 'full'
+                            ? 'bg-[#5B21B6] text-white border-[#5B21B6] shadow-xs'
+                            : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                            }`}
                     >
                         <Layers className="w-3.5 h-3.5" />
                         <span>Versi 2: Full Informasi (Paket, Add-on, Biaya Layanan)</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${
-                            invoiceVersion === 'full' ? 'bg-white/20 text-white' : 'bg-purple-100 text-purple-700'
-                        }`}>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${invoiceVersion === 'full' ? 'bg-white/20 text-white' : 'bg-purple-100 text-purple-700'
+                            }`}>
                             Rincian Lengkap
                         </span>
                     </button>
@@ -862,11 +799,10 @@ return '27 Agustus 2026';
                                                 <div className="grid grid-cols-[90px_10px_1fr] items-center pt-1 border-t border-[#E0D7FE]">
                                                     <span className="text-slate-500 font-medium">Status</span>
                                                     <span className="text-slate-400">:</span>
-                                                    <span className={`inline-flex items-center gap-1.5 font-bold text-[10.5px] ${
-                                                        isInvoicePaid
-                                                            ? 'text-emerald-700'
-                                                            : (project?.payment_status === 'partial' || Number(project?.paid_amount || 0) > 0 ? 'text-indigo-700' : 'text-rose-600')
-                                                    }`}>
+                                                    <span className={`inline-flex items-center gap-1.5 font-bold text-[10.5px] ${isInvoicePaid
+                                                        ? 'text-emerald-700'
+                                                        : (project?.payment_status === 'partial' || Number(project?.paid_amount || 0) > 0 ? 'text-indigo-700' : 'text-rose-600')
+                                                        }`}>
                                                         <span className={`w-2 h-2 rounded-full ${statusBadge.dot}`} />
                                                         <span>{statusBadge.label}</span>
                                                     </span>
@@ -985,11 +921,10 @@ return '27 Agustus 2026';
                                                             </span>
                                                         </td>
                                                         <td className="py-4 px-4 text-center align-middle">
-                                                            <span className={`inline-flex items-center gap-1.5 font-bold text-[10px] px-2.5 py-1 rounded-full border ${
-                                                                isInvoicePaid
-                                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                                                    : 'bg-amber-50 text-amber-800 border-amber-200'
-                                                            }`}>
+                                                            <span className={`inline-flex items-center gap-1.5 font-bold text-[10px] px-2.5 py-1 rounded-full border ${isInvoicePaid
+                                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                                : 'bg-amber-50 text-amber-800 border-amber-200'
+                                                                }`}>
                                                                 <span className={`w-1.5 h-1.5 rounded-full ${isInvoicePaid ? 'bg-emerald-500' : 'bg-amber-500'}`} />
                                                                 <span>{isInvoicePaid ? 'LUNAS' : 'MENUNGGU PEMBAYARAN'}</span>
                                                             </span>
@@ -1335,14 +1270,47 @@ return '27 Agustus 2026';
                                                 </p>
                                             </div>
 
-                                            {/* Cursive Thank You */}
-                                            <div className="text-center pt-2 space-y-0.5">
-                                                <h3 className="font-serif italic text-2xl text-[#1E1B4B] tracking-wide">
-                                                    {customTexts.thankYouTitle}
-                                                </h3>
-                                                <p className="text-[11px] text-slate-500 font-medium">
-                                                    {customTexts.thankYouSub}
-                                                </p>
+                                            {/* ── TANDA TANGAN RESMI (TTD) ── */}
+                                            <div className="pt-2 flex flex-col items-end text-right">
+                                                <div className="space-y-0.5 inline-block min-w-[210px] text-center">
+                                                    <p className="text-[11px] text-slate-600 font-medium">
+                                                        {customTexts.signatureCity || signatureCity || 'Jakarta'}, {issueDateFormatted}
+                                                    </p>
+                                                    <p className="text-[11px] font-bold text-slate-800">
+                                                        {customTexts.signatureSalutation || 'Hormat Kami,'}
+                                                    </p>
+                                                    <p className="text-[9.5px] font-bold text-[#5B21B6] uppercase tracking-wider">
+                                                        {studioLegalName || studioName || 'Arams Pictures Studio'}
+                                                    </p>
+
+                                                    {/* Signature Box / Stamp space */}
+                                                    <div className="h-16 flex items-center justify-center relative my-0.5">
+                                                        {/* Elegant Signature Typography */}
+                                                        <div className="absolute inset-0 flex items-center justify-center opacity-90">
+                                                            <span className="font-serif italic text-2xl text-[#1E1B4B] tracking-widest select-none -rotate-3">
+                                                                {/* {customTexts.directorName || directorName || 'Aditya Pratama'} */}
+                                                            </span>
+                                                        </div>
+                                                        {/* Official Stamp watermark badge */}
+                                                        {/* <div className="absolute right-0 top-1/2 -translate-y-1/2 opacity-20 pointer-events-none">
+                                                            <div className="w-14 h-14 rounded-full border-2 border-dashed border-[#5B21B6] flex items-center justify-center rotate-12">
+                                                                <span className="text-[7px] font-black text-[#5B21B6] uppercase tracking-widest text-center leading-tight">
+                                                                    OFFICIAL<br />VERIFIED
+                                                                </span>
+                                                            </div>
+                                                        </div> */}
+                                                    </div>
+
+                                                    {/* Name & Title Line */}
+                                                    <div className="border-t border-slate-900/80 pt-1">
+                                                        <p className="text-xs font-bold text-slate-900 tracking-tight">
+                                                            {customTexts.directorName || directorName || 'Aditya Pratama'}
+                                                        </p>
+                                                        <p className="text-[10px] text-slate-500 font-medium leading-tight">
+                                                            {customTexts.directorTitle || directorTitle || 'Direktur Utama / Finance Studio'}
+                                                        </p>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -1391,14 +1359,14 @@ return '27 Agustus 2026';
                                         </div>
                                     </div>
 
-                                    {/* 6. Bottom Purple Double Wave Banner */}
-                                    <div className="relative w-full overflow-hidden mt-4 -mb-8">
+                                    {/* 6. Bottom Purple Double Wave Banner (Full-Bleed to edges and bottom) */}
+                                    <div className="-mx-6 -mb-6 sm:-mx-8 sm:-mb-8 mt-6 overflow-hidden relative">
                                         <svg viewBox="0 0 1000 120" className="w-full h-16 sm:h-20 block" preserveAspectRatio="none">
                                             <path d="M0,50 Q250,110 500,50 T1000,45 L1000,120 L0,120 Z" fill="#8B5CF6" opacity="0.45" />
                                             <path d="M0,65 Q300,120 600,60 T1000,60 L1000,120 L0,120 Z" fill="#6D28D9" opacity="0.85" />
                                             <path d="M0,80 Q350,130 700,75 T1000,75 L1000,120 L0,120 Z" fill="#4C1D95" />
                                         </svg>
-                                        <div className="bg-[#4C1D95] text-white text-center pb-3 pt-0.5 text-[9px] sm:text-[10px] tracking-[0.3em] font-bold uppercase">
+                                        <div className="bg-[#4C1D95] text-white text-center pb-5 pt-1.5 text-[9px] sm:text-[10px] tracking-[0.3em] font-bold uppercase">
                                             {customTexts.footerWebsite.toUpperCase()}
                                         </div>
                                     </div>
@@ -1507,15 +1475,13 @@ return '27 Agustus 2026';
                     </div>
 
                     {/* ── CARD: STATUS & KONFIRMASI DP ──────────────────────────── */}
-                    <div className={`p-4 rounded-3xl border shadow-2xs space-y-3 ${
-                        isInvoicePaid
-                            ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
-                            : 'bg-amber-50/80 border-amber-200 text-amber-950'
-                    }`}>
+                    <div className={`p-4 rounded-3xl border shadow-2xs space-y-3 ${isInvoicePaid
+                        ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
+                        : 'bg-amber-50/80 border-amber-200 text-amber-950'
+                        }`}>
                         <div className="flex items-center gap-2.5">
-                            <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
-                                isInvoicePaid ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
-                            }`}>
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${isInvoicePaid ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
+                                }`}>
                                 {isInvoicePaid ? <Check className="w-4 h-4 stroke-[3]" /> : <Clock className="w-4 h-4" />}
                             </div>
                             <div className="min-w-0">
@@ -1533,17 +1499,7 @@ return '27 Agustus 2026';
                         {!isInvoicePaid ? (
                             <button
                                 type="button"
-                                onClick={() => {
-                                    setPaymentFormData({
-                                        amount: String(Math.round(dpAmount)),
-                                        payment_date: new Date().toISOString().split('T')[0],
-                                        payment_method_id: defaultPaymentMethod?.id || payment_methods[0]?.id || '',
-                                        reference_number: '',
-                                        notes: `Pembayaran ${inv.notes || `Invoice ${inv.invoice_number}`}`,
-                                        proof_file: null,
-                                    });
-                                    setIsPaymentModalOpen(true);
-                                }}
+                                onClick={() => setIsPaymentModalOpen(true)}
                                 className="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-2xs transition-all cursor-pointer flex items-center justify-center gap-2"
                             >
                                 <CheckCircle2 className="w-4 h-4" />
@@ -1800,10 +1756,10 @@ return '27 Agustus 2026';
                                 </div>
                             </div>
 
-                            {/* Section 4: Pengingat & Ucapan Terima Kasih */}
+                            {/* Section 4: Pengingat & Tanda Tangan (TTD) */}
                             <div className="space-y-3 p-4 rounded-2xl bg-slate-50/60 border border-slate-200/60">
                                 <span className="font-black text-[10.5px] uppercase tracking-wider text-[#7C3AED] block">
-                                    4. Pengingat Jatuh Tempo &amp; Ucapan Terima Kasih
+                                    4. Pengingat Jatuh Tempo &amp; Penandatangan (TTD)
                                 </span>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div className="space-y-1">
@@ -1825,21 +1781,43 @@ return '27 Agustus 2026';
                                         />
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-[11px] font-semibold text-slate-600">Judul Ucapan</label>
+                                        <label className="text-[11px] font-semibold text-slate-600">Nama Direktur / Penandatangan</label>
                                         <input
                                             type="text"
-                                            value={customTexts.thankYouTitle}
-                                            onChange={(e) => setCustomTexts({ ...customTexts, thankYouTitle: e.target.value })}
-                                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-[#7C3AED] focus:outline-hidden"
+                                            value={customTexts.directorName}
+                                            onChange={(e) => setCustomTexts({ ...customTexts, directorName: e.target.value })}
+                                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-[#7C3AED] focus:outline-hidden font-bold"
+                                            placeholder="Aditya Pratama"
                                         />
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-[11px] font-semibold text-slate-600">Pesan Ucapan Terima Kasih</label>
+                                        <label className="text-[11px] font-semibold text-slate-600">Jabatan Penandatangan</label>
                                         <input
                                             type="text"
-                                            value={customTexts.thankYouSub}
-                                            onChange={(e) => setCustomTexts({ ...customTexts, thankYouSub: e.target.value })}
+                                            value={customTexts.directorTitle}
+                                            onChange={(e) => setCustomTexts({ ...customTexts, directorTitle: e.target.value })}
                                             className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-[#7C3AED] focus:outline-hidden"
+                                            placeholder="Direktur Utama / Finance Studio"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[11px] font-semibold text-slate-600">Kota Tanda Tangan</label>
+                                        <input
+                                            type="text"
+                                            value={customTexts.signatureCity}
+                                            onChange={(e) => setCustomTexts({ ...customTexts, signatureCity: e.target.value })}
+                                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-[#7C3AED] focus:outline-hidden"
+                                            placeholder="Jakarta Selatan"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[11px] font-semibold text-slate-600">Salam Pembuka TTD</label>
+                                        <input
+                                            type="text"
+                                            value={customTexts.signatureSalutation}
+                                            onChange={(e) => setCustomTexts({ ...customTexts, signatureSalutation: e.target.value })}
+                                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-[#7C3AED] focus:outline-hidden"
+                                            placeholder="Hormat Kami,"
                                         />
                                     </div>
                                 </div>
@@ -1976,237 +1954,15 @@ return '27 Agustus 2026';
             )}
 
             {/* ── MODAL: CATAT PEMBAYARAN INVOICE ─────────────────────────────── */}
-            {isPaymentModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
-                    <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl space-y-4 border border-slate-200">
-                        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                            <h3 className="font-bold text-sm text-slate-900">Konfirmasi Pembayaran DP ke Keuangan</h3>
-                            <button
-                                type="button"
-                                onClick={() => setIsPaymentModalOpen(false)}
-                                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 cursor-pointer"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
-                        <form onSubmit={handlePaymentSubmit} className="space-y-3.5 text-xs">
-                            {/* Summary Finansial Singkat */}
-                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex items-center justify-between text-xs">
-                                <div>
-                                    <span className="text-slate-400 block text-[10px] font-medium">Nilai Invoice</span>
-                                    <span className="font-bold text-slate-900 font-mono">{formatRupiah(inv.total || dpAmount)}</span>
-                                </div>
-                                <div className="text-center">
-                                    <span className="text-slate-400 block text-[10px] font-medium">Sudah Dibayar</span>
-                                    <span className="font-bold text-emerald-600 font-mono">{formatRupiah(inv.paid_amount || 0)}</span>
-                                </div>
-                                <div className="text-right">
-                                    <span className="text-slate-400 block text-[10px] font-medium">Total Nilai Project</span>
-                                    <span className="font-bold text-indigo-700 font-mono">{formatRupiah(grandTotal)}</span>
-                                </div>
-                            </div>
-
-                            {/* Shortcut Pilihan Cepat Nominal */}
-                            <div className="space-y-1.5">
-                                <div className="flex items-center justify-between text-[11px]">
-                                    <label className="font-bold text-slate-700">Pilihan Cepat Nominal (Shortcut):</label>
-                                    <span className="text-[10px] text-slate-400">Klik untuk isi otomatis</span>
-                                </div>
-                                <div className="flex flex-wrap gap-1.5">
-                                    {dpAmount > 0 && (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setPaymentFormData({
-                                                    ...paymentFormData,
-                                                    amount: String(Math.round(dpAmount)),
-                                                    notes: `Pembayaran ${inv.notes || `Invoice ${inv.invoice_number}`}`,
-                                                });
-                                            }}
-                                            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer border ${
-                                                Number(paymentFormData.amount) === Math.round(dpAmount)
-                                                    ? 'bg-indigo-50 text-[#3B46F1] border-indigo-300 ring-1 ring-indigo-200'
-                                                    : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
-                                            }`}
-                                        >
-                                            Bayar Tagihan DP ({formatRupiah(dpAmount)})
-                                        </button>
-                                    )}
-
-                                    {remainingAmount > 0 && (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setPaymentFormData({
-                                                    ...paymentFormData,
-                                                    amount: String(Math.round(remainingAmount)),
-                                                    notes: `Pelunasan Sisa Pembayaran Project ${project?.name || ''}`,
-                                                });
-                                            }}
-                                            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer border ${
-                                                Number(paymentFormData.amount) === Math.round(remainingAmount)
-                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-300 ring-1 ring-emerald-200'
-                                                    : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
-                                            }`}
-                                        >
-                                            Pelunasan Sisa ({formatRupiah(remainingAmount)})
-                                        </button>
-                                    )}
-
-                                    {grandTotal > 0 && (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setPaymentFormData({
-                                                    ...paymentFormData,
-                                                    amount: String(Math.round(grandTotal)),
-                                                    notes: `Pembayaran Lunas Penuh (100%) Project ${project?.name || ''}`,
-                                                });
-                                            }}
-                                            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer border ${
-                                                Number(paymentFormData.amount) === Math.round(grandTotal)
-                                                    ? 'bg-purple-50 text-purple-700 border-purple-300 ring-1 ring-purple-200'
-                                                    : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
-                                            }`}
-                                        >
-                                            Lunas Penuh ({formatRupiah(grandTotal)})
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Input Jumlah Pembayaran dengan Format Otomatis */}
-                            <div className="space-y-1">
-                                <label className="font-bold text-slate-700">Jumlah Pembayaran *</label>
-                                <FormattedNumberInput
-                                    value={Number(paymentFormData.amount) || ''}
-                                    onChange={(val) => setPaymentFormData({ ...paymentFormData, amount: String(val) })}
-                                    prefix="Rp"
-                                    placeholder="0"
-                                    className="w-full text-sm font-mono font-bold focus:border-[#3B46F1] focus:ring-2 focus:ring-[#3B46F1]/20"
-                                    required
-                                />
-                                {Number(paymentFormData.amount) > 0 && (
-                                    <p className="text-[11px] text-slate-500 italic">
-                                        Nominal: <strong className="text-slate-800 font-semibold">{formatRupiah(Number(paymentFormData.amount))}</strong>
-                                    </p>
-                                )}
-                            </div>
-                            <div className="space-y-1">
-                                <label className="font-bold text-slate-700">Tanggal Pembayaran *</label>
-                                <input
-                                    type="date"
-                                    value={paymentFormData.payment_date}
-                                    onChange={(e) => setPaymentFormData({ ...paymentFormData, payment_date: e.target.value })}
-                                    className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden"
-                                    required
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="font-bold text-slate-700">Metode Pembayaran / Rekening Bank *</label>
-                                <select
-                                    value={paymentFormData.payment_method_id}
-                                    onChange={(e) => setPaymentFormData({ ...paymentFormData, payment_method_id: e.target.value })}
-                                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#3B46F1] outline-hidden bg-white"
-                                    required
-                                >
-                                    {payment_methods.length > 0 ? (
-                                        payment_methods.map((pm) => (
-                                            <option key={pm.id} value={pm.id}>
-                                                {pm.name} {pm.account_number ? `(${pm.account_number} a.n. ${pm.account_holder})` : ''}
-                                            </option>
-                                        ))
-                                    ) : (
-                                        <option value="">Pilih Metode Pembayaran</option>
-                                    )}
-                                </select>
-                            </div>
-                            <div className="space-y-1">
-                                <label className="font-bold text-slate-700">Nomor Referensi Transfer (Opsional)</label>
-                                <input
-                                    type="text"
-                                    value={paymentFormData.reference_number}
-                                    onChange={(e) => setPaymentFormData({ ...paymentFormData, reference_number: e.target.value })}
-                                    placeholder="Contoh: REF-BCA-98124"
-                                    className="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-[#3B46F1] outline-hidden"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="font-bold text-slate-700">Catatan / Keterangan</label>
-                                <input
-                                    type="text"
-                                    value={paymentFormData.notes}
-                                    onChange={(e) => setPaymentFormData({ ...paymentFormData, notes: e.target.value })}
-                                    className="w-full p-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-[#3B46F1] outline-hidden"
-                                />
-                            </div>
-
-                            {/* Upload Bukti Transfer */}
-                            <div className="space-y-1">
-                                <label className="font-bold text-slate-700">Upload Bukti Transfer / Pembayaran (Opsional)</label>
-                                {paymentFormData.proof_file ? (
-                                    <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-between">
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            <Receipt className="w-4 h-4 text-indigo-600 shrink-0" />
-                                            <div className="min-w-0">
-                                                <p className="font-bold text-slate-900 truncate text-xs">
-                                                    {paymentFormData.proof_file.name}
-                                                </p>
-                                                <span className="text-[10px] text-slate-500">
-                                                    {(paymentFormData.proof_file.size / 1024).toFixed(1)} KB
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => setPaymentFormData({ ...paymentFormData, proof_file: null })}
-                                            className="p-1 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-red-500 cursor-pointer"
-                                        >
-                                            <X className="w-3.5 h-3.5" />
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <label className="border-2 border-dashed border-slate-200 hover:border-[#3B46F1] rounded-xl p-3 flex flex-col items-center justify-center text-center bg-slate-50/60 hover:bg-slate-50 transition-all cursor-pointer group">
-                                        <Upload className="w-4 h-4 text-slate-400 group-hover:text-[#3B46F1] mb-1" />
-                                        <span className="text-xs font-bold text-slate-700 group-hover:text-[#3B46F1]">
-                                            Pilih Foto atau Dokumen Bukti Transfer
-                                        </span>
-                                        <span className="text-[10px] text-slate-400">
-                                            JPG, PNG, WEBP, atau PDF (Maks. 10MB)
-                                        </span>
-                                        <input
-                                            type="file"
-                                            accept="image/jpeg,image/png,image/webp,application/pdf"
-                                            onChange={(e) => {
-                                                const file = e.target.files?.[0] || null;
-                                                setPaymentFormData({ ...paymentFormData, proof_file: file });
-                                            }}
-                                            className="hidden"
-                                        />
-                                    </label>
-                                )}
-                            </div>
-
-                            <div className="pt-2 flex justify-end gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsPaymentModalOpen(false)}
-                                    className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={paymentSubmitting}
-                                    className="px-4 py-2 bg-[#3B46F1] text-white rounded-xl font-bold hover:bg-[#323BD8] cursor-pointer"
-                                >
-                                    {paymentSubmitting ? 'Menyimpan ke Finance...' : 'Simpan Pembayaran ke Finance'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            <RecordPaymentModal
+                isOpen={isPaymentModalOpen}
+                onClose={() => setIsPaymentModalOpen(false)}
+                project={project}
+                paymentMethods={payment_methods}
+                invoiceId={inv.id}
+                initialAmount={dpAmount}
+                initialNotes={`Pembayaran ${inv.notes || `Invoice ${inv.invoice_number}`}`}
+            />
         </div>
     );
 }

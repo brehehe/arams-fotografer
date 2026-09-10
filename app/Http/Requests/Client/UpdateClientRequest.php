@@ -15,10 +15,10 @@ class UpdateClientRequest extends FormRequest
 
     public function rules(): array
     {
-        $isPatch = $this->isMethod('patch');
+        $isPartial = $this->isMethod('patch') || $this->isMethod('put');
 
         return [
-            'name' => $isPatch ? 'sometimes|required|string|max:255' : 'required|string|max:255',
+            'name' => $isPartial ? 'sometimes|required|string|max:255' : 'required|string|max:255',
             'partner_name' => 'nullable|string|max:255',
             'child_name' => 'nullable|string|max:255',
             'child_birth_date' => 'nullable|date',
@@ -40,9 +40,12 @@ class UpdateClientRequest extends FormRequest
             'client_type' => 'nullable|string|max:100',
             'email' => 'nullable|email|max:255',
             'instagram' => 'nullable|string|max:100',
-            'phone' => $isPatch ? 'sometimes|required|string|max:50' : 'required|string|max:50',
+            'phone' => $isPartial ? 'sometimes|required|string|max:50' : 'required|string|max:50',
             'secondary_phone' => 'nullable|string|max:50',
             'preferred_contact' => 'nullable|string|in:whatsapp,email,phone',
+            'contact_person' => 'nullable|string|max:255',
+            'occupation' => 'nullable|string|max:255',
+            'other_social_media' => 'nullable|string|max:255',
             'province' => 'nullable|string|max:100',
             'city' => 'nullable|string|max:100',
             'district' => 'nullable|string|max:100',
@@ -54,10 +57,16 @@ class UpdateClientRequest extends FormRequest
             'village_code' => 'nullable|string|max:30',
             'address' => 'nullable|string',
             'source' => 'nullable|string|max:100',
+            'client_source_id' => 'nullable|exists:client_sources,id',
             'referred_by_client_id' => 'nullable|exists:clients,id',
             'wedding_organizer_id' => 'nullable|exists:wedding_organizers,id',
             'referral_name' => 'nullable|string|max:255',
-            'status' => [$isPatch ? 'sometimes' : 'required', 'string', Rule::in(ClientStatus::values())],
+            'event_type' => 'nullable|string|max:100',
+            'event_date' => 'nullable|date',
+            'event_time' => 'nullable|string|max:50',
+            'event_location' => 'nullable|string|max:255',
+            'package_id' => 'nullable|string|max:100',
+            'status' => [$isPartial ? 'sometimes' : 'required', 'string', Rule::in(ClientStatus::values())],
             'notes' => 'nullable|string',
             'tags' => 'nullable|array',
         ];

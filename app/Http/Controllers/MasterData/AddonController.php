@@ -27,8 +27,8 @@ class AddonController extends Controller
         $addonsQuery = Addon::with('category:id,name,color')->where('type', 'addon');
         if ($search) {
             $addonsQuery->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+                $q->where('name', 'ilike', "%{$search}%")
+                  ->orWhere('description', 'ilike', "%{$search}%");
             });
         }
         if ($addonCategory && $addonCategory !== 'all') {
@@ -43,8 +43,8 @@ class AddonController extends Controller
         $opsQuery = Addon::with('category:id,name,color')->where('type', 'operational');
         if ($search) {
             $opsQuery->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+                $q->where('name', 'ilike', "%{$search}%")
+                  ->orWhere('description', 'ilike', "%{$search}%");
             });
         }
         if ($opsCategory && $opsCategory !== 'all') {

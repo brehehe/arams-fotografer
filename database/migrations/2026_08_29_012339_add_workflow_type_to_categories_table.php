@@ -17,7 +17,7 @@ return new class extends Migration
 
         // Set Wedding categories to wedding workflow
         \Illuminate\Support\Facades\DB::table('categories')
-            ->where('slug', 'like', '%wedding%')
+            ->where('slug', 'ilike', '%wedding%')
             ->where('slug', 'not like', '%prewedding%')
             ->update(['workflow_type' => 'wedding']);
     }

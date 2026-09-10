@@ -34,11 +34,11 @@ class SearchController extends Controller
         // 1. Projects Search
         $projects = Project::with(['client', 'category'])
             ->where(function ($query) use ($q) {
-                $query->where('name', 'like', "%{$q}%")
-                    ->orWhere('project_number', 'like', "%{$q}%")
-                    ->orWhere('location', 'like', "%{$q}%")
-                    ->orWhereHas('client', fn ($cq) => $cq->where('name', 'like', "%{$q}%"))
-                    ->orWhereHas('category', fn ($catQ) => $catQ->where('name', 'like', "%{$q}%"));
+                $query->where('name', 'ilike', "%{$q}%")
+                    ->orWhere('project_number', 'ilike', "%{$q}%")
+                    ->orWhere('location', 'ilike', "%{$q}%")
+                    ->orWhereHas('client', fn ($cq) => $cq->where('name', 'ilike', "%{$q}%"))
+                    ->orWhereHas('category', fn ($catQ) => $catQ->where('name', 'ilike', "%{$q}%"));
             })
             ->limit(5)
             ->get()
@@ -53,10 +53,10 @@ class SearchController extends Controller
 
         // 2. Clients Search
         $clients = Client::where(function ($query) use ($q) {
-            $query->where('name', 'like', "%{$q}%")
-                ->orWhere('email', 'like', "%{$q}%")
-                ->orWhere('phone', 'like', "%{$q}%")
-                ->orWhere('city', 'like', "%{$q}%");
+            $query->where('name', 'ilike', "%{$q}%")
+                ->orWhere('email', 'ilike', "%{$q}%")
+                ->orWhere('phone', 'ilike', "%{$q}%")
+                ->orWhere('city', 'ilike', "%{$q}%");
         })
             ->limit(5)
             ->get()
@@ -72,9 +72,9 @@ class SearchController extends Controller
         // 3. Files Search
         $files = FileLink::with('project')
             ->where(function ($query) use ($q) {
-                $query->where('name', 'like', "%{$q}%")
-                    ->orWhere('drive_url', 'like', "%{$q}%")
-                    ->orWhereHas('project', fn ($pq) => $pq->where('name', 'like', "%{$q}%"));
+                $query->where('name', 'ilike', "%{$q}%")
+                    ->orWhere('drive_url', 'ilike', "%{$q}%")
+                    ->orWhereHas('project', fn ($pq) => $pq->where('name', 'ilike', "%{$q}%"));
             })
             ->limit(5)
             ->get()
@@ -91,9 +91,9 @@ class SearchController extends Controller
         // 4. Invoices Search
         $invoices = Invoice::with(['client', 'project'])
             ->where(function ($query) use ($q) {
-                $query->where('invoice_number', 'like', "%{$q}%")
-                    ->orWhereHas('client', fn ($cq) => $cq->where('name', 'like', "%{$q}%"))
-                    ->orWhereHas('project', fn ($pq) => $pq->where('name', 'like', "%{$q}%"));
+                $query->where('invoice_number', 'ilike', "%{$q}%")
+                    ->orWhereHas('client', fn ($cq) => $cq->where('name', 'ilike', "%{$q}%"))
+                    ->orWhereHas('project', fn ($pq) => $pq->where('name', 'ilike', "%{$q}%"));
             })
             ->limit(5)
             ->get()

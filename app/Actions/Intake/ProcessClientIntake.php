@@ -89,9 +89,12 @@ class ProcessClientIntake
             }
 
             // 2. Determine Client Name & Type based on Category Form Type
-            $children = !empty($validated['children']) && is_array($validated['children'])
+            $rawChildren = !empty($validated['children']) && is_array($validated['children'])
                 ? $validated['children']
                 : ($catData['babies'] ?? ($catData['children'] ?? []));
+            $children = array_values(array_filter($rawChildren, function ($c) {
+                return !empty(trim($c['name'] ?? ''));
+            }));
             $fatherName = trim($catData['father_name'] ?? ($validated['father_name'] ?? ''));
             $motherName = trim($catData['mother_name'] ?? ($validated['mother_name'] ?? ''));
             $parentNames = trim($validated['parent_names'] ?? '');
@@ -99,7 +102,7 @@ class ProcessClientIntake
                 $parentNames = implode(' & ', array_filter([$fatherName, $motherName]));
             }
 
-            if ($formType === 'newborn') {
+            if ($formType === 'newborn' || $formType === 'baby') {
                 if (!empty($children)) {
                     $childNames = array_filter(array_map(fn($c) => trim($c['name'] ?? ''), $children));
                     $childName = implode(' & ', $childNames);
@@ -117,6 +120,7 @@ class ProcessClientIntake
                 $clientName = $childName ?: ($parentNames ?: ($validated['name'] ?? 'Baby Client'));
                 $clientType = 'newborn';
             } elseif ($formType === 'wedding') {
+                $children = null;
                 $childName = null;
                 $childBirthDate = null;
                 $childGender = null;
@@ -269,6 +273,7 @@ class ProcessClientIntake
                 'groom_nickname' => $catData['groom_nickname'] ?? ($validated['groom_nickname'] ?? null),
                 'bride_birth_date' => $catData['bride_birth_date'] ?? ($validated['bride_birth_date'] ?? null),
                 'groom_birth_date' => $catData['groom_birth_date'] ?? ($validated['groom_birth_date'] ?? null),
+                'company_name' => $catData['company_name'] ?? ($validated['company_name'] ?? null),
                 'phone' => $validated['phone'],
                 'secondary_phone' => $validated['secondary_phone'] ?? null,
                 'email' => $validated['email'] ?? null,
@@ -283,9 +288,10 @@ class ProcessClientIntake
                 'village_code' => $validated['village_code'] ?? null,
                 'postal_code' => $validated['postal_code'] ?? null,
                 'address' => $validated['address'] ?? null,
-                'preferred_contact' => 'whatsapp',
+                'preferred_contact' => $validated['preferred_contact'] ?? 'whatsapp',
                 'client_type' => $clientType,
-                'source' => $validated['source_info'] ?? 'Formulir Online (Client Intake)',
+                'source' => $validated['source_info'] ?? ($validated['source'] ?? 'Formulir Online (Client Intake)'),
+                'client_source_id' => $validated['client_source_id'] ?? null,
                 'referred_by_client_id' => $referredByClientId,
                 'wedding_organizer_id' => $weddingOrganizerId,
                 'referral_name' => $validated['referral_name'] ?? null,

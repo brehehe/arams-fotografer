@@ -77,6 +77,7 @@ class StoreClientRequest extends FormRequest
             'event_location' => 'nullable|string|max:255',
             'package_id' => 'nullable|string|max:100',
             'source' => 'nullable|string|max:100',
+            'client_source_id' => 'nullable|exists:client_sources,id',
             'referred_by_client_id' => 'nullable|exists:clients,id',
             'wedding_organizer_id' => 'nullable|exists:wedding_organizers,id',
             'referral_name' => 'nullable|string|max:255',

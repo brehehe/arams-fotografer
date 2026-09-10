@@ -18,6 +18,7 @@ class UpdateProjectRequest extends FormRequest
         return [
             'name' => 'required|string|max:255',
             'client_id' => 'required|exists:clients,id',
+            'client_source_id' => 'nullable|exists:client_sources,id',
             'wedding_organizer_id' => 'nullable|exists:wedding_organizers,id',
             'category_id' => 'required|exists:categories,id',
             'package_id' => 'nullable|exists:packages,id',

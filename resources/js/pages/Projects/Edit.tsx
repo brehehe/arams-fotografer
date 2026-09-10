@@ -233,7 +233,7 @@ export default function ProjectsEdit({
     const [packageId, setPackageId] = useState<string>(project.package_id || '');
     const [projectLocation, setProjectLocation] = useState<string>(project.location || '');
     const [projectNotes, setProjectNotes] = useState<string>(project.notes || '');
-    const [referralSource, setReferralSource] = useState<string>(project.referral_source || client_sources[0]?.name || '');
+    const [referralSourceId, setReferralSourceId] = useState<string>((project as any).client_source_id || (project.client as any)?.client_source_id || client_sources[0]?.id || '');
     const [referralName, setReferralName] = useState<string>('');
     const [referralLink, setReferralLink] = useState<string>('');
 
@@ -703,7 +703,7 @@ export default function ProjectsEdit({
     const referralSourceOptions = useMemo<SelectSearchOption[]>(() => {
         if (client_sources && client_sources.length > 0) {
             return client_sources.map((cs) => ({
-                value: cs.name,
+                value: cs.id,
                 label: cs.name,
                 subtitle: cs.type ? `Tipe: ${cs.type}` : cs.phone || undefined,
             }));
@@ -1037,9 +1037,13 @@ export default function ProjectsEdit({
             ? 'draft'
             : (project.status === 'draft' ? 'in_progress' : (project.status || 'in_progress'));
 
+        const selectedSource = client_sources.find((cs) => cs.id === referralSourceId);
+        const sourceName = selectedSource?.name || referralSourceId || '';
+
         const payload = {
             name: projectName.trim(),
             client_id: clientId,
+            client_source_id: referralSourceId || null,
             category_id: categoryId,
             package_id: selectedPackage?.id || null,
             status: effectiveStatus,
@@ -1060,7 +1064,7 @@ export default function ProjectsEdit({
                 projectNotes,
                 additionalNotes ? `Catatan Tambahan: ${additionalNotes}` : '',
                 specialRequirement ? `Requirement: ${specialRequirement}` : '',
-                referralSource ? `Sumber Referensi: ${referralSource} (${referralName} - ${referralLink})` : '',
+                sourceName ? `Sumber Referensi: ${sourceName} (${referralName} - ${referralLink})` : '',
                 additionalCostNotes ? `Catatan Biaya: ${additionalCostNotes}` : '',
             ]
                 .filter(Boolean)
@@ -1106,6 +1110,8 @@ export default function ProjectsEdit({
                         ? categoryData.babies
                         : undefined,
                 } : {}),
+                client_source_id: referralSourceId || null,
+                source: sourceName || null,
             },
         };
 
@@ -1647,10 +1653,10 @@ export default function ProjectsEdit({
                                 <label className="text-[11px] font-bold text-slate-600 block">Referensi / Sumber Klien</label>
                                 <SelectSearch
                                     options={referralSourceOptions}
-                                    value={referralSource}
-                                    onChange={setReferralSource}
+                                    value={referralSourceId}
+                                    onChange={setReferralSourceId}
                                     placeholder="Pilih Sumber Referensi..."
-                                    clearable={false}
+                                    clearable={true}
                                 />
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                     <Input

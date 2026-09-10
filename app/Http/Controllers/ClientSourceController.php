@@ -24,10 +24,10 @@ class ClientSourceController extends Controller
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('phone', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('type', 'like', "%{$search}%");
+                $q->where('name', 'ilike', "%{$search}%")
+                    ->orWhere('phone', 'ilike', "%{$search}%")
+                    ->orWhere('email', 'ilike', "%{$search}%")
+                    ->orWhere('type', 'ilike', "%{$search}%");
             });
         }
 
@@ -75,18 +75,30 @@ class ClientSourceController extends Controller
             $q->with('paymentMethod')->latest('date');
         }])->findOrFail($id);
 
-        // Cari klien riil yang berkaitan dengan sumber ini dari database
-        $clientsQuery = Client::query()->where(function ($q) use ($source) {
-            $q->where('source', $source->name)
-                ->orWhere('source', $source->type)
-                ->orWhere('referral_name', $source->name);
+        // Cari klien berdasarkan FK client_source_id (prioritas utama)
+        $clientsByFk = Client::where('client_source_id', $source->id);
 
-            if ($source->type === 'wedding_organizer') {
-                $wo = WeddingOrganizer::where('name', $source->name)->first();
-                if ($wo) {
-                    $q->orWhere('wedding_organizer_id', $wo->id);
-                }
-            }
+        // Fallback: string match untuk data lama yang belum punya FK
+        $clientsQuery = Client::query()->where(function ($q) use ($source, $clientsByFk) {
+            // Exclude clients already found by FK to avoid duplicates
+            $fkIds = $clientsByFk->pluck('id');
+
+            $q->where('client_source_id', $source->id)
+                ->orWhere(function ($inner) use ($source, $fkIds) {
+                    $inner->whereNull('client_source_id')
+                        ->whereNotIn('id', $fkIds)
+                        ->where(function ($str) use ($source) {
+                            $str->where('source', $source->name)
+                                ->orWhere('referral_name', $source->name);
+
+                            if ($source->type === 'wedding_organizer') {
+                                $wo = WeddingOrganizer::where('name', $source->name)->first();
+                                if ($wo) {
+                                    $str->orWhere('wedding_organizer_id', $wo->id);
+                                }
+                            }
+                        });
+                });
         });
 
         $clients = $clientsQuery->with([
@@ -95,18 +107,32 @@ class ClientSourceController extends Controller
             },
         ])->get();
 
-        // Kumpulkan semua project dari klien-klien tersebut
+        // Cari juga project yang terhubung langsung via FK projects.client_source_id
+        $directProjects = Project::where('client_source_id', $source->id)
+            ->with(['client', 'category'])
+            ->get();
+
+        // Kumpulkan semua project dari klien-klien tersebut dan project langsung
         $allProjects = $clients->flatMap(function ($client) {
             return $client->projects->map(function ($project) use ($client) {
                 $project->setRelation('client', $client);
                 return $project;
             });
-        })->sortByDesc(function ($p) {
+        })
+        ->concat($directProjects)
+        ->unique('id')
+        ->sortByDesc(function ($p) {
             return $p->event_date ?? $p->created_at;
         })->values();
 
+        // Klien-klien yang belum memiliki project sama sekali
+        $clientsWithProjectIds = $allProjects->pluck('client_id')->filter()->unique()->all();
+        $clientsWithoutProject = $clients->filter(function ($client) use ($clientsWithProjectIds) {
+            return !in_array($client->id, $clientsWithProjectIds);
+        });
+
         // Bentuk riwayat referral dari data project riil
-        $referralHistory = $allProjects->map(function ($project) {
+        $projectHistory = $allProjects->map(function ($project) {
             $clientName = $project->client?->bride_name && $project->client?->groom_name
                 ? "{$project->client->bride_name} & {$project->client->groom_name}"
                 : ($project->client?->name ?? 'Klien');
@@ -122,14 +148,42 @@ class ClientSourceController extends Controller
 
             return [
                 'id' => $project->id,
+                'project_id' => $project->id,
+                'client_id' => $project->client?->id,
                 'client' => $clientName,
                 'project' => $project->name,
                 'project_category' => strtolower($project->category?->name ?? 'wedding'),
                 'event_date' => $project->event_date ? Carbon::parse($project->event_date)->isoFormat('D MMM YYYY') : '-',
+                'raw_date' => $project->event_date ?? $project->created_at,
                 'amount' => (float) $project->total_amount,
                 'status' => $statusLabel,
             ];
-        })->all();
+        });
+
+        // Tambahkan klien yang belum memiliki project sebagai lead referral
+        $clientLeadHistory = $clientsWithoutProject->map(function ($client) {
+            $clientName = $client->bride_name && $client->groom_name
+                ? "{$client->bride_name} & {$client->groom_name}"
+                : $client->name;
+
+            return [
+                'id' => 'client-' . $client->id,
+                'project_id' => null,
+                'client_id' => $client->id,
+                'client' => $clientName,
+                'project' => 'Lead Klien (Belum ada project)',
+                'project_category' => 'lead',
+                'event_date' => $client->created_at ? Carbon::parse($client->created_at)->isoFormat('D MMM YYYY') : '-',
+                'raw_date' => $client->created_at,
+                'amount' => 0,
+                'status' => 'Lead Klien',
+            ];
+        });
+
+        $referralHistory = $projectHistory->concat($clientLeadHistory)
+            ->sortByDesc(fn ($item) => $item['raw_date'])
+            ->values()
+            ->all();
 
         $totalProjectValue = (float) $allProjects->sum('total_amount');
         $latestProject = $allProjects->first();

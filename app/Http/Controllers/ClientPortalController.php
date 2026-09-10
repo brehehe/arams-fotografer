@@ -37,8 +37,21 @@ class ClientPortalController extends Controller
     /**
      * Display specific project detail & download gallery.
      */
-    public function projectDetail(Request $request, Project $project): Response
+    public function projectDetail(Request $request, Project $project): Response|\Illuminate\Http\RedirectResponse
     {
+        $user = $request->user();
+        $isClientUser = $user && ($user->client_id || $user->hasRole('Client') || $user->hasRole('client'));
+
+        if ($isClientUser) {
+            $userClientId = $user->client_id;
+            $userEmail = $user->email;
+            $isOwner = ($userClientId && $project->client_id === $userClientId) || ($userEmail && $project->client?->email === $userEmail);
+
+            if (!$isOwner) {
+                return redirect()->route('client.projects')->with('error', 'Anda tidak memiliki akses ke project tersebut.');
+            }
+        }
+
         $data = $this->clientPortalService->getProjectDetailData($project);
 
         return Inertia::render('Client/Projects/Show', $data);

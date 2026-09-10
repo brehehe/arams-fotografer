@@ -19,9 +19,9 @@ class NoteTemplateController extends Controller
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                    ->orWhere('content', 'like', "%{$search}%")
-                    ->orWhere('type', 'like', "%{$search}%");
+                $q->where('title', 'ilike', "%{$search}%")
+                    ->orWhere('content', 'ilike', "%{$search}%")
+                    ->orWhere('type', 'ilike', "%{$search}%");
             });
         }
 

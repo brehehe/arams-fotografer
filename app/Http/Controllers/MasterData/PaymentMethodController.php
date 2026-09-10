@@ -18,9 +18,9 @@ class PaymentMethodController extends Controller
         $query = PaymentMethod::withCount('payments');
 
         if ($search = $request->input('search')) {
-            $query->where('name', 'like', "%{$search}%")
-                ->orWhere('code', 'like', "%{$search}%")
-                ->orWhere('account_number', 'like', "%{$search}%");
+            $query->where('name', 'ilike', "%{$search}%")
+                ->orWhere('code', 'ilike', "%{$search}%")
+                ->orWhere('account_number', 'ilike', "%{$search}%");
         }
 
         $perPage = (int) $request->input('per_page', 10);

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\LogOptions;
@@ -47,6 +48,7 @@ class Client extends Model
         'village_code',
         'address',
         'source',
+        'client_source_id',
         'referred_by_client_id',
         'wedding_organizer_id',
         'referral_name',
@@ -72,7 +74,12 @@ class Client extends Model
             ->dontSubmitEmptyLogs();
     }
 
-    public function referredByClient(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function clientSource(): BelongsTo
+    {
+        return $this->belongsTo(ClientSource::class, 'client_source_id');
+    }
+
+    public function referredByClient(): BelongsTo
     {
         return $this->belongsTo(Client::class, 'referred_by_client_id');
     }

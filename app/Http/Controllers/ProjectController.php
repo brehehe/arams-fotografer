@@ -99,7 +99,8 @@ class ProjectController extends Controller
         $this->authorize('update', $project);
 
         $project->load([
-            'client',
+            'client.clientSource',
+            'clientSource',
             'weddingOrganizer',
             'category',
             'package',

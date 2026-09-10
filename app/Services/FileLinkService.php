@@ -26,10 +26,10 @@ class FileLinkService
 
         if ($search) {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('drive_url', 'like', "%{$search}%")
-                  ->orWhereHas('project', fn ($pq) => $pq->where('name', 'like', "%{$search}%")->orWhere('project_number', 'like', "%{$search}%"))
-                  ->orWhereHas('project.client', fn ($cq) => $cq->where('name', 'like', "%{$search}%"));
+                $q->where('name', 'ilike', "%{$search}%")
+                  ->orWhere('drive_url', 'ilike', "%{$search}%")
+                  ->orWhereHas('project', fn ($pq) => $pq->where('name', 'ilike', "%{$search}%")->orWhere('project_number', 'ilike', "%{$search}%"))
+                  ->orWhereHas('project.client', fn ($cq) => $cq->where('name', 'ilike', "%{$search}%"));
             });
         }
 

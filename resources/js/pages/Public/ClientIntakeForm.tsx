@@ -90,6 +90,13 @@ interface ClientIntakeFormProps {
         bride_name?: string;
         groom_name?: string;
     }>;
+    client_sources?: Array<{
+        id: string;
+        name: string;
+        type?: string;
+        avatar?: string;
+        is_primary?: boolean;
+    }>;
     company?: {
         name: string;
         phone: string;
@@ -157,6 +164,7 @@ export default function ClientIntakeForm({
     categories = [],
     packages = [],
     wedding_organizers = [],
+    client_sources = [],
     company = {
         name: 'Arams Pictures',
         phone: '081234567890',
@@ -289,6 +297,8 @@ export default function ClientIntakeForm({
         // Informasi Tambahan
         reference_url: '',
         special_requests: '',
+        client_source_id: '',
+        source_info: '',
     });
 
     // Regional cascading dropdown options
@@ -1950,37 +1960,63 @@ export default function ClientIntakeForm({
                                         </h3>
                                     </div>
 
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-4">
                                         <div>
                                             <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                Referensi / Inspirasi (Opsional)
+                                                Dari mana Anda mengetahui Arams Pictures? (Sumber Referensi)
                                             </label>
-                                            <textarea
-                                                rows={3}
-                                                value={formData.reference_url}
-                                                onChange={(e) => handleFieldChange('reference_url', e.target.value)}
-                                                placeholder="Masukkan referensi atau link inspirasi (Pinterest, Instagram, dll)"
-                                                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all resize-none"
+                                            <SelectSearch
+                                                options={[
+                                                    ...client_sources.map((cs) => ({
+                                                        value: cs.id,
+                                                        label: cs.name,
+                                                        subtitle: cs.type ? `Tipe: ${cs.type}` : undefined,
+                                                    })),
+                                                ]}
+                                                value={formData.client_source_id}
+                                                onChange={(val) => {
+                                                    const selected = client_sources.find((cs) => cs.id === val);
+                                                    handleFieldChange('client_source_id', val);
+                                                    handleFieldChange('source_info', selected?.name || '');
+                                                }}
+                                                placeholder="Pilih sumber referensi..."
+                                                searchPlaceholder="Cari sumber referensi..."
+                                                clearable={true}
                                             />
                                         </div>
 
-                                        <div>
-                                            <div className="flex items-center justify-between mb-1">
-                                                <label className="block text-[11px] font-bold text-slate-700">
-                                                    Hal-hal yang Perlu Diperhatikan (Opsional)
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                    Referensi / Inspirasi (Opsional)
                                                 </label>
-                                                <span className="text-[10px] text-slate-400">
-                                                    {formData.special_requests.length} / 500
-                                                </span>
+                                                <textarea
+                                                    rows={3}
+                                                    value={formData.reference_url}
+                                                    onChange={(e) => handleFieldChange('reference_url', e.target.value)}
+                                                    placeholder="Masukkan referensi atau link inspirasi (Pinterest, Instagram, dll)"
+                                                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all resize-none"
+                                                />
                                             </div>
-                                            <textarea
-                                                rows={3}
-                                                maxLength={500}
-                                                value={formData.special_requests}
-                                                onChange={(e) => handleFieldChange('special_requests', e.target.value)}
-                                                placeholder="Contoh: tidak ada drone, area terbatas, acara outdoor, dll"
-                                                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all resize-none"
-                                            />
+
+                                            <div>
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <label className="block text-[11px] font-bold text-slate-700">
+                                                        Hal-hal yang Perlu Diperhatikan (Opsional)
+                                                    </label>
+                                                    <span className="text-[10px] text-slate-400">
+                                                        {formData.special_requests.length} / 500
+                                                    </span>
+                                                </div>
+                                                <textarea
+                                                    rows={3}
+                                                    maxLength={500}
+                                                    value={formData.special_requests}
+                                                    onChange={(e) => handleFieldChange('special_requests', e.target.value)}
+                                                    placeholder="Contoh: tidak ada drone, area terbatas, acara outdoor, dll"
+                                                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all resize-none"
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -2214,6 +2250,12 @@ export default function ClientIntakeForm({
                                         </div>
 
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[11px]">
+                                            <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-100 sm:col-span-2">
+                                                <span className="text-slate-400 block text-[10px] mb-1">Sumber Referensi / Mengetahui Arams</span>
+                                                <p className="font-semibold text-slate-800">
+                                                    {formData.source_info || client_sources.find((cs) => cs.id === formData.client_source_id)?.name || '-'}
+                                                </p>
+                                            </div>
                                             <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-100">
                                                 <span className="text-slate-400 block text-[10px] mb-1">Referensi / Inspirasi</span>
                                                 <p className="font-semibold text-slate-800 leading-relaxed whitespace-pre-line">
