@@ -200,6 +200,24 @@ export default function ClientIntakeForm({
     const handleCategoryDataChange = (field: string, value: any) => {
         setCategoryData((prev) => {
             const next = { ...prev, [field]: value };
+            // Auto-sync client name fields with formData.name
+            if (['client_name', 'name', 'pic_name', 'contact_person'].includes(field)) {
+                if (value && typeof value === 'string' && value.trim()) {
+                    setFormData((f) => ({ ...f, name: value.trim() }));
+                }
+            }
+            if (field === 'nickname' && value && typeof value === 'string') {
+                setFormData((f) => ({ ...f, nickname: value.trim() }));
+            }
+            if ((field === 'phone' || field === 'pic_phone') && value && typeof value === 'string') {
+                setFormData((f) => ({ ...f, phone: value.trim() }));
+            }
+            if ((field === 'email' || field === 'pic_email') && value && typeof value === 'string') {
+                setFormData((f) => ({ ...f, email: value.trim() }));
+            }
+            if ((field === 'instagram' || field === 'client_instagram') && value && typeof value === 'string') {
+                setFormData((f) => ({ ...f, instagram: value.trim() }));
+            }
             // Auto-sync event date and location with core form fields
             if (field === 'session_date' || field === 'akad_date' || field === 'event_date' || field === 'departure_date') {
                 if (value) {
@@ -582,8 +600,65 @@ export default function ClientIntakeForm({
             };
         }
 
+        if (activeCategoryKey === 'perorangan') {
+            return {
+                name: (categoryData as any).client_name || (categoryData as any).name || (formData.name && formData.name !== '-' ? formData.name : '') || '-',
+                nickname: (categoryData as any).nickname || formData.nickname || '-',
+                occupation: (categoryData as any).occupation || formData.occupation || '-',
+                instagram: (categoryData as any).instagram || formData.instagram || '-',
+                birth_date: formData.birth_date || '-',
+                role: 'Pemesan',
+            };
+        }
+
+        if (activeCategoryKey === 'commercial') {
+            return {
+                name: (categoryData as any).contact_person || (categoryData as any).pic_name || (categoryData as any).brand_name || (formData.name && formData.name !== '-' ? formData.name : '') || '-',
+                nickname: '-',
+                occupation: (categoryData as any).brand_name || '-',
+                instagram: (categoryData as any).brand_instagram || formData.instagram || '-',
+                birth_date: '-',
+                role: 'PIC Brand / Client',
+            };
+        }
+
+        if (activeCategoryKey === 'traveling') {
+            return {
+                name: (categoryData as any).contact_person || (categoryData as any).client_name || (formData.name && formData.name !== '-' ? formData.name : '') || '-',
+                nickname: '-',
+                occupation: '-',
+                instagram: (categoryData as any).instagram || formData.instagram || '-',
+                birth_date: '-',
+                role: 'Pemesan Trip',
+            };
+        }
+
+        if (activeCategoryKey === 'event') {
+            return {
+                name: (categoryData as any).contact_person || (categoryData as any).pic_name || (categoryData as any).client_name || (formData.name && formData.name !== '-' ? formData.name : '') || '-',
+                nickname: '-',
+                occupation: (categoryData as any).organizer_name || (categoryData as any).organizer || '-',
+                instagram: formData.instagram || '-',
+                birth_date: '-',
+                role: 'PIC Event / Panitia',
+            };
+        }
+
+        if (activeCategoryKey === 'lainnya') {
+            return {
+                name: (categoryData as any).client_name || (categoryData as any).name || (categoryData as any).contact_person || (formData.name && formData.name !== '-' ? formData.name : '') || '-',
+                nickname: formData.nickname || '-',
+                occupation: formData.occupation || '-',
+                instagram: (categoryData as any).instagram || formData.instagram || '-',
+                birth_date: formData.birth_date || '-',
+                role: 'Pemesan',
+            };
+        }
+
+        const fallbackName = (categoryData as any).client_name || (categoryData as any).name || (categoryData as any).contact_person || (categoryData as any).pic_name || (formData.name && formData.name !== '-' ? formData.name : '') || '-';
+
         return {
-            name: categoryData.contact_person || formData.name || '-',
+            name: fallbackName,
             nickname: formData.nickname || '-',
             occupation: formData.occupation || '-',
             instagram: formData.instagram || '-',
@@ -778,6 +853,10 @@ export default function ClientIntakeForm({
                 return true;
 
             case 'lainnya':
+                if (!(categoryData as any).client_name?.trim() && !(categoryData as any).name?.trim() && !formData.name?.trim()) {
+                    toast.error('Nama Lengkap Pemesan wajib diisi');
+                    return false;
+                }
                 if (!categoryData.needs_description?.trim()) {
                     toast.error('Deskripsi Kebutuhan wajib diisi');
                     return false;
@@ -797,6 +876,10 @@ export default function ClientIntakeForm({
                 return true;
 
             case 'perorangan':
+                if (!(categoryData as any).client_name?.trim() && !(categoryData as any).name?.trim() && !formData.name?.trim()) {
+                    toast.error('Nama Lengkap Pemesan wajib diisi');
+                    return false;
+                }
                 if (!categoryData.photo_purpose?.trim()) {
                     toast.error('Tujuan Foto wajib dipilih');
                     return false;
@@ -835,6 +918,10 @@ export default function ClientIntakeForm({
                 return true;
 
             case 'commercial':
+                if (!(categoryData as any).contact_person?.trim() && !(categoryData as any).pic_name?.trim() && !(categoryData as any).client_name?.trim() && !formData.name?.trim()) {
+                    toast.error('Nama Contact Person / PIC wajib diisi');
+                    return false;
+                }
                 if (!categoryData.commercial_purpose?.trim()) {
                     toast.error('Tujuan / Jenis Kebutuhan Foto wajib dipilih');
                     return false;
@@ -862,6 +949,10 @@ export default function ClientIntakeForm({
                 return true;
 
             case 'traveling':
+                if (!(categoryData as any).contact_person?.trim() && !(categoryData as any).client_name?.trim() && !formData.name?.trim()) {
+                    toast.error('Nama Pemesan / Kontak Utama wajib diisi');
+                    return false;
+                }
                 if (!categoryData.destination_city_country?.trim()) {
                     toast.error('Tujuan Destinasi (Negara / Kota) wajib diisi');
                     return false;
@@ -1001,6 +1092,10 @@ export default function ClientIntakeForm({
                 return true;
 
             case 'event':
+                if (!(categoryData as any).contact_person?.trim() && !(categoryData as any).pic_name?.trim() && !(categoryData as any).client_name?.trim() && !formData.name?.trim()) {
+                    toast.error('Nama Penanggung Jawab / PIC wajib diisi');
+                    return false;
+                }
                 if (!categoryData.event_date) {
                     toast.error('Tanggal Event wajib diisi');
                     return false;
@@ -1115,15 +1210,30 @@ export default function ClientIntakeForm({
         e.preventDefault();
         setIsSubmitting(true);
 
-        const payload = {
-            ...formData,
-            name: formData.name || primaryContactInfo.name || 'Klien Baru',
-            category_id: selectedCategory.id,
-            package_id: formData.package_id || null,
-            category_data: categoryData,
+        const candidateName =
+            (formData.name && formData.name.trim() !== '-' ? formData.name.trim() : '') ||
+            ((categoryData as any).client_name && (categoryData as any).client_name.trim() !== '-' ? (categoryData as any).client_name.trim() : '') ||
+            ((categoryData as any).name && (categoryData as any).name.trim() !== '-' ? (categoryData as any).name.trim() : '') ||
+            ((categoryData as any).contact_person && (categoryData as any).contact_person.trim() !== '-' ? (categoryData as any).contact_person.trim() : '') ||
+            ((categoryData as any).pic_name && (categoryData as any).pic_name.trim() !== '-' ? (categoryData as any).pic_name.trim() : '') ||
+            (primaryContactInfo.name && primaryContactInfo.name.trim() !== '-' ? primaryContactInfo.name.trim() : '') ||
+            'Klien Baru';
+
+        const mergedCategoryData = {
+            ...categoryData,
+            client_name: (categoryData as any).client_name || candidateName,
+            name: (categoryData as any).name || candidateName,
         };
 
-        router.post('/form-klien', payload, {
+        const payload = {
+            ...formData,
+            name: candidateName,
+            category_id: selectedCategory.id,
+            package_id: formData.package_id || null,
+            category_data: mergedCategoryData,
+        };
+
+        router.post('/form-klien', payload as any, {
             onSuccess: () => {
                 setIsSubmitting(false);
                 setShowSuccessModal(true);
@@ -1624,7 +1734,9 @@ export default function ClientIntakeForm({
                                                             <option value="cpp">Ayah — {categoryData.father_name || formData.father_name || 'Ayah'}</option>
                                                         </>
                                                     ) : (
-                                                        <option value="client">Pemesan — {categoryData.contact_person || formData.name || 'Pemesan'}</option>
+                                                        <option value="client">
+                                                            Pemesan — {(categoryData as any).client_name || (categoryData as any).name || (categoryData as any).contact_person || (categoryData as any).pic_name || (formData.name && formData.name !== '-' ? formData.name : '') || 'Pemesan'}
+                                                        </option>
                                                     )}
                                                 </NativeSelect>
                                             </div>

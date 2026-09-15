@@ -53,6 +53,8 @@ class StoreClientRequest extends FormRequest
             'groom_birth_date' => 'nullable|date',
             'company_name' => 'nullable|string|max:255',
             'client_type' => 'nullable|string|max:100',
+            'category_id' => 'nullable|exists:categories,id',
+            'category_data' => 'nullable|array',
             'email' => 'nullable|email|max:255',
             'instagram' => 'nullable|string|max:100',
             'phone' => 'nullable|string|max:50',

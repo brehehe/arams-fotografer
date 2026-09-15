@@ -74,6 +74,7 @@ export default function RecordPaymentModal({
     const dp50Amount = Math.round(totalProject * 0.5);
 
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [currentInvoiceId, setCurrentInvoiceId] = useState<string>('');
     const [formData, setFormData] = useState({
         amount: '',
         payment_date: new Date().toISOString().split('T')[0],
@@ -87,6 +88,8 @@ export default function RecordPaymentModal({
     useEffect(() => {
         if (isOpen) {
             const defaultMethodId = paymentMethods.length > 0 ? String(paymentMethods[0].id) : '';
+            const initInvId = invoiceId ? String(invoiceId) : (project?.invoices?.[0]?.id ? String(project.invoices[0].id) : '');
+            setCurrentInvoiceId(initInvId);
             
             let defaultAmount = initialAmount !== undefined && initialAmount !== null && Number(initialAmount) > 0 
                 ? String(Math.round(Number(initialAmount))) 
@@ -120,7 +123,7 @@ export default function RecordPaymentModal({
                 proof_file: null,
             });
         }
-    }, [isOpen, project, paymentMethods, paidAmount, sisaPelunasan, totalProject, dp30Amount, initialAmount, initialNotes]);
+    }, [isOpen, project, paymentMethods, paidAmount, sisaPelunasan, totalProject, dp30Amount, initialAmount, initialNotes, invoiceId]);
 
     if (!isOpen) return null;
 
@@ -163,7 +166,7 @@ export default function RecordPaymentModal({
             payment_method_id: methodId,
             reference_number: formData.reference_number || null,
             notes: formData.notes || null,
-            invoice_id: invoiceId || project.invoices?.[0]?.id || null,
+            invoice_id: currentInvoiceId || invoiceId || project.invoices?.[0]?.id || null,
         };
 
         if (formData.proof_file) {
@@ -271,6 +274,47 @@ export default function RecordPaymentModal({
                             </div>
                         </div>
                     </div>
+
+                    {/* Termin Selector if project has invoices */}
+                    {project?.invoices && project.invoices.length > 0 && (
+                        <div className="space-y-1.5">
+                            <label className="font-bold text-slate-700 flex items-center justify-between text-xs">
+                                <span className="flex items-center gap-1.5">
+                                    <Receipt className="w-3.5 h-3.5 text-indigo-600" />
+                                    <span>Pilih Termin / Invoice Tagihan:</span>
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-normal">Sesuai termin kontrak</span>
+                            </label>
+                            <select
+                                value={currentInvoiceId}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setCurrentInvoiceId(val);
+                                    const matched = project.invoices?.find((i: any) => String(i.id) === val);
+                                    if (matched) {
+                                        const rem = Number(matched.remaining_amount ?? (Number(matched.total || 0) - Number(matched.paid_amount || 0)));
+                                        setFormData((prev) => ({
+                                            ...prev,
+                                            amount: rem > 0 ? String(Math.round(rem)) : String(Math.round(Number(matched.total || 0))),
+                                            notes: `Pembayaran ${matched.notes || matched.invoice_number}`,
+                                        }));
+                                    }
+                                }}
+                                className="w-full bg-white border border-slate-200/90 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#3B46F1]/20 focus:border-[#3B46F1] transition-all cursor-pointer font-medium"
+                            >
+                                <option value="">Semua / Pembayaran Umum Project</option>
+                                {project.invoices.map((inv: any) => {
+                                    const tot = Number(inv.total || 0);
+                                    const rem = Number(inv.remaining_amount ?? (tot - Number(inv.paid_amount || 0)));
+                                    return (
+                                        <option key={inv.id} value={inv.id}>
+                                            {inv.invoice_number} - {inv.notes || 'Termin'} (Sisa: {formatRupiah(rem)})
+                                        </option>
+                                    );
+                                })}
+                            </select>
+                        </div>
+                    )}
 
                     {/* 2. Pilihan Cepat Nominal (Shortcuts) */}
                     <div className="space-y-2">

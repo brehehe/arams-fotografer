@@ -120,17 +120,25 @@ class ClientService
     {
         $client->load([
             'user:id,name,email,phone,avatar,client_id,status,last_login_at,created_at',
+            'category:id,name,slug,description,color,form_type',
             'referredByClient:id,name,phone,city,email,bride_name,groom_name',
             'referrals:id,name,phone,city,referred_by_client_id,created_at',
             'weddingOrganizer:id,name,pic_name,phone,email,city,tier',
             'clientSource:id,name,type,avatar,phone,email',
             'projects' => function ($q) {
-                $q->with(['category', 'package', 'fileLinks' => function ($q) {
-                    $q->latest();
-                }])->latest('created_at');
+                $q->with([
+                    'category',
+                    'package',
+                    'invoices' => function ($iq) {
+                        $iq->orderBy('created_at');
+                    },
+                    'fileLinks' => function ($q) {
+                        $q->latest();
+                    },
+                ])->latest('created_at');
             },
             'invoices' => function ($q) {
-                $q->latest('created_at');
+                $q->with('project:id,name,project_number')->orderBy('created_at');
             },
             'payments' => function ($q) {
                 $q->with(['paymentMethod', 'project'])->latest('payment_date');

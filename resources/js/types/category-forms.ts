@@ -16,6 +16,7 @@ export type CategoryFormKey =
     | 'standard';
 
 export interface ChildRepeaterItem {
+    [key: string]: any;
     name: string;
     age?: string | number;
     birth_date?: string;
@@ -33,6 +34,9 @@ export interface MaternityCategoryData {
 }
 
 export interface LainnyaCategoryData {
+    client_name?: string;
+    name?: string;
+    contact_person?: string;
     needs_description?: string;
     location?: string;
     needs_type?: string;
@@ -42,6 +46,9 @@ export interface LainnyaCategoryData {
 }
 
 export interface PeroranganCategoryData {
+    client_name?: string;
+    name?: string;
+    nickname?: string;
     photo_purpose?: string;
     session_type?: string;
     outfit_looks_count?: number | string;
@@ -65,6 +72,9 @@ export interface PreweddingCategoryData {
 }
 
 export interface CommercialCategoryData {
+    company_name?: string;
+    pic_name?: string;
+    client_name?: string;
     commercial_purpose?: string;
     product_brand_type?: string;
     products_count?: number | string;
@@ -76,6 +86,8 @@ export interface CommercialCategoryData {
 }
 
 export interface TravelingCategoryData {
+    client_name?: string;
+    contact_person?: string;
     departure_date?: string;
     return_date?: string;
     destination_city_country?: string;
@@ -159,6 +171,8 @@ export interface EngagementCategoryData {
 }
 
 export interface EventCategoryData {
+    pic_name?: string;
+    client_name?: string;
     event_date?: string;
     event_time_range?: string;
     event_type?: string;
@@ -256,42 +270,55 @@ export function resolveCategoryKey(category?: {
     if (candidate.includes('maternity')) {
         return 'maternity';
     }
+
     if (candidate.includes('prewedding')) {
         return 'prewedding';
     }
+
     if (candidate.includes('wedding')) {
         return 'wedding';
     }
+
     if (candidate.includes('newborn') || candidate.includes('bayi')) {
         return 'newborn';
     }
+
     if (candidate.includes('commercial') || candidate.includes('produk') || candidate.includes('brand')) {
         return 'commercial';
     }
+
     if (candidate.includes('traveling') || candidate.includes('trip') || candidate.includes('wisata')) {
         return 'traveling';
     }
+
     if (candidate.includes('birthday') || candidate.includes('ulang tahun')) {
         return 'birthday';
     }
+
     if (candidate.includes('corporate') || candidate.includes('perusahaan')) {
         return 'corporate';
     }
+
     if (candidate.includes('engagement') || candidate.includes('lamaran')) {
         return 'engagement';
     }
+
     if (candidate.includes('perorangan') || candidate.includes('personal') || candidate.includes('portrait')) {
         return 'perorangan';
     }
+
     if (candidate.includes('family') || candidate.includes('keluarga')) {
         return 'family';
     }
+
     if (candidate.includes('komunitas') || candidate.includes('community')) {
         return 'komunitas';
     }
+
     if (candidate.includes('event') || candidate.includes('acara')) {
         return 'event';
     }
+
     if (candidate.includes('lainnya') || candidate.includes('khusus')) {
         return 'lainnya';
     }

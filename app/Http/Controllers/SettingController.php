@@ -7,6 +7,7 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Project;
 use App\Models\Setting;
+use App\Services\BackupService;
 use App\Services\SettingService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -18,7 +19,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class SettingController extends Controller
 {
     public function __construct(
-        protected SettingService $settingService
+        protected SettingService $settingService,
+        protected BackupService $backupService
     ) {}
 
     public function index(Request $request): Response|RedirectResponse
@@ -71,6 +73,7 @@ class SettingController extends Controller
         return Inertia::render('settings/Admin', [
             'settings' => $data['settings'],
             'settingsMap' => $data['settingsMap'],
+            'backups' => $this->backupService->getBackupsList(),
         ]);
     }
 
@@ -104,32 +107,42 @@ class SettingController extends Controller
         return redirect()->back()->with('success', 'Pengaturan dan logo berhasil disimpan.');
     }
 
-    public function backupDownload(): StreamedResponse
+    public function runBackup(Request $request): RedirectResponse
     {
-        activity()
-            ->causedBy(auth()->user())
-            ->event('backup_created')
-            ->log('Database snapshot backup berhasil diunduh');
+        $type = $request->input('type', 'full'); // 'full' or 'db'
+        $result = $this->backupService->runBackup($type, auth()->user());
 
-        $data = [
-            'app' => 'Arams Photography Management System',
-            'version' => '1.0.0',
-            'exported_at' => Carbon::now()->toIso8601String(),
-            'exported_by' => auth()->user()?->name ?? 'Admin',
-            'settings' => Setting::all(),
-            'clients' => Client::all(),
-            'projects' => Project::with(['client', 'category', 'package'])->get(),
-            'payments' => Payment::all(),
-            'invoices' => Invoice::all(),
-        ];
+        if ($result['success']) {
+            return redirect()->back()->with('success', $result['message']);
+        }
 
-        $filename = 'arams_backup_' . date('Y-m-d_His') . '.json';
+        return redirect()->back()->with('error', $result['message']);
+    }
 
-        return response()->streamDownload(function () use ($data) {
-            echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-        }, $filename, [
-            'Content-Type' => 'application/json',
-        ]);
+    public function downloadBackup(Request $request, ?string $filename = null)
+    {
+        $filename = $filename ?? $request->query('filename');
+
+        if (! $filename) {
+            $backups = $this->backupService->getBackupsList();
+            if (empty($backups)) {
+                return redirect()->back()->with('error', 'Belum ada arsip backup yang tersedia.');
+            }
+            $filename = $backups[0]['filename'];
+        }
+
+        return $this->backupService->downloadBackup($filename);
+    }
+
+    public function deleteBackup(string $filename): RedirectResponse
+    {
+        $deleted = $this->backupService->deleteBackup($filename, auth()->user());
+
+        if ($deleted) {
+            return redirect()->back()->with('success', "Arsip backup {$filename} berhasil dihapus.");
+        }
+
+        return redirect()->back()->with('error', "Gagal menghapus arsip backup {$filename}.");
     }
 
     public function exportData(string $type): StreamedResponse

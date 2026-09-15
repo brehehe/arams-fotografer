@@ -224,7 +224,9 @@ class ProjectService
             'supervisor:id,name,email,avatar',
             'projectAddons.addon',
             'schedules',
-            'invoices.items',
+            'invoices' => function ($iq) {
+                $iq->with('items')->orderBy('created_at');
+            },
             'payments.paymentMethod',
             'fileLinks.creator:id,name',
             'highlights',
@@ -328,7 +330,21 @@ class ProjectService
     {
         $addons = $data['selected_addons'] ?? [];
         $clientOverrides = $data['client_overrides'] ?? null;
-        unset($data['selected_addons'], $data['client_overrides']);
+        $teamAssignments = $data['team_assignments'] ?? null;
+        $installments = $data['payment_installments'] ?? null;
+        unset($data['selected_addons'], $data['client_overrides'], $data['team_assignments'], $data['payment_installments']);
+
+        if (!empty($teamAssignments) && is_array($teamAssignments)) {
+            $catData = $data['category_data'] ?? [];
+            $catData['team_assignments'] = $teamAssignments;
+            $data['category_data'] = $catData;
+        }
+
+        if (!empty($installments) && is_array($installments)) {
+            $catData = $data['category_data'] ?? [];
+            $catData['payment_installments'] = $installments;
+            $data['category_data'] = $catData;
+        }
 
         $dpAmount = (float) ($data['dp_amount'] ?? ($data['invoice_amount'] ?? 0));
         $invoiceType = $data['invoice_type'] ?? 'dp';
@@ -371,11 +387,48 @@ class ProjectService
 
         $data['status'] = $data['status'] ?? 'in_progress';
         $data['progress'] = $data['status'] === 'completed' ? 100 : ($data['status'] === 'draft' ? 0 : 20);
-        $data['payment_status'] = $data['payment_status'] ?? ($data['status'] === 'draft' ? 'unpaid' : ($data['paid_amount'] ?? 0 > 0 ? 'partial' : 'unpaid'));
-        $data['paid_amount'] = (float) ($data['paid_amount'] ?? ($data['payment_status'] === 'paid' ? ($data['total_amount'] ?? 0) : 0));
+        $paidAmt = (float) ($data['paid_amount'] ?? 0);
+        $totalAmt = (float) ($data['total_amount'] ?? 0);
+        if ($paidAmt <= 0) {
+            $data['payment_status'] = 'unpaid';
+            $data['paid_amount'] = 0;
+        } elseif ($paidAmt >= $totalAmt && $totalAmt > 0) {
+            $data['payment_status'] = 'paid';
+            $data['paid_amount'] = $paidAmt;
+        } else {
+            $data['payment_status'] = 'partial';
+            $data['paid_amount'] = $paidAmt;
+        }
 
-        // Append operational free-text staff to notes if present
+        // Format multi-role team assignments into notes & staff summaries
         $extraNotes = [];
+        if (!empty($teamAssignments) && is_array($teamAssignments)) {
+            $photoList = [];
+            $editorList = [];
+            $teamSummary = [];
+            foreach ($teamAssignments as $tm) {
+                if (!empty($tm['name'])) {
+                    $tType = $tm['type'] ?? 'Personil';
+                    $tName = trim($tm['name']);
+                    if (in_array($tType, ['Photografer', 'Videografer'])) {
+                        $photoList[] = "{$tName} ({$tType})";
+                    } elseif (in_array($tType, ['Editor Foto', 'Editor Video'])) {
+                        $editorList[] = "{$tName} ({$tType})";
+                    }
+                    $teamSummary[] = "{$tType}: {$tName}";
+                }
+            }
+            if (!empty($photoList) && empty($photographerName)) {
+                $photographerName = implode(', ', $photoList);
+            }
+            if (!empty($editorList) && empty($editorName)) {
+                $editorName = implode(', ', $editorList);
+            }
+            if (!empty($teamSummary)) {
+                $extraNotes[] = "Tim Personil: " . implode(' | ', $teamSummary);
+            }
+        }
+
         if ($photographerName) {
             $extraNotes[] = "Photographer: {$photographerName}";
         }
@@ -423,13 +476,56 @@ class ProjectService
             }
         }
 
-        // Automatically create initial Invoice (DP or Full)
-        $invoice = null;
-        if ($dpAmount > 0) {
-            $financeService = app(\App\Services\FinanceService::class);
+        // Automatically create Invoices (Multi-Termin or Single DP/Full)
+        $firstInvoice = null;
+        $financeService = app(\App\Services\FinanceService::class);
+
+        if (!empty($installments) && is_array($installments) && count($installments) > 0) {
+            foreach ($installments as $idx => $inst) {
+                $instAmount = (float) ($inst['amount'] ?? 0);
+                if ($instAmount <= 0) {
+                    continue;
+                }
+
+                $instName = $inst['name'] ?? ('Invoice ' . ($idx + 1));
+                $instDueDate = !empty($inst['due_date'])
+                    ? \Carbon\Carbon::parse($inst['due_date'])
+                    : ($createdAtDate ? \Carbon\Carbon::parse($createdAtDate)->addDays(7 * ($idx + 1)) : now()->addDays(7 * ($idx + 1)));
+
+                $invoiceNumber = $financeService->generateInvoiceNumber();
+
+                $createdInv = \App\Models\Invoice::create([
+                    'invoice_number' => $invoiceNumber,
+                    'project_id' => $project->id,
+                    'client_id' => $project->client_id,
+                    'issue_date' => $createdAtDate ? \Carbon\Carbon::parse($createdAtDate) : now(),
+                    'due_date' => $instDueDate,
+                    'subtotal' => $instAmount,
+                    'discount' => 0,
+                    'tax' => 0,
+                    'total' => $instAmount,
+                    'paid_amount' => 0,
+                    'remaining_amount' => $instAmount,
+                    'status' => 'unpaid',
+                    'notes' => "{$instName} untuk {$project->name}",
+                ]);
+
+                \App\Models\InvoiceItem::create([
+                    'invoice_id' => $createdInv->id,
+                    'description' => "{$instName} - {$project->name}",
+                    'quantity' => 1,
+                    'unit_price' => $instAmount,
+                    'total' => $instAmount,
+                ]);
+
+                if (!$firstInvoice) {
+                    $firstInvoice = $createdInv;
+                }
+            }
+        } elseif ($dpAmount > 0) {
             $invoiceNumber = $financeService->generateInvoiceNumber();
 
-            $invoice = \App\Models\Invoice::create([
+            $firstInvoice = \App\Models\Invoice::create([
                 'invoice_number' => $invoiceNumber,
                 'project_id' => $project->id,
                 'client_id' => $project->client_id,
@@ -448,7 +544,7 @@ class ProjectService
             ]);
 
             \App\Models\InvoiceItem::create([
-                'invoice_id' => $invoice->id,
+                'invoice_id' => $firstInvoice->id,
                 'description' => ($invoiceType === 'dp' ? 'DP - ' : 'Pembayaran - ') . $project->name,
                 'quantity' => 1,
                 'unit_price' => $dpAmount,
@@ -456,7 +552,7 @@ class ProjectService
             ]);
         }
 
-        $project->created_invoice = $invoice;
+        $project->created_invoice = $firstInvoice;
 
         activity()
             ->causedBy($causer ?? auth()->user())
@@ -474,7 +570,40 @@ class ProjectService
     {
         $addons = $data['selected_addons'] ?? null;
         $clientOverrides = $data['client_overrides'] ?? null;
-        unset($data['selected_addons'], $data['client_overrides']);
+        $teamAssignments = $data['team_assignments'] ?? null;
+        $installments = $data['payment_installments'] ?? null;
+        unset($data['selected_addons'], $data['client_overrides'], $data['team_assignments'], $data['payment_installments']);
+
+        $catData = $data['category_data'] ?? ($project->category_data ?? []);
+        if (!empty($teamAssignments) && is_array($teamAssignments)) {
+            $catData['team_assignments'] = $teamAssignments;
+            $data['category_data'] = $catData;
+
+            $photoList = [];
+            $editorList = [];
+            foreach ($teamAssignments as $tm) {
+                if (!empty($tm['name'])) {
+                    $tType = $tm['type'] ?? 'Personil';
+                    $tName = trim($tm['name']);
+                    if (in_array($tType, ['Photografer', 'Videografer'])) {
+                        $photoList[] = "{$tName} ({$tType})";
+                    } elseif (in_array($tType, ['Editor Foto', 'Editor Video'])) {
+                        $editorList[] = "{$tName} ({$tType})";
+                    }
+                }
+            }
+            if (!empty($photoList)) {
+                $data['photographer_name'] = implode(', ', $photoList);
+            }
+            if (!empty($editorList)) {
+                $data['editor_name'] = implode(', ', $editorList);
+            }
+        }
+
+        if (!empty($installments) && is_array($installments)) {
+            $catData['payment_installments'] = $installments;
+            $data['category_data'] = $catData;
+        }
 
         // Apply client overrides (wedding/newborn info) to Client record
         if (!empty($clientOverrides) && !empty($project->client_id)) {
@@ -660,13 +789,15 @@ class ProjectService
             'payments.paymentMethod',
         ]);
 
-        // Find selected invoice or latest
+        $sortedInvoices = $project->invoices->sortBy('created_at')->values();
+
+        // Find selected invoice or first
         $invoice = null;
         if ($invoiceId) {
-            $invoice = $project->invoices->firstWhere('id', $invoiceId);
+            $invoice = $sortedInvoices->firstWhere('id', $invoiceId);
         }
         if (!$invoice) {
-            $invoice = $project->invoices->first();
+            $invoice = $sortedInvoices->first();
         }
 
         // If no invoice exists on this project, create a default DP invoice record
@@ -729,7 +860,7 @@ class ProjectService
         return [
             'project' => $project,
             'current_invoice' => $invoice,
-            'invoices' => $project->invoices,
+            'invoices' => $sortedInvoices,
             'payment_methods' => $paymentMethods,
             'company_settings' => $companySettings,
         ];

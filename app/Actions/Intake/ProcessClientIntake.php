@@ -186,12 +186,31 @@ class ProcessClientIntake
                     $clientName = $validated['name'] ?? 'Klien Lamaran';
                 }
                 $clientType = 'engagement';
+            } elseif ($formType === 'perorangan' || $formType === 'personal' || $formType === 'portrait') {
+                $childName = null;
+                $childBirthDate = null;
+                $childGender = null;
+                $clientName = trim($catData['client_name'] ?? ($catData['name'] ?? ($validated['name'] ?? '')));
+                if (empty($clientName) || $clientName === '-') {
+                    $clientName = 'Klien Perorangan';
+                }
+                $clientType = 'perorangan';
             } else {
                 $childName = null;
                 $childBirthDate = null;
                 $childGender = null;
-                $clientName = trim($catData['contact_person'] ?? ($validated['name'] ?? 'Klien Baru'));
+                $clientName = trim($catData['client_name'] ?? ($catData['name'] ?? ($catData['pic_name'] ?? ($catData['contact_person'] ?? ($validated['name'] ?? '')))));
+                if (empty($clientName) || $clientName === '-') {
+                    $clientName = 'Klien Baru';
+                }
                 $clientType = Str::slug($category?->name ?? 'standard');
+            }
+
+            if (empty($clientName) || $clientName === '-') {
+                $clientName = trim($validated['name'] ?? '') ?: 'Klien Baru';
+                if ($clientName === '-') {
+                    $clientName = 'Klien Baru';
+                }
             }
 
             $client = Client::where('phone', $validated['phone'])->first();
@@ -258,6 +277,20 @@ class ProcessClientIntake
                     ? ($groomInstagram ?? $brideInstagram ?? null)
                     : ($brideInstagram ?? $groomInstagram ?? null));
 
+            $clientCategoryData = array_merge($catData, array_filter([
+                'category_id' => $category?->id,
+                'package_id' => $packageId,
+                'package_name' => $package?->name,
+                'package_price' => $price,
+                'event_date' => $validated['event_date'] ?? ($catData['session_date'] ?? ($catData['akad_date'] ?? ($catData['event_date'] ?? null))),
+                'event_time' => $validated['event_time'] ?? ($catData['event_time'] ?? null),
+                'location' => $validated['location'] ?? ($catData['session_location'] ?? ($catData['location'] ?? null)),
+                'reception_location' => $validated['reception_location'] ?? null,
+                'primary_contact' => $validated['primary_contact'] ?? null,
+                'client_name' => $catData['client_name'] ?? ($clientName !== '-' ? $clientName : null),
+                'name' => $catData['name'] ?? ($clientName !== '-' ? $clientName : null),
+            ], fn($v) => !is_null($v)));
+
             $clientData = [
                 'name' => $clientName,
                 'partner_name' => $catData['groom_name'] ?? ($validated['groom_name'] ?? ($parentNames ?: null)),
@@ -290,6 +323,8 @@ class ProcessClientIntake
                 'address' => $validated['address'] ?? null,
                 'preferred_contact' => $validated['preferred_contact'] ?? 'whatsapp',
                 'client_type' => $clientType,
+                'category_id' => $category?->id,
+                'category_data' => $clientCategoryData,
                 'source' => $validated['source_info'] ?? ($validated['source'] ?? 'Formulir Online (Client Intake)'),
                 'client_source_id' => $validated['client_source_id'] ?? null,
                 'referred_by_client_id' => $referredByClientId,

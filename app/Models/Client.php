@@ -56,11 +56,14 @@ class Client extends Model
         'notes',
         'tags',
         'avatar',
+        'category_id',
+        'category_data',
     ];
 
     protected $casts = [
         'tags' => 'array',
         'children' => 'array',
+        'category_data' => 'array',
         'bride_birth_date' => 'date',
         'groom_birth_date' => 'date',
         'child_birth_date' => 'date',
@@ -72,6 +75,11 @@ class Client extends Model
             ->logOnly(['name', 'email', 'phone', 'city', 'status'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class, 'category_id');
     }
 
     public function clientSource(): BelongsTo

@@ -108,6 +108,7 @@ class ProjectController extends Controller
             'editor:id,name,email,avatar',
             'supervisor:id,name,email,avatar',
             'projectAddons.addon',
+            'invoices.items',
         ]);
 
         $formData = $this->projectService->getProjectFormData();

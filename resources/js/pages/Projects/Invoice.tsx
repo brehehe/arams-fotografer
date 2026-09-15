@@ -30,7 +30,7 @@ import {
     Upload,
     ExternalLink,
 } from 'lucide-react';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
 import { formatRupiah } from '@/lib/formatters';
 import RecordPaymentModal from '@/components/projects/RecordPaymentModal';
@@ -130,32 +130,62 @@ export default function ProjectInvoice({
 
     // Primary invoice data
     const inv = current_invoice || invoices[0] || {
-        invoice_number: project?.project_number ? project.project_number.replace('PRJ', 'INV') : 'INV/260826/001',
-        issue_date: project?.created_at || '2026-08-27',
-        due_date: project?.deadline || '2026-09-10',
-        total: 23800000,
-        subtotal: 15000000,
+        id: '',
+        invoice_number: project?.project_number ? project.project_number.replace('PRJ', 'INV') : 'INV-001',
+        issue_date: project?.created_at || '',
+        due_date: project?.deadline || '',
+        total: Number(project?.total_amount || 0),
+        subtotal: Number(project?.total_amount || 0),
+        paid_amount: 0,
+        remaining_amount: Number(project?.total_amount || 0),
         status: 'unpaid',
+        notes: '',
     };
+
+    const currentInvoiceIndex = useMemo(() => {
+        return invoices.findIndex((item) => String(item.id) === String(inv.id));
+    }, [invoices, inv.id]);
+
+    const invoiceTerminLabel = useMemo(() => {
+        if (inv.notes) {
+            const cleaned = inv.notes.replace(/\s+untuk\s+.*$/i, '').trim();
+            if (cleaned) {
+                return cleaned;
+            }
+        }
+        if (currentInvoiceIndex >= 0) {
+            if (invoices.length === 1) {
+                return 'Invoice Tagihan (Penuh)';
+            }
+            if (currentInvoiceIndex === 0) {
+                return 'Invoice 1 (DP)';
+            }
+            if (currentInvoiceIndex === invoices.length - 1) {
+                return `Invoice ${currentInvoiceIndex + 1} (Pelunasan)`;
+            }
+            return `Invoice ${currentInvoiceIndex + 1} (Termin ${currentInvoiceIndex + 1})`;
+        }
+        return 'Invoice Tagihan';
+    }, [inv.notes, currentInvoiceIndex, invoices.length]);
 
     const client = project?.client || {
-        name: 'Budi Santoso',
-        phone: '0812 2345 6789',
-        email: 'budi.santoso@email.com',
-        address: 'Jl. Sudirman No. 10, Jakarta Pusat, DKI Jakarta 10220',
+        name: project?.name || 'Klien',
+        phone: '-',
+        email: '-',
+        address: project?.location || '-',
     };
 
-    const supervisorName = project?.supervisor?.name || 'Aditya Pratama';
+    const supervisorName = project?.supervisor?.name || '-';
     const parsedPhotographer =
         project?.photographer?.name ||
         project?.photographer_name ||
         project?.notes?.match(/Photographer:\s*([^|\n]+)/i)?.[1]?.trim() ||
-        'Ivan Hardianto';
+        '-';
     const parsedEditor =
         project?.editor?.name ||
         project?.editor_name ||
         project?.notes?.match(/Editor:\s*([^|\n]+)/i)?.[1]?.trim() ||
-        'Dian Pratama';
+        '-';
 
     // Default Payment Method
     const defaultPaymentMethod = payment_methods[0] || {
@@ -180,7 +210,7 @@ export default function ProjectInvoice({
     // ── KUSTOMISASI TEKS & CATATAN INVOICE ────────────────────────────────────
     const initialCustomTexts = {
         invoiceTitle: 'INVOICE',
-        invoiceSubtitle: 'DP (UANG MUKA)',
+        invoiceSubtitle: invoiceTerminLabel.toUpperCase(),
         tagline: studioTagline || 'Capturing Moments, Creating Timeless Memories',
         bankName: defaultPaymentMethod.name || 'Bank Mandiri',
         bankAccount: defaultPaymentMethod.account_number || '123-00-1234567-8',
@@ -209,14 +239,25 @@ export default function ProjectInvoice({
     const [customTexts, setCustomTexts] = useState(initialCustomTexts);
     const [isTextModalOpen, setIsTextModalOpen] = useState(false);
 
+    // Sync subtitle when invoice termin changes
+    useEffect(() => {
+        setCustomTexts((prev) => ({
+            ...prev,
+            invoiceSubtitle: invoiceTerminLabel.toUpperCase(),
+        }));
+    }, [invoiceTerminLabel]);
+
     // Format dates
     const formatDateIndo = (dateStr?: string) => {
         if (!dateStr) {
-            return '27 Agustus 2026';
+            return '-';
         }
 
         try {
             const d = new Date(dateStr);
+            if (isNaN(d.getTime())) {
+                return dateStr;
+            }
 
             return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
         } catch {
@@ -226,94 +267,142 @@ export default function ProjectInvoice({
 
     const issueDateFormatted = formatDateIndo(inv.issue_date || project?.created_at);
     const dueDateFormatted = formatDateIndo(inv.due_date || project?.deadline);
-    const eventDateFormatted = formatDateIndo(project?.event_date || '2026-08-27');
+    const eventDateFormatted = formatDateIndo(project?.event_date);
 
-    // ── DYNAMIC LINE ITEMS (PAKET, ADD-ONS, BIAYA OPERASIONAL) ─────────────────
-    const addonsList = useMemo<LineItem[]>(() => {
-        const addons = project?.project_addons || project?.projectAddons;
-
-        if (Array.isArray(addons) && addons.length > 0) {
-            return addons.map((item: any, idx: number) => ({
-                id: item.id || idx + 1,
-                name: item.addon?.name || item.name || 'Additional Service',
-                qty: Number(item.quantity || 1),
-                unit_price: Number(item.price || item.addon?.price || 0),
-                total: Number(item.price || item.addon?.price || 0) * Number(item.quantity || 1),
-                type: (item.addon?.type || 'photo').toLowerCase(),
-            }));
+    // ── DYNAMIC LINE ITEMS (PAKET, ADD-ONS, BIAYA OPERASIONAL DARI DATABASE) ───
+    const allProjectAddons = useMemo(() => {
+        const raw = project?.project_addons || project?.projectAddons;
+        if (Array.isArray(raw)) {
+            return raw;
         }
-
-        return [
-            { id: 1, name: 'Same Day Edit (Video)', qty: 1, unit_price: 2000000, total: 2000000, type: 'video' },
-            { id: 2, name: 'Extra Photographer', qty: 1, unit_price: 2500000, total: 2500000, type: 'camera' },
-            { id: 3, name: 'Prewedding Photo Session', qty: 1, unit_price: 2000000, total: 2000000, type: 'image' },
-        ];
+        return [];
     }, [project]);
 
-    const operationalCostsList = useMemo<LineItem[]>(() => {
-        const costs = project?.operational_costs;
+    // Filter Add-ons (Ala Carte / Layanan Tambahan)
+    const addonsList = useMemo<LineItem[]>(() => {
+        const items = allProjectAddons.filter((item: any) => {
+            const isOps = (item.addon?.type === 'operational') || (item.unit === 'ops') || (item.notes === 'operational');
+            return !isOps;
+        });
 
-        if (Array.isArray(costs) && costs.length > 0) {
-            return costs.map((item: any, idx: number) => ({
-                id: item.id || idx + 1,
+        return items.map((item: any, idx: number) => ({
+            id: item.id || idx + 1,
+            name: item.custom_name || item.addon?.name || item.name || 'Layanan Tambahan',
+            qty: Number(item.qty || item.quantity || 1),
+            unit_price: Number(item.unit_price || item.price || item.addon?.price || 0),
+            total: Number(item.total_price || item.total || (Number(item.unit_price || item.price || 0) * Number(item.qty || item.quantity || 1))),
+            type: (item.addon?.type || 'photo').toLowerCase(),
+        }));
+    }, [allProjectAddons]);
+
+    // Filter Biaya Layanan & Operasional
+    const operationalCostsList = useMemo<LineItem[]>(() => {
+        const directCosts = Array.isArray(project?.operational_costs) ? project.operational_costs : [];
+
+        const opsFromAddons = allProjectAddons.filter((item: any) => {
+            const isOps = (item.addon?.type === 'operational') || (item.unit === 'ops') || (item.notes === 'operational');
+            return isOps;
+        }).map((item: any, idx: number) => ({
+            id: item.id || idx + 1,
+            name: item.custom_name || item.addon?.name || item.name || 'Biaya Operasional',
+            qty: Number(item.qty || item.quantity || 1),
+            unit_price: Number(item.unit_price || item.price || item.addon?.price || 0),
+            total: Number(item.total_price || item.total || (Number(item.unit_price || item.price || 0) * Number(item.qty || item.quantity || 1))),
+            type: (item.addon?.type || 'transport').toLowerCase(),
+        }));
+
+        if (directCosts.length > 0) {
+            const directOps = directCosts.map((item: any, idx: number) => ({
+                id: item.id || `direct-ops-${idx + 1}`,
                 name: item.name || item.description || 'Biaya Operasional',
                 qty: Number(item.quantity || 1),
                 unit_price: Number(item.unit_price || item.amount || 0),
                 total: Number(item.total || ((item.unit_price || item.amount || 0) * (item.quantity || 1))),
                 type: (item.type || 'transport').toLowerCase(),
             }));
+            return [...opsFromAddons, ...directOps];
         }
 
-        return [
-            { id: 1, name: 'Transport (PP)', qty: 1, unit_price: 800000, total: 800000, type: 'transport' },
-            { id: 2, name: 'Penginapan (2 Malam)', qty: 2, unit_price: 600000, total: 1200000, type: 'lodging' },
-            { id: 3, name: 'Parkir & Tol', qty: 1, unit_price: 300000, total: 300000, type: 'parking' },
-        ];
-    }, [project]);
+        return opsFromAddons;
+    }, [allProjectAddons, project?.operational_costs]);
 
-    // Financial breakdown values
-    const packageTotal = Number(project?.price || project?.package?.base_price || 15000000);
+    // Financial breakdown values strictly from database
+    const packageTotal = Number(project?.price || project?.package?.base_price || 0);
     const additionalServicesTotal = addonsList.reduce((acc: number, item: LineItem) => acc + item.total, 0);
     const operationalCostTotal = operationalCostsList.reduce((acc: number, item: LineItem) => acc + item.total, 0);
     const grandTotal = Number(
         project?.total_amount || (packageTotal + additionalServicesTotal + operationalCostTotal)
     );
-    const dpPercent = 50;
-    const dpAmount = Number(
-        inv.total || (project?.paid_amount > 0 ? project.paid_amount : Math.round(grandTotal * (dpPercent / 100)))
-    );
-    const remainingAmount = Math.max(0, grandTotal - dpAmount);
+    const currentInvoiceAmount = Number(inv.total || 0);
+    const remainingProjectAmount = Math.max(0, grandTotal - Number(project?.paid_amount || 0));
 
-    const isInvoicePaid = inv.status === 'paid' || project?.payment_status === 'paid' || (Number(inv.paid_amount || 0) >= Number(inv.total || 0) && Number(inv.total || 0) > 0);
+    const isInvoicePaid = inv.status === 'paid' || (Number(inv.paid_amount || 0) >= Number(inv.total || 0) && Number(inv.total || 0) > 0);
 
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+    const [selectedPaymentInvoice, setSelectedPaymentInvoice] = useState<any>(null);
 
-    // Status Label & Styling
-    const getInvoiceStatus = () => {
-        if (project?.payment_status === 'paid' || inv.status === 'paid' || isInvoicePaid) {
+    // Status Label & Styling for any invoice object
+    const getInvoiceStatus = (invoiceObj: any = inv) => {
+        const total = Number(invoiceObj?.total || 0);
+        const paid = Number(invoiceObj?.paid_amount || 0);
+        const isPaid = invoiceObj?.status === 'paid' || (total > 0 && paid >= total);
+        const isPartial = !isPaid && paid > 0;
+
+        if (isPaid) {
             return {
                 label: 'LUNAS',
                 badge: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
                 dot: 'bg-emerald-500',
+                text: 'text-emerald-700',
             };
         }
 
-        if (project?.payment_status === 'partial' || project?.paid_amount > 0) {
+        if (isPartial) {
             return {
-                label: 'DP TERBAYAR',
-                badge: 'bg-indigo-50 text-indigo-700 border-indigo-200/80',
-                dot: 'bg-indigo-500',
+                label: 'DIBAYAR SEBAGIAN',
+                badge: 'bg-sky-50 text-sky-700 border-sky-200/80',
+                dot: 'bg-sky-500',
+                text: 'text-sky-700',
             };
         }
 
         return {
-            label: 'MENUNGGU PEMBAYARAN',
+            label: 'BELUM LUNAS',
             badge: 'bg-amber-50 text-amber-800 border-amber-200/80',
             dot: 'bg-amber-500',
+            text: 'text-amber-800',
         };
     };
 
-    const statusBadge = getInvoiceStatus();
+    // Status helper for overall project
+    const getProjectPaymentStatus = () => {
+        const paid = Number(project?.paid_amount || 0);
+        if (project?.payment_status === 'paid' || (grandTotal > 0 && paid >= grandTotal)) {
+            return {
+                label: 'LUNAS',
+                badge: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
+                dot: 'bg-emerald-500',
+                text: 'text-emerald-700',
+            };
+        }
+        if (paid > 0) {
+            return {
+                label: 'TERBAYAR SEBAGIAN',
+                badge: 'bg-indigo-50 text-indigo-700 border-indigo-200/80',
+                dot: 'bg-indigo-500',
+                text: 'text-indigo-700',
+            };
+        }
+        return {
+            label: 'BELUM DIBAYAR',
+            badge: 'bg-rose-50 text-rose-700 border-rose-200/80',
+            dot: 'bg-rose-500',
+            text: 'text-rose-700',
+        };
+    };
+
+    const statusBadge = getInvoiceStatus(inv);
+    const projectStatusBadge = getProjectPaymentStatus();
 
     // Print & Download PDF handler - Isolated to Invoice Paper only
     const handlePrint = () => {
@@ -440,10 +529,11 @@ export default function ProjectInvoice({
     const handleSendWhatsApp = () => {
         const cleanPhone = (client.phone || '').replace(/[^0-9]/g, '');
         const phoneFormatted = cleanPhone.startsWith('0') ? '62' + cleanPhone.substring(1) : cleanPhone;
+        const isPayment = invoiceVersion === 'payment';
         const msg = encodeURIComponent(
-            invoiceVersion === 'payment'
-                ? `Halo ${client.name},\n\nBerikut kami lampirkan tagihan uang muka (DP) untuk project *${project?.name || ''}* (${inv.invoice_number}) senilai *${formatRupiah(dpAmount)}* dengan batas jatuh tempo pada *${dueDateFormatted}*.\n\nPembayaran dapat ditransfer ke:\n${defaultPaymentMethod.name}\nNo. Rek: ${defaultPaymentMethod.account_number}\na.n. ${defaultPaymentMethod.account_holder}\n\nTerima kasih atas kepercayaannya.\n*${studioName}*`
-                : `Halo ${client.name},\n\nBerikut kami lampirkan rincian invoice lengkap project *${project?.name || ''}* (${inv.invoice_number}):\n- Paket: ${project?.package?.name || project?.name || 'Paket Utama'} (${formatRupiah(packageTotal)})\n- Add-ons: ${formatRupiah(additionalServicesTotal)}\n- Biaya Layanan: ${formatRupiah(operationalCostTotal)}\n- *Grand Total: ${formatRupiah(grandTotal)}*\n- Terbayar (DP): ${formatRupiah(dpAmount)}\n- Sisa Pelunasan: ${formatRupiah(remainingAmount)}\n\nRekening Pembayaran:\n${defaultPaymentMethod.name} ${defaultPaymentMethod.account_number} a.n. ${defaultPaymentMethod.account_holder}\n\nTerima kasih,\n*${studioName}*`
+            isPayment
+                ? `Halo ${client.name},\n\nBerikut kami lampirkan tagihan *${invoiceTerminLabel}* untuk project *${project?.name || ''}* (${inv.invoice_number}) senilai *${formatRupiah(currentInvoiceAmount)}* dengan batas jatuh tempo pada *${dueDateFormatted}*.\n\nPembayaran dapat ditransfer ke:\n${defaultPaymentMethod.name}\nNo. Rek: ${defaultPaymentMethod.account_number}\na.n. ${defaultPaymentMethod.account_holder}\n\nTerima kasih atas kepercayaannya.\n*${studioName}*`
+                : `Halo ${client.name},\n\nBerikut kami lampirkan rincian invoice lengkap project *${project?.name || ''}* (${inv.invoice_number}):\n- Paket: ${project?.package?.name || project?.name || 'Paket Utama'} (${formatRupiah(packageTotal)})\n- Add-ons: ${formatRupiah(additionalServicesTotal)}\n- Biaya Layanan: ${formatRupiah(operationalCostTotal)}\n- *Grand Total Project: ${formatRupiah(grandTotal)}*\n- Terbayar: ${formatRupiah(project?.paid_amount || 0)}\n- Sisa Tagihan: ${formatRupiah(remainingProjectAmount)}\n\nRekening Pembayaran:\n${defaultPaymentMethod.name} ${defaultPaymentMethod.account_number} a.n. ${defaultPaymentMethod.account_holder}\n\nTerima kasih,\n*${studioName}*`
         );
         window.open(`https://wa.me/${phoneFormatted}?text=${msg}`, '_blank');
     };
@@ -451,11 +541,11 @@ export default function ProjectInvoice({
     // Send Email handler
     const handleSendEmail = () => {
         const isPayment = invoiceVersion === 'payment';
-        const subject = encodeURIComponent(`Invoice ${isPayment ? 'DP' : 'Rincian Layanan'} ${inv.invoice_number} - ${project?.name || ''}`);
+        const subject = encodeURIComponent(`Invoice ${isPayment ? invoiceTerminLabel : 'Rincian Layanan'} ${inv.invoice_number} - ${project?.name || ''}`);
         const body = encodeURIComponent(
             isPayment
-                ? `Yth. ${client.name},\n\nTerima kasih telah mempercayakan momen berharga Anda kepada ${studioName}.\n\nBerikut kami informasikan invoice uang muka (DP) untuk project:\n- Nama Project: ${project?.name || ''}\n- No. Invoice: ${inv.invoice_number}\n- Nominal DP: ${formatRupiah(dpAmount)}\n- Jatuh Tempo: ${dueDateFormatted}\n\nPembayaran via Transfer:\nBank: ${defaultPaymentMethod.name}\nRekening: ${defaultPaymentMethod.account_number}\na.n. ${defaultPaymentMethod.account_holder}\n\nTerima kasih,\n${studioName}`
-                : `Yth. ${client.name},\n\nTerima kasih telah mempercayakan momen berharga Anda kepada ${studioName}.\n\nBerikut rincian lengkap invoice untuk project:\n- Nama Project: ${project?.name || ''}\n- No. Invoice: ${inv.invoice_number}\n- Paket Utama: ${project?.package?.name || project?.name || 'Paket'} (${formatRupiah(packageTotal)})\n- Total Add-ons: ${formatRupiah(additionalServicesTotal)}\n- Biaya Layanan & Operasional: ${formatRupiah(operationalCostTotal)}\n- Grand Total: ${formatRupiah(grandTotal)}\n- Terbayar (DP): ${formatRupiah(dpAmount)}\n- Sisa Pelunasan: ${formatRupiah(remainingAmount)}\n\nPembayaran via Transfer:\nBank: ${defaultPaymentMethod.name}\nRekening: ${defaultPaymentMethod.account_number}\na.n. ${defaultPaymentMethod.account_holder}\n\nTerima kasih,\n${studioName}`
+                ? `Yth. ${client.name},\n\nTerima kasih telah mempercayakan momen berharga Anda kepada ${studioName}.\n\nBerikut kami informasikan invoice *${invoiceTerminLabel}* untuk project:\n- Nama Project: ${project?.name || ''}\n- No. Invoice: ${inv.invoice_number}\n- Nominal Tagihan: ${formatRupiah(currentInvoiceAmount)}\n- Jatuh Tempo: ${dueDateFormatted}\n\nPembayaran via Transfer:\nBank: ${defaultPaymentMethod.name}\nRekening: ${defaultPaymentMethod.account_number}\na.n. ${defaultPaymentMethod.account_holder}\n\nTerima kasih,\n${studioName}`
+                : `Yth. ${client.name},\n\nTerima kasih telah mempercayakan momen berharga Anda kepada ${studioName}.\n\nBerikut rincian lengkap invoice untuk project:\n- Nama Project: ${project?.name || ''}\n- No. Invoice: ${inv.invoice_number}\n- Paket Utama: ${project?.package?.name || project?.name || 'Paket'} (${formatRupiah(packageTotal)})\n- Total Add-ons: ${formatRupiah(additionalServicesTotal)}\n- Biaya Layanan & Operasional: ${formatRupiah(operationalCostTotal)}\n- Grand Total Project: ${formatRupiah(grandTotal)}\n- Terbayar: ${formatRupiah(project?.paid_amount || 0)}\n- Sisa Tagihan: ${formatRupiah(remainingProjectAmount)}\n\nPembayaran via Transfer:\nBank: ${defaultPaymentMethod.name}\nRekening: ${defaultPaymentMethod.account_number}\na.n. ${defaultPaymentMethod.account_holder}\n\nTerima kasih,\n${studioName}`
         );
         window.open(`mailto:${client.email || ''}?subject=${subject}&body=${body}`, '_blank');
     };
@@ -563,6 +653,21 @@ export default function ProjectInvoice({
                         )}
                     </div>
 
+                    {!isInvoicePaid && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setSelectedPaymentInvoice(inv);
+                                setIsPaymentModalOpen(true);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm shadow-emerald-600/20 transition-all cursor-pointer"
+                            title={`Konfirmasi pembayaran untuk ${invoiceTerminLabel}`}
+                        >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Konfirmasi Pembayaran</span>
+                        </button>
+                    )}
+
                     <button
                         type="button"
                         onClick={() => setIsTextModalOpen(true)}
@@ -583,14 +688,110 @@ export default function ProjectInvoice({
                 </div>
             </div>
 
-            {/* ── 2. INVOICE VERSION SELECTOR BAR (GAMBAR 3 CLASSIC) ──────────────── */}
+            {/* ── 2. TERMIN INVOICES SELECTOR BAR ─────────────────────────────────── */}
+            {invoices.length > 0 && (
+                <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 shadow-2xs space-y-2.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                <Receipt className="w-4 h-4" />
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-xs text-slate-900">
+                                    Pilih Termin Invoice ({invoices.length} Termin Terjadwal)
+                                </h3>
+                                <p className="text-[11px] text-slate-500">
+                                    Klik salah satu termin di bawah untuk melihat rincian tagihan, status pembayaran, atau mencetaknya
+                                </p>
+                            </div>
+                        </div>
+                        <div className="text-[11px] text-slate-500 flex items-center gap-2">
+                            <span>Total Tagihan Project:</span>
+                            <span className="font-mono text-slate-900 font-bold bg-slate-100 px-2 py-0.5 rounded-md">
+                                {formatRupiah(grandTotal)}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1">
+                        {invoices.map((item, idx) => {
+                            const isActive = String(item.id) === String(inv.id);
+                            const isPaid = item.status === 'paid' || (Number(item.paid_amount || 0) >= Number(item.total || 0) && Number(item.total || 0) > 0);
+                            const label = item.notes
+                                ? item.notes.replace(/\s+untuk\s+.*$/i, '').trim()
+                                : idx === 0
+                                ? 'Invoice 1 (DP)'
+                                : idx === invoices.length - 1
+                                ? `Invoice ${idx + 1} (Pelunasan)`
+                                : `Invoice ${idx + 1} (Termin ${idx + 1})`;
+
+                            return (
+                                <button
+                                    key={item.id}
+                                    type="button"
+                                    onClick={() => {
+                                        if (!isActive) {
+                                            router.visit(`/projects/${project?.id}/invoice?invoice_id=${item.id}`, {
+                                                preserveScroll: true,
+                                                preserveState: false,
+                                            });
+                                        }
+                                    }}
+                                    className={`text-left p-3 rounded-xl border transition-all cursor-pointer relative group ${
+                                        isActive
+                                            ? 'bg-gradient-to-br from-[#5B21B6] to-[#431407]/90 text-white border-[#5B21B6] shadow-md ring-2 ring-[#5B21B6]/30'
+                                            : 'bg-slate-50/70 hover:bg-white text-slate-800 border-slate-200/80 hover:border-indigo-300 hover:shadow-xs'
+                                    }`}
+                                >
+                                    <div className="flex items-center justify-between gap-1 mb-1">
+                                        <span className={`text-[11px] font-bold truncate ${isActive ? 'text-white' : 'text-slate-900'}`}>
+                                            {label}
+                                        </span>
+                                        {isActive ? (
+                                            <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 shrink-0">
+                                                Aktif
+                                            </span>
+                                        ) : (
+                                            <span className="text-[9px] font-semibold text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                Buka &rarr;
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center justify-between text-[10.5px]">
+                                        <span className={`font-mono text-[10px] ${isActive ? 'text-purple-200' : 'text-slate-500'}`}>
+                                            {item.invoice_number}
+                                        </span>
+                                        <span className={`font-bold font-mono text-xs ${isActive ? 'text-white' : 'text-[#5B21B6]'}`}>
+                                            {formatRupiah(item.total)}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between pt-2 mt-2 border-t text-[10px] border-slate-200/40">
+                                        <span className={isActive ? 'text-purple-200' : 'text-slate-400'}>
+                                            Tempo: {formatDateIndo(item.due_date)}
+                                        </span>
+                                        <span className={`px-1.5 py-0.2 rounded text-[9.5px] font-bold ${
+                                            isPaid
+                                                ? (isActive ? 'bg-emerald-500 text-white' : 'bg-emerald-50 text-emerald-700 border border-emerald-200')
+                                                : (isActive ? 'bg-amber-400 text-slate-950 font-extrabold' : 'bg-amber-50 text-amber-800 border border-amber-200')
+                                        }`}>
+                                            {isPaid ? 'LUNAS' : 'BELUM LUNAS'}
+                                        </span>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* ── 3. INVOICE VERSION SELECTOR BAR (GAMBAR 3 CLASSIC) ──────────────── */}
             <div className="bg-white p-2.5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2">
                         Pilihan Versi Invoice:
                     </span>
 
-                    {/* Versi 1: Pembayaran / DP (Kwitansi & Tagihan) */}
+                    {/* Versi 1: Pembayaran / Termin */}
                     <button
                         type="button"
                         onClick={() => setInvoiceVersion('payment')}
@@ -600,10 +801,10 @@ export default function ProjectInvoice({
                             }`}
                     >
                         <CreditCard className="w-3.5 h-3.5" />
-                        <span>Versi 1: Pembayaran (Tagihan DP)</span>
+                        <span>Versi 1: Tagihan Termin ({invoiceTerminLabel})</span>
                         <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${invoiceVersion === 'payment' ? 'bg-white/20 text-white' : 'bg-purple-100 text-purple-700'
                             }`}>
-                            Kwitansi / DP
+                            {formatRupiah(currentInvoiceAmount)}
                         </span>
                     </button>
 
@@ -767,7 +968,7 @@ export default function ProjectInvoice({
                                                 </h1>
                                                 <span className="text-xs font-bold text-slate-800 tracking-[0.2em] block mt-1 uppercase">
                                                     {invoiceVersion === 'payment'
-                                                        ? (customTexts.invoiceSubtitle || 'DP (UANG MUKA)')
+                                                        ? (customTexts.invoiceSubtitle || invoiceTerminLabel.toUpperCase())
                                                         : 'RINCIAN PAKET & LAYANAN LENGKAP'}
                                                 </span>
                                                 <div className="w-14 h-1 bg-amber-500 rounded-full mt-2 ml-0 sm:ml-auto"></div>
@@ -793,16 +994,13 @@ export default function ProjectInvoice({
                                                     <span className="text-slate-500 font-medium">Jenis Invoice</span>
                                                     <span className="text-slate-400">:</span>
                                                     <span className="font-semibold text-slate-800">
-                                                        {invoiceVersion === 'payment' ? 'DP (Uang Muka)' : 'Rincian Layanan & Biaya'}
+                                                        {invoiceVersion === 'payment' ? invoiceTerminLabel : 'Rincian Layanan & Biaya'}
                                                     </span>
                                                 </div>
                                                 <div className="grid grid-cols-[90px_10px_1fr] items-center pt-1 border-t border-[#E0D7FE]">
                                                     <span className="text-slate-500 font-medium">Status</span>
                                                     <span className="text-slate-400">:</span>
-                                                    <span className={`inline-flex items-center gap-1.5 font-bold text-[10.5px] ${isInvoicePaid
-                                                        ? 'text-emerald-700'
-                                                        : (project?.payment_status === 'partial' || Number(project?.paid_amount || 0) > 0 ? 'text-indigo-700' : 'text-rose-600')
-                                                        }`}>
+                                                    <span className={`inline-flex items-center gap-1.5 font-bold text-[10.5px] ${statusBadge.text}`}>
                                                         <span className={`w-2 h-2 rounded-full ${statusBadge.dot}`} />
                                                         <span>{statusBadge.label}</span>
                                                     </span>
@@ -821,22 +1019,24 @@ export default function ProjectInvoice({
                                                 </span>
                                                 <div className="w-10 h-0.5 bg-[#5B21B6] rounded-full mb-2"></div>
                                                 <h3 className="text-sm font-bold text-slate-900 pt-1">
-                                                    {client.name || 'Kevin Sanjaya & Jessica Mila'}
+                                                    {client.name || '-'}
                                                 </h3>
-                                                <p className="text-xs text-slate-700 font-mono">
-                                                    {client.phone || '0813 9876 5432'}
-                                                </p>
-                                                <p className="text-xs text-slate-600">
-                                                    {client.email || 'kevin.sanjaya@gmail.com'}
-                                                </p>
+                                                {client.phone && client.phone !== '-' && (
+                                                    <p className="text-xs text-slate-700 font-mono">
+                                                        {client.phone}
+                                                    </p>
+                                                )}
+                                                {client.email && client.email !== '-' && (
+                                                    <p className="text-xs text-slate-600">
+                                                        {client.email}
+                                                    </p>
+                                                )}
+                                                {client.address && client.address !== '-' && (
+                                                    <p className="text-xs text-slate-500 line-clamp-2">
+                                                        {client.address}
+                                                    </p>
+                                                )}
                                             </div>
-
-                                            {/* Botanical Branch Watermark Asset */}
-                                            <img
-                                                src="/images/invoice-botanical-branch.png"
-                                                alt="Botanical Branch"
-                                                className="absolute -bottom-4 -right-4 w-36 h-36 object-contain opacity-25 pointer-events-none select-none mix-blend-multiply"
-                                            />
                                         </div>
 
                                         {/* Card 2: RINGKASAN PROJECT with Camera Botanical Watermark */}
@@ -851,20 +1051,15 @@ export default function ProjectInvoice({
                                                         <span className="text-slate-600 font-medium">Nama Project</span>
                                                         <span className="text-slate-400">:</span>
                                                         <span className="font-bold text-slate-900 truncate">
-                                                            {project?.name || 'Prewedding Kevin & Jessica Mila'}
+                                                            {project?.name || '-'}
                                                         </span>
                                                     </div>
                                                     <div className="grid grid-cols-[105px_10px_1fr]">
                                                         <span className="text-slate-600 font-medium">Kategori</span>
                                                         <span className="text-slate-400">:</span>
                                                         <span className="text-slate-800">
-                                                            {project?.category?.name || 'Prewedding / Event / Family / dll'}
+                                                            {project?.category?.name || '-'}
                                                         </span>
-                                                    </div>
-                                                    <div className="grid grid-cols-[105px_10px_1fr]">
-                                                        <span className="text-slate-600 font-medium">Workflow</span>
-                                                        <span className="text-slate-400">:</span>
-                                                        <span className="text-slate-800">5 Tahap</span>
                                                     </div>
                                                     <div className="grid grid-cols-[105px_10px_1fr]">
                                                         <span className="text-slate-600 font-medium">Hari H</span>
@@ -874,7 +1069,7 @@ export default function ProjectInvoice({
                                                     <div className="grid grid-cols-[105px_10px_1fr]">
                                                         <span className="text-slate-600 font-medium">PIC Supervisor</span>
                                                         <span className="text-slate-400">:</span>
-                                                        <span className="text-slate-800">{supervisorName} (Supervisor)</span>
+                                                        <span className="text-slate-800">{supervisorName}</span>
                                                     </div>
                                                     <div className="grid grid-cols-[105px_10px_1fr]">
                                                         <span className="text-slate-600 font-medium">Photographer</span>
@@ -888,19 +1083,12 @@ export default function ProjectInvoice({
                                                     </div>
                                                 </div>
                                             </div>
-
-                                            {/* Camera Botanical Watermark Asset */}
-                                            <img
-                                                src="/images/invoice-camera-botanical.png"
-                                                alt="Camera Botanical"
-                                                className="absolute -bottom-2 -right-3 w-40 h-32 object-contain opacity-25 pointer-events-none select-none mix-blend-multiply"
-                                            />
                                         </div>
                                     </div>
 
                                     {/* 3. Central Table Section: Switches based on invoiceVersion */}
                                     {invoiceVersion === 'payment' ? (
-                                        /* ══════════ VERSI 1: PEMBAYARAN (DP & TAGIHAN) ══════════ */
+                                        /* ══════════ VERSI 1: PEMBAYARAN (TAGIHAN TERMIN) ══════════ */
                                         <div className="rounded-2xl overflow-hidden border border-[#E0D7FE] shadow-2xs">
                                             <table className="w-full text-left text-xs">
                                                 <thead className="bg-[#0B0E38] text-white">
@@ -914,10 +1102,10 @@ export default function ProjectInvoice({
                                                     <tr className="border-b border-slate-100">
                                                         <td className="py-4 px-5 align-middle">
                                                             <strong className="text-slate-900 font-bold text-xs block">
-                                                                DP (Uang Muka {dpPercent}%) - {project?.name || 'Project Photography'}
+                                                                {invoiceTerminLabel} - {project?.name || 'Project Photography'}
                                                             </strong>
                                                             <span className="text-[11px] text-slate-500 block mt-0.5">
-                                                                Pembayaran termin konfirmasi booking tanggal &amp; jadwal pelaksanaan
+                                                                {inv.notes || `Pembayaran termin invoice untuk project ${project?.name || ''}`}
                                                             </span>
                                                         </td>
                                                         <td className="py-4 px-4 text-center align-middle">
@@ -930,7 +1118,7 @@ export default function ProjectInvoice({
                                                             </span>
                                                         </td>
                                                         <td className="py-4 px-5 text-right font-bold text-slate-900 font-mono text-sm align-middle">
-                                                            {formatRupiah(dpAmount)}
+                                                            {formatRupiah(currentInvoiceAmount)}
                                                         </td>
                                                     </tr>
                                                 </tbody>
@@ -939,7 +1127,7 @@ export default function ProjectInvoice({
                                             <div className="p-4 px-5 bg-[#F5F3FF] flex items-center justify-between border-t border-[#E0D7FE]">
                                                 <div>
                                                     <span className="text-xs font-black tracking-wider text-[#5B21B6] uppercase block">
-                                                        TOTAL DIBAYAR (DP)
+                                                        TOTAL TAGIHAN ({invoiceTerminLabel.toUpperCase()})
                                                     </span>
                                                     <span className="text-[10.5px] text-slate-500">
                                                         Total Nilai Project: {formatRupiah(grandTotal)}
@@ -947,10 +1135,10 @@ export default function ProjectInvoice({
                                                 </div>
                                                 <div className="text-right">
                                                     <span className="text-2xl font-black text-[#5B21B6] font-mono block">
-                                                        {formatRupiah(dpAmount)}
+                                                        {formatRupiah(currentInvoiceAmount)}
                                                     </span>
-                                                    <span className="text-[10.5px] text-amber-800 font-semibold">
-                                                        Sisa Pelunasan: {formatRupiah(remainingAmount)}
+                                                    <span className="text-[10.5px] text-slate-600 font-medium">
+                                                        Sisa Tagihan Project: <strong className="text-amber-800">{formatRupiah(remainingProjectAmount)}</strong>
                                                     </span>
                                                 </div>
                                             </div>
@@ -1147,21 +1335,21 @@ export default function ProjectInvoice({
                                                             TOTAL NILAI PROJECT
                                                         </span>
                                                         <span className="text-[11px] text-slate-600 font-medium">
-                                                            Status: <strong className={isInvoicePaid ? 'text-emerald-700' : 'text-amber-800'}>{statusBadge.label}</strong>
+                                                            Status Project: <strong className={projectStatusBadge.text}>{projectStatusBadge.label}</strong>
                                                         </span>
                                                     </div>
                                                     <div className="flex items-center gap-4 text-right">
                                                         <div>
-                                                            <span className="text-[10px] text-slate-500 block uppercase font-bold">Terbayar (DP)</span>
+                                                            <span className="text-[10px] text-slate-500 block uppercase font-bold">Terbayar</span>
                                                             <span className="text-sm font-bold text-emerald-700 font-mono">
-                                                                {formatRupiah(dpAmount)}
+                                                                {formatRupiah(project?.paid_amount || 0)}
                                                             </span>
                                                         </div>
                                                         <div className="w-px h-8 bg-[#E0D7FE]" />
                                                         <div>
-                                                            <span className="text-[10px] text-slate-500 block uppercase font-bold">Sisa Pelunasan</span>
+                                                            <span className="text-[10px] text-slate-500 block uppercase font-bold">Sisa Tagihan</span>
                                                             <span className="text-sm font-bold text-amber-800 font-mono">
-                                                                {formatRupiah(remainingAmount)}
+                                                                {formatRupiah(remainingProjectAmount)}
                                                             </span>
                                                         </div>
                                                         <div className="w-px h-8 bg-[#E0D7FE]" />
@@ -1233,7 +1421,7 @@ export default function ProjectInvoice({
                                                         </span>
                                                     </div>
                                                     <p className="text-base font-bold text-emerald-800 font-mono">
-                                                        LUNAS ({formatRupiah(inv.paid_amount || dpAmount)})
+                                                        LUNAS ({formatRupiah(inv.paid_amount || currentInvoiceAmount)})
                                                     </p>
                                                     <p className="text-[11px] text-emerald-700/90 leading-tight">
                                                         Pembayaran sah telah diterima via rekening resmi dan tercatat di sistem Keuangan.
@@ -1400,39 +1588,78 @@ export default function ProjectInvoice({
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {invoices.map((item) => (
-                                        <tr key={item.id} className="group hover:bg-slate-50/50">
-                                            <td className="py-2.5 font-bold text-slate-900 font-mono">
-                                                {item.invoice_number}
-                                            </td>
-                                            <td className="py-2.5 text-slate-600">DP (Uang Muka)</td>
-                                            <td className="py-2.5 text-slate-500">
-                                                {formatDateIndo(item.issue_date)}
-                                            </td>
-                                            <td className="py-2.5 text-slate-500">
-                                                {formatDateIndo(item.due_date)}
-                                            </td>
-                                            <td className="py-2.5 text-right font-bold text-slate-900 font-mono">
-                                                {formatRupiah(item.total)}
-                                            </td>
-                                            <td className="py-2.5 text-center">
-                                                <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-lg border ${statusBadge.badge}`}>
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${statusBadge.dot}`} />
-                                                    <span>{statusBadge.label}</span>
-                                                </span>
-                                            </td>
-                                            <td className="py-2.5 text-center">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => router.visit(`/projects/${project?.id}/invoice?invoice_id=${item.id}`)}
-                                                    className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
-                                                    title="Lihat Invoice"
-                                                >
-                                                    <Eye className="w-4 h-4" />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {invoices.map((item, idx) => {
+                                        const isCurrent = item.id === inv.id;
+                                        const isItemPaid = item.status === 'paid' || (Number(item.paid_amount || 0) >= Number(item.total || 0) && Number(item.total || 0) > 0);
+                                        const itemLabel = item.notes
+                                            ? item.notes.replace(/\s+untuk\s+.*$/i, '').trim()
+                                            : idx === 0
+                                            ? 'Invoice 1 (DP)'
+                                            : idx === invoices.length - 1
+                                            ? `Invoice ${idx + 1} (Pelunasan)`
+                                            : `Invoice ${idx + 1} (Termin ${idx + 1})`;
+
+                                        return (
+                                            <tr key={item.id} className={`group transition-colors ${isCurrent ? 'bg-purple-50/60 font-semibold' : 'hover:bg-slate-50/50'}`}>
+                                                <td className="py-2.5 font-bold text-slate-900 font-mono">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span>{item.invoice_number}</span>
+                                                        {isCurrent && (
+                                                            <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-purple-600 text-white shrink-0">
+                                                                Aktif
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="py-2.5 text-slate-700 font-medium">{itemLabel}</td>
+                                                <td className="py-2.5 text-slate-500">
+                                                    {formatDateIndo(item.issue_date)}
+                                                </td>
+                                                <td className="py-2.5 text-slate-500">
+                                                    {formatDateIndo(item.due_date)}
+                                                </td>
+                                                <td className="py-2.5 text-right font-bold text-slate-900 font-mono">
+                                                    {formatRupiah(item.total)}
+                                                </td>
+                                                <td className="py-2.5 text-center">
+                                                    {(() => {
+                                                        const itemStatus = getInvoiceStatus(item);
+                                                        return (
+                                                            <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-lg border ${itemStatus.badge}`}>
+                                                                <span className={`w-1.5 h-1.5 rounded-full ${itemStatus.dot}`} />
+                                                                <span>{itemStatus.label}</span>
+                                                            </span>
+                                                        );
+                                                    })()}
+                                                </td>
+                                                <td className="py-2.5 text-center">
+                                                    <div className="flex items-center justify-center gap-1">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => router.visit(`/projects/${project?.id}/invoice?invoice_id=${item.id}`, { preserveScroll: true, preserveState: false })}
+                                                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${isCurrent ? 'bg-purple-100 text-purple-700' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-100'}`}
+                                                            title="Lihat Invoice Ini"
+                                                        >
+                                                            <Eye className="w-4 h-4" />
+                                                        </button>
+                                                        {!isItemPaid && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setSelectedPaymentInvoice(item);
+                                                                    setIsPaymentModalOpen(true);
+                                                                }}
+                                                                className="p-1.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                                                                title={`Konfirmasi Pembayaran ${itemLabel}`}
+                                                            >
+                                                                <CreditCard className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
@@ -1462,7 +1689,7 @@ export default function ProjectInvoice({
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-slate-500">Jenis Dokumen</span>
-                                <span className="font-semibold text-indigo-700">Invoice DP ({dpPercent}%)</span>
+                                <span className="font-semibold text-indigo-700">{invoiceTerminLabel}</span>
                             </div>
                             <div className="flex justify-between items-center pt-1.5 border-t border-slate-100">
                                 <span className="text-slate-500">Status Pembayaran</span>
@@ -1474,7 +1701,7 @@ export default function ProjectInvoice({
                         </div>
                     </div>
 
-                    {/* ── CARD: STATUS & KONFIRMASI DP ──────────────────────────── */}
+                    {/* ── CARD: STATUS & KONFIRMASI PEMBAYARAN ─────────────────────── */}
                     <div className={`p-4 rounded-3xl border shadow-2xs space-y-3 ${isInvoicePaid
                         ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
                         : 'bg-amber-50/80 border-amber-200 text-amber-950'
@@ -1486,12 +1713,12 @@ export default function ProjectInvoice({
                             </div>
                             <div className="min-w-0">
                                 <h4 className="font-bold text-xs truncate">
-                                    {isInvoicePaid ? 'Invoice DP Telah Lunas' : 'Menunggu Pembayaran DP'}
+                                    {isInvoicePaid ? `${invoiceTerminLabel} Telah Lunas` : `Menunggu Pembayaran ${invoiceTerminLabel}`}
                                 </h4>
                                 <p className="text-[11px] opacity-80 truncate">
                                     {isInvoicePaid
-                                        ? `Tercatat di Keuangan: ${formatRupiah(inv.paid_amount || dpAmount)}`
-                                        : `Total Tagihan: ${formatRupiah(dpAmount)}`}
+                                        ? `Tercatat di Keuangan: ${formatRupiah(inv.paid_amount || currentInvoiceAmount)}`
+                                        : `Total Tagihan: ${formatRupiah(currentInvoiceAmount)}`}
                                 </p>
                             </div>
                         </div>
@@ -1499,15 +1726,19 @@ export default function ProjectInvoice({
                         {!isInvoicePaid ? (
                             <button
                                 type="button"
-                                onClick={() => setIsPaymentModalOpen(true)}
+                                onClick={() => {
+                                    setSelectedPaymentInvoice(inv);
+                                    setIsPaymentModalOpen(true);
+                                }}
                                 className="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-2xs transition-all cursor-pointer flex items-center justify-center gap-2"
                             >
                                 <CheckCircle2 className="w-4 h-4" />
-                                <span>Konfirmasi Terima DP (Catat ke Keuangan)</span>
+                                <span>Konfirmasi Terima Pembayaran</span>
                             </button>
                         ) : (
-                            <div className="text-[11px] font-semibold text-emerald-800 bg-white/80 py-2 px-3 rounded-xl border border-emerald-200 text-center">
-                                Pembayaran sah dan langsung tercatat di Keuangan
+                            <div className="text-[11px] font-semibold text-emerald-800 bg-white/80 py-2.5 px-3 rounded-xl border border-emerald-200 text-center flex items-center justify-center gap-1.5">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                <span>Pembayaran Telah Dikonfirmasi & Masuk Keuangan</span>
                             </div>
                         )}
                     </div>
@@ -1524,16 +1755,20 @@ export default function ProjectInvoice({
                                 <span className="font-bold text-slate-900 font-mono">{formatRupiah(grandTotal)}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-slate-500">Nominal DP ({dpPercent}%)</span>
-                                <span className="font-bold text-emerald-600 font-mono">{formatRupiah(dpAmount)}</span>
+                                <span className="text-slate-500">Tagihan ({invoiceTerminLabel})</span>
+                                <span className="font-bold text-indigo-600 font-mono">{formatRupiah(currentInvoiceAmount)}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-slate-500">Sisa Pelunasan</span>
-                                <span className="font-bold text-amber-700 font-mono">{formatRupiah(remainingAmount)}</span>
+                                <span className="text-slate-500">Terbayar (Project)</span>
+                                <span className="font-bold text-emerald-600 font-mono">{formatRupiah(project?.paid_amount || 0)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-slate-500">Sisa Tagihan Project</span>
+                                <span className="font-bold text-amber-700 font-mono">{formatRupiah(remainingProjectAmount)}</span>
                             </div>
                             <div className="flex justify-between pt-1.5 border-t border-slate-100">
-                                <span className="font-black text-[#3B46F1]">Total Tagihan DP</span>
-                                <span className="font-black text-sm text-[#3B46F1] font-mono">{formatRupiah(dpAmount)}</span>
+                                <span className="font-black text-[#3B46F1]">Nominal Invoice Ini</span>
+                                <span className="font-black text-sm text-[#3B46F1] font-mono">{formatRupiah(currentInvoiceAmount)}</span>
                             </div>
                         </div>
                     </div>
@@ -1956,12 +2191,22 @@ export default function ProjectInvoice({
             {/* ── MODAL: CATAT PEMBAYARAN INVOICE ─────────────────────────────── */}
             <RecordPaymentModal
                 isOpen={isPaymentModalOpen}
-                onClose={() => setIsPaymentModalOpen(false)}
+                onClose={() => {
+                    setIsPaymentModalOpen(false);
+                    setSelectedPaymentInvoice(null);
+                }}
                 project={project}
                 paymentMethods={payment_methods}
-                invoiceId={inv.id}
-                initialAmount={dpAmount}
-                initialNotes={`Pembayaran ${inv.notes || `Invoice ${inv.invoice_number}`}`}
+                invoiceId={selectedPaymentInvoice?.id || inv.id}
+                initialAmount={
+                    selectedPaymentInvoice
+                        ? Math.max(0, Number(selectedPaymentInvoice.total || 0) - Number(selectedPaymentInvoice.paid_amount || 0))
+                        : Math.max(0, Number(inv.total || 0) - Number(inv.paid_amount || 0))
+                }
+                initialNotes={`Pembayaran ${(selectedPaymentInvoice || inv).notes ? (selectedPaymentInvoice || inv).notes.replace(/\s+untuk\s+.*$/i, '').trim() : invoiceTerminLabel} (${(selectedPaymentInvoice || inv).invoice_number})`}
+                onSuccess={() => {
+                    router.reload();
+                }}
             />
         </div>
     );

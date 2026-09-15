@@ -14,12 +14,18 @@ class UserService
      */
     public function getUsersPaginated(Request $request): array
     {
-        $query = User::with('roles');
+        // Filter out client users - /users page is exclusively for internal team/staff members
+        $query = User::with('roles')
+            ->whereDoesntHave('roles', function ($q) {
+                $q->whereRaw('LOWER(name) = ?', ['client']);
+            })
+            ->whereNull('client_id');
 
         if ($search = $request->input('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'ilike', "%{$search}%")
-                    ->orWhere('email', 'ilike', "%{$search}%");
+            $searchLower = strtolower($search);
+            $query->where(function ($q) use ($searchLower) {
+                $q->whereRaw('LOWER(name) LIKE ?', ["%{$searchLower}%"])
+                    ->orWhereRaw('LOWER(email) LIKE ?', ["%{$searchLower}%"]);
             });
         }
 
@@ -41,7 +47,8 @@ class UserService
         $query->orderBy('name', $sort === 'desc' ? 'desc' : 'asc');
 
         $users = $query->paginate(10)->withQueryString();
-        $roles = Role::all();
+        // Exclude 'Client' role from available roles in internal user management
+        $roles = Role::whereRaw('LOWER(name) != ?', ['client'])->get();
 
         return [
             'users' => $users,

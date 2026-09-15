@@ -28,7 +28,15 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email|max:255',
             'phone' => 'nullable|string|max:50',
-            'role' => 'required|exists:roles,name',
+            'role' => [
+                'required',
+                'exists:roles,name',
+                function ($attribute, $value, $fail) {
+                    if (strtolower($value) === 'client') {
+                        $fail('Role Client tidak dapat ditugaskan melalui manajemen pengguna internal.');
+                    }
+                },
+            ],
             'status' => 'required|string|in:active,inactive,suspended',
             'password' => 'required|string|min:8',
         ]);
@@ -44,7 +52,15 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email,'.$user->id,
             'phone' => 'nullable|string|max:50',
-            'role' => 'required|exists:roles,name',
+            'role' => [
+                'required',
+                'exists:roles,name',
+                function ($attribute, $value, $fail) {
+                    if (strtolower($value) === 'client') {
+                        $fail('Role Client tidak dapat ditugaskan melalui manajemen pengguna internal.');
+                    }
+                },
+            ],
             'status' => 'required|string|in:active,inactive,suspended',
             'password' => 'nullable|string|min:8',
         ]);

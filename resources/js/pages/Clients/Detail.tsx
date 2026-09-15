@@ -800,10 +800,32 @@ export default function ClientDetail({
         }
     }, [editFormData.primary_contact, editCategoryData]);
 
+    // Extract all real invoices from client.invoices and client.projects
+    const allInvoices = useMemo(() => {
+        const directInvoices = (client.invoices || []).map((inv: any) => ({
+            ...inv,
+            project: inv.project || client.projects?.find((p: any) => String(p.id) === String(inv.project_id)),
+        }));
+        const projectInvoices = (client.projects || []).flatMap((p: any) =>
+            (p.invoices || []).map((inv: any) => ({
+                ...inv,
+                project: p,
+            }))
+        );
+        const map = new Map<string, any>();
+        [...directInvoices, ...projectInvoices].forEach((inv: any) => {
+            if (inv && inv.id && !map.has(String(inv.id))) {
+                map.set(String(inv.id), inv);
+            }
+        });
+        return Array.from(map.values());
+    }, [client.invoices, client.projects]);
+
     // Modal Tambah Pembayaran States
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
     const [paymentFormData, setPaymentFormData] = useState<{
         project_id: string;
+        invoice_id?: string;
         amount: string;
         payment_date: string;
         payment_method_id: string;
@@ -812,6 +834,7 @@ export default function ClientDetail({
         proof_file: File | null;
     }>({
         project_id: client.projects?.[0]?.id || '',
+        invoice_id: '',
         amount: '',
         payment_date: new Date().toISOString().split('T')[0],
         payment_method_id: payment_methods?.[0]?.id || '1',
@@ -840,6 +863,29 @@ export default function ClientDetail({
             list[0]
         );
     }, [client.projects, paymentFormData.project_id, unpaidProjects]);
+
+    const availableInvoicesForSelectedProject = useMemo(() => {
+        if (!selectedPaymentProject) return [];
+        return allInvoices.filter(
+            (inv: any) => String(inv.project_id || inv.project?.id) === String(selectedPaymentProject.id)
+        );
+    }, [selectedPaymentProject, allInvoices]);
+
+    const openPaymentForInvoice = (inv: any) => {
+        const pId = inv.project_id || inv.project?.id || '';
+        const rem = Number(inv.remaining_amount ?? inv.total_amount ?? 0);
+        setPaymentFormData({
+            project_id: String(pId),
+            invoice_id: String(inv.id),
+            amount: rem > 0 ? String(rem) : String(inv.total_amount || ''),
+            payment_date: new Date().toISOString().split('T')[0],
+            payment_method_id: payment_methods?.[0]?.id || '1',
+            reference_number: '',
+            notes: `Pembayaran ${inv.notes || inv.invoice_no || 'Termin'}`,
+            proof_file: null,
+        });
+        setIsPaymentModalOpen(true);
+    };
 
     const paymentProjectTotal = Number(selectedPaymentProject?.total_amount || 0);
     const paymentProjectPaid = Number(selectedPaymentProject?.paid_amount || 0);
@@ -1120,6 +1166,7 @@ export default function ClientDetail({
             payment_method_id: paymentFormData.payment_method_id || payment_methods?.[0]?.id,
             reference_number: paymentFormData.reference_number || null,
             notes: paymentFormData.notes || null,
+            invoice_id: paymentFormData.invoice_id || null,
         };
 
         if (paymentFormData.proof_file) {
@@ -1138,6 +1185,7 @@ export default function ClientDetail({
                     setIsPaymentModalOpen(false);
                     setPaymentFormData({
                         project_id: client.projects?.[0]?.id || '',
+                        invoice_id: '',
                         amount: '',
                         payment_date: new Date().toISOString().split('T')[0],
                         payment_method_id: payment_methods?.[0]?.id || '1',
@@ -1487,12 +1535,48 @@ export default function ClientDetail({
     const [paymentCurrentPage, setPaymentCurrentPage] = useState(1);
 
     const initialInvoicesList = useMemo(() => {
+        if (allInvoices && allInvoices.length > 0) {
+            return allInvoices.map((inv, idx) => {
+                const total = Number(inv.total || 0);
+                const paid = Number(inv.paid_amount || 0);
+                const remaining = Math.max(0, Number(inv.remaining_amount ?? (total - paid)));
+                let status = 'Belum Dibayar';
+                let status_variant = 'destructive';
+                if (total > 0 && paid >= total) {
+                    status = 'Lunas';
+                    status_variant = 'success';
+                } else if (paid > 0) {
+                    status = 'Sebagian';
+                    status_variant = 'warning';
+                }
+
+                return {
+                    id: String(inv.id || idx + 1),
+                    project_id: String(inv.project_id || inv.project?.id || ''),
+                    invoice_no: inv.invoice_number || `INV-${String(idx + 1).padStart(4, '0')}`,
+                    notes: inv.notes || 'Tagihan Project',
+                    project_name: inv.project?.name || client.projects?.find((p: any) => String(p.id) === String(inv.project_id))?.name || 'Project',
+                    invoice_date: inv.issue_date ? formatDate(inv.issue_date) : '-',
+                    due_date: inv.due_date ? formatDate(inv.due_date) : '-',
+                    total_amount: total,
+                    paid_amount: paid,
+                    remaining_amount: remaining,
+                    status,
+                    status_variant,
+                    payment_method: inv.payments?.[0]?.payment_method?.name || (client.payments?.[0]?.payment_method?.name ?? 'Transfer Bank'),
+                    paid_at: paid >= total && inv.updated_at ? formatDate(inv.updated_at) : (paid > 0 ? 'Sebagian' : '-'),
+                };
+            });
+        }
+
         if (client.payments && client.payments.length > 0) {
             return client.payments.map((p, idx) => {
                 const total = Number(p.amount || 0);
                 return {
                     id: String(p.id || idx + 1),
+                    project_id: String(p.project_id || p.project?.id || ''),
                     invoice_no: p.reference_number || `INV-${String(idx + 1).padStart(4, '0')}`,
+                    notes: p.notes || 'Pembayaran Project',
                     project_name: p.project?.name || client.projects?.[0]?.name || 'Project',
                     invoice_date: p.payment_date ? formatDate(p.payment_date) : '-',
                     due_date: p.due_date ? formatDate(p.due_date) : '-',
@@ -1507,13 +1591,14 @@ export default function ClientDetail({
             });
         }
         return [];
-    }, [client.payments, client.projects]);
+    }, [allInvoices, client.payments, client.projects]);
 
     const filteredInvoicesList = useMemo(() => {
         return initialInvoicesList.filter((inv) => {
             const matchesSearch =
                 inv.invoice_no.toLowerCase().includes(paymentSearchQuery.toLowerCase()) ||
-                inv.project_name.toLowerCase().includes(paymentSearchQuery.toLowerCase());
+                inv.project_name.toLowerCase().includes(paymentSearchQuery.toLowerCase()) ||
+                (inv.notes && inv.notes.toLowerCase().includes(paymentSearchQuery.toLowerCase()));
             const matchesStatus =
                 paymentStatusFilter === 'all' ||
                 (paymentStatusFilter === 'lunas' && inv.status === 'Lunas') ||
@@ -1526,17 +1611,15 @@ export default function ClientDetail({
     }, [initialInvoicesList, paymentSearchQuery, paymentStatusFilter, paymentMethodFilter]);
 
     const paymentSummary = useMemo(() => {
-        const totalTagihan = totalProjectValue > 0
-            ? totalProjectValue
-            : (initialInvoicesList.reduce((acc, i) => acc + i.total_amount, 0) || 101500000);
-        const totalDibayar = totalPaid > 0
-            ? totalPaid
-            : (initialInvoicesList.reduce((acc, i) => acc + i.paid_amount, 0) || 85750000);
+        const totalTagihan = allInvoices.length > 0
+            ? allInvoices.reduce((acc, i) => acc + Number(i.total || 0), 0)
+            : totalProjectValue;
+        const totalDibayar = totalPaid;
         const sisaTagihan = Math.max(0, totalTagihan - totalDibayar);
         const percent = totalTagihan > 0 ? Math.min(100, Number(((totalDibayar / totalTagihan) * 100).toFixed(2))) : 0;
-        const invoiceCount = initialInvoicesList.length || client.projects?.length || 9;
-        const paymentCount = client.payments?.length || 8;
-        const unpaidInvoiceCount = initialInvoicesList.filter((i) => i.remaining_amount > 0).length || (sisaTagihan > 0 ? 3 : 0);
+        const invoiceCount = allInvoices.length;
+        const paymentCount = client.payments?.length || 0;
+        const unpaidInvoiceCount = allInvoices.filter((i) => Number(i.remaining_amount ?? i.total) > 0).length || (sisaTagihan > 0 ? 1 : 0);
 
         return {
             totalTagihan,
@@ -1547,7 +1630,7 @@ export default function ClientDetail({
             paymentCount,
             unpaidInvoiceCount,
         };
-    }, [totalProjectValue, totalPaid, initialInvoicesList, client.projects, client.payments]);
+    }, [allInvoices, totalProjectValue, totalPaid, client.payments]);
 
     // -------------------------------------------------------------
     // STATES FOR TAB 4: FILES & TIMELINE — REAL-TIME DATABASE
@@ -2468,7 +2551,7 @@ export default function ClientDetail({
                                 <div className="flex items-center justify-between gap-3 flex-wrap">
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <h2 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
-                                            {client.name || '-'}
+                                            {(client.name && client.name !== '-') ? client.name : ((client.category_data as any)?.client_name || (client.category_data as any)?.name || '-')}
                                         </h2>
 
                                         {/* 1. Tingkatan / Tier Klien (Dropdown Quick Switcher) */}
@@ -2763,9 +2846,17 @@ export default function ClientDetail({
 
                                 const syntheticProject = {
                                     category: clientCategory,
-                                    category_data: client.category_data || client,
-                                    client: client,
-                                    name: client.name,
+                                    category_data: {
+                                        ...(client.category_data || {}),
+                                        client_name: (client.category_data as any)?.client_name || (client.category_data as any)?.name || (client.name && client.name !== '-' ? client.name : ''),
+                                        name: (client.category_data as any)?.name || (client.category_data as any)?.client_name || (client.name && client.name !== '-' ? client.name : ''),
+                                        nickname: (client.category_data as any)?.nickname || (client as any).nickname || '',
+                                    },
+                                    client: {
+                                        ...client,
+                                        name: (client.name && client.name !== '-') ? client.name : ((client.category_data as any)?.client_name || (client.category_data as any)?.name || '-'),
+                                    },
+                                    name: (client.name && client.name !== '-') ? client.name : ((client.category_data as any)?.client_name || (client.category_data as any)?.name || '-'),
                                 };
 
                                 return (
@@ -3486,16 +3577,31 @@ export default function ClientDetail({
                                                     filteredInvoicesList.map((inv) => (
                                                         <TableRow key={inv.id} className="hover:bg-slate-50/50 transition-colors">
                                                             <TableCell>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => toast.info(`Melihat detail invoice ${inv.invoice_no}`)}
-                                                                    className="font-mono font-bold text-xs text-indigo-600 hover:underline cursor-pointer"
+                                                                <a
+                                                                    href={inv.project_id ? `/projects/${inv.project_id}/invoice?invoice_id=${inv.id}` : '#'}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    className="font-mono font-bold text-xs text-indigo-600 hover:underline inline-flex items-center gap-1"
+                                                                    title="Buka Invoice & Riwayat Termin"
                                                                 >
-                                                                    {inv.invoice_no}
-                                                                </button>
+                                                                    <span>{inv.invoice_no}</span>
+                                                                    <ExternalLink className="w-3 h-3 text-indigo-400" />
+                                                                </a>
+                                                                <span className="block text-[10px] text-slate-500 font-medium truncate max-w-[150px]">
+                                                                    {inv.notes || 'Termin Tagihan'}
+                                                                </span>
                                                             </TableCell>
                                                             <TableCell className="font-semibold text-xs text-slate-900">
-                                                                {inv.project_name}
+                                                                {inv.project_id ? (
+                                                                    <Link
+                                                                        href={`/projects/${inv.project_id}`}
+                                                                        className="hover:text-primary-accent hover:underline"
+                                                                    >
+                                                                        {inv.project_name}
+                                                                    </Link>
+                                                                ) : (
+                                                                    inv.project_name
+                                                                )}
                                                             </TableCell>
                                                             <TableCell className="text-xs text-slate-600">
                                                                 {inv.invoice_date}
@@ -3529,14 +3635,30 @@ export default function ClientDetail({
                                                                 </span>
                                                             </TableCell>
                                                             <TableCell className="text-center">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => toast.info(`Mendownload invoice ${inv.invoice_no}`)}
-                                                                    className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 shadow-2xs transition-all cursor-pointer"
-                                                                    title="Download Invoice"
-                                                                >
-                                                                    <Download className="w-3.5 h-3.5" />
-                                                                </button>
+                                                                <div className="flex items-center justify-center gap-1.5">
+                                                                    {inv.remaining_amount > 0 && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => openPaymentForInvoice(inv)}
+                                                                            className="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold shadow-2xs transition-all cursor-pointer inline-flex items-center gap-1 whitespace-nowrap"
+                                                                            title="Konfirmasi Pembayaran Termin Ini"
+                                                                        >
+                                                                            <Wallet className="w-3 h-3" />
+                                                                            <span>Konfirmasi Bayar</span>
+                                                                        </button>
+                                                                    )}
+                                                                    {inv.project_id && (
+                                                                        <a
+                                                                            href={`/projects/${inv.project_id}/invoice?invoice_id=${inv.id}`}
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 shadow-2xs transition-all"
+                                                                            title="Lihat & Download Invoice"
+                                                                        >
+                                                                            <Download className="w-3.5 h-3.5" />
+                                                                        </a>
+                                                                    )}
+                                                                </div>
                                                             </TableCell>
                                                         </TableRow>
                                                     ))
@@ -3580,17 +3702,52 @@ export default function ClientDetail({
                                             </p>
                                         </div>
 
-                                        <button
-                                            type="button"
-                                            onClick={() => setIsAddDriveLinkModalOpen(true)}
-                                            className="px-4 py-2 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0 self-start sm:self-auto"
-                                        >
-                                            <Plus className="w-3.5 h-3.5" />
-                                            <span>Simpan Link Google Drive</span>
-                                        </button>
+                                        {initialProjectsList.length > 0 ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsAddDriveLinkModalOpen(true)}
+                                                className="px-4 py-2 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0 self-start sm:self-auto"
+                                            >
+                                                <Plus className="w-3.5 h-3.5" />
+                                                <span>Simpan Link Google Drive</span>
+                                            </button>
+                                        ) : (
+                                            <Link
+                                                href={`/projects/create?client_id=${client.id}`}
+                                                className="px-4 py-2 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0 self-start sm:self-auto"
+                                            >
+                                                <Plus className="w-3.5 h-3.5" />
+                                                <span>Buat Project</span>
+                                            </Link>
+                                        )}
                                     </div>
 
-                                    {/* PROJECT SWITCHER BAR WITH SELECT SEARCH */}
+                                    {initialProjectsList.length === 0 ? (
+                                        <div className="p-12 text-center rounded-3xl border border-dashed border-slate-200 bg-slate-50/50 space-y-4 my-4">
+                                            <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 text-slate-400 flex items-center justify-center mx-auto shadow-2xs">
+                                                <Folder className="w-8 h-8 stroke-[1.5]" />
+                                            </div>
+                                            <div className="space-y-1 max-w-md mx-auto">
+                                                <h4 className="text-sm font-bold text-slate-900">
+                                                    Belum Ada Project Terdaftar
+                                                </h4>
+                                                <p className="text-xs text-slate-500 leading-relaxed">
+                                                    Klien ini belum memiliki project aktif. Alur tahapan kerja, progres timeline, dan folder penyimpanan Google Drive akan otomatis tersedia setelah project dibuat.
+                                                </p>
+                                            </div>
+                                            <div className="pt-2">
+                                                <Link
+                                                    href={`/projects/create?client_id=${client.id}`}
+                                                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+                                                >
+                                                    <Plus className="w-4 h-4" />
+                                                    <span>Buat Project Pertama</span>
+                                                </Link>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            {/* PROJECT SWITCHER BAR WITH SELECT SEARCH */}
                                     <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 shadow-2xs space-y-3.5">
                                         {/* Header Row with Title & Active Workflow Indicator */}
                                         <div className="flex items-center justify-between gap-3">
@@ -4382,13 +4539,14 @@ export default function ClientDetail({
                                                     className="w-full py-2.5 rounded-xl border-2 border-dashed border-slate-200 hover:border-primary-accent/40 hover:bg-primary-accent/5 text-slate-600 hover:text-primary-accent font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                                                 >
                                                     <Plus className="w-3.5 h-3.5" />
-                                                    <span>Tambah Link Google Drive</span>
                                                 </button>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                </>
                             )}
+                        </div>
+                    )}
 
                             {/* TAB 5: CATATAN (Gambar 3) */}
                             {mainTab === 'catatan' && (
@@ -5118,7 +5276,7 @@ Terima kasih!`}
                                 <div
                                     className="bg-emerald-500 h-full rounded-full transition-all duration-500"
                                     style={{
-                                        width: `${Math.min(100, Math.round((totalPaid / (totalProjectValue || 1)) * 100))}%`,
+                                        width: `${totalProjectValue > 0 ? Math.min(100, Math.round((totalPaid / totalProjectValue) * 100)) : 0}%`,
                                     }}
                                 />
                             </div>
@@ -5129,7 +5287,7 @@ Terima kasih!`}
                                     <div className="flex items-center gap-2 font-mono font-bold">
                                         <span className="text-slate-800">{formatRupiah(totalPaid)}</span>
                                         <span className="text-emerald-600 text-[11px]">
-                                            {Math.round((totalPaid / (totalProjectValue || 1)) * 100)}%
+                                            {totalProjectValue > 0 ? Math.round((totalPaid / totalProjectValue) * 100) : 0}%
                                         </span>
                                     </div>
                                 </div>
@@ -5138,7 +5296,7 @@ Terima kasih!`}
                                     <div className="flex items-center gap-2 font-mono font-bold">
                                         <span className="text-slate-800">{formatRupiah(outstanding)}</span>
                                         <span className="text-rose-500 text-[11px]">
-                                            {Math.max(0, 100 - Math.round((totalPaid / (totalProjectValue || 1)) * 100))}%
+                                            {totalProjectValue > 0 ? Math.max(0, 100 - Math.round((totalPaid / totalProjectValue) * 100)) : 0}%
                                         </span>
                                     </div>
                                 </div>
@@ -6402,13 +6560,14 @@ Terima kasih!`}
                                 </label>
                                 <select
                                     value={paymentFormData.project_id}
-                                    onChange={(e) => setPaymentFormData({ ...paymentFormData, project_id: e.target.value })}
+                                    onChange={(e) => setPaymentFormData({ ...paymentFormData, project_id: e.target.value, invoice_id: '' })}
                                     className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-accent/20 focus:border-primary-accent transition-all cursor-pointer"
                                 >
                                     {unpaidProjects.map((p) => {
                                         const tot = Number(p.total_amount || 0);
                                         const pd = Number(p.paid_amount || 0);
                                         const rem = Math.max(0, tot - pd);
+
                                         return (
                                             <option key={p.id} value={p.id}>
                                                 {p.name} (Sisa: {formatRupiah(rem)})
@@ -6417,6 +6576,42 @@ Terima kasih!`}
                                     })}
                                 </select>
                             </div>
+
+                            {/* Termin / Invoice Selector */}
+                            {availableInvoicesForSelectedProject.length > 0 && (
+                                <div>
+                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                        Pilih Termin / Invoice Tagihan (Opsional)
+                                    </label>
+                                    <select
+                                        value={paymentFormData.invoice_id || ''}
+                                        onChange={(e) => {
+                                            const chosenId = e.target.value;
+                                            const inv = availableInvoicesForSelectedProject.find((i: any) => String(i.id) === chosenId);
+
+                                            setPaymentFormData((prev) => ({
+                                                ...prev,
+                                                invoice_id: chosenId,
+                                                amount: inv ? String(Math.round(Number(inv.remaining_amount ?? inv.total))) : prev.amount,
+                                                notes: inv ? `Pembayaran ${inv.notes || inv.invoice_number}` : prev.notes,
+                                            }));
+                                        }}
+                                        className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-accent/20 focus:border-primary-accent transition-all cursor-pointer"
+                                    >
+                                        <option value="">Semua / Tanpa Invoice Spesifik</option>
+                                        {availableInvoicesForSelectedProject.map((inv: any) => {
+                                            const tot = Number(inv.total || 0);
+                                            const rem = Number(inv.remaining_amount ?? (tot - Number(inv.paid_amount || 0)));
+
+                                            return (
+                                                <option key={inv.id} value={inv.id}>
+                                                    {inv.invoice_number} - {inv.notes || 'Termin'} (Sisa: {formatRupiah(rem)})
+                                                </option>
+                                            );
+                                        })}
+                                    </select>
+                                </div>
+                            )}
 
                             {/* Sisa Pembayaran Info Card */}
                             {selectedPaymentProject && (

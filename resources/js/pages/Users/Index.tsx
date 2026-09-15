@@ -82,37 +82,11 @@ export default function UsersIndex({
         password: '',
     });
 
-    const fallbackUsers: UserItem[] = [
-        {
-            id: 1,
-            name: 'Andi Pratama',
-            email: 'andi.pratama@arams.com',
-            status: 'active',
-            last_login_at: '2026-05-20 10:15:00',
-            avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
-            roles: [{ id: 1, name: 'Owner' }],
-        },
-        {
-            id: 2,
-            name: 'Sinta Pratama',
-            email: 'sinta.pratama@arams.com',
-            status: 'active',
-            last_login_at: '2026-05-19 16:40:00',
-            avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80',
-            roles: [{ id: 2, name: 'Supervisor' }],
-        },
-        {
-            id: 3,
-            name: 'Admin Arams',
-            email: 'admin@arams.com',
-            status: 'active',
-            last_login_at: '2026-05-18 09:20:00',
-            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80',
-            roles: [{ id: 3, name: 'Admin' }],
-        },
-    ];
-
-    const displayUsers = users.data && users.data.length > 0 ? users.data : fallbackUsers;
+    const rawUsers = users?.data || [];
+    // Pastikan pengguna dengan role Client tidak dimunculkan di manajemen user internal
+    const displayUsers = rawUsers.filter(
+        (u) => !u.roles?.some((r) => r.name.toLowerCase() === 'client')
+    );
 
     const openCreate = () => {
         setEditUser(null);
@@ -188,6 +162,8 @@ export default function UsersIndex({
             case 'fotografer':
             case 'supervisor':
                 return 'bg-amber-50 text-amber-700 border-amber-200';
+            case 'editor':
+                return 'bg-emerald-50 text-emerald-700 border-emerald-200';
             case 'admin':
             default:
                 return 'bg-blue-50 text-blue-700 border-blue-200';
@@ -195,7 +171,7 @@ export default function UsersIndex({
     };
 
     const formatLastLogin = (lastLogin?: string) => {
-        if (!lastLogin) return '20 Mei 2026, 10:15 WIB';
+        if (!lastLogin) return '-';
         try {
             const d = new Date(lastLogin);
             if (isNaN(d.getTime())) return lastLogin;
@@ -381,7 +357,7 @@ export default function UsersIndex({
             {/* Pagination Footer */}
             <div className="p-4 bg-white rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 shadow-2xs">
                 <div>
-                    Menampilkan 1 - {displayUsers.length} dari {displayUsers.length} user
+                    Menampilkan {users.from || (displayUsers.length > 0 ? 1 : 0)} - {users.to || displayUsers.length} dari {users.total ?? displayUsers.length} user
                 </div>
 
                 <div className="flex items-center gap-1.5">
@@ -619,10 +595,26 @@ export default function UsersIndex({
                                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 font-semibold focus:bg-white focus:border-indigo-600 outline-hidden cursor-pointer"
                             >
-                                <option value="Owner">Owner (Super Admin)</option>
-                                <option value="Supervisor">Supervisor</option>
-                                <option value="Admin">Admin</option>
-                                {formData.role && !['Owner', 'Supervisor', 'Admin'].includes(formData.role) && (
+                                {roles && roles.length > 0 ? (
+                                    roles
+                                        .filter((r) => r.name.toLowerCase() !== 'client')
+                                        .map((r) => (
+                                            <option key={r.id} value={r.name}>
+                                                {r.name === 'Owner' ? 'Owner (Super Admin)' : r.name}
+                                            </option>
+                                        ))
+                                ) : (
+                                    <>
+                                        <option value="Owner">Owner (Super Admin)</option>
+                                        <option value="Supervisor">Supervisor</option>
+                                        <option value="Admin">Admin</option>
+                                        <option value="Photographer">Photographer</option>
+                                        <option value="Editor">Editor</option>
+                                    </>
+                                )}
+                                {formData.role &&
+                                    formData.role.toLowerCase() !== 'client' &&
+                                    !roles.some((r) => r.name.toLowerCase() === formData.role.toLowerCase()) && (
                                     <option value={formData.role}>{formData.role}</option>
                                 )}
                             </select>

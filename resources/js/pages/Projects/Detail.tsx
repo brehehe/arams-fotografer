@@ -40,6 +40,7 @@ import {
     ArrowUpRight,
     X,
     Folder,
+    Download,
     Award,
     Printer,
     Eye,
@@ -61,6 +62,7 @@ import {
     Clock3,
     Baby,
 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { formatRupiah, formatDate } from '@/lib/formatters';
 import {
     RecordPaymentModal,
@@ -118,11 +120,11 @@ export default function ProjectDetail({
 
     // Modals
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-    const [paymentModalData, setPaymentModalData] = useState<{ amount?: number; notes?: string }>({});
+    const [paymentModalData, setPaymentModalData] = useState<{ amount?: number; notes?: string; invoiceId?: string | number }>({});
     const [selectedProofUrl, setSelectedProofUrl] = useState<string | null>(null);
 
-    const openPaymentModal = (defaultAmount?: number, defaultNotes?: string) => {
-        setPaymentModalData({ amount: defaultAmount, notes: defaultNotes });
+    const openPaymentModal = (defaultAmount?: number, defaultNotes?: string, defaultInvoiceId?: string | number) => {
+        setPaymentModalData({ amount: defaultAmount, notes: defaultNotes, invoiceId: defaultInvoiceId });
         setIsPaymentModalOpen(true);
     };
 
@@ -252,6 +254,14 @@ export default function ProjectDetail({
         project?.notes?.match(/Editor:\s*([^|\n]+)/i)?.[1]?.trim() ||
         '-';
 
+    const structuredTeamAssignments: Array<{ type: string; name: string; notes?: string }> = useMemo(() => {
+        const raw = (project?.category_data as any)?.team_assignments;
+        if (Array.isArray(raw) && raw.length > 0) {
+            return raw.filter((t: any) => t && t.name && typeof t.name === 'string' && t.name.trim().length > 0);
+        }
+        return [];
+    }, [project?.category_data]);
+
     const parsedReferral =
         project?.client?.referral_name ||
         project?.notes?.match(/Sumber Referensi:\s*([^|\n]+)/i)?.[1]?.trim() ||
@@ -317,7 +327,37 @@ export default function ProjectDetail({
     );
 
     const paidAmount = Number(project?.paid_amount || 0);
-    const dpInvoiceAmount = Number(project?.invoices?.[0]?.total || 0);
+    const projectInvoices = useMemo(() => {
+        return (project?.invoices || []).map((inv: any) => {
+            const tot = Number(inv.total || 0);
+            const pd = Number(inv.paid_amount || 0);
+            const rem = Math.max(0, Number(inv.remaining_amount ?? (tot - pd)));
+            let statusLabel = 'Belum Lunas';
+            let statusVariant = 'destructive';
+            if (tot > 0 && rem <= 0) {
+                statusLabel = 'Lunas';
+                statusVariant = 'success';
+            } else if (pd > 0) {
+                statusLabel = 'Sebagian';
+                statusVariant = 'warning';
+            }
+            return {
+                ...inv,
+                total: tot,
+                paid_amount: pd,
+                remaining_amount: rem,
+                status_label: statusLabel,
+                status_variant: statusVariant,
+                is_paid: rem <= 0 && tot > 0,
+            };
+        });
+    }, [project?.invoices]);
+
+    const nextUnpaidInvoice = useMemo(() => {
+        return projectInvoices.find((i: any) => !i.is_paid) || null;
+    }, [projectInvoices]);
+
+    const dpInvoiceAmount = Number(projectInvoices[0]?.total || 0);
     const nominalDP = dpInvoiceAmount > 0
         ? dpInvoiceAmount
         : (paidAmount > 0 ? paidAmount : Math.round(totalProject * 0.3));
@@ -325,7 +365,7 @@ export default function ProjectDetail({
     const dpPercent = totalProject > 0 ? Math.round((nominalDP / totalProject) * 100) : 30;
 
     const isDpPaid = useMemo(() => {
-        if (project?.payment_status === 'paid' || project?.payment_status === 'partial') {
+        if (project?.payment_status === 'paid') {
             return true;
         }
         if (paidAmount > 0) {
@@ -911,27 +951,64 @@ export default function ProjectDetail({
                         {/* 3. PIC & Tim Produksi Assigned */}
                         <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between h-full">
                             <div className="space-y-3">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                                        <Users className="w-4 h-4" />
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                            <Users className="w-4 h-4" />
+                                        </div>
+                                        <h3 className="font-bold text-xs text-slate-900">
+                                            Tim Produksi &amp; PIC
+                                        </h3>
                                     </div>
-                                    <h3 className="font-bold text-xs text-slate-900">
-                                        Tim Produksi &amp; PIC
-                                    </h3>
+                                    {structuredTeamAssignments.length > 0 && (
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                                            {structuredTeamAssignments.length + (supervisorName !== 'Belum Ditentukan' ? 1 : 0)} Personil
+                                        </span>
+                                    )}
                                 </div>
                                 <div className="space-y-2 text-xs">
                                     <div className="flex justify-between items-center">
                                         <span className="text-slate-500">Supervisor (PIC)</span>
                                         <span className="font-bold text-slate-900">{supervisorName}</span>
                                     </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-slate-500">Lead Photographer</span>
-                                        <span className="font-semibold text-slate-800">{parsedPhotographer}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-slate-500">Lead Editor</span>
-                                        <span className="font-semibold text-slate-800">{parsedEditor}</span>
-                                    </div>
+
+                                    {structuredTeamAssignments.length > 0 ? (
+                                        <div className="pt-2 border-t border-slate-100 space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                                            {structuredTeamAssignments.map((member, idx) => {
+                                                const typeColor =
+                                                    member.type === 'Photografer'
+                                                        ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                                        : member.type === 'Videografer'
+                                                        ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                                        : member.type === 'Editor Foto'
+                                                        ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                                        : member.type === 'Editor Video'
+                                                        ? 'bg-violet-50 text-violet-700 border-violet-200'
+                                                        : 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                                                return (
+                                                    <div key={idx} className="flex justify-between items-center gap-2 py-0.5">
+                                                        <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-md border shrink-0 ${typeColor}`}>
+                                                            {member.type || 'Personil'}
+                                                        </span>
+                                                        <span className="font-semibold text-slate-800 text-right truncate">
+                                                            {member.name}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-slate-500">Lead Photographer</span>
+                                                <span className="font-semibold text-slate-800">{parsedPhotographer}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-slate-500">Lead Editor</span>
+                                                <span className="font-semibold text-slate-800">{parsedEditor}</span>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                             <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
@@ -1148,51 +1225,61 @@ export default function ProjectDetail({
                                         </span>
                                     </div>
                                     <div className="flex justify-between items-center gap-2">
-                                        <span className="text-slate-500 shrink-0">Jatuh Tempo DP</span>
+                                        <span className="text-slate-500 shrink-0">
+                                            {nextUnpaidInvoice ? 'Jatuh Tempo Tagihan' : 'Status Tagihan'}
+                                        </span>
                                         <span className="font-semibold text-slate-800 text-right">
-                                            {formatDateIndo(project?.deadline || project?.event_date)}
+                                            {nextUnpaidInvoice
+                                                ? formatDateIndo(nextUnpaidInvoice.due_date || project?.deadline || project?.event_date)
+                                                : 'Lunas Penuh'}
                                         </span>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Checklist & Status DP Terintegrasi Finance */}
+                            {/* Checklist & Status Termin / Tagihan Terintegrasi Finance */}
                             <div className={`p-2.5 rounded-xl border transition-all mt-auto ${
-                                isDpPaid
+                                !nextUnpaidInvoice || isDpPaid
                                     ? 'bg-emerald-50/90 border-emerald-200 text-emerald-950'
                                     : 'bg-amber-50/90 border-amber-200 text-amber-950'
                             }`}>
                                 <div className="flex items-center justify-between gap-2">
                                     <div className="flex items-center gap-2 min-w-0">
                                         <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
-                                            isDpPaid ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
+                                            !nextUnpaidInvoice ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
                                         }`}>
-                                            {isDpPaid ? <Check className="w-3 h-3 stroke-[3]" /> : <Clock className="w-3 h-3" />}
+                                            {!nextUnpaidInvoice ? <Check className="w-3 h-3 stroke-[3]" /> : <Clock className="w-3 h-3" />}
                                         </div>
                                         <div className="min-w-0">
                                             <div className="font-bold text-[10px] truncate">
-                                                {isDpPaid ? 'DP Terbayar & Tercatat' : 'Belum Membayar DP'}
+                                                {!nextUnpaidInvoice
+                                                    ? 'Semua Tagihan Lunas'
+                                                    : `Tagihan: ${nextUnpaidInvoice.notes || nextUnpaidInvoice.invoice_number}`}
                                             </div>
                                             <div className="text-[9px] opacity-80 truncate">
-                                                {isDpPaid
-                                                    ? `Lunas DP: ${formatRupiah(project.paid_amount || nominalDP)}`
-                                                    : `Tagihan DP: ${formatRupiah(nominalDP)} (${dpPercent}%)`}
+                                                {!nextUnpaidInvoice
+                                                    ? `Total Lunas: ${formatRupiah(totalProject)}`
+                                                    : `Sisa Tagihan: ${formatRupiah(nextUnpaidInvoice.remaining_amount)}`}
                                             </div>
                                         </div>
                                     </div>
-                                    {!isDpPaid ? (
+                                    {nextUnpaidInvoice ? (
                                         <button
                                             type="button"
-                                            onClick={() => openPaymentModal(nominalDP, `Pembayaran DP (${dpPercent}%) project ${project.name}`)}
+                                            onClick={() => openPaymentModal(nextUnpaidInvoice.remaining_amount, `Pembayaran ${nextUnpaidInvoice.notes || nextUnpaidInvoice.invoice_number}`, nextUnpaidInvoice.id)}
                                             className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-bold rounded-lg shadow-2xs transition-all cursor-pointer flex items-center gap-1 shrink-0 whitespace-nowrap"
+                                            title="Konfirmasi Pembayaran Termin"
                                         >
                                             <CheckCircle2 className="w-3 h-3" />
-                                            <span>Terima DP</span>
+                                            <span>Konfirmasi Bayar</span>
                                         </button>
                                     ) : (
-                                        <span className="text-[8.5px] font-bold uppercase px-1.5 py-0.5 rounded-md bg-emerald-100/80 text-emerald-800 border border-emerald-300/60 shrink-0">
-                                            TERCATAT
-                                        </span>
+                                        <Link
+                                            href={`/projects/${project.id}/invoice`}
+                                            className="text-[8.5px] font-bold uppercase px-1.5 py-0.5 rounded-md bg-emerald-100/80 text-emerald-800 border border-emerald-300/60 shrink-0 hover:bg-emerald-200"
+                                        >
+                                            LIHAT INVOICE
+                                        </Link>
                                     )}
                                 </div>
                             </div>
@@ -1309,7 +1396,104 @@ export default function ProjectDetail({
                                 )}
                             </div>
 
-                            {/* Card 2: Riwayat Transaksi Pembayaran */}
+                            {/* Card 2: Termin Tagihan & Invoice Project */}
+                            {projectInvoices.length > 0 && (
+                                <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all space-y-3">
+                                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                                <FileText className="w-4 h-4" />
+                                            </div>
+                                            <div>
+                                                <h3 className="font-bold text-xs text-slate-900">Termin &amp; Invoice Project</h3>
+                                                <p className="text-[10px] text-slate-400">Rincian invoice per termin kontrak</p>
+                                            </div>
+                                        </div>
+                                        <Link
+                                            href={`/projects/${project.id}/invoice`}
+                                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-[11px] font-bold shadow-2xs transition-all cursor-pointer"
+                                        >
+                                            <span>Buka Lembar Invoice</span>
+                                            <ExternalLink className="w-3 h-3 text-slate-400" />
+                                        </Link>
+                                    </div>
+
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-xs">
+                                            <thead>
+                                                <tr className="text-[9.5px] uppercase font-bold text-slate-400 border-b border-slate-100">
+                                                    <th className="py-2 px-2">INVOICE</th>
+                                                    <th className="py-2 px-2">TERMIN / KETERANGAN</th>
+                                                    <th className="py-2 px-2 text-right">TOTAL</th>
+                                                    <th className="py-2 px-2 text-right">SISA</th>
+                                                    <th className="py-2 px-2 text-center">STATUS</th>
+                                                    <th className="py-2 px-2 text-center">AKSI</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100 text-slate-700">
+                                                {projectInvoices.map((inv: any) => (
+                                                    <tr key={inv.id} className="hover:bg-slate-50/60 transition-colors">
+                                                        <td className="py-2.5 px-2">
+                                                            <Link
+                                                                href={`/projects/${project.id}/invoice?invoice_id=${inv.id}`}
+                                                                className="font-mono font-bold text-[11px] text-indigo-600 hover:underline inline-flex items-center gap-1"
+                                                            >
+                                                                <span>{inv.invoice_number}</span>
+                                                                <ExternalLink className="w-2.5 h-2.5 text-indigo-400" />
+                                                            </Link>
+                                                        </td>
+                                                        <td className="py-2.5 px-2">
+                                                            <span className="font-semibold text-slate-900 text-[11px] block">
+                                                                {inv.notes || 'Termin'}
+                                                            </span>
+                                                            {inv.due_date && (
+                                                                <span className="text-[9.5px] text-slate-400 block">
+                                                                    Jatuh tempo: {formatDateIndo(inv.due_date)}
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className="py-2.5 px-2 text-right font-mono font-bold text-slate-900 text-[11px]">
+                                                            {formatRupiah(inv.total)}
+                                                        </td>
+                                                        <td className={`py-2.5 px-2 text-right font-mono font-bold text-[11px] ${inv.remaining_amount > 0 ? 'text-amber-600' : 'text-slate-400'}`}>
+                                                            {formatRupiah(inv.remaining_amount)}
+                                                        </td>
+                                                        <td className="py-2.5 px-2 text-center">
+                                                            <Badge variant={inv.status_variant as any} className="text-[9.5px] font-bold">
+                                                                {inv.status_label}
+                                                            </Badge>
+                                                        </td>
+                                                        <td className="py-2.5 px-2 text-center">
+                                                            <div className="flex items-center justify-center gap-1.5">
+                                                                {inv.remaining_amount > 0 && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => openPaymentModal(inv.remaining_amount, `Pembayaran ${inv.notes || inv.invoice_number}`, inv.id)}
+                                                                        className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded-lg shadow-2xs transition-all cursor-pointer inline-flex items-center gap-1 whitespace-nowrap"
+                                                                        title="Konfirmasi Pembayaran Termin Ini"
+                                                                    >
+                                                                        <Wallet className="w-3 h-3" />
+                                                                        <span>Konfirmasi Bayar</span>
+                                                                    </button>
+                                                                )}
+                                                                <Link
+                                                                    href={`/projects/${project.id}/invoice?invoice_id=${inv.id}`}
+                                                                    className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 shadow-2xs transition-all"
+                                                                    title="Buka Invoice Termin Ini"
+                                                                >
+                                                                    <Download className="w-3.5 h-3.5" />
+                                                                </Link>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Card 3: Riwayat Transaksi Pembayaran */}
                             <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all space-y-3 flex-1 flex flex-col justify-between">
                                 <div className="flex items-center justify-between gap-2 flex-wrap">
                                     <div className="flex items-center gap-2">
@@ -2128,6 +2312,7 @@ export default function ProjectDetail({
                 paymentMethods={payment_methods}
                 initialAmount={paymentModalData.amount}
                 initialNotes={paymentModalData.notes}
+                invoiceId={paymentModalData.invoiceId}
             />
 
             <ProofViewerModal

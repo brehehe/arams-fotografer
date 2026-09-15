@@ -144,6 +144,7 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
                         'bg-purple-50 text-purple-700'
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {renderItem('Nama Pemesan / Klien', data.client_name || data.name || data.contact_person || (project?.client?.name && project.client.name !== '-' ? project.client.name : null))}
                         {renderItem('Jenis Kebutuhan', data.needs_type)}
                         {renderItem('Lokasi', data.location, <MapPin className="w-3.5 h-3.5" />)}
                         {renderItem('Pendekatan yang Diperlukan', data.approach_type)}
@@ -179,6 +180,8 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
                         'bg-indigo-50 text-indigo-700'
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                        {renderItem('Nama Pemesan', data.client_name || data.name || (project?.client?.name && project.client.name !== '-' ? project.client.name : null))}
+                        {renderItem('Nama Panggilan', data.nickname)}
                         {renderItem('Tujuan Foto', data.photo_purpose)}
                         {renderItem('Jenis Sesi', data.session_type)}
                         {renderItem('Jumlah Look / Outfit', data.outfit_looks_count ? `${data.outfit_looks_count} Look` : null)}
@@ -234,6 +237,8 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
                         'bg-emerald-50 text-emerald-700'
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        {renderItem('Nama Brand / Perusahaan', data.company_name)}
+                        {renderItem('Nama PIC / Pemesan', data.pic_name || data.client_name || (project?.client?.name && project.client.name !== '-' ? project.client.name : null))}
                         {renderItem('Tujuan / Kebutuhan', data.commercial_purpose)}
                         {renderItem('Jenis Produk / Brand', data.product_brand_type)}
                         {renderItem('Jumlah Produk', data.products_count ? `${data.products_count} Item / SKU` : null)}
@@ -277,6 +282,7 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
                         'bg-sky-50 text-sky-700'
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                        {renderItem('Nama Pemesan / Koordinator', data.client_name || data.contact_person || (project?.client?.name && project.client.name !== '-' ? project.client.name : null))}
                         {renderItem('Tujuan Destinasi', data.destination_city_country, <MapPin className="w-3.5 h-3.5" />)}
                         {renderItem('Jumlah Traveler', data.travelers_count ? `${data.travelers_count} orang` : null)}
                         {renderItem('Jenis Trip', data.trip_type)}
@@ -475,6 +481,7 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
                         'bg-indigo-50 text-indigo-700'
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {renderItem('PIC / Penanggung Jawab', data.pic_name || data.client_name || (project?.client?.name && project.client.name !== '-' ? project.client.name : null))}
                         {renderItem('Tanggal Event', data.event_date ? formatDate(data.event_date) : null, <Calendar className="w-3.5 h-3.5" />)}
                         {renderItem('Waktu Event', data.event_time_range, <Clock className="w-3.5 h-3.5" />)}
                         {renderItem('Lokasi Event', data.event_location, <MapPin className="w-3.5 h-3.5" />)}

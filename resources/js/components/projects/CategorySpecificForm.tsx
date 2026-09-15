@@ -272,6 +272,22 @@ export function CategorySpecificForm({
             {/* ── 2. LAINNYA / KEBUTUHAN KHUSUS ────────────────────────────── */}
             {categoryKey === 'lainnya' && (
                 <div className="space-y-4">
+                    <div>
+                        {renderLabel('Nama Lengkap Pemesan / Klien', true)}
+                        <Input
+                            value={data.client_name || data.name || data.contact_person || ''}
+                            onChange={(e) => {
+                                onChange('client_name', e.target.value);
+                                onChange('name', e.target.value);
+                            }}
+                            placeholder="Nama lengkap pemesan"
+                            className="h-[38px] text-xs bg-white"
+                        />
+                        {(errors['client_name'] || errors['name']) && (
+                            <p className="text-[11px] text-rose-500 mt-1">{errors['client_name'] || errors['name']}</p>
+                        )}
+                    </div>
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             {renderLabel('Jenis Kebutuhan', true)}
@@ -356,7 +372,38 @@ export function CategorySpecificForm({
             {/* ── 3. PERORANGAN ────────────────────────────────────────────── */}
             {categoryKey === 'perorangan' && (
                 <div className="space-y-4">
+                    <div className="p-3 bg-indigo-50/70 border border-indigo-200/80 rounded-xl text-xs text-indigo-900 flex items-center gap-2">
+                        <User className="w-4 h-4 text-indigo-600 shrink-0" />
+                        <span>Sesi foto perorangan untuk portrait personal, wisuda, profesional headshot, atau branding diri.</span>
+                    </div>
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            {renderLabel('Nama Lengkap Pemesan', true)}
+                            <Input
+                                value={data.client_name || data.name || ''}
+                                onChange={(e) => {
+                                    onChange('client_name', e.target.value);
+                                    onChange('name', e.target.value);
+                                }}
+                                placeholder="Contoh: Amanda Putri"
+                                className="h-[38px] text-xs bg-white"
+                            />
+                            {(errors['client_name'] || errors['name']) && (
+                                <p className="text-[11px] text-rose-500 mt-1">{errors['client_name'] || errors['name']}</p>
+                            )}
+                        </div>
+
+                        <div>
+                            {renderLabel('Nama Panggilan', false)}
+                            <Input
+                                value={data.nickname || ''}
+                                onChange={(e) => onChange('nickname', e.target.value)}
+                                placeholder="Contoh: Manda"
+                                className="h-[38px] text-xs bg-white"
+                            />
+                        </div>
+
                         <div>
                             {renderLabel('Tujuan Foto', true)}
                             <NativeSelect
@@ -582,6 +629,34 @@ export function CategorySpecificForm({
                 <div className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
+                            {renderLabel('Nama Brand / Perusahaan', true)}
+                            <Input
+                                value={data.company_name || ''}
+                                onChange={(e) => onChange('company_name', e.target.value)}
+                                placeholder="Contoh: PT Beauty Glow Indonesia"
+                                className="h-[38px] text-xs bg-white"
+                            />
+                            {errors['company_name'] && <p className="text-[11px] text-rose-500 mt-1">{errors['company_name']}</p>}
+                        </div>
+
+                        <div>
+                            {renderLabel('Nama PIC / Pemesan', true)}
+                            <Input
+                                value={data.pic_name || data.client_name || ''}
+                                onChange={(e) => {
+                                    onChange('pic_name', e.target.value);
+                                    onChange('client_name', e.target.value);
+                                    onChange('name', e.target.value);
+                                }}
+                                placeholder="Nama penanggung jawab"
+                                className="h-[38px] text-xs bg-white"
+                            />
+                            {(errors['pic_name'] || errors['client_name']) && (
+                                <p className="text-[11px] text-rose-500 mt-1">{errors['pic_name'] || errors['client_name']}</p>
+                            )}
+                        </div>
+
+                        <div>
                             {renderLabel('Tujuan / Jenis Kebutuhan', true)}
                             <NativeSelect
                                 value={data.commercial_purpose || ''}
@@ -710,6 +785,22 @@ export function CategorySpecificForm({
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="sm:col-span-2">
+                            {renderLabel('Nama Pemesan / Koordinator Trip', true)}
+                            <Input
+                                value={data.client_name || data.name || data.contact_person || ''}
+                                onChange={(e) => {
+                                    onChange('client_name', e.target.value);
+                                    onChange('name', e.target.value);
+                                }}
+                                placeholder="Contoh: Aditya Pratama"
+                                className="h-[38px] text-xs bg-white"
+                            />
+                            {(errors['client_name'] || errors['name']) && (
+                                <p className="text-[11px] text-rose-500 mt-1">{errors['client_name'] || errors['name']}</p>
+                            )}
+                        </div>
+
                         <div>
                             {renderLabel('Tanggal Berangkat (Mulai Trip)', true)}
                             <Input
@@ -1556,6 +1647,23 @@ export function CategorySpecificForm({
                             Informasi Event Utama
                         </span>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="sm:col-span-2">
+                                {renderLabel('Nama PIC / Penanggung Jawab Event', true)}
+                                <Input
+                                    value={data.pic_name || data.client_name || ''}
+                                    onChange={(e) => {
+                                        onChange('pic_name', e.target.value);
+                                        onChange('client_name', e.target.value);
+                                        onChange('name', e.target.value);
+                                    }}
+                                    placeholder="Nama penanggung jawab event"
+                                    className="h-[38px] text-xs bg-white"
+                                />
+                                {(errors['pic_name'] || errors['client_name']) && (
+                                    <p className="text-[11px] text-rose-500 mt-1">{errors['pic_name'] || errors['client_name']}</p>
+                                )}
+                            </div>
+
                             <div>
                                 {renderLabel('Tanggal Event', true)}
                                 <Input
@@ -2191,8 +2299,22 @@ export function CategorySpecificForm({
 
             {/* ── STANDARD FALLBACK ────────────────────────────────────────── */}
             {categoryKey === 'standard' && (
-                <div className="p-4 bg-slate-50 border border-slate-200/70 rounded-xl text-xs text-slate-600">
-                    <p>Kategori ini menggunakan formulir standar pemesanan.</p>
+                <div className="p-4 bg-white border border-slate-200/80 rounded-xl space-y-3">
+                    <div>
+                        {renderLabel('Nama Lengkap Pemesan', true)}
+                        <Input
+                            value={data.client_name || data.name || ''}
+                            onChange={(e) => {
+                                onChange('client_name', e.target.value);
+                                onChange('name', e.target.value);
+                            }}
+                            placeholder="Nama lengkap pemesan"
+                            className="h-[38px] text-xs bg-white"
+                        />
+                        {(errors['client_name'] || errors['name']) && (
+                            <p className="text-[11px] text-rose-500 mt-1">{errors['client_name'] || errors['name']}</p>
+                        )}
+                    </div>
                 </div>
             )}
         </div>

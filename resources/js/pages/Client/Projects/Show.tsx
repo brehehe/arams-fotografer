@@ -93,8 +93,10 @@ interface InvoiceItem {
     paid_amount: number;
     remaining_amount: number;
     status: string;
+    notes?: string;
     issue_date?: string;
     due_date?: string;
+    invoice_url?: string;
 }
 
 interface PaymentMethodItem {
@@ -1230,7 +1232,7 @@ export default function ClientProjectDetail({
                                     </button>
 
                                     <a
-                                        href={`/projects/${project.id}/invoice`}
+                                        href={project.invoices?.[0]?.id ? `/projects/${project.id}/invoice?invoice_id=${project.invoices[0].id}` : `/projects/${project.id}/invoice`}
                                         target="_blank"
                                         rel="noreferrer"
                                         className="px-4 py-2.5 rounded-xl border border-[#E8DDD5] bg-[#F4EBE4] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-xs font-bold text-[#3C0E0E] transition-all flex items-center gap-2 shadow-2xs cursor-pointer group/print"
@@ -1831,32 +1833,59 @@ export default function ClientProjectDetail({
                         {/* Invoices List if any */}
                         {project.invoices && project.invoices.length > 0 && (
                             <div className="space-y-3">
-                                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Invoice Resmi</h4>
+                                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                                    Invoice Resmi &amp; Termin Tagihan
+                                </h4>
                                 <div className="space-y-2">
-                                    {project.invoices.map((inv) => (
-                                        <div key={inv.id} className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-slate-200/80 flex items-center justify-between gap-3 text-xs">
-                                            <div className="space-y-0.5">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-bold text-slate-900 font-mono">{inv.invoice_number}</span>
-                                                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-800">
-                                                        {inv.status}
-                                                    </span>
+                                    {project.invoices.map((inv) => {
+                                        const tot = Number(inv.total || 0);
+                                        const pd = Number(inv.paid_amount || 0);
+                                        const rem = Number(inv.remaining_amount ?? (tot - pd));
+                                        const isPaid = rem <= 0 && tot > 0;
+                                        const isPartial = pd > 0 && !isPaid;
+
+                                        return (
+                                            <div key={inv.id} className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs hover:border-[#3C0E0E]/20 transition-all">
+                                                <div className="space-y-0.5">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="font-bold text-slate-900 font-mono">{inv.invoice_number}</span>
+                                                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                                                            isPaid 
+                                                                ? 'bg-emerald-100 text-emerald-800' 
+                                                                : isPartial 
+                                                                ? 'bg-amber-100 text-amber-800' 
+                                                                : 'bg-rose-100 text-rose-800'
+                                                        }`}>
+                                                            {isPaid ? 'Lunas' : isPartial ? 'Sebagian' : 'Belum Lunas'}
+                                                        </span>
+                                                        {inv.notes && (
+                                                            <span className="text-[11px] font-semibold text-slate-700">
+                                                                • {inv.notes}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-[11px] text-slate-500">
+                                                        <span>Tagihan: <strong className="font-mono text-slate-800">{formatRupiah(tot)}</strong></span>
+                                                        {rem > 0 ? (
+                                                            <span> • Sisa: <strong className="font-mono text-amber-700">{formatRupiah(rem)}</strong></span>
+                                                        ) : (
+                                                            <span> • <strong className="text-emerald-700 font-semibold">Lunas 100%</strong></span>
+                                                        )}
+                                                        {inv.due_date && <span> • Jatuh Tempo: {inv.due_date}</span>}
+                                                    </div>
                                                 </div>
-                                                <span className="text-[11px] text-slate-500">
-                                                    Total: {formatRupiah(inv.total)} • Jatuh Tempo: {inv.due_date || '-'}
-                                                </span>
+                                                <a
+                                                    href={inv.invoice_url || `/projects/${project.id}/invoice?invoice_id=${inv.id}`}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-[11px] font-bold text-[#4A151B] hover:bg-[#3C0E0E] hover:text-white shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer shrink-0 transition-all"
+                                                >
+                                                    <Printer className="w-3.5 h-3.5" />
+                                                    <span>Cetak / Download</span>
+                                                </a>
                                             </div>
-                                            <a
-                                                href={`/projects/${project.id}/invoice`}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-[11px] font-bold text-[#4A151B] hover:bg-slate-50 shadow-2xs flex items-center gap-1.5 cursor-pointer"
-                                            >
-                                                <Printer className="w-3.5 h-3.5" />
-                                                <span>Cetak Invoice</span>
-                                            </a>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}

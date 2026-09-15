@@ -31,6 +31,7 @@ import {
     Instagram,
     MessageCircle,
     FileText,
+    FileSpreadsheet,
     Check,
     Ban,
     ChevronRight,
@@ -79,6 +80,7 @@ import {
     resolveCategoryKey,
     AnyCategorySpecificData,
 } from '@/types/category-forms';
+import { ImportSpreadsheetModal } from '@/components/data-transfer/ImportSpreadsheetModal';
 
 interface SelectSearchOption {
     value: string;
@@ -223,8 +225,18 @@ interface ClientsIndexProps {
     };
 }
 
+const getClientName = (client: ClientItem) => {
+    if (client.name && client.name.trim() !== '-') return client.name;
+    const catData = (client as any).category_data;
+    if (catData?.client_name && catData.client_name.trim() !== '-') return catData.client_name;
+    if (catData?.name && catData.name.trim() !== '-') return catData.name;
+    if (catData?.contact_person && catData.contact_person.trim() !== '-') return catData.contact_person;
+    if (catData?.pic_name && catData.pic_name.trim() !== '-') return catData.pic_name;
+    return client.name || 'Klien Baru';
+};
+
 const getInitials = (name?: string) => {
-    if (!name) return 'CL';
+    if (!name || name.trim() === '-') return 'CL';
     const words = name.trim().split(/\s+/);
     if (words.length >= 2) {
         return (words[0][0] + words[1][0]).toUpperCase();
@@ -315,6 +327,7 @@ export default function ClientsIndex({
 
     // Modals state
     const [createModalOpen, setCreateModalOpen] = useState(false);
+    const [importModalOpen, setImportModalOpen] = useState(false);
     const [detailModalClient, setDetailModalClient] = useState<ClientItem | null>(null);
     const [copied, setCopied] = useState(false);
 
@@ -682,7 +695,7 @@ export default function ClientsIndex({
         const cat = (categories || []).find((c: any) => String(c.id) === String(val) || c.slug === val);
         setFormData((prev) => ({
             ...prev,
-            category_id: val,
+            category_id: cat ? String(cat.id) : val,
             client_type: cat?.slug || val,
             event_type: cat?.name || 'Dokumentasi',
         }));
@@ -855,9 +868,12 @@ export default function ClientsIndex({
     };
 
     const handleOpenCreateModal = () => {
+        const defaultCat = categories?.find((c: any) => c.slug === 'wedding' || c.name?.toLowerCase().includes('wedding')) || categories?.[0];
         setFormData({
             ...initialFormData,
-            category_id: String(categories?.find((c: any) => c.slug === 'wedding' || c.name?.toLowerCase().includes('wedding'))?.id || categories?.[0]?.id || ''),
+            category_id: defaultCat ? String(defaultCat.id) : '',
+            client_type: defaultCat?.slug || 'wedding',
+            event_type: defaultCat?.name || 'Pernikahan',
         });
         setCategoryData({});
         setCreateCurrentStep(1);
@@ -1035,7 +1051,12 @@ export default function ClientsIndex({
 
     // Export Action
     const handleExportCSV = () => {
-        window.open('/settings/export/clients', '_blank');
+        const params = new URLSearchParams();
+        if (search) params.set('search', search);
+        if (status !== 'Semua') params.set('status', status);
+        if (city !== 'Semua') params.set('city', city);
+        if (source !== 'Semua') params.set('source', source);
+        window.open(`/clients/export/csv?${params.toString()}`, '_blank', 'noopener,noreferrer');
     };
 
     return (
@@ -1078,6 +1099,15 @@ export default function ClientsIndex({
                             <ExternalLink className="w-3.5 h-3.5 text-amber-700" />
                             <span>Buka Form Klien</span>
                         </a>
+
+                        <button
+                            type="button"
+                            onClick={() => setImportModalOpen(true)}
+                            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-xs font-bold text-emerald-800 shadow-2xs transition-all hover:scale-[1.02] hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2"
+                        >
+                            <FileSpreadsheet className="size-4" aria-hidden="true" />
+                            <span>Import Excel</span>
+                        </button>
 
                         <button
                             type="button"
@@ -1359,8 +1389,17 @@ export default function ClientsIndex({
                             {/* Export Button */}
                             <button
                                 type="button"
+                                onClick={() => setImportModalOpen(true)}
+                                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-xs font-semibold shadow-2xs transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            >
+                                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Import Excel</span>
+                            </button>
+
+                            <button
+                                type="button"
                                 onClick={handleExportCSV}
-                                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-xs font-semibold shadow-2xs transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                             >
                                 <Download className="w-3.5 h-3.5 text-slate-500" />
                                 <span>Export</span>
@@ -1385,9 +1424,10 @@ export default function ClientsIndex({
                             <TableBody>
                                 {clients.data.length > 0 ? (
                                     clients.data.map((c) => {
-                                        const totalVal = c.total_value || 50000000;
-                                        const paidVal = c.total_paid || 40000000;
-                                        const isPaidOff = (c.total_paid || 0) >= (c.total_value || 0) && (c.total_value || 0) > 0;
+                                        const totalVal = Number(c.total_value || 0);
+                                        const paidVal = Number(c.total_paid || 0);
+                                        const projectsCount = Number(c.projects_count ?? 0);
+                                        const isPaidOff = projectsCount > 0 && paidVal >= totalVal && totalVal > 0;
 
                                         return (
                                             <TableRow
@@ -1400,12 +1440,12 @@ export default function ClientsIndex({
                                                         {c.avatar ? (
                                                             <img
                                                                 src={c.avatar}
-                                                                alt={c.name}
+                                                                alt={getClientName(c)}
                                                                 className="w-10 h-10 rounded-full object-cover ring-2 ring-slate-100 shrink-0"
                                                             />
                                                         ) : (
-                                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${getInitialsBg(c.name)}`}>
-                                                                {getInitials(c.name)}
+                                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${getInitialsBg(getClientName(c))}`}>
+                                                                {getInitials(getClientName(c))}
                                                             </div>
                                                         )}
                                                         <div>
@@ -1413,7 +1453,7 @@ export default function ClientsIndex({
                                                                 href={`/clients/${c.id}`}
                                                                 className="font-bold text-slate-900 hover:text-[#C89445] transition-colors block text-xs"
                                                             >
-                                                                {c.name}
+                                                                {getClientName(c)}
                                                             </Link>
                                                             <span className="text-[10px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100/80 mt-0.5 inline-block">
                                                                 {getClientTypeLabel(c)}
@@ -1440,7 +1480,7 @@ export default function ClientsIndex({
                                                 <TableCell className="py-4">
                                                     <div>
                                                         <span className="font-bold text-xs text-slate-900 block font-mono">
-                                                            {c.projects_count ?? 1}
+                                                            {projectsCount}
                                                         </span>
                                                         <span className="text-[11px] text-slate-400 block">
                                                             Project
@@ -1452,14 +1492,22 @@ export default function ClientsIndex({
                                                 <TableCell className="py-4">
                                                     <div>
                                                         <span className="font-bold text-xs text-slate-900 block font-mono">
-                                                            {formatRupiah(totalVal)}
+                                                            {projectsCount > 0 ? formatRupiah(totalVal) : 'Rp 0'}
                                                         </span>
-                                                        <span className={`text-[11px] font-semibold block mt-0.5 ${isPaidOff || paidVal >= totalVal
-                                                            ? 'text-emerald-600'
-                                                            : 'text-amber-600'
-                                                            }`}>
-                                                            {isPaidOff || paidVal >= totalVal ? 'Lunas' : 'Belum Lunas'}
-                                                        </span>
+                                                        {projectsCount > 0 ? (
+                                                            <span className={`text-[11px] font-semibold block mt-0.5 ${isPaidOff
+                                                                ? 'text-emerald-600'
+                                                                : paidVal > 0
+                                                                ? 'text-indigo-600'
+                                                                : 'text-amber-600'
+                                                                }`}>
+                                                                {isPaidOff ? 'Lunas' : paidVal > 0 ? 'Sebagian' : 'Belum Lunas'}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-[11px] text-slate-400 block mt-0.5">
+                                                                Belum Ada Tagihan
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </TableCell>
 
@@ -1560,7 +1608,10 @@ export default function ClientsIndex({
                     <div className="md:hidden divide-y divide-slate-100">
                         {clients.data.length > 0 ? (
                             clients.data.map((c) => {
-                                const totalVal = c.total_value || 50000000;
+                                const totalVal = Number(c.total_value || 0);
+                                const paidVal = Number(c.total_paid || 0);
+                                const projectsCount = Number(c.projects_count ?? 0);
+                                const isPaidOff = projectsCount > 0 && paidVal >= totalVal && totalVal > 0;
 
                                 return (
                                     <div
@@ -1573,12 +1624,12 @@ export default function ClientsIndex({
                                                 {c.avatar ? (
                                                     <img
                                                         src={c.avatar}
-                                                        alt={c.name}
+                                                        alt={getClientName(c)}
                                                         className="w-10 h-10 rounded-full object-cover ring-1 ring-slate-200 shrink-0 shadow-2xs"
                                                     />
                                                 ) : (
-                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${getInitialsBg(c.name)}`}>
-                                                        {getInitials(c.name)}
+                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${getInitialsBg(getClientName(c))}`}>
+                                                        {getInitials(getClientName(c))}
                                                     </div>
                                                 )}
                                                 <div>
@@ -1586,7 +1637,7 @@ export default function ClientsIndex({
                                                         href={`/clients/${c.id}`}
                                                         className="font-bold text-slate-900 text-sm hover:text-[#C89445] transition-colors line-clamp-1"
                                                     >
-                                                        {c.name}
+                                                        {getClientName(c)}
                                                     </Link>
                                                     <span className="text-[10px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100/80 mt-0.5 inline-block">
                                                         {getClientTypeLabel(c)}
@@ -1621,7 +1672,10 @@ export default function ClientsIndex({
                                                     Total Pembayaran
                                                 </span>
                                                 <span className="font-bold text-slate-900 font-mono block mt-0.5 truncate">
-                                                    {formatRupiah(totalVal)}
+                                                    {projectsCount > 0 ? formatRupiah(totalVal) : 'Rp 0'}
+                                                </span>
+                                                <span className="text-[9.5px] text-slate-500 block">
+                                                    {projectsCount > 0 ? (isPaidOff ? 'Lunas' : paidVal > 0 ? 'Sebagian' : 'Belum Lunas') : 'Belum Ada Tagihan'}
                                                 </span>
                                             </div>
                                         </div>
@@ -1910,7 +1964,8 @@ export default function ClientsIndex({
                                     <div>
                                         <SelectSearch
                                             options={categoryOptions}
-                                                                                      onChange={handleCategoryChange}
+                                            value={String(selectedCategory?.id || formData.category_id || '')}
+                                            onChange={handleCategoryChange}
                                             placeholder="Cari atau pilih Kategori Project..."
                                             searchPlaceholder="Ketik nama kategori (Wedding, Newborn, dll)..."
                                             clearable={false}
@@ -2268,7 +2323,7 @@ export default function ClientsIndex({
                                             </label>
                                             <SelectSearch
                                                 options={categoryOptions}
-                                                value={String(formData.category_id || selectedCategory?.id)}
+                                                value={String(selectedCategory?.id || formData.category_id || '')}
                                                 onChange={handleCategoryChange}
                                                 placeholder="Pilih kategori project"
                                                 searchPlaceholder="Cari kategori..."
@@ -2996,6 +3051,12 @@ export default function ClientsIndex({
                     confirmText={confirmToggleBlock.client?.status === 'blocked' ? 'Ya, Buka Blokir' : 'Ya, Blokir Klien'}
                     cancelText="Batal"
                     variant={confirmToggleBlock.client?.status === 'blocked' ? 'success' : 'danger'}
+                />
+
+                <ImportSpreadsheetModal
+                    kind="clients"
+                    isOpen={importModalOpen}
+                    onClose={() => setImportModalOpen(false)}
                 />
             </div>
         </>

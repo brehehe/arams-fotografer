@@ -236,6 +236,9 @@ export default function ClientEdit({
     const [categoryData, setCategoryData] = useState<AnyCategorySpecificData>({
         ...(client.category_data || {}),
         ...(client.projects?.[0]?.category_data || {}),
+        client_name: (client.category_data as any)?.client_name || (client.category_data as any)?.name || (client.name && client.name !== '-' ? client.name : ''),
+        name: (client.category_data as any)?.name || (client.category_data as any)?.client_name || (client.name && client.name !== '-' ? client.name : ''),
+        nickname: (client.category_data as any)?.nickname || (client as any).nickname || '',
         bride_name: client.bride_name || client.category_data?.bride_name || client.name,
         bride_nickname: client.bride_nickname || client.category_data?.bride_nickname || '',
         bride_birth_date: client.bride_birth_date ? String(client.bride_birth_date).substring(0, 10) : (client.category_data?.bride_birth_date || ''),
@@ -265,7 +268,7 @@ export default function ClientEdit({
 
     const [formData, setFormData] = useState({
         category_id: (client.category_id ? String(client.category_id) : '') || String(initialActiveCat.id) || '',
-        name: client.name || '',
+        name: client.name && client.name !== '-' ? client.name : ((client.category_data as any)?.client_name || (client.category_data as any)?.name || ''),
         client_type: client.client_type || initialActiveCat.slug || 'wedding',
         partner_name: client.partner_name || '',
         bride_name: client.bride_name || '',
@@ -301,16 +304,24 @@ export default function ClientEdit({
         contact_person: client.contact_person || '',
         occupation: client.occupation || '',
         other_social_media: client.other_social_media || '',
-        event_type: client.projects?.[0]?.category?.name || 'Wedding',
-        event_date: client.projects?.[0]?.event_date ? String(client.projects[0].event_date).substring(0, 10) : '',
-        event_time: client.projects?.[0]?.event_time || '16:00',
-        event_location: client.projects?.[0]?.location || '',
-        reception_location: (client.projects?.[0]?.category_data as any)?.reception_location || '',
-        estimated_guests: (client.projects?.[0]?.category_data as any)?.estimated_guests || '',
-        concept_theme: (client.projects?.[0]?.category_data as any)?.concept || (client.projects?.[0]?.category_data as any)?.theme || '',
+        event_type: client.projects?.[0]?.category?.name || client.category?.name || 'Wedding',
+        event_date: client.projects?.[0]?.event_date 
+            ? String(client.projects[0].event_date).substring(0, 10) 
+            : ((client.category_data as any)?.event_date || (client.category_data as any)?.session_date || (client.category_data as any)?.akad_date || (client.category_data as any)?.departure_date 
+                ? String((client.category_data as any)?.event_date || (client.category_data as any)?.session_date || (client.category_data as any)?.akad_date || (client.category_data as any)?.departure_date).substring(0, 10) 
+                : ''),
+        event_time: client.projects?.[0]?.event_time || (client.category_data as any)?.event_time || (client.category_data as any)?.session_time || (client.category_data as any)?.akad_time || '16:00',
+        event_location: client.projects?.[0]?.location || (client.category_data as any)?.location || (client.category_data as any)?.session_location || (client.category_data as any)?.akad_location || (client.category_data as any)?.event_location || (client.category_data as any)?.destination_city_country || '',
+        reception_location: (client.projects?.[0]?.category_data as any)?.reception_location || (client.category_data as any)?.reception_location || '',
+        estimated_guests: (client.projects?.[0]?.category_data as any)?.estimated_guests || (client.category_data as any)?.estimated_guests || '',
+        concept_theme: (client.projects?.[0]?.category_data as any)?.concept || (client.projects?.[0]?.category_data as any)?.theme || (client.category_data as any)?.concept || (client.category_data as any)?.concept_theme || '',
         other_vendors: '',
-        reference_url: (client.projects?.[0]?.category_data as any)?.reference_url || '',
-        package_id: client.projects?.[0]?.package_id ? String(client.projects[0].package_id) : (packages[0]?.id ? String(packages[0].id) : ''),
+        reference_url: (client.projects?.[0]?.category_data as any)?.reference_url || (client.category_data as any)?.reference_url || '',
+        package_id: client.projects?.[0]?.package_id 
+            ? String(client.projects[0].package_id) 
+            : ((client.category_data as any)?.package_id 
+                ? String((client.category_data as any).package_id) 
+                : (packages[0]?.id ? String(packages[0].id) : '')),
         source: client.source || '',
         client_source_id: (client as any).client_source_id || '',
         referred_by_client_id: client.referred_by_client_id || '',
@@ -348,6 +359,11 @@ export default function ClientEdit({
     const handleCategoryDataChange = (field: string, value: any) => {
         setCategoryData((prev) => {
             const next = { ...prev, [field]: value };
+            if (['client_name', 'name', 'pic_name', 'contact_person'].includes(field)) {
+                if (value && typeof value === 'string' && value.trim()) {
+                    setFormData((f) => ({ ...f, name: value.trim() }));
+                }
+            }
             if (field === 'session_date' || field === 'akad_date' || field === 'event_date' || field === 'departure_date') {
                 if (value) {
                     setFormData((f) => ({ ...f, event_date: value }));
@@ -659,7 +675,7 @@ export default function ClientEdit({
     const handleSubmit = (e?: React.FormEvent) => {
         if (e) e.preventDefault();
 
-        let clientName = formData.name;
+        let clientName = (formData.name && formData.name.trim() !== '-' ? formData.name.trim() : '');
         if (activeCategoryKey === 'wedding' || activeCategoryKey === 'engagement' || activeCategoryKey === 'prewedding') {
             const bName = (categoryData as any).bride_name || (categoryData as any).partner_1 || formData.bride_name;
             const gName = (categoryData as any).groom_name || (categoryData as any).partner_2 || formData.groom_name;
@@ -671,12 +687,18 @@ export default function ClientEdit({
                 clientName = gName;
             }
         } else if (activeCategoryKey === 'corporate' || activeCategoryKey === 'commercial' || activeCategoryKey === 'komunitas') {
-            clientName = (categoryData as any).company_name || (categoryData as any).community_name || (categoryData as any).brand_name || formData.company_name || formData.name;
+            clientName = (categoryData as any).company_name || (categoryData as any).community_name || (categoryData as any).brand_name || (categoryData as any).contact_person || (categoryData as any).pic_name || formData.company_name || clientName;
         } else if (activeCategoryKey === 'newborn') {
-            clientName = (categoryData as any).child_name || (categoryData as any).baby_name || formData.child_name || formData.name;
+            clientName = (categoryData as any).child_name || (categoryData as any).baby_name || formData.child_name || clientName;
+        } else if (activeCategoryKey === 'perorangan' || activeCategoryKey === 'lainnya') {
+            clientName = (categoryData as any).client_name || (categoryData as any).name || clientName;
+        } else if (activeCategoryKey === 'traveling' || activeCategoryKey === 'event') {
+            clientName = (categoryData as any).contact_person || (categoryData as any).client_name || (categoryData as any).organizer_name || (categoryData as any).pic_name || clientName;
         }
 
-        if (!clientName && !formData.name) {
+        const resolvedClientName = clientName || (categoryData as any).client_name || (categoryData as any).name || (formData.name && formData.name.trim() !== '-' ? formData.name.trim() : '');
+
+        if (!resolvedClientName) {
             toast.error('Nama klien wajib diisi');
             return;
         }
@@ -692,15 +714,21 @@ export default function ClientEdit({
         const isNewbornCategory = activeCategoryKey === 'newborn' || formData.client_type === 'newborn';
         const childrenPayload = isNewbornCategory && validChildren.length > 0 ? validChildren : null;
 
+        const mergedCategoryData = {
+            ...categoryData,
+            client_name: (categoryData as any).client_name || resolvedClientName,
+            name: (categoryData as any).name || resolvedClientName,
+        };
+
         setSubmitting(true);
 
         router.put(
             `/clients/${client.id}`,
             {
-                name: clientName || formData.name,
+                name: resolvedClientName,
                 client_type: formData.client_type,
                 category_id: formData.category_id || null,
-                category_data: categoryData,
+                category_data: mergedCategoryData as any,
                 partner_name: formData.partner_name || (categoryData as any).groom_name || (categoryData as any).partner_2 || null,
                 bride_name: formData.bride_name || (categoryData as any).bride_name || (categoryData as any).partner_1 || null,
                 bride_nickname: formData.bride_nickname || (categoryData as any).bride_nickname || null,

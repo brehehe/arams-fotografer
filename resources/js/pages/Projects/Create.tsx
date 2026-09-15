@@ -55,6 +55,14 @@ import {
     resolveCategoryKey,
     AnyCategorySpecificData,
 } from '@/types/category-forms';
+import {
+    ProjectTeamAssignmentSection,
+    type TeamAssignmentItem,
+} from '@/components/projects/ProjectTeamAssignmentSection';
+import {
+    ProjectPaymentTerminSection,
+    type PaymentInstallmentItem,
+} from '@/components/projects/ProjectPaymentTerminSection';
 
 interface ClientItem {
     id: string;
@@ -371,9 +379,14 @@ export default function ProjectsCreate({
     const [supervisorId, setSupervisorId] = useState<string>(defaultSupervisor?.id || '');
     const [photographerName, setPhotographerName] = useState<string>('');
     const [editorName, setEditorName] = useState<string>('');
+    const [teamAssignments, setTeamAssignments] = useState<TeamAssignmentItem[]>([
+        { id: 'team-1', type: 'Photografer', name: '' },
+        { id: 'team-2', type: 'Editor Foto', name: '' },
+    ]);
     const [shootingEventDate, setShootingEventDate] = useState<string>(todayStr);
     const [shootingDuration, setShootingDuration] = useState<string>('12 Jam');
     const [assignmentNotes, setAssignmentNotes] = useState<string>('');
+    const [paymentInstallments, setPaymentInstallments] = useState<PaymentInstallmentItem[]>([]);
 
     // Step 2 Requirement Checkboxes
     const [step2Requirements, setStep2Requirements] = useState<{ [key: string]: boolean }>({
@@ -1295,6 +1308,12 @@ export default function ProjectsCreate({
         const selectedSource = client_sources.find((cs) => cs.id === referralSourceId);
         const sourceName = selectedSource?.name || referralSourceId || '';
 
+        const photoMembers = teamAssignments.filter((t) => (t.type === 'Photografer' || t.type === 'Videografer') && t.name.trim());
+        const editorMembers = teamAssignments.filter((t) => (t.type === 'Editor Foto' || t.type === 'Editor Video') && t.name.trim());
+        const effectivePhotographerName = photoMembers.map((t) => `${t.name} (${t.type})`).join(', ') || photographerName || null;
+        const effectiveEditorName = editorMembers.map((t) => `${t.name} (${t.type})`).join(', ') || editorName || null;
+        const effectiveDpAmount = paymentInstallments.length > 0 ? paymentInstallments[0].amount : nominalDp;
+
         const payload = {
             name: projectName.trim(),
             client_id: clientId,
@@ -1306,22 +1325,27 @@ export default function ProjectsCreate({
             deadline: projectDeadline || dpDueDate || null,
             location: projectLocation || null,
             supervisor_id: supervisorId || null,
-            photographer_name: photographerName || null,
-            editor_name: editorName || null,
+            photographer_name: effectivePhotographerName,
+            editor_name: effectiveEditorName,
+            team_assignments: teamAssignments.filter((t) => t.name.trim()),
+            payment_installments: paymentInstallments,
             status: isDraft ? 'draft' : 'in_progress',
             price: packagePrice,
             discount: discountPackage,
             tax: calculatedTaxAmount,
             total_amount: totalProject,
             thumbnail: projectThumbnail || null,
-            dp_amount: nominalDp,
+            dp_amount: effectiveDpAmount,
             payment_method: paymentMethodName,
-            payment_status: nominalDp > 0 ? 'partial' : 'unpaid',
+            payment_status: 'unpaid',
             invoice_type: 'dp',
-            invoice_amount: nominalDp,
-            invoice_due_date: dpDueDate || null,
+            invoice_amount: effectiveDpAmount,
+            invoice_due_date: paymentInstallments[0]?.due_date || dpDueDate || null,
             notes: [
                 projectNotes,
+                teamAssignments.some((t) => t.name.trim())
+                    ? `Tim Personil: ${teamAssignments.filter((t) => t.name.trim()).map((t) => `${t.type}: ${t.name}`).join(' | ')}`
+                    : '',
                 additionalNotes ? `Catatan Tambahan: ${additionalNotes}` : '',
                 specialRequirement ? `Requirement: ${specialRequirement}` : '',
                 sourceName ? `Sumber Referensi: ${sourceName} (${referralName} - ${referralLink})` : '',
@@ -1330,7 +1354,11 @@ export default function ProjectsCreate({
                 .filter(Boolean)
                 .join('\n\n'),
             selected_addons: selectedAddonsPayload,
-            category_data: categoryData,
+            category_data: {
+                ...categoryData,
+                team_assignments: teamAssignments.filter((t) => t.name.trim()),
+                payment_installments: paymentInstallments,
+            },
             // Client info overrides — update Client record with latest category/wedding/maternity/etc data
             client_overrides: {
                 ...(activeCategoryKey === 'wedding' || activeFormType === 'wedding' ? {
@@ -2063,69 +2091,17 @@ export default function ProjectsCreate({
                                 </span>
                             </div>
 
-                            <div className="space-y-3.5 text-xs min-w-0 flex-1 flex flex-col justify-between">
-                                <div className="space-y-3.5">
-                                    <div className="space-y-1 min-w-0">
-                                        <label className="text-[11px] font-bold text-slate-600 block">
-                                            Supervisor <span className="text-rose-500">*</span>
-                                        </label>
-                                        <SelectSearch
-                                            options={supervisorOptions}
-                                            value={supervisorId}
-                                            onChange={setSupervisorId}
-                                            placeholder="Pilih Supervisor..."
-                                            searchPlaceholder="Cari nama supervisor..."
-                                            clearable={false}
-                                        />
-                                    </div>
-
-                                    <div className="space-y-1 min-w-0">
-                                        <label className="text-[11px] font-bold text-slate-600 block">
-                                            Photographer <span className="text-rose-500">*</span>
-                                        </label>
-                                        <Input
-                                            value={photographerName}
-                                            onChange={(e) => setPhotographerName(e.target.value)}
-                                            placeholder="Ketik nama photographer..."
-                                            className="h-[42px]"
-                                            list="photographer-suggestions"
-                                        />
-                                        <datalist id="photographer-suggestions">
-                                            {photographerOptions.map((p) => (
-                                                <option key={p.value} value={p.label} />
-                                            ))}
-                                        </datalist>
-                                    </div>
-
-                                    <div className="space-y-1 min-w-0">
-                                        <label className="text-[11px] font-bold text-slate-600 block">
-                                            Editor <span className="text-rose-500">*</span>
-                                        </label>
-                                        <Input
-                                            value={editorName}
-                                            onChange={(e) => setEditorName(e.target.value)}
-                                            placeholder="Ketik nama editor..."
-                                            className="h-[42px]"
-                                            list="editor-suggestions"
-                                        />
-                                        <datalist id="editor-suggestions">
-                                            {editorOptions.map((ed) => (
-                                                <option key={ed.value} value={ed.label} />
-                                            ))}
-                                        </datalist>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1 min-w-0 pt-3 mt-auto border-t border-slate-100">
-                                    <label className="text-[11px] font-bold text-slate-600 block">Catatan Penugasan Tim</label>
-                                    <Textarea
-                                        minRows={2}
-                                        value={assignmentNotes}
-                                        onChange={(e) => setAssignmentNotes(e.target.value)}
-                                        placeholder="Catatan khusus pembagian tugas atau peralatan tim..."
-                                    />
-                                </div>
-                            </div>
+                            <ProjectTeamAssignmentSection
+                                supervisorId={supervisorId}
+                                setSupervisorId={setSupervisorId}
+                                supervisorOptions={supervisorOptions}
+                                teamAssignments={teamAssignments}
+                                setTeamAssignments={setTeamAssignments}
+                                teamSuggestions={team_members}
+                                assignmentNotes={assignmentNotes}
+                                setAssignmentNotes={setAssignmentNotes}
+                                idPrefix="create"
+                            />
                         </div>
 
                         {/* Card 2: Checklist Persiapan & Requirement Khusus (col-span-12 lg:col-span-6) */}
@@ -2572,77 +2548,25 @@ export default function ProjectsCreate({
                             </div>
                         </div>
 
-                        {/* Right: Pengaturan Pembayaran & Tagihan DP */}
-                        <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full space-y-4">
-                            <div className="space-y-4">
-                                <h3 className="font-bold text-base text-slate-900 border-b border-slate-100 pb-2">
-                                    Pengaturan Pembayaran &amp; Invoice DP
-                                </h3>
-
-                                <div className="space-y-3 text-xs">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-bold text-slate-500 uppercase">Persentase DP</label>
-                                            <SelectSearch
-                                                options={dpPercentOptions}
-                                                value={String(dpPercent)}
-                                                onChange={(val) => setDpPercent(Number(val) || 0)}
-                                                clearable={false}
-                                            />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] font-bold text-slate-500 uppercase">Jatuh Tempo DP</label>
-                                            <input
-                                                type="date"
-                                                value={dpDueDate}
-                                                onChange={(e) => setDpDueDate(e.target.value)}
-                                                className="w-full h-[42px] px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 outline-none focus:border-[#4F46E5]"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="p-3 bg-emerald-50/80 border border-emerald-100 rounded-xl flex items-center justify-between">
-                                        <div>
-                                            <span className="text-emerald-900 font-bold text-xs block">Nominal Tagihan DP</span>
-                                            <span className="text-[10px] text-emerald-700">DP {dpPercent}% dari total project</span>
-                                        </div>
-                                        <span className="text-lg font-black text-emerald-700 font-sans">
-                                            {formatRupiah(nominalDp)}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="space-y-2.5 pt-3 border-t border-slate-100 mt-auto text-xs">
-                                <div className="space-y-1">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase">Metode Pembayaran</label>
-                                    <SelectSearch
-                                        options={paymentMethodOptions}
-                                        value={paymentMethodName}
-                                        onChange={handlePaymentMethodChange}
-                                        clearable={false}
-                                    />
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase">Bank / No. Rekening</label>
-                                        <Input
-                                            value={bankAccount}
-                                            onChange={(e) => setBankAccount(e.target.value)}
-                                            className="h-[40px]"
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase">Atas Nama</label>
-                                        <Input
-                                            value={accountHolder}
-                                            onChange={(e) => setAccountHolder(e.target.value)}
-                                            className="h-[40px]"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        {/* Right: Pengaturan Pembayaran & Tagihan Termin */}
+                        <ProjectPaymentTerminSection
+                            totalProject={totalProject}
+                            dpPercent={dpPercent}
+                            setDpPercent={setDpPercent}
+                            dpPercentOptions={dpPercentOptions}
+                            dpDueDate={dpDueDate}
+                            setDpDueDate={setDpDueDate}
+                            paymentInstallments={paymentInstallments}
+                            setPaymentInstallments={setPaymentInstallments}
+                            paymentMethodOptions={paymentMethodOptions}
+                            paymentMethodName={paymentMethodName}
+                            handlePaymentMethodChange={handlePaymentMethodChange}
+                            bankAccount={bankAccount}
+                            setBankAccount={setBankAccount}
+                            accountHolder={accountHolder}
+                            setAccountHolder={setAccountHolder}
+                            eventDate={shootingEventDate || projectDate}
+                        />
                     </div>
 
                     {/* Step 3 Bottom Actions */}
@@ -2771,14 +2695,25 @@ export default function ProjectsCreate({
                                         {supervisors.find((s) => String(s.id) === String(supervisorId))?.name || 'Supervisor'}
                                     </span>
                                 </div>
-                                <div className="flex items-start justify-between gap-2.5">
-                                    <span className="text-slate-400 shrink-0">Photographer:</span>
-                                    <span className="font-bold text-slate-800 text-right min-w-0 break-words">{photographerName}</span>
-                                </div>
-                                <div className="flex items-start justify-between gap-2.5">
-                                    <span className="text-slate-400 shrink-0">Editor:</span>
-                                    <span className="font-bold text-slate-800 text-right min-w-0 break-words">{editorName}</span>
-                                </div>
+                                {teamAssignments.filter((t) => t.name.trim()).length > 0 ? (
+                                    teamAssignments.filter((t) => t.name.trim()).map((t, i) => (
+                                        <div key={i} className="flex items-start justify-between gap-2.5">
+                                            <span className="text-slate-400 shrink-0">{t.type}:</span>
+                                            <span className="font-bold text-slate-800 text-right min-w-0 break-words">{t.name}</span>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <>
+                                        <div className="flex items-start justify-between gap-2.5">
+                                            <span className="text-slate-400 shrink-0">Photographer:</span>
+                                            <span className="font-bold text-slate-800 text-right min-w-0 break-words">{photographerName || '-'}</span>
+                                        </div>
+                                        <div className="flex items-start justify-between gap-2.5">
+                                            <span className="text-slate-400 shrink-0">Editor:</span>
+                                            <span className="font-bold text-slate-800 text-right min-w-0 break-words">{editorName || '-'}</span>
+                                        </div>
+                                    </>
+                                )}
                                 <div className="flex items-center justify-between gap-2.5">
                                     <span className="text-slate-400 shrink-0">Standby:</span>
                                     <span className="font-bold text-slate-800 text-right">{shootingDuration}</span>

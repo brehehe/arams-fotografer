@@ -18,10 +18,12 @@ import {
     Trash2,
     X,
     FileText,
+    FileSpreadsheet,
     ArrowRight,
 } from 'lucide-react';
 import { formatRupiah, formatDate } from '@/lib/formatters';
 import { FormattedNumberInput, AlertConfirmation } from '@/components/ui';
+import { ImportSpreadsheetModal } from '@/components/data-transfer/ImportSpreadsheetModal';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -140,6 +142,7 @@ export default function ProjectsIndex({
     const [selectedDate, setSelectedDate] = useState(filters?.date || '');
 
     const [createModalOpen, setCreateModalOpen] = useState(false);
+    const [importModalOpen, setImportModalOpen] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id?: string | number; name?: string }>({
         isOpen: false,
     });
@@ -231,6 +234,17 @@ export default function ProjectsIndex({
                 setConfirmDelete({ isOpen: false });
             },
         });
+    };
+
+    const handleExportCsv = () => {
+        const params = new URLSearchParams();
+        if (search) params.set('search', search);
+        if (selectedCategory !== 'all') params.set('category_id', String(selectedCategory));
+        if (selectedStatus !== 'all') params.set('status', selectedStatus);
+        if (selectedSupervisor !== 'all') params.set('supervisor_id', String(selectedSupervisor));
+        if (activeTab !== 'all') params.set('tab', activeTab);
+        if (selectedDate) params.set('date', selectedDate);
+        window.open(`/projects/export/csv?${params.toString()}`, '_blank', 'noopener,noreferrer');
     };
 
     // Category styling badge
@@ -383,7 +397,7 @@ export default function ProjectsIndex({
                     </p>
                 </div>
 
-                <div className="flex items-center gap-2.5">
+                <div className="flex flex-wrap items-center gap-2.5">
                     <Link
                         href="/projects/create"
                         className="btn-primary-action inline-flex items-center gap-2 px-4 py-2 text-white rounded-xl text-xs font-bold shadow-sm shadow-black/10 transition-all cursor-pointer"
@@ -392,13 +406,23 @@ export default function ProjectsIndex({
                         <span>Buat Project Baru</span>
                     </Link>
 
-                    <a
-                        href="/settings/export/projects"
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 rounded-xl text-xs font-semibold shadow-2xs transition-colors"
+                    <button
+                        type="button"
+                        onClick={() => setImportModalOpen(true)}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 rounded-xl text-xs font-semibold shadow-2xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                        <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Import Excel</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={handleExportCsv}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 rounded-xl text-xs font-semibold shadow-2xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                         <Download className="w-3.5 h-3.5 text-slate-500" />
                         <span>Export</span>
-                    </a>
+                    </button>
                 </div>
             </div>
 
@@ -1310,6 +1334,13 @@ export default function ProjectsIndex({
                 variant="danger"
                 onConfirm={handleDeleteProject}
                 onClose={() => setConfirmDelete({ isOpen: false })}
+            />
+
+            <ImportSpreadsheetModal
+                kind="projects"
+                isOpen={importModalOpen}
+                onClose={() => setImportModalOpen(false)}
+                categories={categories}
             />
         </div>
     );

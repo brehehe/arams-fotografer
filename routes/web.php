@@ -23,6 +23,7 @@ use App\Http\Controllers\ClientIntakeController;
 use App\Http\Controllers\ClientSourceController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\SpreadsheetTransferController;
 use App\Http\Controllers\MasterData\InstagramPostController;
 use App\Http\Controllers\MasterData\PortfolioCategoryController;
 use App\Http\Controllers\MasterData\PortfolioController;
@@ -96,6 +97,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // 2. Clients & Wedding Organizers (WO)
+    Route::get('/clients/export/csv', [SpreadsheetTransferController::class, 'exportClients'])->name('clients.export.csv');
+    Route::get('/clients/import/template', [SpreadsheetTransferController::class, 'clientTemplate'])->name('clients.import.template');
+    Route::post('/clients/import', [SpreadsheetTransferController::class, 'importClients'])->name('clients.import');
     Route::patch('/clients/{client}/toggle-block', [ClientController::class, 'toggleBlock'])->name('clients.toggle-block');
     Route::post('/clients/{client}/account', [ClientController::class, 'storeAccount'])->name('clients.account.store');
     Route::resource('clients', ClientController::class);
@@ -104,6 +108,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/weeding-organizer', fn() => redirect()->route('wedding-organizer.index'));
 
     // 3. Projects
+    Route::get('/projects/export/csv', [SpreadsheetTransferController::class, 'exportProjects'])->name('projects.export.csv');
+    Route::get('/projects/import/template', [SpreadsheetTransferController::class, 'projectTemplate'])->name('projects.import.template');
+    Route::post('/projects/import', [SpreadsheetTransferController::class, 'importProjects'])->name('projects.import');
     Route::get('/project/create', fn () => redirect()->route('projects.create'));
     Route::get('/projects/{project}/invoice', [ProjectController::class, 'showInvoice'])->name('projects.invoice');
     Route::get('/invoices/{invoice}', [ProjectController::class, 'showInvoiceById'])->name('invoices.show');
@@ -200,7 +207,9 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/settings/company', [SettingController::class, 'index'])->name('settings.index');
     Route::post('/settings', [SettingController::class, 'update'])->name('settings.update');
-    Route::get('/settings/backup/download', [SettingController::class, 'backupDownload'])->name('settings.backup.download');
+    Route::post('/settings/backup/run', [SettingController::class, 'runBackup'])->name('settings.backup.run');
+    Route::get('/settings/backup/download/{filename?}', [SettingController::class, 'downloadBackup'])->name('settings.backup.download');
+    Route::delete('/settings/backup/{filename}', [SettingController::class, 'deleteBackup'])->name('settings.backup.delete');
     Route::get('/settings/export/{type}', [SettingController::class, 'exportData'])->name('settings.export');
     Route::get('/settings/admin/promo-slides', fn() => redirect()->route('master-data.promo-slides.index'));
     Route::get('/settings/admin/testimonials', fn() => redirect()->route('master-data.testimonials.index'));

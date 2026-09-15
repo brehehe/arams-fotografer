@@ -1107,7 +1107,7 @@ export default function ClientDashboard({
                                         Total Nilai Project
                                     </span>
                                     <p className="text-base sm:text-lg font-black text-slate-900 font-mono">
-                                        {formatRupiah(payment_summary?.total_amount || 50000000)}
+                                        {formatRupiah(payment_summary?.total_amount || 0)}
                                     </p>
                                 </div>
                                 <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-100 space-y-1">
@@ -1115,10 +1115,10 @@ export default function ClientDashboard({
                                         Total Terbayar
                                     </span>
                                     <p className="text-base sm:text-lg font-black text-emerald-700 font-mono">
-                                        {formatRupiah(payment_summary?.paid_amount || 25000000)}
+                                        {formatRupiah(payment_summary?.paid_amount || 0)}
                                     </p>
                                     <span className="text-[10px] text-emerald-600 font-bold block">
-                                        {payment_summary?.paid_percentage || 50}% dari total
+                                        {payment_summary?.paid_percentage || 0}% dari total
                                     </span>
                                 </div>
                                 <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-100 space-y-1">
@@ -1126,38 +1126,87 @@ export default function ClientDashboard({
                                         Sisa Tagihan
                                     </span>
                                     <p className="text-base sm:text-lg font-black text-amber-700 font-mono">
-                                        {formatRupiah(payment_summary?.remaining_amount || 25000000)}
+                                        {formatRupiah(payment_summary?.remaining_amount || 0)}
                                     </p>
                                 </div>
                             </div>
 
-                            {/* Section: Invoice Resmi */}
+                            {/* Section: Invoice Resmi & Termin Pembayaran */}
                             <div className="space-y-3">
-                                <h4 className="text-xs font-black uppercase tracking-wider text-slate-900">
-                                    Invoice Resmi
-                                </h4>
-                                <div className="p-4 rounded-2xl bg-[#FBF6F0] border border-[#F4EBE4] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                    <div className="space-y-1">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-mono font-black text-xs text-slate-900">
-                                                {(active_project as any)?.invoices?.[0]?.invoice_number || `INV-${new Date().getFullYear()}06-0001`}
-                                            </span>
-                                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 uppercase">
-                                                {(active_project as any)?.invoices?.[0]?.status || (active_project?.paid_amount && active_project.paid_amount >= active_project.total_amount ? 'Lunas' : 'DP Diterima')}
-                                            </span>
-                                        </div>
-                                        <p className="text-xs text-slate-500">
-                                            Total: <strong className="text-slate-800">{formatRupiah(payment_summary?.total_amount || 50000000)}</strong> • Project: {active_project?.name || 'Wedding Day'}
-                                        </p>
-                                    </div>
-                                    <Link
-                                        href={active_project?.id ? `/client/projects/${active_project.id}#invoice` : '/client/projects'}
-                                        className="px-3.5 py-2 rounded-xl border border-[#E8DDD5] bg-[#F4EBE4] text-[#3C0E0E] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-xs font-bold shadow-2xs transition-all flex items-center justify-center gap-1.5 self-start sm:self-auto cursor-pointer group/inv"
-                                    >
-                                        <Printer className="w-3.5 h-3.5 text-[#3C0E0E] group-hover/inv:text-white transition-colors" />
-                                        <span>Lihat Invoice</span>
-                                    </Link>
+                                <div className="flex items-center justify-between">
+                                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-900">
+                                        Invoice Resmi &amp; Termin Pembayaran
+                                    </h4>
+                                    <span className="text-[11px] text-slate-400 font-semibold">
+                                        {((active_project as any)?.invoices?.length || 0)} Invoice
+                                    </span>
                                 </div>
+
+                                {((active_project as any)?.invoices && (active_project as any).invoices.length > 0) ? (
+                                    <div className="space-y-2.5">
+                                        {(active_project as any).invoices.map((inv: any) => {
+                                            const total = Number(inv.total || 0);
+                                            const paid = Number(inv.paid_amount || 0);
+                                            const remaining = Number(inv.remaining_amount ?? (total - paid));
+                                            const isPaid = remaining <= 0 && total > 0;
+                                            const isPartial = paid > 0 && !isPaid;
+
+                                            return (
+                                                <div
+                                                    key={inv.id}
+                                                    className="p-4 rounded-2xl bg-[#FBF6F0] border border-[#F4EBE4] flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#3C0E0E]/20 transition-all"
+                                                >
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <span className="font-mono font-black text-xs text-slate-900">
+                                                                {inv.invoice_number}
+                                                            </span>
+                                                            <span
+                                                                className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                                                    isPaid
+                                                                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                                                        : isPartial
+                                                                        ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                                                        : 'bg-rose-100 text-rose-800 border border-rose-200'
+                                                                }`}
+                                                            >
+                                                                {isPaid ? 'Lunas' : isPartial ? 'Sebagian' : 'Belum Lunas'}
+                                                            </span>
+                                                            {inv.notes && (
+                                                                <span className="text-[11px] font-semibold text-slate-700">
+                                                                    • {inv.notes}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-xs text-slate-500">
+                                                            Tagihan: <strong className="text-slate-800 font-mono">{formatRupiah(total)}</strong>
+                                                            {remaining > 0 ? (
+                                                                <> • Sisa: <strong className="text-amber-700 font-mono">{formatRupiah(remaining)}</strong></>
+                                                            ) : (
+                                                                <> • <strong className="text-emerald-700 font-semibold">Lunas 100%</strong></>
+                                                            )}
+                                                            {inv.due_date && <> • Jatuh Tempo: {inv.due_date}</>}
+                                                        </p>
+                                                    </div>
+                                                    <a
+                                                        href={inv.invoice_url || (active_project?.id ? `/projects/${active_project.id}/invoice?invoice_id=${inv.id}` : '#')}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="px-3.5 py-2 rounded-xl border border-[#E8DDD5] bg-[#F4EBE4] text-[#3C0E0E] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-xs font-bold shadow-2xs transition-all flex items-center justify-center gap-1.5 self-start sm:self-auto cursor-pointer group/inv shrink-0"
+                                                        title="Download / Cetak Lembar Invoice"
+                                                    >
+                                                        <Download className="w-3.5 h-3.5 text-[#3C0E0E] group-hover/inv:text-white transition-colors" />
+                                                        <span>Download Invoice</span>
+                                                    </a>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 text-center text-xs text-slate-400">
+                                        Belum ada invoice resmi yang diterbitkan untuk project ini.
+                                    </div>
+                                )}
                             </div>
 
                             {/* Section: Riwayat Pembayaran Masuk Real per Project */}
@@ -1167,7 +1216,7 @@ export default function ClientDashboard({
                                         Riwayat Pembayaran Masuk
                                     </h4>
                                     <span className="text-[11px] text-slate-400 font-semibold">
-                                        {((active_project as any)?.payments?.length || 1)} Transaksi
+                                        {((active_project as any)?.payments?.length || 0)} Transaksi
                                     </span>
                                 </div>
 
