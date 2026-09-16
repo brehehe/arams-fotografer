@@ -346,8 +346,8 @@ export default function ClientDashboard({
     const packageRecommendations = (recommended_packages && recommended_packages.length > 0)
         ? recommended_packages
         : (recommended_projects && recommended_projects.length > 0)
-        ? recommended_projects
-        : [];
+            ? recommended_projects
+            : [];
 
     const activePromo = promoSlides[currentPromoIndex % promoSlides.length] || promoSlides[0];
     const activeTestimonial = testimonialList.length > 0
@@ -419,24 +419,23 @@ export default function ClientDashboard({
                                             style={
                                                 isCompleted
                                                     ? {
-                                                          backgroundColor: COLOR_BURGUNDY,
-                                                          color: '#FFFFFF',
-                                                      }
+                                                        backgroundColor: COLOR_BURGUNDY,
+                                                        color: '#FFFFFF',
+                                                    }
                                                     : isActive
-                                                    ? {
-                                                          backgroundColor: '#FFFFFF',
-                                                          color: COLOR_BURGUNDY,
-                                                          borderColor: COLOR_BURGUNDY,
-                                                      }
-                                                    : {
-                                                          backgroundColor: COLOR_WARM_CREAM,
-                                                          color: '#7A6666',
-                                                          borderColor: '#E8DDD5',
-                                                      }
+                                                        ? {
+                                                            backgroundColor: '#FFFFFF',
+                                                            color: COLOR_BURGUNDY,
+                                                            borderColor: COLOR_BURGUNDY,
+                                                        }
+                                                        : {
+                                                            backgroundColor: COLOR_WARM_CREAM,
+                                                            color: '#7A6666',
+                                                            borderColor: '#E8DDD5',
+                                                        }
                                             }
-                                            className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-200 ${
-                                                isActive ? 'border-2 shadow-xs' : !isCompleted ? 'border' : ''
-                                            }`}
+                                            className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-200 ${isActive ? 'border-2 shadow-xs' : !isCompleted ? 'border' : ''
+                                                }`}
                                         >
                                             {isCompleted ? (
                                                 <Check className="w-4 h-4 stroke-[2.5]" />
@@ -461,13 +460,12 @@ export default function ClientDashboard({
                                                 {step.title || `${step.step}. ${step.name}`}
                                             </p>
                                             <span
-                                                className={`text-[10px] block font-semibold ${
-                                                    isCompleted
+                                                className={`text-[10px] block font-semibold ${isCompleted
                                                         ? 'text-slate-500'
                                                         : isActive
-                                                        ? 'text-[#3C0E0E] font-bold'
-                                                        : 'text-slate-400'
-                                                }`}
+                                                            ? 'text-[#3C0E0E] font-bold'
+                                                            : 'text-slate-400'
+                                                    }`}
                                             >
                                                 {step.status_label || (isCompleted ? 'Selesai' : isActive ? 'Sedang Dikerjakan' : 'Menunggu')}
                                             </span>
@@ -798,11 +796,11 @@ export default function ClientDashboard({
                             )}
 
                             {/* Dots */}
-                            <div className="flex justify-center items-center gap-1 pt-1">
+                            {/* <div className="flex justify-center items-center gap-1 pt-1">
                                 <div className="w-4 h-1 rounded-full bg-slate-400" />
                                 <div className="w-1 h-1 rounded-full bg-slate-200" />
                                 <div className="w-1 h-1 rounded-full bg-slate-200" />
-                            </div>
+                            </div> */}
                         </div>
 
                         <div className="pt-4 mt-auto">
@@ -861,9 +859,9 @@ export default function ClientDashboard({
                                         title="Klik untuk melihat foto"
                                     >
                                         <img
-                                             src={item.image}
-                                             alt="Portfolio thumbnail"
-                                             className="w-full h-full object-cover group-hover/pimg:scale-110 transition-transform duration-500"
+                                            src={item.image}
+                                            alt="Portfolio thumbnail"
+                                            className="w-full h-full object-cover group-hover/pimg:scale-110 transition-transform duration-500"
                                         />
                                         {item.isOverlay ? (
                                             <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center text-white text-center p-1 group-hover/pimg:bg-black/60 transition-colors">
@@ -980,11 +978,10 @@ export default function ClientDashboard({
                                                                 key={dotIdx}
                                                                 type="button"
                                                                 onClick={() => setCurrentTestimonialIndex(dotIdx)}
-                                                                className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                                                                    (currentTestimonialIndex % testimonialList.length) === dotIdx
+                                                                className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${(currentTestimonialIndex % testimonialList.length) === dotIdx
                                                                         ? 'w-4 bg-[#3C0E0E]'
                                                                         : 'w-1.5 bg-slate-200 hover:bg-slate-300'
-                                                                }`}
+                                                                    }`}
                                                                 aria-label={`Testimoni ${dotIdx + 1}`}
                                                             />
                                                         ))}
@@ -1029,54 +1026,54 @@ export default function ClientDashboard({
                             </div>
                         </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
-                        {packageRecommendations.map((pkg, idx) => (
-                            <div
-                                key={pkg.id || idx}
-                                className="rounded-xl border border-slate-200/80 overflow-hidden flex flex-col justify-between bg-white shadow-2xs hover:shadow-lg hover:shadow-[#3C0E0E]/10 hover:-translate-y-1.5 hover:border-[#3C0E0E]/30 transition-all duration-300 group"
-                            >
-                                <div className="aspect-[4/3] bg-slate-100 overflow-hidden">
-                                    <img
-                                        src={pkg.image}
-                                        alt={pkg.title || pkg.name}
-                                        className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
-                                    />
-                                </div>
-
-                                <div className="p-3 space-y-2 flex flex-col flex-1 justify-between">
-                                    <div className="space-y-1">
-                                        <h4 className="font-bold text-xs text-slate-900 leading-snug group-hover:text-[#3C0E0E] transition-colors">
-                                            {pkg.title || pkg.name}
-                                        </h4>
-                                        <p className="text-[10px] text-slate-500 leading-tight line-clamp-2">
-                                            {pkg.desc || pkg.description}
-                                        </p>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
+                            {packageRecommendations.map((pkg, idx) => (
+                                <div
+                                    key={pkg.id || idx}
+                                    className="rounded-xl border border-slate-200/80 overflow-hidden flex flex-col justify-between bg-white shadow-2xs hover:shadow-lg hover:shadow-[#3C0E0E]/10 hover:-translate-y-1.5 hover:border-[#3C0E0E]/30 transition-all duration-300 group"
+                                >
+                                    <div className="aspect-[4/3] bg-slate-100 overflow-hidden">
+                                        <img
+                                            src={pkg.image}
+                                            alt={pkg.title || pkg.name}
+                                            className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
+                                        />
                                     </div>
 
-                                    <div className="pt-2 space-y-2">
-                                        <p
-                                            style={{ color: COLOR_BURGUNDY }}
-                                            className="text-xs font-black"
-                                        >
-                                            {pkg.price || (pkg.base_price ? formatRupiah(pkg.base_price) : '')}
-                                        </p>
-                                        <a
-                                            href={generalWhatsAppUrl}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="w-full py-1.5 rounded-lg border border-[#E8DDD5] bg-[#F4EBE4] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-[10.5px] font-bold text-[#3C0E0E] shadow-2xs transition-all duration-300 flex items-center justify-center gap-1 cursor-pointer group/btn"
-                                        >
-                                            <MessageCircle className="w-3 h-3 text-[#3C0E0E] group-hover/btn:text-white transition-colors" />
-                                            <span>Hubungi Admin</span>
-                                        </a>
+                                    <div className="p-3 space-y-2 flex flex-col flex-1 justify-between">
+                                        <div className="space-y-1">
+                                            <h4 className="font-bold text-xs text-slate-900 leading-snug group-hover:text-[#3C0E0E] transition-colors">
+                                                {pkg.title || pkg.name}
+                                            </h4>
+                                            <p className="text-[10px] text-slate-500 leading-tight line-clamp-2">
+                                                {pkg.desc || pkg.description}
+                                            </p>
+                                        </div>
+
+                                        <div className="pt-2 space-y-2">
+                                            <p
+                                                style={{ color: COLOR_BURGUNDY }}
+                                                className="text-xs font-black"
+                                            >
+                                                {pkg.price || (pkg.base_price ? formatRupiah(pkg.base_price) : '')}
+                                            </p>
+                                            <a
+                                                href={generalWhatsAppUrl}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="w-full py-1.5 rounded-lg border border-[#E8DDD5] bg-[#F4EBE4] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-[10.5px] font-bold text-[#3C0E0E] shadow-2xs transition-all duration-300 flex items-center justify-center gap-1 cursor-pointer group/btn"
+                                            >
+                                                <MessageCircle className="w-3 h-3 text-[#3C0E0E] group-hover/btn:text-white transition-colors" />
+                                                <span>Hubungi Admin</span>
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
-                </section>
-            )}
-        </div>
+                            ))}
+                        </div>
+                    </section>
+                )}
+            </div>
 
             {/* ── MODAL: RINCIAN & RIWAYAT PEMBAYARAN ───────────────────────────── */}
             {isPaymentModalOpen && (
@@ -1174,13 +1171,12 @@ export default function ClientDashboard({
                                                                 {inv.invoice_number}
                                                             </span>
                                                             <span
-                                                                className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                                                                    isPaid
+                                                                className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${isPaid
                                                                         ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                                                                         : isPartial
-                                                                        ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                                                                        : 'bg-rose-100 text-rose-800 border border-rose-200'
-                                                                }`}
+                                                                            ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                                                            : 'bg-rose-100 text-rose-800 border border-rose-200'
+                                                                    }`}
                                                             >
                                                                 {isPaid ? 'Lunas' : isPartial ? 'Sebagian' : 'Belum Lunas'}
                                                             </span>
