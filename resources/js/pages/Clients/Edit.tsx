@@ -207,7 +207,7 @@ export default function ClientEdit({
 
     const steps = [
         { number: 1, title: 'Informasi Awal & Detail Klien', subtitle: 'Kategori & Data Khusus' },
-        { number: 2, title: 'Informasi Alamat & Kontak', subtitle: 'Domisili & WhatsApp' },
+        { number: 2, title: 'Informasi Alamat', subtitle: 'Alamat & WhatsApp' },
         { number: 3, title: 'Paket & Detail Acara', subtitle: 'Paket, Lokasi & Jadwal' },
         { number: 4, title: 'Ringkasan', subtitle: 'Review & Simpan' },
     ];
@@ -719,24 +719,28 @@ export default function ClientEdit({
                     return true;
 
                 case 'lainnya':
-                    if (!clientNameVal) {
+                    if (!clientNameVal && !(categoryData as any).client_name?.trim() && !(categoryData as any).name?.trim() && !(categoryData as any).pic_name?.trim()) {
                         toast.error('Nama Pemesan wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.event_date && !formData.event_date) {
+                        toast.error('Tanggal Event wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.event_time_range?.trim() && !formData.event_time?.trim()) {
+                        toast.error('Waktu Event wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.event_type?.trim()) {
+                        toast.error('Jenis Event wajib dipilih');
                         return false;
                     }
                     if (!categoryData.needs_type?.trim()) {
                         toast.error('Jenis Kebutuhan wajib dipilih');
                         return false;
                     }
-                    if (!categoryData.event_date && !formData.event_date) {
-                        toast.error('Tanggal Acara wajib diisi');
-                        return false;
-                    }
-                    if (!categoryData.location?.trim() && !formData.event_location?.trim()) {
-                        toast.error('Lokasi wajib diisi');
-                        return false;
-                    }
-                    if (!categoryData.needs_description?.trim()) {
-                        toast.error('Deskripsi Kebutuhan wajib diisi');
+                    if (!categoryData.location?.trim() && !(categoryData as any).event_location?.trim() && !formData.event_location?.trim()) {
+                        toast.error('Lokasi Event wajib diisi');
                         return false;
                     }
                     return true;
@@ -1515,15 +1519,15 @@ export default function ClientEdit({
                         </div>
                     )}
 
-                    {/* STEP 2: INFORMASI ALAMAT & KONTAK */}
+                    {/* STEP 2: INFORMASI ALAMAT */}
                     {currentStep === 2 && (
                         <div className="space-y-5 animate-in fade-in duration-200">
                             <div>
                                 <h3 className="text-base font-bold text-slate-900">
-                                    Informasi Alamat & Kontak
+                                    Informasi Alamat
                                 </h3>
                                 <p className="text-xs text-slate-500 mt-0.5">
-                                    Lengkapi informasi domisili wilayah dan pilih kontak utama untuk komunikasi.
+                                    Lengkapi informasi alamat wilayah dan pilih kontak utama untuk komunikasi.
                                 </p>
                             </div>
 
@@ -2277,7 +2281,7 @@ export default function ClientEdit({
                                             <MapPin className="w-4 h-4" />
                                         </div>
                                         <h4 className="text-sm font-bold text-slate-900">
-                                            Informasi Alamat &amp; Kontak Utama
+                                            Informasi Alamat
                                         </h4>
                                     </div>
                                     <button

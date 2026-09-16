@@ -887,24 +887,28 @@ export default function ClientIntakeForm({
                 return true;
 
             case 'lainnya':
-                if (!(categoryData as any).client_name?.trim() && !(categoryData as any).name?.trim() && !formData.name?.trim()) {
+                if (!(categoryData as any).client_name?.trim() && !(categoryData as any).name?.trim() && !(categoryData as any).pic_name?.trim() && !formData.name?.trim()) {
                     toast.error('Nama Pemesan wajib diisi');
+                    return false;
+                }
+                if (!categoryData.event_date && !formData.event_date) {
+                    toast.error('Tanggal Event wajib diisi');
+                    return false;
+                }
+                if (!categoryData.event_time_range?.trim() && !formData.event_time?.trim()) {
+                    toast.error('Waktu Event wajib diisi');
+                    return false;
+                }
+                if (!categoryData.event_type?.trim()) {
+                    toast.error('Jenis Event wajib dipilih');
                     return false;
                 }
                 if (!categoryData.needs_type?.trim()) {
                     toast.error('Jenis Kebutuhan wajib dipilih');
                     return false;
                 }
-                if (!categoryData.event_date && !formData.event_date) {
-                    toast.error('Tanggal Acara wajib diisi');
-                    return false;
-                }
-                if (!categoryData.location?.trim() && !formData.location?.trim()) {
-                    toast.error('Lokasi wajib diisi');
-                    return false;
-                }
-                if (!categoryData.needs_description?.trim()) {
-                    toast.error('Deskripsi Kebutuhan wajib diisi');
+                if (!categoryData.location?.trim() && !(categoryData as any).event_location?.trim() && !formData.location?.trim()) {
+                    toast.error('Lokasi Event wajib diisi');
                     return false;
                 }
                 return true;
@@ -1297,7 +1301,7 @@ export default function ClientIntakeForm({
 
     const steps = [
         { number: 1, title: 'Informasi Awal & Detail Klien' },
-        { number: 2, title: 'Informasi Alamat & Kontak' },
+        { number: 2, title: 'Informasi Alamat' },
         { number: 3, title: 'Paket & Detail Acara' },
         { number: 4, title: 'Ringkasan' },
     ];
@@ -1551,13 +1555,13 @@ export default function ClientIntakeForm({
                         )}
 
                         {/* ================================================================= */}
-                        {/* STEP 2: INFORMASI ALAMAT & KONTAK */}
+                        {/* STEP 2: INFORMASI ALAMAT */}
                         {/* ================================================================= */}
                         {currentStep === 2 && (
                             <div className="space-y-6 animate-in fade-in duration-200">
                                 <div>
                                     <h2 className="text-xl font-bold text-slate-900">
-                                        Informasi Alamat & Kontak
+                                        Informasi Alamat
                                     </h2>
                                     <p className="text-xs text-slate-500 mt-1">
                                         Lengkapi informasi alamat dan pilih kontak utama agar kami dapat menghubungi Anda dengan mudah.
@@ -2263,7 +2267,7 @@ export default function ClientIntakeForm({
                                         />
                                     </div>
 
-                                    {/* Card 2: Informasi Alamat & Kontak */}
+                                    {/* Card 2: Informasi Alamat */}
                                     <div className="border border-slate-200/80 rounded-2xl p-5 bg-white shadow-2xs space-y-3">
                                         <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                                             <div className="flex items-center gap-2">
@@ -2271,7 +2275,7 @@ export default function ClientIntakeForm({
                                                     <MapPin className="w-3.5 h-3.5" />
                                                 </div>
                                                 <h3 className="text-xs font-bold text-slate-900">
-                                                    Informasi Alamat & Kontak
+                                                    Informasi Alamat
                                                 </h3>
                                             </div>
                                             <button

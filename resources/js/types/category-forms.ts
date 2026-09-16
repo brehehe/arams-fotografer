@@ -37,12 +37,19 @@ export interface LainnyaCategoryData {
     client_name?: string;
     name?: string;
     contact_person?: string;
+    pic_name?: string;
+    event_date?: string;
+    event_time_range?: string;
+    event_time?: string;
+    event_type?: string;
+    needs_type?: string;
     needs_description?: string;
     location?: string;
-    needs_type?: string;
+    event_location?: string;
     needs_detail?: string;
     approach_type?: string;
     special_notes?: string;
+    additional_notes?: string;
 }
 
 export interface PeroranganCategoryData {
@@ -352,13 +359,20 @@ export const LAINNYA_NEEDS_TYPES = [
     'Foto Only',
     'Video Only',
     'Foto & Video',
-    'Lainnya',
 ];
 
 export const EVENT_NEEDS_TYPES = [
     'Foto Only',
     'Video Only',
     'Foto & Video',
+];
+
+export const LAINNYA_EVENT_TYPES = [
+    'Pengajian, Siraman, dan Midodareni',
+    'Pengajian',
+    'Siraman',
+    'Midodareni',
+    'Acara Tradisional / Adat',
     'Lainnya',
 ];
 
@@ -540,6 +554,7 @@ export const ENGAGEMENT_CONCEPTS = [
 ];
 
 export const EVENT_TYPES = [
+    'Pengajian, Siraman, dan Midodareni',
     'Konser Musik',
     'Festival / Bazaar',
     'Olahraga / Maraton',

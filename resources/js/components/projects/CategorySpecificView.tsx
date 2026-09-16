@@ -100,11 +100,11 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
         const hasVal = value !== null && value !== undefined && String(value).trim() !== '' && String(value).trim() !== 'null';
 
         return (
-            <div className="space-y-1">
-                <span className="text-[11px] font-semibold text-slate-400 block">{label}</span>
-                <div className={`text-xs flex items-center gap-1.5 break-words ${hasVal ? 'font-bold text-slate-800' : 'font-normal text-slate-400'}`}>
-                    {icon && <span className={`${hasVal ? 'text-slate-500' : 'text-slate-300'} shrink-0`}>{icon}</span>}
-                    <span>{hasVal ? String(value) : fallback}</span>
+            <div className="space-y-1 min-w-0">
+                <span className="text-[11px] font-semibold text-slate-400 block truncate" title={label}>{label}</span>
+                <div className={`text-xs flex items-start gap-1.5 min-w-0 ${hasVal ? 'font-bold text-slate-800' : 'font-normal text-slate-400'}`}>
+                    {icon && <span className={`${hasVal ? 'text-slate-500' : 'text-slate-300'} shrink-0 mt-0.5`}>{icon}</span>}
+                    <span className="break-words min-w-0 flex-1 leading-snug">{hasVal ? String(value) : fallback}</span>
                 </div>
             </div>
         );
@@ -159,22 +159,23 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
             {categoryKey === 'lainnya' && (
                 <>
                     {renderHeader(
-                        'Informasi Lainnya / Tradisional Event',
-                        'Detail permohonan spesifik & arahan teknis sesi',
+                        'Informasi Event Utama',
+                        'Jadwal waktu, jenis kebutuhan, dan lokasi pelaksanaan',
                         <Sparkles className="w-4 h-4 text-purple-600" />,
                         'bg-purple-50 text-purple-700'
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        {renderItem('Nama Pemesan', data.client_name || data.name || data.contact_person || (project?.client?.name && project.client.name !== '-' ? project.client.name : null))}
+                        {renderItem('Nama Pemesan', data.client_name || data.name || data.pic_name || data.contact_person || (project?.client?.name && project.client.name !== '-' ? project.client.name : null))}
+                        {renderItem('Tanggal Event', data.event_date ? formatDate(data.event_date) : null, <Calendar className="w-3.5 h-3.5" />)}
+                        {renderItem('Waktu Event', data.event_time_range || data.event_time, <Clock className="w-3.5 h-3.5" />)}
+                        {renderItem('Jenis Event', data.event_type)}
                         {renderItem('Jenis Kebutuhan', data.needs_type)}
-                        {renderItem('Tanggal Acara', data.event_date ? formatDate(data.event_date) : null, <Calendar className="w-3.5 h-3.5" />)}
-                        {renderItem('Waktu Acara', data.event_time_range || data.event_time, <Clock className="w-3.5 h-3.5" />)}
-                        {renderItem('Lokasi', data.location || data.event_location, <MapPin className="w-3.5 h-3.5" />)}
+                        {renderItem('Lokasi Event', data.event_location || data.location, <MapPin className="w-3.5 h-3.5" />)}
                     </div>
-                    {data.needs_description && (
+                    {(data.additional_notes || data.needs_description) && (
                         <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs space-y-1">
-                            <span className="font-semibold text-slate-600 block">Deskripsi / Catatan Kebutuhan:</span>
-                            <p className="text-slate-800 whitespace-pre-line">{data.needs_description}</p>
+                            <span className="font-semibold text-slate-600 block">Catatan Tambahan:</span>
+                            <p className="text-slate-800 whitespace-pre-line">{data.additional_notes || data.needs_description}</p>
                         </div>
                     )}
                 </>
@@ -433,7 +434,7 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
                         {renderItem('Jenis Acara', data.event_type)}
                         {renderItem('Skala Acara', data.event_scale)}
                         {renderItem('Tujuan Dokumentasi', data.documentation_purpose)}
-                        {renderItem('PIC / Contact Person', data.pic_name, <User className="w-3.5 h-3.5" />)}
+                        {renderItem('Nama Pemesan', data.pic_name, <User className="w-3.5 h-3.5" />)}
                         {renderItem('No. Telepon PIC', data.pic_phone, <Phone className="w-3.5 h-3.5" />)}
                         {renderItem('Email PIC', data.pic_email, <Mail className="w-3.5 h-3.5" />)}
                     </div>
@@ -573,7 +574,7 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
                         {renderItem('Jenis Komunitas', data.community_type)}
                         {renderItem('Tahun Berdiri', data.established_year)}
                         {renderItem('Jumlah Anggota', data.members_count ? `${data.members_count} Anggota` : null)}
-                        {renderItem('Nama PIC / Penanggung Jawab', data.pic_name, <User className="w-3.5 h-3.5" />)}
+                        {renderItem('Nama Pemesan', data.pic_name, <User className="w-3.5 h-3.5" />)}
                         {renderItem('No. Telepon PIC', data.pic_phone, <Phone className="w-3.5 h-3.5" />)}
                         {renderItem('Email Komunitas', data.pic_email, <Mail className="w-3.5 h-3.5" />)}
                         {renderItem('Jenis Kegiatan', data.activity_type)}

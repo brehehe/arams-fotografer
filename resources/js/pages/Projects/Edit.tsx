@@ -802,6 +802,7 @@ export default function ProjectsEdit({
     const shootingDurationOptions: SelectSearchOption[] = [
         { value: '4 Jam', label: '4 Jam', subtitle: 'Liputan Sesi Singkat' },
         { value: '8 Jam', label: '8 Jam', subtitle: 'Setengah Hari' },
+        { value: '6 Jam', label: '6 Jam', subtitle: 'Setengah Hari' },
         { value: '12 Jam', label: '12 Jam', subtitle: 'Standar Hari H' },
         { value: 'Full Day', label: 'Full Day', subtitle: 'Liputan Penuh Seharian' },
     ];

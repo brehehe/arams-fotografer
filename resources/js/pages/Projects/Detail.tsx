@@ -781,13 +781,13 @@ export default function ProjectDetail({
                 </div>
 
                 {/* Main Header with Title & Action Buttons */}
-                <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
+                <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
                     <div className="space-y-2.5 min-w-0 flex-1">
                         <div className="flex items-center gap-2.5 flex-wrap">
                             <span className="px-2.5 py-0.5 rounded-lg text-xs font-mono font-bold bg-slate-100 text-slate-700 border border-slate-200 shrink-0">
                                 {project?.project_number || 'PRJ-2609-0000'}
                             </span>
-                            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight break-words min-w-0">
                                 {project?.name || 'Nama Project'}
                             </h1>
                             <div className="inline-flex items-center gap-1.5 shrink-0 flex-wrap">
@@ -825,13 +825,15 @@ export default function ProjectDetail({
                             <span className="text-slate-300 hidden sm:inline">•</span>
                             <div className="flex items-center gap-1.5 min-w-0">
                                 <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                                <span className="truncate max-w-md">{project?.location || 'Lokasi Acara Belum Ditentukan'}</span>
+                                <span className="truncate max-w-[260px] sm:max-w-md" title={project?.location || 'Lokasi Acara Belum Ditentukan'}>
+                                    {project?.location || 'Lokasi Acara Belum Ditentukan'}
+                                </span>
                             </div>
                         </div>
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap shrink-0">
+                    <div className="flex items-center gap-2 flex-wrap shrink-0">
                         <Link
                             href={`/projects/${project?.id}/edit`}
                             className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 rounded-xl text-xs font-bold shadow-2xs transition-all hover:scale-[1.02] whitespace-nowrap shrink-0"
@@ -1031,7 +1033,7 @@ export default function ProjectDetail({
             {activeTab === 'overview' && (
                 <div className="space-y-6">
                     {/* ── ROW 1: DESKRIPSI PROJECT, STATUS PROJECT, PIC & TIM PRODUKSI ─ */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 items-stretch">
                         {/* 1. Deskripsi Project */}
                         <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between h-full min-w-0 overflow-hidden">
                             <div className="space-y-2.5 min-w-0">
@@ -1113,7 +1115,7 @@ export default function ProjectDetail({
                         </div>
 
                         {/* 3. PIC & Tim Produksi Assigned */}
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between h-full">
+                        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between h-full md:col-span-2 xl:col-span-1 min-w-0">
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
@@ -1216,8 +1218,8 @@ export default function ProjectDetail({
                             )}
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
-                            <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/70 space-y-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
+                            <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/70 space-y-2 min-w-0">
                                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                                     <User className="w-3.5 h-3.5 text-slate-400" /> Identitas Pemesan
                                 </span>
@@ -1252,7 +1254,7 @@ export default function ProjectDetail({
                                 </div>
                             </div>
 
-                            <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/70 space-y-2">
+                            <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/70 space-y-2 sm:col-span-2 lg:col-span-1 min-w-0">
                                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                                     <MapPin className="w-3.5 h-3.5 text-slate-400" /> Alamat / Lokasi
                                 </span>
@@ -1277,7 +1279,7 @@ export default function ProjectDetail({
                     </div>
 
                     {/* ── ROW 3: 3 FINANCIAL CARDS ─────────────────────────────────────── */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 items-stretch">
                         {/* 1. Informasi Keuangan & Status Pembayaran */}
                         <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between h-full">
                             <div className="space-y-3">
@@ -1363,7 +1365,7 @@ export default function ProjectDetail({
                         </div>
 
                         {/* 4. Informasi Pembayaran & Rekening */}
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between h-full">
+                        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between h-full md:col-span-2 xl:col-span-1 min-w-0">
                             <div className="space-y-2.5 text-xs">
                                 <div className="flex items-center gap-2">
                                     <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
@@ -1407,7 +1409,7 @@ export default function ProjectDetail({
                                     ? 'bg-emerald-50/90 border-emerald-200 text-emerald-950'
                                     : 'bg-amber-50/90 border-amber-200 text-amber-950'
                             }`}>
-                                <div className="flex items-center justify-between gap-2">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                                     <div className="flex items-center gap-2 min-w-0">
                                         <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
                                             !nextUnpaidInvoice ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
@@ -1451,9 +1453,9 @@ export default function ProjectDetail({
                     </div>
 
                     {/* ── ROW 3: WORKFLOW & SERVICES (BALANCED 2-COLUMN DASHBOARD) ─── */}
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-stretch">
                         {/* ── LEFT COLUMN (Span 6): Layanan & Deliverables + Riwayat Transaksi ─ */}
-                        <div className="lg:col-span-6 flex flex-col gap-5">
+                        <div className="xl:col-span-6 flex flex-col gap-5 min-w-0">
                             {/* Card 1: Layanan & Deliverables Paket */}
                             <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all space-y-4 flex-1 flex flex-col justify-between">
                                 <div className="space-y-3">
@@ -1476,7 +1478,7 @@ export default function ProjectDetail({
                                         </span>
                                     </div>
 
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                                         {/* Layanan Termasuk */}
                                         <div className="space-y-2">
                                             <span className="text-[10px] font-bold uppercase text-slate-400 block tracking-wider">
@@ -1737,7 +1739,7 @@ export default function ProjectDetail({
                         </div>
 
                         {/* ── RIGHT COLUMN (Span 6): Alur Kerja & Tahapan Operasional Tim ─ */}
-                        <div className="lg:col-span-6 flex flex-col">
+                        <div className="xl:col-span-6 flex flex-col min-w-0">
                             <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all space-y-4 flex-1 flex flex-col justify-between h-full">
                                 <div className="space-y-3">
                                     <div className="border-b border-slate-100 pb-3 flex items-center justify-between gap-2 flex-wrap">
@@ -1915,7 +1917,7 @@ export default function ProjectDetail({
                         {timelineSteps.map((step) => (
                             <div
                                 key={step.id}
-                                className={`p-4 rounded-xl border flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap transition-all ${
+                                className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all ${
                                     step.done
                                         ? 'bg-emerald-50/40 border-emerald-200'
                                         : step.current
@@ -1953,7 +1955,7 @@ export default function ProjectDetail({
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+                                <div className="flex items-center gap-3 shrink-0 self-start sm:self-center pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 w-full sm:w-auto justify-between sm:justify-end">
                                     <span className={`text-xs font-bold shrink-0 ${step.statusColor}`}>{step.status}</span>
                                     {step.current && (
                                         <button
