@@ -283,14 +283,14 @@ class DatabaseSeeder extends Seeder
         $categoriesData = [
             ['name' => 'Perorangan', 'slug' => 'perorangan', 'description' => 'Project untuk individu seperti personal photoshoot, profil, wisuda, dll.', 'icon' => 'User', 'color' => '#8B5CF6', 'sort_order' => 1],
             ['name' => 'Birthday', 'slug' => 'birthday', 'description' => 'Project dokumentasi ulang tahun anak maupun dewasa.', 'icon' => 'Cake', 'color' => '#EC4899', 'sort_order' => 2],
-            ['name' => 'Event', 'slug' => 'event', 'description' => 'Event seperti seminar, gathering, opening, konser, dan acara lainnya.', 'icon' => 'Calendar', 'color' => '#F59E0B', 'sort_order' => 3],
+            ['name' => 'Event (Publik, Festival & Seminar)', 'slug' => 'event', 'description' => 'Dokumentasi festival musik, konser panggung, seminar perusahaan, workshop, pameran seni, dan acara publik dinamis.', 'icon' => 'Calendar', 'color' => '#F59E0B', 'sort_order' => 3],
             ['name' => 'Produk / Brand / Commercial', 'slug' => 'commercial', 'description' => 'Project foto produk, brand campaign, katalog, iklan, dan keperluan komersial.', 'icon' => 'Tag', 'color' => '#3B82F6', 'sort_order' => 4],
             ['name' => 'Corporate', 'slug' => 'corporate', 'description' => 'Project untuk perusahaan seperti profile company, annual report, meeting, dll.', 'icon' => 'Building2', 'color' => '#10B981', 'sort_order' => 5],
             ['name' => 'Wedding', 'slug' => 'wedding', 'description' => 'Dokumentasi pernikahan adat maupun modern secara komprehensif.', 'icon' => 'Heart', 'color' => '#3B82F6', 'sort_order' => 6],
             ['name' => 'Prewedding', 'slug' => 'prewedding', 'description' => 'Sesi foto prewedding konsep indoor studio maupun outdoor trip.', 'icon' => 'Camera', 'color' => '#6366F1', 'sort_order' => 7],
             ['name' => 'Newborn', 'slug' => 'newborn', 'description' => 'Sesi foto bayi baru lahir dengan perlengkapan aman & steril.', 'icon' => 'Baby', 'color' => '#F43F5E', 'sort_order' => 8],
             ['name' => 'Maternity', 'slug' => 'maternity', 'description' => 'Sesi foto kehamilan ibu dan keluarga dengan konsep hangat.', 'icon' => 'Smile', 'color' => '#A855F7', 'sort_order' => 9],
-            ['name' => 'Lainnya / Tradisional Event (Pengajian, Siraman, dan Midodareni)', 'slug' => 'lainnya', 'description' => 'Dokumentasi rangkaian acara tradisional (Pengajian, Siraman, Midodareni) atau kebutuhan dokumentasi khusus lainnya.', 'icon' => 'MoreHorizontal', 'color' => '#64748B', 'sort_order' => 10],
+            ['name' => 'Lainnya / Tradisional Event (Pengajian, Siraman, dan Midodareni)', 'slug' => 'lainnya', 'description' => 'Dokumentasi prosesi sakral keluarga & adat tradisional (Pengajian, Siraman, Midodareni) atau kebutuhan dokumentasi khusus lainnya.', 'icon' => 'Sparkles', 'color' => '#8B5CF6', 'sort_order' => 10],
         ];
 
         $categories = [];

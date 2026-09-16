@@ -323,12 +323,19 @@ export function resolveCategoryKey(category?: {
         return 'komunitas';
     }
 
-    if (candidate.includes('event') || candidate.includes('acara')) {
-        return 'event';
+    if (
+        candidate.includes('lainnya') ||
+        candidate.includes('pengajian') ||
+        candidate.includes('siraman') ||
+        candidate.includes('midodareni') ||
+        candidate.includes('tradisional') ||
+        candidate.includes('khusus')
+    ) {
+        return 'lainnya';
     }
 
-    if (candidate.includes('lainnya') || candidate.includes('khusus')) {
-        return 'lainnya';
+    if (candidate.includes('event') || candidate.includes('acara') || candidate.includes('konser') || candidate.includes('festival')) {
+        return 'event';
     }
 
     return 'standard';
@@ -554,14 +561,14 @@ export const ENGAGEMENT_CONCEPTS = [
 ];
 
 export const EVENT_TYPES = [
-    'Pengajian, Siraman, dan Midodareni',
-    'Konser Musik',
-    'Festival / Bazaar',
-    'Olahraga / Maraton',
-    'Seminar / Workshop',
-    'Pameran Seni',
-    'Awarding Night',
-    'Lainnya',
+    'Konser Musik / Live Performance',
+    'Festival / Bazaar / Expo',
+    'Seminar / Konferensi / Workshop',
+    'Olahraga / Turnamen / Maraton',
+    'Pameran Seni / Exhibition',
+    'Awarding Night / Gala Dinner',
+    'Opening Ceremony / Launching',
+    'Acara Publik Lainnya',
 ];
 
 export const EVENT_SCALES = [

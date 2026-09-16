@@ -299,10 +299,10 @@ return;
                         <span>Dokumentasi rangkaian acara tradisional (Pengajian, Siraman, Midodareni) atau kebutuhan event khusus lainnya.</span>
                     </div>
 
-                    {/* Informasi Event Utama */}
+                    {/* Informasi Event Tradisional */}
                     <div className="p-4 bg-white border border-slate-200/80 rounded-xl space-y-3">
-                        <span className="text-[11px] font-extrabold text-slate-900 uppercase tracking-wider block">
-                            Informasi Event Utama
+                        <span className="text-[11px] font-extrabold text-purple-900 uppercase tracking-wider block">
+                            Informasi Tradisional Event (Pengajian, Siraman, Midodareni)
                         </span>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="sm:col-span-2">
@@ -1693,14 +1693,25 @@ return;
                         <span>Dokumentasi event, festival, seminar, konser, dan perhelatan publik dinamis.</span>
                     </div>
 
-                    {/* Informasi Utama Event */}
+                    {/* Informasi Event Publik */}
                     <div className="p-4 bg-white border border-slate-200/80 rounded-xl space-y-3">
-                        <span className="text-[11px] font-extrabold text-slate-900 uppercase tracking-wider block">
-                            Informasi Event Utama
+                        <span className="text-[11px] font-extrabold text-indigo-900 uppercase tracking-wider block">
+                            Informasi Event Publik / Panggung
                         </span>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="sm:col-span-2">
-                                {renderLabel('Nama Pemesan', true)}
+                                {renderLabel('Nama Event / Acara', true)}
+                                <Input
+                                    value={data.event_name || ''}
+                                    onChange={(e) => onChange('event_name', e.target.value)}
+                                    placeholder="Contoh: Soundrenaline Fest 2026 / National Tech Seminar"
+                                    className="h-[38px] text-xs bg-white"
+                                />
+                                {errors['event_name'] && <p className="text-[11px] text-rose-500 mt-1">{errors['event_name']}</p>}
+                            </div>
+
+                            <div className="sm:col-span-2">
+                                {renderLabel('Nama Penanggung Jawab / Pemesan', true)}
                                 <Input
                                     value={data.pic_name || data.client_name || data.name || ''}
                                     onChange={(e) => {
@@ -1708,7 +1719,7 @@ return;
                                         onChange('client_name', e.target.value);
                                         onChange('name', e.target.value);
                                     }}
-                                    placeholder="Nama pemesan event"
+                                    placeholder="Nama pemesan / PIC event"
                                     className="h-[38px] text-xs bg-white"
                                 />
                                 {(errors['pic_name'] || errors['client_name'] || errors['name']) && (

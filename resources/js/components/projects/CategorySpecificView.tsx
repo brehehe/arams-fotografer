@@ -159,8 +159,8 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
             {categoryKey === 'lainnya' && (
                 <>
                     {renderHeader(
-                        'Informasi Event Utama',
-                        'Jadwal waktu, jenis kebutuhan, dan lokasi pelaksanaan',
+                        'Informasi Tradisional Event (Pengajian, Siraman, Midodareni)',
+                        'Rangkaian prosesi adat sakral, jadwal waktu, jenis kebutuhan, dan lokasi',
                         <Sparkles className="w-4 h-4 text-purple-600" />,
                         'bg-purple-50 text-purple-700'
                     )}
@@ -485,18 +485,20 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
             {categoryKey === 'event' && (
                 <>
                     {renderHeader(
-                        'Informasi Event Utama',
-                        'Jadwal waktu, jenis kebutuhan, dan lokasi pelaksanaan',
+                        'Informasi Event Publik / Panggung',
+                        'Jadwal waktu, jenis kebutuhan, nama acara, dan lokasi venue',
                         <Sparkles className="w-4 h-4 text-indigo-600" />,
                         'bg-indigo-50 text-indigo-700'
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        {renderItem('Nama Pemesan', data.pic_name || data.client_name || data.name || (project?.client?.name && project.client.name !== '-' ? project.client.name : null))}
+                        {renderItem('Nama Event / Acara', data.event_name)}
+                        {renderItem('Nama Penanggung Jawab / Pemesan', data.pic_name || data.client_name || data.name || (project?.client?.name && project.client.name !== '-' ? project.client.name : null))}
                         {renderItem('Tanggal Event', data.event_date ? formatDate(data.event_date) : null, <Calendar className="w-3.5 h-3.5" />)}
                         {renderItem('Waktu Event', data.event_time_range || data.event_time, <Clock className="w-3.5 h-3.5" />)}
                         {renderItem('Jenis Event', data.event_type)}
                         {renderItem('Jenis Kebutuhan', data.needs_type)}
                         {renderItem('Lokasi Event', data.event_location || data.location, <MapPin className="w-3.5 h-3.5" />)}
+                        {renderItem('Estimasi Pengunjung / Tamu', data.estimated_guests ? `${data.estimated_guests} Tamu` : null)}
                     </div>
                     {data.additional_notes && (
                         <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs">
