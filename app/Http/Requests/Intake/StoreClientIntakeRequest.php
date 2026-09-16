@@ -55,6 +55,8 @@ class StoreClientIntakeRequest extends FormRequest
             'address' => 'nullable|string',
             'category_id' => 'nullable',
             'package_id' => 'nullable',
+            'custom_price' => 'nullable|numeric|min:0',
+            'needs_type' => 'nullable|string|max:100',
             'event_date' => 'nullable|date',
             'event_time' => 'nullable|string|max:100',
             'location' => 'nullable|string|max:255',

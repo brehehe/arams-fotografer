@@ -1,20 +1,44 @@
 import * as React from "react"
-import { LucideIcon } from "lucide-react"
+import { LucideIcon, ArrowRight } from "lucide-react"
+import { Link } from "@inertiajs/react"
 import { cn } from "@/lib/utils"
+import { formatCurrencyShort, formatRupiah } from "@/lib/formatters"
 
-export type StatCardColor = 'purple' | 'green' | 'amber' | 'blue' | 'rose' | 'slate' | 'teal'
+export type StatCardColor =
+  | 'purple'
+  | 'green'
+  | 'emerald'
+  | 'amber'
+  | 'blue'
+  | 'rose'
+  | 'slate'
+  | 'teal'
+  | 'indigo'
+  | 'orange'
+  | 'cyan'
 
 export interface StatCardProps extends React.HTMLAttributes<HTMLDivElement> {
   title: string
   value: string | number
-  subtitle?: string
+  subtitle?: React.ReactNode
   icon: LucideIcon | React.ReactNode
   color?: StatCardColor
   tooltip?: string
+  isCurrency?: boolean
+  formatCompact?: boolean
+  valueClassName?: string
+  suffix?: React.ReactNode
   trend?: {
     value: string
     isPositive?: boolean
   }
+  layout?: 'horizontal' | 'vertical'
+  action?: {
+    label: string
+    href?: string
+    onClick?: () => void
+  }
+  footer?: React.ReactNode
 }
 
 const colorStyles: Record<
@@ -22,7 +46,6 @@ const colorStyles: Record<
   {
     iconBg: string
     iconColor: string
-    badgeBg?: string
   }
 > = {
   purple: {
@@ -30,6 +53,10 @@ const colorStyles: Record<
     iconColor: "text-purple-600",
   },
   green: {
+    iconBg: "bg-emerald-50 text-emerald-600 border border-emerald-100",
+    iconColor: "text-emerald-600",
+  },
+  emerald: {
     iconBg: "bg-emerald-50 text-emerald-600 border border-emerald-100",
     iconColor: "text-emerald-600",
   },
@@ -53,6 +80,18 @@ const colorStyles: Record<
     iconBg: "bg-slate-50 text-slate-600 border border-slate-200",
     iconColor: "text-slate-600",
   },
+  indigo: {
+    iconBg: "bg-indigo-50 text-indigo-600 border border-indigo-100",
+    iconColor: "text-indigo-600",
+  },
+  orange: {
+    iconBg: "bg-orange-50 text-orange-600 border border-orange-100",
+    iconColor: "text-orange-600",
+  },
+  cyan: {
+    iconBg: "bg-cyan-50 text-cyan-600 border border-cyan-100",
+    iconColor: "text-cyan-600",
+  },
 }
 
 export function StatCard({
@@ -62,7 +101,14 @@ export function StatCard({
   icon,
   color = "blue",
   tooltip,
+  isCurrency,
+  formatCompact = true,
+  valueClassName,
+  suffix,
   trend,
+  layout,
+  action,
+  footer,
   className,
   ...props
 }: StatCardProps) {
@@ -73,51 +119,185 @@ export function StatCard({
       return icon
     }
     const IconComponent = icon as LucideIcon
-    return <IconComponent className="w-4 h-4" />
+    return <IconComponent className="w-5 h-5 sm:w-5.5 sm:h-5.5" />
   }
 
-  const valueStr = String(value)
-  const isLongValue = valueStr.length > 8
+  // Currency detection and compact formatting
+  let isCurrencyValue = Boolean(isCurrency)
+  let fullValueStr = ""
+  let compactValueStr = ""
+
+  if (typeof value === "number") {
+    if (isCurrency) {
+      fullValueStr = formatRupiah(value)
+      compactValueStr = formatCurrencyShort(value)
+    } else {
+      fullValueStr = String(value)
+      compactValueStr = String(value)
+    }
+  } else if (typeof value === "string") {
+    const trimmed = value.trim()
+    if (isCurrency || /^(rp|idr)/i.test(trimmed)) {
+      isCurrencyValue = true
+      const cleaned = trimmed.replace(/[^\d-]/g, "")
+      const parsed = Number(cleaned)
+      if (!isNaN(parsed) && cleaned.length > 0) {
+        fullValueStr = formatRupiah(parsed)
+        compactValueStr = formatCurrencyShort(parsed)
+      } else {
+        fullValueStr = trimmed
+        compactValueStr = trimmed
+      }
+    } else {
+      fullValueStr = trimmed
+      compactValueStr = trimmed
+    }
+  }
+
+  const shouldCompact = isCurrencyValue && formatCompact !== false
+  const displayValue = shouldCompact ? compactValueStr : (isCurrencyValue ? fullValueStr : value)
+  const fullTooltip = tooltip || (isCurrencyValue ? fullValueStr : (typeof value === "string" ? value : undefined))
+
+  const isVertical = layout === "vertical" || Boolean(action) || Boolean(footer)
+
+  // Sizing font nominal: agak dikecilkan agar proporsional dan tidak terpotong
+  const currencyFontClass = isCurrencyValue
+    ? String(displayValue).length > 10
+      ? "text-sm sm:text-base"
+      : "text-base sm:text-lg"
+    : undefined
+
+  if (isVertical) {
+    return (
+      <div
+        className={cn(
+          "bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-xs flex flex-col justify-between transition-all duration-200 hover:shadow-sm hover:border-slate-300/80 min-w-0 group cursor-default",
+          className
+        )}
+        title={fullTooltip}
+        {...props}
+      >
+        <div>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block truncate leading-tight">
+                {title}
+              </span>
+              <div className="flex items-baseline gap-1.5 mt-1.5 min-w-0">
+                <span
+                  className={cn(
+                    "font-extrabold tracking-tight text-slate-900 block truncate font-sans",
+                    isCurrencyValue
+                      ? currencyFontClass
+                      : "text-xl sm:text-xl",
+                    valueClassName
+                  )}
+                  title={fullTooltip}
+                >
+                  {displayValue}
+                </span>
+                {suffix && <span className="shrink-0">{suffix}</span>}
+                {trend && (
+                  <span
+                    className={cn(
+                      "text-[9px] font-semibold px-1.5 py-0.5 rounded-md shrink-0",
+                      trend.isPositive
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "bg-rose-50 text-rose-700"
+                    )}
+                  >
+                    {trend.value}
+                  </span>
+                )}
+              </div>
+              {subtitle && (
+                <span className="text-[11px] text-slate-400 font-medium block truncate mt-1 leading-tight">
+                  {subtitle}
+                </span>
+              )}
+            </div>
+            {/* <div
+              className={cn(
+                "w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform",
+                styles.iconBg
+              )}
+            >
+              {renderIcon()}
+            </div> */}
+          </div>
+        </div>
+
+        {(action || footer) && (
+          <div className="mt-3.5 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+            {action && (
+              action.href ? (
+                <Link
+                  href={action.href}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 hover:text-primary-accent transition-colors"
+                >
+                  <span>{action.label}</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={action.onClick}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 hover:text-primary-accent transition-colors cursor-pointer"
+                >
+                  <span>{action.label}</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              )
+            )}
+            {footer}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div
       className={cn(
-        "bg-white rounded-2xl p-3 sm:p-3.5 border border-slate-200/80 shadow-2xs flex items-center gap-2.5 sm:gap-3 transition-all duration-200 hover:shadow-sm hover:border-slate-300/80 min-w-0 group cursor-default",
+        "bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 shadow-xs flex items-center gap-3.5 sm:gap-4 transition-all duration-200 hover:shadow-sm hover:border-slate-300/80 min-w-0 group cursor-default",
         className
       )}
-      title={tooltip || (typeof value === "string" ? value : undefined)}
+      title={fullTooltip}
       {...props}
     >
       {/* Icon Container */}
-      <div
+      {/* <div
         className={cn(
-          "w-9 h-9 sm:w-9.5 sm:h-9.5 rounded-xl flex items-center justify-center shrink-0 shadow-2xs font-bold text-xs group-hover:scale-105 transition-transform",
+          "w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform",
           styles.iconBg
         )}
       >
         {renderIcon()}
-      </div>
+      </div> */}
 
       {/* Stats Content */}
       <div className="min-w-0 flex-1 overflow-hidden">
-        <span className="text-[9px] sm:text-[9.5px] font-bold uppercase tracking-wider text-slate-800 stat-card-title block whitespace-nowrap leading-tight truncate">
+        <span className="text-xs font-semibold text-slate-500 block truncate leading-tight">
           {title}
         </span>
-        <div className="flex items-baseline gap-1 mt-0.5">
+        <div className="flex items-baseline gap-1.5 mt-1 min-w-0">
           <span
             className={cn(
-              "font-extrabold font-mono text-slate-900 tracking-tight block whitespace-nowrap",
-              isLongValue
-                ? "text-[13px] sm:text-[14px]"
-                : "text-[15px] sm:text-base"
+              "font-extrabold tracking-tight text-slate-900 block truncate font-sans",
+              isCurrencyValue
+                ? currencyFontClass
+                : "text-xl sm:text-2xl",
+              valueClassName
             )}
+            title={fullTooltip}
           >
-            {value}
+            {displayValue}
           </span>
+          {suffix && <span className="shrink-0">{suffix}</span>}
           {trend && (
             <span
               className={cn(
-                "text-[8.5px] font-semibold px-1.5 py-0.5 rounded-md shrink-0",
+                "text-[9px] font-semibold px-1.5 py-0.5 rounded-md shrink-0",
                 trend.isPositive
                   ? "bg-emerald-50 text-emerald-700"
                   : "bg-rose-50 text-rose-700"
@@ -128,7 +308,7 @@ export function StatCard({
           )}
         </div>
         {subtitle && (
-          <span className="text-[9.5px] sm:text-[10px] text-slate-500 font-medium block truncate mt-0.5 leading-tight">
+          <span className="text-[11px] text-slate-400 font-medium block truncate mt-1 leading-tight">
             {subtitle}
           </span>
         )}

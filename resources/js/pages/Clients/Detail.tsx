@@ -74,6 +74,7 @@ import {
     Upload,
 } from 'lucide-react';
 import { formatRupiah, formatDate, formatCurrencyShort } from '@/lib/formatters';
+import { FormattedNumberInput } from '@/components/ui/formatted-number-input';
 import { ALL_WORKFLOWS, resolveWorkflow, type WorkflowDefinition } from '@/lib/workflows';
 import {
     Modal,
@@ -1084,23 +1085,23 @@ export default function ClientDetail({
 
                 case 'lainnya':
                     if (!clientNameVal) {
-                        toast.error('Nama Lengkap Pemesan wajib diisi');
-                        return false;
-                    }
-                    if (!editCategoryData.needs_description?.trim()) {
-                        toast.error('Deskripsi Kebutuhan wajib diisi');
-                        return false;
-                    }
-                    if (!editCategoryData.location?.trim() && !editFormData.event_location?.trim()) {
-                        toast.error('Lokasi wajib diisi');
+                        toast.error('Nama Pemesan wajib diisi');
                         return false;
                     }
                     if (!editCategoryData.needs_type?.trim()) {
                         toast.error('Jenis Kebutuhan wajib dipilih');
                         return false;
                     }
-                    if (!editCategoryData.needs_detail?.trim()) {
-                        toast.error('Detail Kebutuhan wajib diisi');
+                    if (!editCategoryData.event_date && !editFormData.event_date) {
+                        toast.error('Tanggal Acara wajib diisi');
+                        return false;
+                    }
+                    if (!editCategoryData.location?.trim() && !editFormData.event_location?.trim()) {
+                        toast.error('Lokasi wajib diisi');
+                        return false;
+                    }
+                    if (!editCategoryData.needs_description?.trim()) {
+                        toast.error('Deskripsi Kebutuhan wajib diisi');
                         return false;
                     }
                     return true;
@@ -1326,8 +1327,8 @@ export default function ClientDetail({
                     return true;
 
                 case 'event':
-                    if (!clientNameVal && !(editCategoryData as any).pic_name?.trim()) {
-                        toast.error('Nama Penanggung Jawab / PIC wajib diisi');
+                    if (!clientNameVal && !(editCategoryData as any).pic_name?.trim() && !(editCategoryData as any).client_name?.trim()) {
+                        toast.error('Nama Pemesan wajib diisi');
                         return false;
                     }
                     if (!editCategoryData.event_date && !editFormData.event_date) {
@@ -1342,8 +1343,8 @@ export default function ClientDetail({
                         toast.error('Jenis Event wajib dipilih');
                         return false;
                     }
-                    if (!editCategoryData.event_scale?.trim()) {
-                        toast.error('Skala Event wajib dipilih');
+                    if (!editCategoryData.needs_type?.trim()) {
+                        toast.error('Jenis Kebutuhan wajib dipilih');
                         return false;
                     }
                     if (!editCategoryData.event_location?.trim() && !editFormData.event_location?.trim()) {
@@ -2439,6 +2440,29 @@ export default function ClientDetail({
         );
     };
 
+    const handleRevertStage = (stageTitle: string, stageIndex: number) => {
+        const rawProject = client.projects?.find((p: any) => String(p.id) === String(selectedProject?.id));
+        if (!rawProject?.id) { toast.error('Project tidak ditemukan'); return; }
+        if (!confirm(`Kembalikan status project ke tahap "${stageTitle}"? Link file hasil tahap ini atau setelahnya akan otomatis dihapus.`)) return;
+
+        setUpdatingStage(true);
+        router.patch(
+            `/projects/${rawProject.id}/status`,
+            {
+                workflow_step: stageTitle,
+                status: 'in_progress',
+                progress: Math.min(100, Math.max(0, Math.round(((stageIndex) / (currentStages.length || 1)) * 100))),
+                revert_step_name: stageTitle,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => toast.success(`Status berhasil dikembalikan ke tahap "${stageTitle}"!`),
+                onError: () => toast.error('Gagal mengembalikan status tahap.'),
+                onFinish: () => setUpdatingStage(false),
+            }
+        );
+    };
+
     // Quick Update Project Overall Status — Gambar 2
     const handleUpdateProjectStatus = (newStatus: string) => {
         const rawProject = client.projects?.find((p: any) => String(p.id) === String(selectedProject?.id));
@@ -2701,8 +2725,9 @@ export default function ClientDetail({
                         setIsAddDriveLinkModalOpen(false);
                         toast.success('Link Google Drive berhasil disimpan ke database!');
                     },
-                    onError: () => {
-                        toast.error('Gagal menyimpan link. Periksa koneksi atau format URL.');
+                    onError: (errs) => {
+                        const msg = Object.values(errs || {})[0] || 'Gagal menyimpan link. Periksa koneksi atau format URL.';
+                        toast.error(String(msg));
                     },
                     onFinish: () => setSavingDriveLink(false),
                 }
@@ -3267,20 +3292,42 @@ export default function ClientDetail({
                                     form_type: resolveCategoryKey(client.category || { slug: client.client_type, form_type: client.client_type }),
                                 };
 
-                                const syntheticProject = {
-                                    category: clientCategory,
-                                    category_data: {
-                                        ...(client.category_data || {}),
-                                        client_name: (client.category_data as any)?.client_name || (client.category_data as any)?.name || (client.name && client.name !== '-' ? client.name : ''),
-                                        name: (client.category_data as any)?.name || (client.category_data as any)?.client_name || (client.name && client.name !== '-' ? client.name : ''),
-                                        nickname: (client.category_data as any)?.nickname || (client as any).nickname || '',
-                                    },
+                                const rawProjectCandidate = selectedRawProject || client.projects?.[0];
+                                const effectiveCategory = rawProjectCandidate?.category || projectCategory || clientCategory;
+
+                                const activeProjectForView = {
+                                    ...(rawProjectCandidate || {}),
+                                    category: effectiveCategory,
                                     client: {
                                         ...client,
+                                        ...(rawProjectCandidate?.client || {}),
                                         name: (client.name && client.name !== '-') ? client.name : ((client.category_data as any)?.client_name || (client.category_data as any)?.name || '-'),
                                     },
-                                    name: (client.name && client.name !== '-') ? client.name : ((client.category_data as any)?.client_name || (client.category_data as any)?.name || '-'),
+                                    category_data: {
+                                        ...(client.category_data || {}),
+                                        ...(rawProjectCandidate?.category_data || {}),
+                                    },
+                                    location: rawProjectCandidate?.location || (rawProjectCandidate?.category_data as any)?.location || client.address,
+                                    event_date: rawProjectCandidate?.event_date || (rawProjectCandidate?.category_data as any)?.event_date,
+                                    name: rawProjectCandidate?.name || client.name,
                                 };
+
+                                const effectiveProvince = client.province || (client.category_data as any)?.province || '-';
+                                const effectiveCity = client.city || (client.category_data as any)?.city || (rawProjectCandidate?.category_data as any)?.city || '-';
+                                const effectiveDistrict = client.district || (client.category_data as any)?.district || '-';
+                                const effectiveVillage = client.village || (client.category_data as any)?.village || '-';
+                                const effectivePostalCode = client.postal_code || (client.category_data as any)?.postal_code || '-';
+                                const effectiveAddress = client.address || (client.category_data as any)?.address || rawProjectCandidate?.location || (rawProjectCandidate?.category_data as any)?.event_location || (rawProjectCandidate?.category_data as any)?.venue_location || '-';
+
+                                const effectivePhone = client.phone || (client.category_data as any)?.phone || (client.category_data as any)?.pic_phone || (rawProjectCandidate?.category_data as any)?.pic_phone || '';
+                                const effectiveSecondaryPhone = client.secondary_phone || (client.category_data as any)?.secondary_phone || '';
+                                const effectiveEmail = client.email || (client.category_data as any)?.email || (client.category_data as any)?.pic_email || (rawProjectCandidate?.category_data as any)?.pic_email || '';
+                                const effectiveInstagram = client.instagram || (client.category_data as any)?.instagram || (client.category_data as any)?.groom_instagram || (client.category_data as any)?.bride_instagram || '';
+                                const effectiveOtherSocial = client.other_social_media || (client.category_data as any)?.other_social_media || '';
+
+                                const effectivePackageName = rawProjectCandidate?.package?.name || (rawProjectCandidate?.name ? `Custom (${rawProjectCandidate.name})` : 'Paket Custom / Direct Order');
+                                const effectiveEventTime = rawProjectCandidate?.event_time || (rawProjectCandidate?.category_data as any)?.event_time || (rawProjectCandidate?.category_data as any)?.session_time || '-';
+                                const effectiveLocation = rawProjectCandidate?.location || (rawProjectCandidate?.category_data as any)?.location || (rawProjectCandidate?.category_data as any)?.event_location || (rawProjectCandidate?.category_data as any)?.venue_location || client.address || '-';
 
                                 return (
                                     <div className="p-6 space-y-5 animate-in fade-in duration-150 flex-1 flex flex-col justify-between">
@@ -3295,7 +3342,7 @@ export default function ClientDetail({
 
                                         {/* SECTION 1: Dynamic Category Specific Details */}
                                         <div className="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-2xs">
-                                            <CategorySpecificView project={client.projects?.[0] || syntheticProject} />
+                                            <CategorySpecificView project={activeProjectForView} />
                                         </div>
 
                                         {/* SECTION 3: Informasi Alamat & Kontak (Numbered 1-12 Badges) */}
@@ -3318,7 +3365,7 @@ export default function ClientDetail({
                                                             <span className="text-[11px]">Provinsi</span>
                                                         </div>
                                                         <span className="text-slate-400 mr-2.5 shrink-0">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.province || '-'}</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{effectiveProvince}</span>
                                                     </div>
                                                     <div className="flex items-start">
                                                         <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
@@ -3326,7 +3373,7 @@ export default function ClientDetail({
                                                             <span className="text-[11px]">Kota/Kabupaten</span>
                                                         </div>
                                                         <span className="text-slate-400 mr-2.5 shrink-0">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.city || '-'}</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{effectiveCity}</span>
                                                     </div>
                                                     <div className="flex items-start">
                                                         <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
@@ -3334,7 +3381,7 @@ export default function ClientDetail({
                                                             <span className="text-[11px]">Kecamatan</span>
                                                         </div>
                                                         <span className="text-slate-400 mr-2.5 shrink-0">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.district || '-'}</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{effectiveDistrict}</span>
                                                     </div>
                                                     <div className="flex items-start">
                                                         <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
@@ -3342,7 +3389,7 @@ export default function ClientDetail({
                                                             <span className="text-[11px]">Kelurahan</span>
                                                         </div>
                                                         <span className="text-slate-400 mr-2.5 shrink-0">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.village || '-'}</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">{effectiveVillage}</span>
                                                     </div>
                                                     <div className="flex items-start">
                                                         <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500">
@@ -3350,7 +3397,7 @@ export default function ClientDetail({
                                                             <span className="text-[11px]">Kode Pos</span>
                                                         </div>
                                                         <span className="text-slate-400 mr-2.5 shrink-0">:</span>
-                                                        <span className="font-mono font-semibold text-slate-900 leading-snug flex-1 min-w-0">{client.postal_code || '-'}</span>
+                                                        <span className="font-mono font-semibold text-slate-900 leading-snug flex-1 min-w-0">{effectivePostalCode}</span>
                                                     </div>
                                                     <div className="flex items-start">
                                                         <div className="w-32 sm:w-34 shrink-0 flex items-center gap-2 text-slate-500 pt-0.5">
@@ -3359,7 +3406,7 @@ export default function ClientDetail({
                                                         </div>
                                                         <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
                                                         <span className="font-semibold text-slate-900 leading-relaxed flex-1 min-w-0">
-                                                            {client.address || '-'}
+                                                            {effectiveAddress}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -3373,14 +3420,14 @@ export default function ClientDetail({
                                                         </div>
                                                         <span className="text-slate-400 mr-2.5 shrink-0">:</span>
                                                         <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 font-mono">
-                                                            {client.phone ? (
+                                                            {effectivePhone ? (
                                                                 <a
-                                                                    href={`https://wa.me/${String(client.phone).replace(/[^0-9]/g, '').replace(/^0/, '62')}`}
+                                                                    href={`https://wa.me/${String(effectivePhone).replace(/[^0-9]/g, '').replace(/^0/, '62')}`}
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
                                                                     className="text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-1 font-bold"
                                                                 >
-                                                                    <span>{client.phone}</span>
+                                                                    <span>{effectivePhone}</span>
                                                                     <ExternalLink className="w-3 h-3 text-emerald-600" />
                                                                 </a>
                                                             ) : '-'}
@@ -3393,7 +3440,7 @@ export default function ClientDetail({
                                                         </div>
                                                         <span className="text-slate-400 mr-2.5 shrink-0">:</span>
                                                         <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 font-mono">
-                                                            {client.secondary_phone || '-'}
+                                                            {effectiveSecondaryPhone || '-'}
                                                         </span>
                                                     </div>
                                                     <div className="flex items-start">
@@ -3412,10 +3459,10 @@ export default function ClientDetail({
                                                             <span className="text-[11px]">Email Aktif</span>
                                                         </div>
                                                         <span className="text-slate-400 mr-2.5 shrink-0">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 truncate" title={client.email || '-'}>
-                                                            {client.email ? (
-                                                                <a href={`mailto:${client.email}`} className="text-indigo-600 hover:underline">
-                                                                    {client.email}
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 truncate" title={effectiveEmail || '-'}>
+                                                            {effectiveEmail ? (
+                                                                <a href={`mailto:${effectiveEmail}`} className="text-indigo-600 hover:underline">
+                                                                    {effectiveEmail}
                                                                 </a>
                                                             ) : '-'}
                                                         </span>
@@ -3427,14 +3474,14 @@ export default function ClientDetail({
                                                         </div>
                                                         <span className="text-slate-400 mr-2.5 shrink-0">:</span>
                                                         <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 whitespace-nowrap">
-                                                            {client.instagram ? (
+                                                            {effectiveInstagram ? (
                                                                 <a
-                                                                    href={`https://instagram.com/${client.instagram.replace(/^@/, '')}`}
+                                                                    href={`https://instagram.com/${effectiveInstagram.replace(/^@/, '')}`}
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
                                                                     className="text-pink-600 hover:underline flex items-center gap-1"
                                                                 >
-                                                                    <span>{client.instagram.startsWith('@') ? client.instagram : `@${client.instagram}`}</span>
+                                                                    <span>{effectiveInstagram.startsWith('@') ? effectiveInstagram : `@${effectiveInstagram}`}</span>
                                                                     <ExternalLink className="w-3 h-3" />
                                                                 </a>
                                                             ) : '-'}
@@ -3447,7 +3494,7 @@ export default function ClientDetail({
                                                         </div>
                                                         <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
                                                         <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 whitespace-pre-line">
-                                                            {client.other_social_media || '-'}
+                                                            {effectiveOtherSocial || '-'}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -3471,28 +3518,28 @@ export default function ClientDetail({
                                                         <span className="text-slate-500 w-44 sm:w-48 shrink-0 text-[11px] pt-0.5">Jenis Acara</span>
                                                         <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
                                                         <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {primaryProject?.category?.name || client.client_type || '-'}
+                                                            {rawProjectCandidate?.category?.name || client.client_type || '-'}
                                                         </span>
                                                     </div>
                                                     <div className="flex items-start">
                                                         <span className="text-slate-500 w-44 sm:w-48 shrink-0 text-[11px] pt-0.5">Tanggal Pelaksanaan</span>
                                                         <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
                                                         <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {primaryProject?.event_date ? formatDate(primaryProject.event_date) : '-'}
+                                                            {rawProjectCandidate?.event_date ? formatDate(rawProjectCandidate.event_date) : '-'}
                                                         </span>
                                                     </div>
                                                     <div className="flex items-start">
                                                         <span className="text-slate-500 w-44 sm:w-48 shrink-0 text-[11px] pt-0.5">Waktu Pelaksanaan</span>
                                                         <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
                                                         <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {primaryProject?.event_time || '-'}
+                                                            {effectiveEventTime}
                                                         </span>
                                                     </div>
                                                     <div className="flex items-start">
                                                         <span className="text-slate-500 w-44 sm:w-48 shrink-0 text-[11px] pt-0.5">Tempat / Lokasi Acara</span>
                                                         <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
                                                         <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {primaryProject?.location || client.address || '-'}
+                                                            {effectiveLocation}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -3502,28 +3549,28 @@ export default function ClientDetail({
                                                         <span className="text-slate-500 w-36 sm:w-40 shrink-0 text-[11px] pt-0.5">Paket Dipilih</span>
                                                         <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
                                                         <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {primaryProject?.package?.name || '-'}
+                                                            {effectivePackageName}
                                                         </span>
                                                     </div>
                                                     <div className="flex items-start">
                                                         <span className="text-slate-500 w-36 sm:w-40 shrink-0 text-[11px] pt-0.5">Kategori Layanan</span>
                                                         <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
                                                         <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {primaryProject?.category?.name || '-'}
+                                                            {rawProjectCandidate?.category?.name || '-'}
                                                         </span>
                                                     </div>
                                                     <div className="flex items-start">
                                                         <span className="text-slate-500 w-36 sm:w-40 shrink-0 text-[11px] pt-0.5">Total Nilai Project</span>
                                                         <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
                                                         <span className="font-semibold text-emerald-700 leading-snug flex-1 min-w-0">
-                                                            {primaryProject?.total_amount ? formatRupiah(primaryProject.total_amount) : '-'}
+                                                            {rawProjectCandidate?.total_amount ? formatRupiah(rawProjectCandidate.total_amount) : '-'}
                                                         </span>
                                                     </div>
                                                     <div className="flex items-start">
                                                         <span className="text-slate-500 w-36 sm:w-40 shrink-0 text-[11px] pt-0.5">Status Pembayaran</span>
                                                         <span className="text-slate-400 mr-2.5 shrink-0 pt-0.5">:</span>
                                                         <span className="font-semibold text-slate-900 leading-snug capitalize flex-1 min-w-0">
-                                                            {primaryProject?.payment_status === 'paid' ? 'Lunas' : primaryProject?.payment_status === 'partial' ? 'DP / Sebagian' : 'Belum Dibayar'}
+                                                            {rawProjectCandidate?.payment_status === 'paid' ? 'Lunas' : rawProjectCandidate?.payment_status === 'partial' ? 'DP / Sebagian' : 'Belum Dibayar'}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -4629,10 +4676,22 @@ export default function ClientDetail({
                                                             </button>
                                                         )}
                                                         {selectedStage.status === 'done' && (
-                                                            <span className="flex-1 py-2 px-3 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 font-bold text-xs flex items-center justify-center gap-1.5">
-                                                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                                                Tahap ini sudah selesai
-                                                            </span>
+                                                            <div className="flex-1 flex items-center gap-2">
+                                                                <span className="flex-1 py-2 px-3 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 font-bold text-xs flex items-center justify-center gap-1.5">
+                                                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                                                    Tahap Selesai
+                                                                </span>
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={updatingStage}
+                                                                    onClick={() => handleRevertStage(selectedStage.title, selectedStageIndex)}
+                                                                    className="py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                                                                    title="Kembalikan status ke tahap ini"
+                                                                >
+                                                                    <RotateCcw className="w-3.5 h-3.5" />
+                                                                    <span>Kembalikan Status</span>
+                                                                </button>
+                                                            </div>
                                                         )}
                                                     </>
                                                 )}
@@ -5689,7 +5748,10 @@ Terima kasih!`}
                                 <span className="text-[11px] text-slate-400 font-medium block">
                                     Total Pembayaran
                                 </span>
-                                <span className="text-2xl font-extrabold text-slate-900 font-mono block mt-0.5">
+                                <span
+                                    className="text-lg sm:text-xl font-extrabold text-slate-900 font-mono block mt-0.5 truncate"
+                                    title={formatRupiah(totalProjectValue)}
+                                >
                                     {formatRupiah(totalProjectValue)}
                                 </span>
                             </div>
@@ -5705,20 +5767,24 @@ Terima kasih!`}
                             </div>
 
                             <div className="space-y-2 text-xs pt-1 border-t border-slate-100">
-                                <div className="flex items-center justify-between">
-                                    <span className="font-medium text-emerald-600">Lunas</span>
-                                    <div className="flex items-center gap-2 font-mono font-bold">
-                                        <span className="text-slate-800">{formatRupiah(totalPaid)}</span>
-                                        <span className="text-emerald-600 text-[11px]">
+                                <div className="flex items-center justify-between gap-2">
+                                    <span className="font-medium text-emerald-600 shrink-0">Lunas</span>
+                                    <div className="flex items-center gap-2 font-mono font-bold min-w-0">
+                                        <span className="text-slate-800 truncate" title={formatRupiah(totalPaid)}>
+                                            {formatRupiah(totalPaid)}
+                                        </span>
+                                        <span className="text-emerald-600 text-[11px] shrink-0">
                                             {totalProjectValue > 0 ? Math.round((totalPaid / totalProjectValue) * 100) : 0}%
                                         </span>
                                     </div>
                                 </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="font-medium text-rose-500">Belum Lunas</span>
-                                    <div className="flex items-center gap-2 font-mono font-bold">
-                                        <span className="text-slate-800">{formatRupiah(outstanding)}</span>
-                                        <span className="text-rose-500 text-[11px]">
+                                <div className="flex items-center justify-between gap-2">
+                                    <span className="font-medium text-rose-500 shrink-0">Belum Lunas</span>
+                                    <div className="flex items-center gap-2 font-mono font-bold min-w-0">
+                                        <span className="text-slate-800 truncate" title={formatRupiah(outstanding)}>
+                                            {formatRupiah(outstanding)}
+                                        </span>
+                                        <span className="text-rose-500 text-[11px] shrink-0">
                                             {totalProjectValue > 0 ? Math.max(0, 100 - Math.round((totalPaid / totalProjectValue) * 100)) : 0}%
                                         </span>
                                     </div>
@@ -6127,7 +6193,7 @@ Terima kasih!`}
                                         </div>
                                         <div>
                                             <h4 className="text-xs font-bold text-slate-900">
-                                                Wilayah Domisili / Alamat Klien
+                                                Informasi Alamat
                                             </h4>
                                             <p className="text-[11px] text-slate-500">
                                                 Pilih Provinsi, Kota, Kecamatan, dan Kelurahan Indonesia secara bertingkat.
@@ -6862,7 +6928,7 @@ Terima kasih!`}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                                         <div className="p-3 bg-slate-50/70 rounded-xl space-y-1">
                                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                                                Wilayah Domisili
+                                                Informasi Alamat
                                             </span>
                                             <p className="font-semibold text-slate-800">
                                                 {[editFormData.village, editFormData.district, editFormData.city, editFormData.province].filter(Boolean).join(', ') || '-'}
@@ -7105,12 +7171,11 @@ Terima kasih!`}
                                     </label>
                                     <span className="text-[10px] text-slate-400">Pilih shortcut:</span>
                                 </div>
-                                <input
-                                    type="number"
+                                <FormattedNumberInput
                                     required
                                     value={paymentFormData.amount}
-                                    onChange={(e) => setPaymentFormData({ ...paymentFormData, amount: e.target.value })}
-                                    placeholder="Contoh: 15000000"
+                                    onChange={(val) => setPaymentFormData({ ...paymentFormData, amount: String(val) })}
+                                    placeholder="Contoh: 1.500.000"
                                     className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-accent/20 focus:border-primary-accent transition-all font-mono font-bold"
                                 />
 

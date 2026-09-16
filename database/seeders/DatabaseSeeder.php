@@ -290,7 +290,7 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Prewedding', 'slug' => 'prewedding', 'description' => 'Sesi foto prewedding konsep indoor studio maupun outdoor trip.', 'icon' => 'Camera', 'color' => '#6366F1', 'sort_order' => 7],
             ['name' => 'Newborn', 'slug' => 'newborn', 'description' => 'Sesi foto bayi baru lahir dengan perlengkapan aman & steril.', 'icon' => 'Baby', 'color' => '#F43F5E', 'sort_order' => 8],
             ['name' => 'Maternity', 'slug' => 'maternity', 'description' => 'Sesi foto kehamilan ibu dan keluarga dengan konsep hangat.', 'icon' => 'Smile', 'color' => '#A855F7', 'sort_order' => 9],
-            ['name' => 'Lainnya (Kebutuhan khusus)', 'slug' => 'lainnya', 'description' => 'Project dengan kebutuhan khusus yang tidak termasuk kategori di atas.', 'icon' => 'MoreHorizontal', 'color' => '#64748B', 'sort_order' => 10],
+            ['name' => 'Lainnya / Tradisional Event (Pengajian, Siraman, dan Midodareni)', 'slug' => 'lainnya', 'description' => 'Dokumentasi rangkaian acara tradisional (Pengajian, Siraman, Midodareni) atau kebutuhan dokumentasi khusus lainnya.', 'icon' => 'MoreHorizontal', 'color' => '#64748B', 'sort_order' => 10],
         ];
 
         $categories = [];

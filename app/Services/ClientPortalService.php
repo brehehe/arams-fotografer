@@ -106,25 +106,67 @@ class ClientPortalService
         $timeline = $this->computeTimeline($activeProject);
         $paymentSummary = $this->computePaymentSummary($activeProject);
 
-        $recommendedPackages = Package::where('status', 'active')
-            ->with('category')
-            ->orderBy('sort_order')
-            ->limit(5)
-            ->get()
-            ->map(function ($pkg) {
-                return [
-                    'id' => $pkg->id,
-                    'name' => $pkg->name,
-                    'title' => $pkg->name,
-                    'category_name' => $pkg->category?->name ?? 'Layanan Foto',
-                    'base_price' => (float) $pkg->base_price,
-                    'price' => 'Rp ' . number_format($pkg->base_price, 0, ',', '.'),
-                    'duration_hours' => $pkg->duration_hours,
-                    'description' => $pkg->description,
-                    'desc' => $pkg->description ?: ($pkg->category?->name ?? 'Dokumentasi Terbaik'),
-                    'image' => $this->getPackageSampleImage($pkg->name),
-                ];
-            });
+        $showRecommended = Setting::get('portal_show_recommended_packages', '1') !== '0';
+        if (! $showRecommended) {
+            $recommendedPackages = collect([]);
+        } else {
+            $rawRecommendedIds = Setting::get('portal_recommended_packages');
+            $recommendedIds = [];
+            if ($rawRecommendedIds) {
+                if (str_starts_with($rawRecommendedIds, '[')) {
+                    $recommendedIds = json_decode($rawRecommendedIds, true) ?: [];
+                } else {
+                    $recommendedIds = array_filter(array_map('trim', explode(',', $rawRecommendedIds)));
+                }
+            }
+
+            if (! empty($recommendedIds)) {
+                $packagesQuery = Package::whereIn('id', $recommendedIds)
+                    ->where('status', 'active')
+                    ->with('category')
+                    ->get()
+                    ->keyBy('id');
+
+                $recommendedPackages = collect($recommendedIds)
+                    ->map(fn ($id) => $packagesQuery->get($id))
+                    ->filter()
+                    ->values()
+                    ->map(function ($pkg) {
+                        return [
+                            'id' => $pkg->id,
+                            'name' => $pkg->name,
+                            'title' => $pkg->name,
+                            'category_name' => $pkg->category?->name ?? 'Layanan Foto',
+                            'base_price' => (float) $pkg->base_price,
+                            'price' => 'Rp ' . number_format($pkg->base_price, 0, ',', '.'),
+                            'duration_hours' => $pkg->duration_hours,
+                            'description' => $pkg->description,
+                            'desc' => $pkg->description ?: ($pkg->category?->name ?? 'Dokumentasi Terbaik'),
+                            'image' => $this->getPackageSampleImage($pkg->name),
+                        ];
+                    });
+            } else {
+                $recommendedPackages = Package::where('status', 'active')
+                    ->with('category')
+                    ->orderBy('sort_order')
+                    ->limit(5)
+                    ->get()
+                    ->map(function ($pkg) {
+                        return [
+                            'id' => $pkg->id,
+                            'name' => $pkg->name,
+                            'title' => $pkg->name,
+                            'category_name' => $pkg->category?->name ?? 'Layanan Foto',
+                            'base_price' => (float) $pkg->base_price,
+                            'price' => 'Rp ' . number_format($pkg->base_price, 0, ',', '.'),
+                            'duration_hours' => $pkg->duration_hours,
+                            'description' => $pkg->description,
+                            'desc' => $pkg->description ?: ($pkg->category?->name ?? 'Dokumentasi Terbaik'),
+                            'image' => $this->getPackageSampleImage($pkg->name),
+                        ];
+                    });
+            }
+        }
 
         // 1. Promo Slides from Database (prioritize active project slide if exists, combined with general studio slides)
         $activeProjectId = $activeProject?->id;
@@ -187,8 +229,9 @@ class ClientPortalService
 
         $portfoliosList = $realPortfolios->isNotEmpty() ? $realPortfolios : $instagramPosts;
 
-        // 3. Testimonials from Database
-        $testimonials = \App\Models\Testimonial::approved()->get()->map(function ($t) {
+        // 3. Testimonials from Database (Respects portal_show_testimonials and approved/Show status)
+        $showTestimonials = Setting::get('portal_show_testimonials', '1') !== '0';
+        $testimonials = $showTestimonials ? \App\Models\Testimonial::approved()->get()->map(function ($t) {
             return [
                 'id' => $t->id,
                 'client_name' => $t->client_name,
@@ -197,7 +240,7 @@ class ClientPortalService
                 'comment' => $t->comment,
                 'avatar' => $t->avatar ?: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
             ];
-        });
+        }) : collect([]);
 
         $companySettings = [
             'name' => Setting::get('company_name', 'Arams Pictures'),
@@ -323,6 +366,12 @@ class ClientPortalService
             'instagram_posts' => $instagramPosts,
             'testimonials' => $testimonials,
             'company' => $companySettings,
+            'portal_settings' => [
+                'show_recommended_packages' => $showRecommended,
+                'recommended_packages_title' => Setting::get('portal_recommended_packages_title', 'Rekomendasi Paket Untuk Anda'),
+                'recommended_packages_subtitle' => Setting::get('portal_recommended_packages_subtitle', 'Pilihan paket menarik lainnya yang mungkin Anda sukai.'),
+                'show_testimonials' => $showTestimonials,
+            ],
         ];
     }
 

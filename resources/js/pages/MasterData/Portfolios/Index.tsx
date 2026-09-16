@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { toast } from 'sonner';
 import { Pagination } from '@/components/ui/pagination';
+import { StatCard } from '@/components/ui';
 import {
     Camera,
     Plus,
@@ -332,56 +333,34 @@ export default function PortfoliosIndex({
 
             {/* ── 4. STATS CARDS ── */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
-                <div className="bg-white dark:bg-slate-900/60 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex items-center gap-3.5">
-                    <div
-                        className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-                        style={{ backgroundColor: `${accentColor}18`, color: accentColor }}
-                    >
-                        <ImageIcon className="w-5 h-5" />
-                    </div>
-                    <div>
-                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Total Foto</span>
-                        <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                            {stats.total}
-                        </h3>
-                    </div>
-                </div>
-
-                <div className="bg-white dark:bg-slate-900/60 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex items-center gap-3.5">
-                    <div className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                        <CheckCircle2 className="w-5 h-5" />
-                    </div>
-                    <div>
-                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Show (Tampil)</span>
-                        <h3 className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
-                            {stats.active}
-                        </h3>
-                    </div>
-                </div>
-
-                <div className="bg-white dark:bg-slate-900/60 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex items-center gap-3.5">
-                    <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center shrink-0">
-                        <EyeOff className="w-5 h-5" />
-                    </div>
-                    <div>
-                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Hide (Sembunyi)</span>
-                        <h3 className="text-xl sm:text-2xl font-black text-slate-600 dark:text-slate-400 tracking-tight">
-                            {stats.inactive}
-                        </h3>
-                    </div>
-                </div>
-
-                <div className="bg-white dark:bg-slate-900/60 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex items-center gap-3.5">
-                    <div className="w-11 h-11 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
-                        <FolderKanban className="w-5 h-5" />
-                    </div>
-                    <div>
-                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Total Kategori</span>
-                        <h3 className="text-xl sm:text-2xl font-black text-purple-600 dark:text-purple-400 tracking-tight">
-                            {stats.categories_count ?? categories.length}
-                        </h3>
-                    </div>
-                </div>
+                <StatCard
+                    title="Total Foto"
+                    value={stats.total}
+                    subtitle="Foto portofolio"
+                    icon={ImageIcon}
+                    color="amber"
+                />
+                <StatCard
+                    title="Show (Tampil)"
+                    value={stats.active}
+                    subtitle="Ditampilkan publik"
+                    icon={CheckCircle2}
+                    color="emerald"
+                />
+                <StatCard
+                    title="Hide (Sembunyi)"
+                    value={stats.inactive}
+                    subtitle="Disembunyikan"
+                    icon={EyeOff}
+                    color="slate"
+                />
+                <StatCard
+                    title="Total Kategori"
+                    value={stats.categories_count ?? categories.length}
+                    subtitle="Kategori foto"
+                    icon={FolderKanban}
+                    color="purple"
+                />
             </div>
 
             {/* ── 5. FILTER & SEARCH ── */}

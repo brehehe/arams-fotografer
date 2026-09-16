@@ -40,6 +40,7 @@ import {
     Modal,
     AlertConfirmation,
     Badge,
+    StatCard,
     DropdownMenu,
     DropdownMenuTrigger,
     DropdownMenuContent,
@@ -344,61 +345,36 @@ export default function ClientSourcesIndex({
 
             {/* ── 4 STAT CARDS ──────────────────────────────────────────────── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Card 1: Total Sumber Klien */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                        <Users className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-semibold text-slate-500 block">Total Sumber Klien</span>
-                        <div className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">
-                            {stats.total_sources}
-                        </div>
-                        <span className="text-[11px] text-slate-400 font-medium">Semua sumber</span>
-                    </div>
-                </div>
-
-                {/* Card 2: Total Project */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                        <FileSpreadsheet className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-semibold text-slate-500 block">Total Project</span>
-                        <div className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">
-                            {stats.total_projects}
-                        </div>
-                        <span className="text-[11px] text-slate-400 font-medium">Dari semua sumber</span>
-                    </div>
-                </div>
-
-                {/* Card 3: Total Penjualan */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                        <DollarSign className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-semibold text-slate-500 block">Total Penjualan</span>
-                        <div className="text-xl font-black text-slate-900 tracking-tight mt-0.5">
-                            {formatCurrency(stats.total_sales)}
-                        </div>
-                        <span className="text-[11px] text-slate-400 font-medium">Dari semua sumber</span>
-                    </div>
-                </div>
-
-                {/* Card 4: Rata-rata Nilai Project */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                        <BarChart2 className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-semibold text-slate-500 block">Rata-rata Nilai Project</span>
-                        <div className="text-xl font-black text-slate-900 tracking-tight mt-0.5">
-                            {formatCurrency(stats.average_project_value)}
-                        </div>
-                        <span className="text-[11px] text-slate-400 font-medium">Dari semua sumber</span>
-                    </div>
-                </div>
+                <StatCard
+                    title="Total Sumber Klien"
+                    value={stats.total_sources}
+                    subtitle="Semua sumber"
+                    icon={Users}
+                    color="indigo"
+                />
+                <StatCard
+                    title="Total Project"
+                    value={stats.total_projects}
+                    subtitle="Dari semua sumber"
+                    icon={FileSpreadsheet}
+                    color="emerald"
+                />
+                <StatCard
+                    title="Total Penjualan"
+                    value={stats.total_sales}
+                    isCurrency={true}
+                    subtitle="Dari semua sumber"
+                    icon={DollarSign}
+                    color="amber"
+                />
+                <StatCard
+                    title="Rata-rata Nilai Project"
+                    value={stats.average_project_value}
+                    isCurrency={true}
+                    subtitle="Dari semua sumber"
+                    icon={BarChart2}
+                    color="blue"
+                />
             </div>
 
             {/* ── SEARCH & FILTERS BAR ────────────────────────────────────────── */}
@@ -641,8 +617,8 @@ export default function ClientSourcesIndex({
                                 )
                             }
                             className={`w-8 h-8 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center justify-center ${p === listData.current_page
-                                    ? 'bg-[#4F46E5] text-white shadow-xs'
-                                    : 'border border-slate-200 text-slate-700 hover:bg-slate-50'
+                                ? 'bg-[#4F46E5] text-white shadow-xs'
+                                : 'border border-slate-200 text-slate-700 hover:bg-slate-50'
                                 }`}
                         >
                             {p}

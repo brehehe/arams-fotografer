@@ -1,8 +1,8 @@
 import { Camera, Video, Image as ImageIcon, Film, Users, Plus, Trash2, ShieldCheck, UserCheck } from 'lucide-react';
 import React from 'react';
 import { Input } from '@/components/ui/input';
-import { SelectSearch  } from '@/components/ui/select-search';
-import type {SelectSearchOption} from '@/components/ui/select-search';
+import { SelectSearch } from '@/components/ui/select-search';
+import type { SelectSearchOption } from '@/components/ui/select-search';
 import { Textarea } from '@/components/ui/textarea';
 
 export type TeamRoleType = 'Photografer' | 'Videografer' | 'Editor Foto' | 'Editor Video' | 'Crew';

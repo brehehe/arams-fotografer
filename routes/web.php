@@ -134,6 +134,7 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('addons', AddonController::class)->except(['create', 'edit', 'show']);
         Route::resource('promo-slides', PromoSlideController::class)->except(['create', 'edit', 'show']);
         Route::resource('testimonials', TestimonialController::class)->except(['create', 'edit', 'show']);
+        Route::patch('testimonials/{testimonial}/toggle', [TestimonialController::class, 'toggleActive'])->name('testimonials.toggle');
         Route::resource('instagram-posts', InstagramPostController::class)->except(['create', 'edit', 'show']);
         Route::resource('portfolio-categories', PortfolioCategoryController::class)->except(['create', 'edit', 'show']);
         Route::patch('portfolio-categories/{portfolio_category}/toggle', [PortfolioCategoryController::class, 'toggleActive'])->name('portfolio-categories.toggle');
@@ -216,6 +217,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/settings/admin/instagram-posts', fn() => redirect()->route('master-data.instagram-posts.index'));
     Route::get('/settings/admin/portfolio-categories', fn() => redirect()->route('master-data.portfolio-categories.index'));
     Route::get('/settings/admin/portfolios', fn() => redirect()->route('master-data.portfolios.index'));
+    Route::get('/settings/admin/recommended-packages', fn() => redirect()->route('setting.admin', ['sub' => 'recommended_packages']));
 });
 
 require __DIR__.'/settings.php';

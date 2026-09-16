@@ -13,6 +13,7 @@ import {
     Database,
     FolderKanban,
     Camera,
+    Package,
 } from 'lucide-react';
 
 export type SettingMainTab = 'admin' | 'form_klien' | 'portal_klien';
@@ -23,6 +24,7 @@ export type SettingAdminSubTab =
     | 'login_theme'
     | 'promo_slides'
     | 'testimonials'
+    | 'recommended_packages'
     | 'instagram_posts'
     | 'portfolio_categories'
     | 'portfolios'
@@ -62,6 +64,7 @@ export default function SettingsTabNav({
         { id: 'login_theme' as const, label: 'Tampilan Login', icon: Lock, href: '/setting/admin?sub=login_theme' },
         { id: 'promo_slides' as const, label: 'Promo Slide', icon: Sparkles, href: '/master-data/promo-slides', isExternalPage: true },
         { id: 'testimonials' as const, label: 'Ulasan Klien', icon: MessageSquareQuote, href: '/master-data/testimonials', isExternalPage: true },
+        { id: 'recommended_packages' as const, label: 'Rekomendasi Paket', icon: Package, href: '/setting/admin?sub=recommended_packages' },
         // { id: 'instagram_posts' as const, label: 'Feed Instagram', icon: Instagram, href: '/master-data/instagram-posts', isExternalPage: true },
         { id: 'portfolio_categories' as const, label: 'Kategori Portofolio', icon: FolderKanban, href: '/master-data/portfolio-categories', isExternalPage: true },
         { id: 'portfolios' as const, label: 'Portofolio', icon: Camera, href: '/master-data/portfolios', isExternalPage: true },

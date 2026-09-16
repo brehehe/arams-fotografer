@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import { Pagination } from '@/components/ui/pagination';
+import { StatCard } from '@/components/ui';
 import {
     Wallet,
     CheckCircle2,
@@ -378,61 +379,34 @@ export default function PaymentMethodsIndex({
 
             {/* ── 2. TOP 4 STAT CARDS ── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Card 1: Total Metode Pembayaran */}
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[#EEF2FF] flex items-center justify-center shrink-0">
-                        <Wallet className="w-6 h-6 text-[#4F46E5]" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-bold text-slate-600 block">Total Metode Pembayaran</span>
-                        <h2 className="text-2xl font-black text-slate-900 tracking-tight font-sans">
-                            {stats.total || 7}
-                        </h2>
-                        <p className="text-[11px] text-slate-400 font-medium">Semua metode</p>
-                    </div>
-                </div>
-
-                {/* Card 2: Metode Aktif */}
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[#ECFDF5] flex items-center justify-center shrink-0">
-                        <CheckCircle2 className="w-6 h-6 text-[#10B981]" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-bold text-slate-600 block">Metode Aktif</span>
-                        <h2 className="text-2xl font-black text-[#059669] tracking-tight font-sans">
-                            {stats.active || 6}
-                        </h2>
-                        <p className="text-[11px] text-slate-400 font-medium">Sedang digunakan</p>
-                    </div>
-                </div>
-
-                {/* Card 3: Metode Nonaktif */}
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[#FEF2F2] flex items-center justify-center shrink-0">
-                        <MinusCircle className="w-6 h-6 text-[#EF4444]" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-bold text-slate-600 block">Metode Nonaktif</span>
-                        <h2 className="text-2xl font-black text-[#DC2626] tracking-tight font-sans">
-                            {stats.inactive ?? 1}
-                        </h2>
-                        <p className="text-[11px] text-slate-400 font-medium">Tidak digunakan</p>
-                    </div>
-                </div>
-
-                {/* Card 4: Digunakan di Invoice */}
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[#FFFBEB] flex items-center justify-center shrink-0">
-                        <FolderKanban className="w-6 h-6 text-[#D97706]" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-bold text-slate-600 block">Digunakan di Invoice</span>
-                        <h2 className="text-2xl font-black text-slate-900 tracking-tight font-sans">
-                            {stats.used_in_invoices || 156}
-                        </h2>
-                        <p className="text-[11px] text-slate-400 font-medium">Total penggunaan</p>
-                    </div>
-                </div>
+                <StatCard
+                    title="Total Metode Pembayaran"
+                    value={stats.total || 7}
+                    subtitle="Semua metode"
+                    icon={Wallet}
+                    color="indigo"
+                />
+                <StatCard
+                    title="Metode Aktif"
+                    value={stats.active || 6}
+                    subtitle="Sedang digunakan"
+                    icon={CheckCircle2}
+                    color="emerald"
+                />
+                <StatCard
+                    title="Metode Nonaktif"
+                    value={stats.inactive ?? 1}
+                    subtitle="Tidak digunakan"
+                    icon={MinusCircle}
+                    color="rose"
+                />
+                <StatCard
+                    title="Digunakan di Invoice"
+                    value={stats.used_in_invoices || 156}
+                    subtitle="Total penggunaan"
+                    icon={FolderKanban}
+                    color="amber"
+                />
             </div>
 
             {/* ── 3. TABLE CARD CONTAINER ── */}

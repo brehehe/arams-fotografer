@@ -1066,21 +1066,6 @@ export default function ProjectInvoice({
                                                         <span className="text-slate-400">:</span>
                                                         <span className="font-semibold text-slate-800">{eventDateFormatted}</span>
                                                     </div>
-                                                    <div className="grid grid-cols-[105px_10px_1fr]">
-                                                        <span className="text-slate-600 font-medium">PIC Supervisor</span>
-                                                        <span className="text-slate-400">:</span>
-                                                        <span className="text-slate-800">{supervisorName}</span>
-                                                    </div>
-                                                    <div className="grid grid-cols-[105px_10px_1fr]">
-                                                        <span className="text-slate-600 font-medium">Photographer</span>
-                                                        <span className="text-slate-400">:</span>
-                                                        <span className="text-slate-800">{parsedPhotographer}</span>
-                                                    </div>
-                                                    <div className="grid grid-cols-[105px_10px_1fr]">
-                                                        <span className="text-slate-600 font-medium">Editor</span>
-                                                        <span className="text-slate-400">:</span>
-                                                        <span className="text-slate-800">{parsedEditor}</span>
-                                                    </div>
                                                 </div>
                                             </div>
                                         </div>

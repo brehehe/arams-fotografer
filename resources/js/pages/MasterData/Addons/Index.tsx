@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Pagination } from '@/components/ui/pagination';
 import { formatRupiah } from '@/lib/formatters';
+import { FormattedNumberInput } from '@/components/ui/formatted-number-input';
 
 interface AddonItem {
     id: number | string;
@@ -1290,20 +1291,15 @@ return;
 
                                     <div className="space-y-1">
                                         <label className="font-bold text-slate-700">Harga Standar (Rp) *</label>
-                                        <div className="relative">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400">
-                                                Rp
-                                            </span>
-                                            <input
-                                                type="number"
-                                                value={formData.price}
-                                                onChange={(e) =>
-                                                    setFormData({ ...formData, price: Number(e.target.value) })
-                                                }
-                                                className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 font-mono font-bold"
-                                                required
-                                            />
-                                        </div>
+                                        <FormattedNumberInput
+                                            value={formData.price}
+                                            onChange={(val) =>
+                                                setFormData({ ...formData, price: val })
+                                            }
+                                            prefix="Rp "
+                                            className="h-[42px] text-xs font-bold"
+                                            placeholder="0"
+                                        />
                                     </div>
 
                                     <div className="space-y-1">

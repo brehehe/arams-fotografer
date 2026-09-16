@@ -25,7 +25,7 @@ export function FormattedNumberInput({
     const cleaned = String(val).replace(/\D/g, "")
     if (!cleaned) return ""
     const num = parseInt(cleaned, 10)
-    if (isNaN(num)) return ""
+    if (isNaN(num) || num === 0) return ""
     return new Intl.NumberFormat("id-ID").format(num)
   }
 
@@ -39,12 +39,17 @@ export function FormattedNumberInput({
     const rawVal = e.target.value.replace(/\D/g, "")
     if (!rawVal) {
       setDisplayValue("")
-      onChange(0)
+      onChange?.(0)
       return
     }
-    const numVal = parseInt(rawVal, 10)
+    const numVal = parseInt(rawVal, 10) || 0
+    if (numVal === 0) {
+      setDisplayValue("")
+      onChange?.(0)
+      return
+    }
     setDisplayValue(new Intl.NumberFormat("id-ID").format(numVal))
-    onChange(numVal)
+    onChange?.(numVal)
   }
 
   return (

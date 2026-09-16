@@ -176,6 +176,12 @@ interface ClientDashboardProps {
     testimonials?: TestimonialItem[];
     portfolios?: any[];
     company?: any;
+    portal_settings?: {
+        show_recommended_packages?: boolean;
+        recommended_packages_title?: string;
+        recommended_packages_subtitle?: string;
+        show_testimonials?: boolean;
+    };
 }
 
 export default function ClientDashboard({
@@ -190,6 +196,7 @@ export default function ClientDashboard({
     testimonials = [],
     portfolios = [],
     company = {},
+    portal_settings = {},
 }: ClientDashboardProps) {
     const { props: pageProps } = usePage<any>();
     const appSettings = pageProps?.appSettings || {};
@@ -324,6 +331,7 @@ export default function ClientDashboard({
 
     // Testimonials
     const testimonialList: TestimonialItem[] = testimonials || [];
+    const hasTestimonials = (portal_settings?.show_testimonials !== false) && (testimonialList.length > 0);
 
     // Auto-advance Testimonials Carousel every 4 seconds (pauses on hover)
     useEffect(() => {
@@ -810,14 +818,14 @@ export default function ClientDashboard({
                 </section>
 
                 {/* ── 4. TWO-COLUMN ROW (PORTOFOLIO KAMI & TESTIMONI KLIEN) ── */}
-                <section className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6 items-stretch">
+                <section className={`grid gap-5 sm:gap-6 items-stretch ${hasTestimonials ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
                     {/* Card 1: Portofolio Kami */}
                     <div
                         style={{
                             backgroundColor: '#FFFFFF',
                             borderColor: COLOR_WARM_CREAM,
                         }}
-                        className="rounded-xl border p-5 sm:p-6 shadow-xs flex flex-col justify-between hover:shadow-lg hover:shadow-[#3C0E0E]/5 hover:-translate-y-1 hover:border-[#3C0E0E]/25 transition-all duration-300 group"
+                        className={`rounded-xl border p-5 sm:p-6 shadow-xs flex flex-col justify-between hover:shadow-lg hover:shadow-[#3C0E0E]/5 hover:-translate-y-1 hover:border-[#3C0E0E]/25 transition-all duration-300 group ${!hasTestimonials ? 'col-span-full' : ''}`}
                     >
                         <div className="space-y-4">
                             <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
@@ -873,150 +881,153 @@ export default function ClientDashboard({
                         </div>
                     </div>
 
-                    {/* Card 2: Testimoni Klien (Auto-sliding with hover pause & smooth transitions) */}
-                    <div
+                    {/* Card 2: Testimoni Klien (Rendered only if hasTestimonials) */}
+                    {hasTestimonials && (
+                        <div
+                            style={{
+                                backgroundColor: '#FFFFFF',
+                                borderColor: COLOR_WARM_CREAM,
+                            }}
+                            onMouseEnter={() => setIsHoveredTestimonial(true)}
+                            onMouseLeave={() => setIsHoveredTestimonial(false)}
+                            className="rounded-xl border p-5 sm:p-6 shadow-xs flex flex-col justify-between hover:shadow-lg hover:shadow-[#3C0E0E]/5 hover:-translate-y-1 hover:border-[#3C0E0E]/25 transition-all duration-300 group select-none"
+                        >
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                                    <div>
+                                        <h4
+                                            style={{ color: COLOR_BURGUNDY }}
+                                            className="text-xs font-black uppercase tracking-wider"
+                                        >
+                                            Testimoni Klien
+                                        </h4>
+                                        <p className="text-[11px] text-slate-400 mt-0.5">
+                                            Kata mereka tentang pengalaman bersama kami.
+                                        </p>
+                                    </div>
+                                    {testimonialList.length > 1 && (
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => setCurrentTestimonialIndex((prev) => (prev === 0 ? testimonialList.length - 1 : prev - 1))}
+                                                className="w-6 h-6 rounded-full border border-[#E8DDD5] bg-[#F4EBE4] flex items-center justify-center text-[#3C0E0E] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] transition-all cursor-pointer group"
+                                                aria-label="Previous testimonial"
+                                            >
+                                                <ChevronLeft className="w-3.5 h-3.5 text-[#3C0E0E] group-hover:text-white transition-colors" />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setCurrentTestimonialIndex((prev) => (prev + 1) % testimonialList.length)}
+                                                className="w-6 h-6 rounded-full border border-[#E8DDD5] bg-[#F4EBE4] flex items-center justify-center text-[#3C0E0E] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] transition-all cursor-pointer group"
+                                                aria-label="Next testimonial"
+                                            >
+                                                <ChevronRight className="w-3.5 h-3.5 text-[#3C0E0E] group-hover:text-white transition-colors" />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {activeTestimonial ? (
+                                    <AnimatePresence mode="wait">
+                                        <motion.div
+                                            key={activeTestimonial.id || currentTestimonialIndex}
+                                            initial={{ opacity: 0, y: 6 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -6 }}
+                                            transition={{ duration: 0.28, ease: 'easeOut' }}
+                                            className="space-y-3"
+                                        >
+                                            {/* Stars */}
+                                            <div className="flex items-center gap-1 text-rose-600">
+                                                {Array.from({ length: activeTestimonial.rating || 5 }).map((_, i) => (
+                                                    <Star
+                                                        key={i}
+                                                        className="w-3.5 h-3.5 text-rose-600 fill-rose-600"
+                                                    />
+                                                ))}
+                                            </div>
+
+                                            {/* Quote */}
+                                            <p className="text-xs text-slate-700 leading-relaxed italic line-clamp-3 min-h-[48px]">
+                                                "{activeTestimonial.comment}"
+                                            </p>
+
+                                            {/* Client Avatar + Name + Slide Dots */}
+                                            <div className="flex items-center justify-between pt-1">
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-200 shrink-0 ring-1 ring-slate-200">
+                                                        <img
+                                                            src={activeTestimonial.avatar || '/images/wedding-couple.jpg'}
+                                                            alt={activeTestimonial.client_name}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs font-bold text-slate-900 leading-none">
+                                                            {activeTestimonial.client_name}
+                                                        </p>
+                                                        <span className="text-[10px] text-slate-400 block mt-0.5">
+                                                            {activeTestimonial.package_name || 'Dokumentasi Spesial'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Testimonial Page Slider Indicator Dots */}
+                                                {testimonialList.length > 1 && (
+                                                    <div className="flex items-center gap-1">
+                                                        {testimonialList.map((_, dotIdx) => (
+                                                            <button
+                                                                key={dotIdx}
+                                                                type="button"
+                                                                onClick={() => setCurrentTestimonialIndex(dotIdx)}
+                                                                className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                                                                    (currentTestimonialIndex % testimonialList.length) === dotIdx
+                                                                        ? 'w-4 bg-[#3C0E0E]'
+                                                                        : 'w-1.5 bg-slate-200 hover:bg-slate-300'
+                                                                }`}
+                                                                aria-label={`Testimoni ${dotIdx + 1}`}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    </AnimatePresence>
+                                ) : (
+                                    <div className="py-8 text-center text-xs text-slate-400">
+                                        Belum ada testimoni ulasan yang dipublikasikan.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </section>
+
+                {/* ── 5. REKOMENDASI PAKET UNTUK ANDA (5 Columns) ─────────── */}
+                {packageRecommendations && packageRecommendations.length > 0 && portal_settings?.show_recommended_packages !== false && (
+                    <section
                         style={{
                             backgroundColor: '#FFFFFF',
                             borderColor: COLOR_WARM_CREAM,
                         }}
-                        onMouseEnter={() => setIsHoveredTestimonial(true)}
-                        onMouseLeave={() => setIsHoveredTestimonial(false)}
-                        className="rounded-xl border p-5 sm:p-6 shadow-xs flex flex-col justify-between hover:shadow-lg hover:shadow-[#3C0E0E]/5 hover:-translate-y-1 hover:border-[#3C0E0E]/25 transition-all duration-300 group select-none"
+                        className="rounded-xl border p-5 sm:p-7 shadow-xs hover:shadow-md transition-all duration-300 space-y-5"
                     >
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                                <div>
-                                    <h4
-                                        style={{ color: COLOR_BURGUNDY }}
-                                        className="text-xs font-black uppercase tracking-wider"
-                                    >
-                                        Testimoni Klien
-                                    </h4>
-                                    <p className="text-[11px] text-slate-400 mt-0.5">
-                                        Kata mereka tentang pengalaman bersama kami.
-                                    </p>
-                                </div>
-                                {testimonialList.length > 1 && (
-                                    <div className="flex items-center gap-1">
-                                        <button
-                                            type="button"
-                                            onClick={() => setCurrentTestimonialIndex((prev) => (prev === 0 ? testimonialList.length - 1 : prev - 1))}
-                                            className="w-6 h-6 rounded-full border border-[#E8DDD5] bg-[#F4EBE4] flex items-center justify-center text-[#3C0E0E] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] transition-all cursor-pointer group"
-                                            aria-label="Previous testimonial"
-                                        >
-                                            <ChevronLeft className="w-3.5 h-3.5 text-[#3C0E0E] group-hover:text-white transition-colors" />
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setCurrentTestimonialIndex((prev) => (prev + 1) % testimonialList.length)}
-                                            className="w-6 h-6 rounded-full border border-[#E8DDD5] bg-[#F4EBE4] flex items-center justify-center text-[#3C0E0E] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] transition-all cursor-pointer group"
-                                            aria-label="Next testimonial"
-                                        >
-                                            <ChevronRight className="w-3.5 h-3.5 text-[#3C0E0E] group-hover:text-white transition-colors" />
-                                        </button>
-                                    </div>
-                                )}
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h3
+                                    style={{
+                                        fontFamily: `'${portalFontHeading}', serif`,
+                                        color: COLOR_BURGUNDY,
+                                    }}
+                                    className="text-xs sm:text-sm font-serif font-black uppercase tracking-wider"
+                                >
+                                    {portal_settings?.recommended_packages_title || 'Rekomendasi Paket Untuk Anda'}
+                                </h3>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    {portal_settings?.recommended_packages_subtitle || 'Pilihan paket menarik lainnya yang mungkin Anda sukai.'}
+                                </p>
                             </div>
-
-                            {activeTestimonial ? (
-                                <AnimatePresence mode="wait">
-                                    <motion.div
-                                        key={activeTestimonial.id || currentTestimonialIndex}
-                                        initial={{ opacity: 0, y: 6 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -6 }}
-                                        transition={{ duration: 0.28, ease: 'easeOut' }}
-                                        className="space-y-3"
-                                    >
-                                        {/* Stars */}
-                                        <div className="flex items-center gap-1 text-rose-600">
-                                            {Array.from({ length: activeTestimonial.rating || 5 }).map((_, i) => (
-                                                <Star
-                                                    key={i}
-                                                    className="w-3.5 h-3.5 text-rose-600 fill-rose-600"
-                                                />
-                                            ))}
-                                        </div>
-
-                                        {/* Quote */}
-                                        <p className="text-xs text-slate-700 leading-relaxed italic line-clamp-3 min-h-[48px]">
-                                            "{activeTestimonial.comment}"
-                                        </p>
-
-                                        {/* Client Avatar + Name + Slide Dots */}
-                                        <div className="flex items-center justify-between pt-1">
-                                            <div className="flex items-center gap-2.5">
-                                                <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-200 shrink-0 ring-1 ring-slate-200">
-                                                    <img
-                                                        src={activeTestimonial.avatar || '/images/wedding-couple.jpg'}
-                                                        alt={activeTestimonial.client_name}
-                                                        className="w-full h-full object-cover"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <p className="text-xs font-bold text-slate-900 leading-none">
-                                                        {activeTestimonial.client_name}
-                                                    </p>
-                                                    <span className="text-[10px] text-slate-400 block mt-0.5">
-                                                        {activeTestimonial.package_name || 'Dokumentasi Spesial'}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            {/* Testimonial Page Slider Indicator Dots */}
-                                            {testimonialList.length > 1 && (
-                                                <div className="flex items-center gap-1">
-                                                    {testimonialList.map((_, dotIdx) => (
-                                                        <button
-                                                            key={dotIdx}
-                                                            type="button"
-                                                            onClick={() => setCurrentTestimonialIndex(dotIdx)}
-                                                            className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                                                                (currentTestimonialIndex % testimonialList.length) === dotIdx
-                                                                    ? 'w-4 bg-[#3C0E0E]'
-                                                                    : 'w-1.5 bg-slate-200 hover:bg-slate-300'
-                                                            }`}
-                                                            aria-label={`Testimoni ${dotIdx + 1}`}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </motion.div>
-                                </AnimatePresence>
-                            ) : (
-                                <div className="py-8 text-center text-xs text-slate-400">
-                                    Belum ada testimoni ulasan yang dipublikasikan.
-                                </div>
-                            )}
                         </div>
-                    </div>
-                </section>
-
-                {/* ── 5. REKOMENDASI PAKET UNTUK ANDA (5 Columns) ─────────── */}
-                <section
-                    style={{
-                        backgroundColor: '#FFFFFF',
-                        borderColor: COLOR_WARM_CREAM,
-                    }}
-                    className="rounded-xl border p-5 sm:p-7 shadow-xs hover:shadow-md transition-all duration-300 space-y-5"
-                >
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h3
-                                style={{
-                                    fontFamily: `'${portalFontHeading}', serif`,
-                                    color: COLOR_BURGUNDY,
-                                }}
-                                className="text-xs sm:text-sm font-serif font-black uppercase tracking-wider"
-                            >
-                                Rekomendasi Paket Untuk Anda
-                            </h3>
-                            <p className="text-xs text-slate-500 mt-0.5">
-                                Pilihan paket menarik lainnya yang mungkin Anda sukai.
-                            </p>
-                        </div>
-                    </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
                         {packageRecommendations.map((pkg, idx) => (
@@ -1064,7 +1075,8 @@ export default function ClientDashboard({
                         ))}
                     </div>
                 </section>
-            </div>
+            )}
+        </div>
 
             {/* ── MODAL: RINCIAN & RIWAYAT PEMBAYARAN ───────────────────────────── */}
             {isPaymentModalOpen && (

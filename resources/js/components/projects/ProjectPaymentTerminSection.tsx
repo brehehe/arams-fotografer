@@ -145,6 +145,29 @@ export function ProjectPaymentTerminSection({
         }
     };
 
+    // Active options ensuring custom percentage is visible in dropdown
+    const activeDpPercentOptions = useMemo(() => {
+        const exists = dpPercentOptions.some((opt) => opt.value === String(dpPercent));
+
+        if (!exists && dpPercent > 0) {
+            return [{ value: String(dpPercent), label: `${dpPercent}% (Custom)` }, ...dpPercentOptions];
+        }
+
+        return dpPercentOptions;
+    }, [dpPercentOptions, dpPercent]);
+
+    // Calculate current DP amount from first installment or percentage
+    const currentDpAmount = useMemo(() => {
+        if (
+            paymentInstallments.length > 0 &&
+            (paymentInstallments[0].type === 'dp' || paymentInstallments[0].name.toLowerCase().includes('dp'))
+        ) {
+            return Number(paymentInstallments[0].amount) || 0;
+        }
+
+        return Math.round((totalProject * dpPercent) / 100);
+    }, [paymentInstallments, totalProject, dpPercent]);
+
     // When DP percent changes from select, update Invoice 1 if it is DP
     const handleDpPercentChange = (newPercent: number) => {
         setDpPercent(newPercent);
@@ -152,8 +175,8 @@ export function ProjectPaymentTerminSection({
 
         setPaymentInstallments((prev) => {
             if (prev.length === 0) {
-return prev;
-}
+                return prev;
+            }
 
             const updated = [...prev];
 
@@ -163,6 +186,54 @@ return prev;
                     ...updated[0],
                     amount: newDpAmount,
                     name: `Invoice 1 (DP ${newPercent}%)`,
+                };
+            }
+
+            // If 2 installments (DP + Pelunasan), auto-rebalance the second item
+            if (updated.length === 2) {
+                updated[1] = {
+                    ...updated[1],
+                    amount: Math.max(0, totalProject - newDpAmount),
+                };
+            }
+
+            return updated;
+        });
+    };
+
+    // When DP nominal changes manually, update Invoice 1 and recalculate DP percent
+    const handleDpNominalChange = (customNominal: number) => {
+        const nominal = Math.max(0, customNominal);
+        const calculatedPercent = totalProject > 0 ? Math.min(100, Math.round((nominal / totalProject) * 100)) : 0;
+        setDpPercent(calculatedPercent);
+
+        setPaymentInstallments((prev) => {
+            if (prev.length === 0) {
+                const today = new Date().toISOString().split('T')[0];
+
+                return [
+                    {
+                        id: `inst-${Date.now()}-1`,
+                        name: 'Invoice 1 (DP)',
+                        type: 'dp',
+                        amount: nominal,
+                        due_date: dpDueDate || today,
+                    },
+                ];
+            }
+
+            const updated = [...prev];
+            updated[0] = {
+                ...updated[0],
+                amount: nominal,
+                name: updated[0].name.toLowerCase().includes('dp') ? updated[0].name : 'Invoice 1 (DP)',
+            };
+
+            // If 2 installments (DP + Pelunasan), auto-rebalance the second item
+            if (updated.length === 2) {
+                updated[1] = {
+                    ...updated[1],
+                    amount: Math.max(0, totalProject - nominal),
                 };
             }
 
@@ -189,17 +260,25 @@ return prev;
     // Remove row
     const handleRemoveInstallment = (idx: number) => {
         if (paymentInstallments.length <= 1) {
-return;
-}
+            return;
+        }
 
         setPaymentInstallments((prev) => prev.filter((_, i) => i !== idx));
     };
 
     // Update row field
     const handleUpdateInstallment = (idx: number, field: keyof PaymentInstallmentItem, val: any) => {
-        setPaymentInstallments((prev) =>
-            prev.map((item, i) => (i === idx ? { ...item, [field]: val } : item))
-        );
+        setPaymentInstallments((prev) => {
+            const updated = prev.map((item, i) => (i === idx ? { ...item, [field]: val } : item));
+
+            if (idx === 0 && field === 'amount') {
+                const nominal = Number(val) || 0;
+                const calculatedPercent = totalProject > 0 ? Math.min(100, Math.round((nominal / totalProject) * 100)) : 0;
+                setDpPercent(calculatedPercent);
+            }
+
+            return updated;
+        });
     };
 
     // Helper: auto-balance remaining into the last termin row
@@ -313,19 +392,32 @@ return;
                         </div>
                     </div>
 
-                    {/* DP Setting helper row */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-200/60">
+                    {/* DP Setting helper row with Custom Manual Nominal */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-200/60">
                         <div className="space-y-1">
                             <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center justify-between">
-                                <span>Persentase DP Awal</span>
+                                <span>Persentase DP</span>
                                 <span className="text-indigo-600 font-semibold">{dpPercent}% dari Total</span>
                             </label>
                             <SelectSearch
-                                options={dpPercentOptions}
+                                options={activeDpPercentOptions}
                                 value={String(dpPercent)}
                                 onChange={(val) => handleDpPercentChange(Number(val) || 0)}
                                 clearable={false}
                                 className="w-full bg-white"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase flex items-center justify-between">
+                                <span>Nominal DP (Rp)</span>
+                                <span className="text-emerald-600 font-semibold text-[10px]">Bisa Custom Manual</span>
+                            </label>
+                            <FormattedNumberInput
+                                value={currentDpAmount}
+                                onChange={(val) => handleDpNominalChange(val)}
+                                prefix="Rp "
+                                className="h-[42px] text-xs font-mono font-bold text-slate-900 bg-white border border-slate-200 focus:border-[#4F46E5]"
+                                placeholder="Nominal DP..."
                             />
                         </div>
                         <div className="space-y-1">

@@ -40,7 +40,7 @@ class SettingController extends Controller
         if ($tab === 'portfolios' || $request->input('sub') === 'portfolios') {
             return redirect()->route('master-data.portfolios.index');
         }
-        if (in_array($tab, ['company', 'general', 'appearance', 'login_theme', 'backup'])) {
+        if (in_array($tab, ['company', 'general', 'appearance', 'login_theme', 'backup', 'recommended_packages'])) {
             $params['sub'] = $tab;
         } elseif ($request->has('sub')) {
             $params['sub'] = $request->input('sub');
@@ -69,11 +69,16 @@ class SettingController extends Controller
         }
 
         $data = $this->settingService->getSettingsData();
+        $packages = \App\Models\Package::with('category')
+            ->where('status', 'active')
+            ->orderBy('sort_order')
+            ->get();
 
         return Inertia::render('settings/Admin', [
             'settings' => $data['settings'],
             'settingsMap' => $data['settingsMap'],
             'backups' => $this->backupService->getBackupsList(),
+            'packages' => $packages,
         ]);
     }
 

@@ -50,6 +50,7 @@ import { FormattedNumberInput } from '@/components/ui/formatted-number-input';
 import { formatRupiah } from '@/lib/formatters';
 import { resolveWorkflow } from '@/lib/workflows';
 import { CategorySpecificForm } from '@/components/projects/CategorySpecificForm';
+import { CategorySpecificView } from '@/components/projects/CategorySpecificView';
 import {
     CategoryFormKey,
     resolveCategoryKey,
@@ -519,7 +520,7 @@ export default function ProjectsCreate({
         child_name: string;
         child_birth_date: string;
         child_gender: string;
-        children: Array<{ name: string; nickname: string; birth_date: string; gender: string; [key: string]: string }>;
+        children: Array<{ name: string; nickname: string; birth_date: string; gender: string;[key: string]: string }>;
     }>({
         bride_name: '',
         bride_nickname: '',
@@ -556,6 +557,10 @@ export default function ProjectsCreate({
         });
         setCategoryData((prev) => ({
             ...prev,
+            client_name: cl.name || '',
+            name: cl.name || '',
+            company_name: (cl as any).company_name || cl.name || '',
+            community_name: cl.name || '',
             bride_name: prev.bride_name || cl.bride_name || '',
             groom_name: prev.groom_name || cl.groom_name || '',
             partner_1: prev.partner_1 || cl.bride_name || '',
@@ -732,10 +737,25 @@ export default function ProjectsCreate({
         return subtotalPaketSetelahDiskon + totalTambahanBiaya + calculatedTaxAmount;
     }, [subtotalPaketSetelahDiskon, totalTambahanBiaya, calculatedTaxAmount]);
 
-    const nominalDp = useMemo(() => {
+    const effectiveDpAmount = useMemo(() => {
+        if (
+            paymentInstallments.length > 0 &&
+            (paymentInstallments[0].type === 'dp' || paymentInstallments[0].name.toLowerCase().includes('dp'))
+        ) {
+            return Number(paymentInstallments[0].amount) || 0;
+        }
         if (dpPercent <= 0) return 0;
         return Math.round((totalProject * dpPercent) / 100);
-    }, [totalProject, dpPercent]);
+    }, [paymentInstallments, totalProject, dpPercent]);
+
+    const effectiveDpPercent = useMemo(() => {
+        if (totalProject > 0 && effectiveDpAmount > 0) {
+            return Math.min(100, Math.round((effectiveDpAmount / totalProject) * 100));
+        }
+        return dpPercent;
+    }, [totalProject, effectiveDpAmount, dpPercent]);
+
+    const nominalDp = effectiveDpAmount;
 
     // Format dates for display
     const formattedProjectDate = useMemo(() => {
@@ -1724,10 +1744,18 @@ export default function ProjectsCreate({
                                     type="date"
                                     value={projectDate}
                                     onChange={(e) => {
-                                        setProjectDate(e.target.value);
+                                        const newDate = e.target.value;
+                                        setProjectDate(newDate);
                                         if (!shootingEventDate || shootingEventDate === projectDate) {
-                                            setShootingEventDate(e.target.value);
+                                            setShootingEventDate(newDate);
                                         }
+                                        setCategoryData((prev) => ({
+                                            ...prev,
+                                            event_date: newDate,
+                                            session_date: newDate,
+                                            akad_date: newDate,
+                                            departure_date: newDate,
+                                        }));
                                     }}
                                     className="w-full h-[42px] px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:border-[#4F46E5] focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
                                 />
@@ -1754,7 +1782,18 @@ export default function ProjectsCreate({
                                 <Input
                                     icon={<MapPin className="w-4 h-4 text-slate-400" />}
                                     value={projectLocation}
-                                    onChange={(e) => setProjectLocation(e.target.value)}
+                                    onChange={(e) => {
+                                        const newLoc = e.target.value;
+                                        setProjectLocation(newLoc);
+                                        setCategoryData((prev) => ({
+                                            ...prev,
+                                            location: newLoc,
+                                            event_location: newLoc,
+                                            session_location: newLoc,
+                                            akad_location: newLoc,
+                                            destination_city_country: newLoc,
+                                        }));
+                                    }}
                                     placeholder="Contoh: Studio Arams, Jakarta Selatan atau Alamat Lengkap Venue"
                                     className="h-[42px]"
                                 />
@@ -1768,7 +1807,13 @@ export default function ProjectsCreate({
                                 <SelectSearch
                                     options={shootingDurationOptions}
                                     value={shootingDuration}
-                                    onChange={setShootingDuration}
+                                    onChange={(val) => {
+                                        setShootingDuration(val);
+                                        setCategoryData((prev) => ({
+                                            ...prev,
+                                            session_duration: val,
+                                        }));
+                                    }}
                                     clearable={false}
                                 />
                             </div>
@@ -1783,64 +1828,67 @@ export default function ProjectsCreate({
                                         <button
                                             type="button"
                                             onClick={handleRemoveThumbnail}
-                                            className="text-[10px] font-bold text-rose-600 hover:underline cursor-pointer"
+                                            className="text-[10px] font-semibold text-rose-600 hover:underline cursor-pointer"
                                         >
                                             Hapus Foto
                                         </button>
                                     )}
                                 </div>
-
                                 <input
-                                    type="file"
                                     ref={thumbnailInputRef}
-                                    accept="image/png,image/jpeg,image/webp,image/avif"
+                                    type="file"
+                                    accept="image/*"
                                     onChange={handleThumbnailChange}
                                     className="hidden"
                                 />
-
                                 {projectThumbnail ? (
-                                    <div className="rounded-xl border border-slate-200 bg-slate-50 flex items-center gap-3 p-2.5">
+                                    <div className="flex items-center gap-3 p-2 bg-slate-50 border border-slate-200 rounded-xl">
                                         <img
                                             src={projectThumbnail}
-                                            alt="Preview Project"
+                                            alt="Cover Project"
                                             className="w-14 h-14 rounded-lg object-cover border border-slate-200 shrink-0"
                                         />
-                                        <div className="min-w-0 flex-1">
+                                        <div className="flex-1 min-w-0">
                                             <span className="text-xs font-bold text-slate-800 block truncate">
-                                                Foto Cover Terpasang
+                                                Foto Cover Terpilih
                                             </span>
                                             <span className="text-[10px] text-slate-400 block">
-                                                PNG, JPG, atau WebP
+                                                Klik ganti foto untuk memperbarui gambar cover project
                                             </span>
-                                            <button
-                                                type="button"
-                                                onClick={() => thumbnailInputRef.current?.click()}
-                                                className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-bold text-[#4F46E5] hover:underline cursor-pointer"
-                                            >
-                                                <Upload className="w-3 h-3" />
-                                                <span>Ganti Foto</span>
-                                            </button>
                                         </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => thumbnailInputRef.current?.click()}
+                                            className="px-2.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-[11px] font-bold transition-colors cursor-pointer shrink-0 shadow-2xs"
+                                        >
+                                            Ganti Foto
+                                        </button>
                                     </div>
                                 ) : (
-                                    <div
+                                    <button
+                                        type="button"
                                         onClick={() => thumbnailInputRef.current?.click()}
-                                        className="border-2 border-dashed border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30 rounded-xl p-3 text-center cursor-pointer transition-all flex items-center justify-center gap-2.5 group"
+                                        className="w-full h-14 border border-dashed border-slate-300 hover:border-[#4F46E5] hover:bg-indigo-50/20 rounded-xl flex items-center justify-center gap-2 text-slate-500 hover:text-[#4F46E5] transition-all cursor-pointer bg-slate-50/50"
                                     >
-                                        <div className="w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-indigo-100 text-slate-500 group-hover:text-indigo-600 flex items-center justify-center transition-colors">
-                                            <ImageIcon className="w-4 h-4" />
-                                        </div>
-                                        <div className="text-left">
-                                            <p className="text-[11px] font-bold text-slate-700 group-hover:text-indigo-900">
-                                                Pilih atau unggah foto cover project
-                                            </p>
-                                            <p className="text-[10px] text-slate-400">
-                                                PNG, JPG, atau WebP hingga 5MB
-                                            </p>
-                                        </div>
-                                    </div>
+                                        <Upload className="w-4 h-4" />
+                                        <span className="text-xs font-bold">Pilih Foto Cover / Moodboard Project</span>
+                                    </button>
                                 )}
                             </div>
+                        </div>
+
+                        {/* Catatan / Kebutuhan Khusus - OPSIONAL */}
+                        <div className="space-y-1 pt-1 border-t border-slate-100">
+                            <label className="text-[11px] font-bold text-slate-600 block">
+                                Catatan / Brief Khusus Project <span className="text-slate-400 font-normal">(Opsional)</span>
+                            </label>
+                            <Textarea
+                                value={projectNotes}
+                                onChange={(e) => setProjectNotes(e.target.value)}
+                                placeholder="Tuliskan catatan khusus, preferensi warna/tone, arahan klien, atau hal penting lainnya..."
+                                rows={2}
+                                className="text-xs resize-none"
+                            />
                         </div>
                     </div>
 
@@ -1852,11 +1900,16 @@ export default function ProjectsCreate({
                                     <Sparkles className="w-4 h-4" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-base text-slate-900">
-                                        2. Informasi {selectedCategory?.name || 'Kategori'}
-                                    </h3>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-bold text-base text-slate-900">
+                                            2. Informasi {selectedCategory?.name || 'Kategori'}
+                                        </h3>
+                                        <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                                            Opsional
+                                        </span>
+                                    </div>
                                     <p className="text-[11px] text-slate-400">
-                                        Form data spesifik untuk kebutuhan kategori {selectedCategory?.name || 'project'}
+                                        Form data spesifik untuk kebutuhan kategori {selectedCategory?.name || 'project'} (dapat dikosongkan jika belum tersedia)
                                     </p>
                                 </div>
                             </div>
@@ -1871,6 +1924,7 @@ export default function ProjectsCreate({
                             data={categoryData}
                             onChange={handleCategoryDataChange}
                             mode="admin"
+                            hideGeneralFields={true}
                         />
                     </div>
 
@@ -2005,7 +2059,7 @@ export default function ProjectsCreate({
                                         placeholder="Catatan tambahan untuk tim..."
                                     />
                                 </div>
-                                <div className="pt-1">
+                                {/* <div className="pt-1">
                                     <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1.5">Visible untuk</span>
                                     <div className="flex items-center gap-4 text-xs flex-wrap">
                                         <label className="flex items-center gap-1.5 cursor-pointer text-slate-700 select-none">
@@ -2045,7 +2099,7 @@ export default function ProjectsCreate({
                                             <span>Client</span>
                                         </label>
                                     </div>
-                                </div>
+                                </div> */}
                             </div>
                         </div>
                     </div>
@@ -2078,7 +2132,7 @@ export default function ProjectsCreate({
             {/* ═════════════════════════════════════════════════════════════════ */}
             {currentStep === 2 && (
                 <div className="space-y-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch text-slate-900">
+                    <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 items-stretch text-slate-900">
                         {/* Card 1: Penugasan Personel (col-span-12 lg:col-span-6) */}
                         <div className="lg:col-span-6 bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full space-y-4">
                             <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
@@ -2105,7 +2159,7 @@ export default function ProjectsCreate({
                         </div>
 
                         {/* Card 2: Checklist Persiapan & Requirement Khusus (col-span-12 lg:col-span-6) */}
-                        <div className="lg:col-span-6 bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full space-y-4">
+                        {/* <div className="lg:col-span-6 bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full space-y-4">
                             <div className="border-b border-slate-100 pb-3">
                                 <h3 className="font-bold text-base text-slate-900">Checklist Persiapan &amp; Operasional Tim</h3>
                                 <p className="text-[11px] text-slate-400">Checklist SOP standar sebelum dan saat pelaksanaan event</p>
@@ -2156,7 +2210,7 @@ export default function ProjectsCreate({
                                     </p>
                                 </div>
                             </div>
-                        </div>
+                        </div> */}
                     </div>
 
                     {/* Step 2 Bottom Actions */}
@@ -2739,11 +2793,23 @@ export default function ProjectsCreate({
                                 </div>
                                 <div className="flex items-center justify-between gap-2.5">
                                     <span className="text-slate-400 shrink-0">DP Pertama:</span>
-                                    <span className="font-bold text-indigo-700 text-right">{dpPercent}% ({formatRupiah(nominalDp)})</span>
+                                    <span className="font-bold text-indigo-700 text-right">{effectiveDpPercent}% ({formatRupiah(effectiveDpAmount)})</span>
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    {/* ── CARD SPESIFIK KATEGORI REVIEW ───────────────────────────── */}
+                    <CategorySpecificView
+                        project={{
+                            name: projectName,
+                            category: selectedCategory,
+                            category_data: categoryData,
+                            client: selectedClient,
+                            location: projectLocation,
+                            event_date: shootingEventDate || projectDate,
+                        }}
+                    />
 
                     {/* Row 2: Layanan Deliverables vs Alur Kerja Workflow Tim */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch text-slate-900">
@@ -3001,7 +3067,7 @@ export default function ProjectsCreate({
                                 <div className="flex items-center justify-between">
                                     <span className="font-bold text-indigo-950">Tagihan DP Pertama</span>
                                     <span className="font-black text-[#4F46E5] font-sans">
-                                        {formatRupiah(nominalDp)} ({dpPercent}%)
+                                        {formatRupiah(effectiveDpAmount)} ({effectiveDpPercent}%)
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">

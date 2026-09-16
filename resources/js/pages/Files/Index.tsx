@@ -34,6 +34,7 @@ import {
     Modal,
     AlertConfirmation,
     Badge,
+    StatCard,
     Pagination,
     DropdownMenu,
     DropdownMenuTrigger,
@@ -455,66 +456,40 @@ export default function FilesIndex({
 
             {/* ── 4 STAT CARDS ──────────────────────────────────────────────── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Card 1: Total Link GDrive */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                        <FileText className="w-6 h-6" />
-                    </div>
-                    <div className="min-w-0">
-                        <span className="text-xs font-semibold text-slate-500 block">Total Link GDrive</span>
-                        <div className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">
-                            {stats.total_links}
-                        </div>
-                        <span className="text-[11px] text-slate-400 font-medium">Semua link terkirim</span>
-                    </div>
-                </div>
-
-                {/* Card 2: Total Project */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                        <Folder className="w-6 h-6" />
-                    </div>
-                    <div className="min-w-0">
-                        <span className="text-xs font-semibold text-slate-500 block">Total Project</span>
-                        <div className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">
-                            {stats.total_projects}
-                        </div>
-                        <span className="text-[11px] text-slate-400 font-medium">Project terkait</span>
-                    </div>
-                </div>
-
-                {/* Card 3: Dikirim oleh Admin */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                        <User className="w-6 h-6" />
-                    </div>
-                    <div className="min-w-0">
-                        <span className="text-xs font-semibold text-slate-500 block">Dikirim oleh Admin</span>
-                        <div className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">
-                            {stats.sent_by_admin}
-                        </div>
-                        <span className="text-[11px] text-slate-400 font-medium">55.9% dari total</span>
-                    </div>
-                </div>
-
-                {/* Card 4: Dikirim oleh Supervisor */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                        <Users className="w-6 h-6" />
-                    </div>
-                    <div className="min-w-0">
-                        <span className="text-xs font-semibold text-slate-500 block">Dikirim oleh Supervisor</span>
-                        <div className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">
-                            {stats.sent_by_supervisor}
-                        </div>
-                        <span className="text-[11px] text-slate-400 font-medium">44.1% dari total</span>
-                    </div>
-                </div>
+                <StatCard
+                    title="Total Link GDrive"
+                    value={stats.total_links}
+                    subtitle="Semua link terkirim"
+                    icon={FileText}
+                    color="indigo"
+                />
+                <StatCard
+                    title="Total Project"
+                    value={stats.total_projects}
+                    subtitle="Project terkait"
+                    icon={Folder}
+                    color="emerald"
+                />
+                <StatCard
+                    title="Dikirim oleh Admin"
+                    value={stats.sent_by_admin}
+                    subtitle="55.9% dari total"
+                    icon={User}
+                    color="amber"
+                />
+                <StatCard
+                    title="Dikirim oleh Supervisor"
+                    value={stats.sent_by_supervisor}
+                    subtitle="44.1% dari total"
+                    icon={Users}
+                    color="blue"
+                />
             </div>
 
-            {/* ── SEARCH & FILTER TOOLBAR (Gambar 2) ─────────────────────────── */}
-            <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
-                <div className="flex flex-wrap lg:flex-nowrap items-center gap-2.5">
+            {/* ── SEARCH & FILTER TOOLBAR (Responsif & Diturunkan) ─────────── */}
+            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+                {/* Baris 1: Search Bar & Actions */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
                     {/* Search Input */}
                     <div className="relative flex-1 min-w-[200px]">
                         <input
@@ -522,22 +497,46 @@ export default function FilesIndex({
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleFilter({ search })}
-                            placeholder="Cari judul link, client, project..."
+                            placeholder="Cari judul link, klien, nama project..."
                             className="w-full pl-3.5 pr-9 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-600 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-indigo-600/10 outline-hidden transition-all"
                         />
                         <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                     </div>
 
-                    {/* Filter Dropdowns in a single responsive row */}
+                    <div className="flex items-center gap-2 shrink-0">
+                        {/* Filter Lainnya button */}
+                        <button
+                            type="button"
+                            onClick={() => handleFilter()}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors cursor-pointer"
+                        >
+                            <SlidersHorizontal className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Terapkan</span>
+                        </button>
+
+                        {/* Reset button */}
+                        <button
+                            type="button"
+                            onClick={handleReset}
+                            className="inline-flex items-center gap-1 px-3 py-2 text-slate-500 hover:text-slate-800 hover:bg-slate-50 border border-transparent hover:border-slate-200 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+                        >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            <span>Reset</span>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Baris 2 (Diturunkan): Dropdown Filter (Responsive Grid: 1 col on xs, 2 on sm, 4 on lg) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-2.5 border-t border-slate-100">
                     {/* Project Filter */}
-                    <div className="relative min-w-[125px]">
+                    <div className="relative">
                         <select
                             value={selectedProject}
                             onChange={(e) => {
                                 setSelectedProject(e.target.value);
                                 handleFilter({ project_id: e.target.value });
                             }}
-                            className="w-full appearance-none px-3 py-2 pr-7 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-hidden cursor-pointer"
+                            className="w-full appearance-none px-3 py-2 pr-7 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-hidden cursor-pointer hover:bg-white transition-colors"
                         >
                             <option value="all">Semua Project</option>
                             {projects.map((p) => (
@@ -550,14 +549,14 @@ export default function FilesIndex({
                     </div>
 
                     {/* Pengirim Filter */}
-                    <div className="relative min-w-[125px]">
+                    <div className="relative">
                         <select
                             value={selectedSender}
                             onChange={(e) => {
                                 setSelectedSender(e.target.value);
                                 handleFilter({ sender: e.target.value });
                             }}
-                            className="w-full appearance-none px-3 py-2 pr-7 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-hidden cursor-pointer"
+                            className="w-full appearance-none px-3 py-2 pr-7 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-hidden cursor-pointer hover:bg-white transition-colors"
                         >
                             <option value="all">Semua Pengirim</option>
                             <option value="admin">Semua Admin</option>
@@ -567,14 +566,14 @@ export default function FilesIndex({
                     </div>
 
                     {/* Tipe Link Filter */}
-                    <div className="relative min-w-[125px]">
+                    <div className="relative">
                         <select
                             value={selectedType}
                             onChange={(e) => {
                                 setSelectedType(e.target.value);
                                 handleFilter({ type: e.target.value });
                             }}
-                            className="w-full appearance-none px-3 py-2 pr-7 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-hidden cursor-pointer"
+                            className="w-full appearance-none px-3 py-2 pr-7 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-hidden cursor-pointer hover:bg-white transition-colors"
                         >
                             <option value="all">Semua Tipe Link</option>
                             <option value="hasil_foto">Hasil Foto</option>
@@ -586,14 +585,14 @@ export default function FilesIndex({
                     </div>
 
                     {/* Status Filter */}
-                    <div className="relative min-w-[115px]">
+                    <div className="relative">
                         <select
                             value={selectedStatus}
                             onChange={(e) => {
                                 setSelectedStatus(e.target.value);
                                 handleFilter({ status: e.target.value });
                             }}
-                            className="w-full appearance-none px-3 py-2 pr-7 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-hidden cursor-pointer"
+                            className="w-full appearance-none px-3 py-2 pr-7 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 outline-hidden cursor-pointer hover:bg-white transition-colors"
                         >
                             <option value="all">Semua Status</option>
                             <option value="terkirim">Terkirim</option>
@@ -603,41 +602,17 @@ export default function FilesIndex({
                         </select>
                         <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
                     </div>
-
-                    {/* Filter Lainnya button */}
-                    <button
-                        type="button"
-                        onClick={() => handleFilter()}
-                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition-colors cursor-pointer shrink-0"
-                    >
-                        <SlidersHorizontal className="w-3.5 h-3.5 text-slate-500" />
-                        <span>Filter Lainnya</span>
-                    </button>
-
-                    {/* Reset button */}
-                    <button
-                        type="button"
-                        onClick={handleReset}
-                        className="inline-flex items-center gap-1 px-2.5 py-2 text-slate-500 hover:text-slate-800 rounded-xl text-xs font-semibold transition-colors cursor-pointer shrink-0"
-                    >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                        <span>Reset</span>
-                    </button>
                 </div>
             </div>
 
-            {/* ── FILES TABLE (Gambar 2) ──────────────────────────────────────── */}
+            {/* ── FILES TABLE (Responsif & Rapi, 5 Kolom Bertingkat) ─────────── */}
             <Table>
                 <TableHeader>
-                    <TableRow className="border-b border-slate-200 bg-slate-50/70 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <TableRow className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                         <TableHead className="w-12 text-center">NO</TableHead>
-                        <TableHead className="min-w-64">JUDUL LINK</TableHead>
-                        <TableHead className="min-w-28">PROJECT</TableHead>
-                        <TableHead className="min-w-36">CLIENT</TableHead>
-                        <TableHead className="min-w-36">TIPE LINK</TableHead>
-                        <TableHead className="min-w-36">DIKIRIM OLEH</TableHead>
-                        <TableHead className="min-w-36">TANGGAL KIRIM</TableHead>
-                        <TableHead className="min-w-28 text-center">STATUS</TableHead>
+                        <TableHead className="min-w-[280px]">LINK GDRIVE & DETAIL PROJECT</TableHead>
+                        <TableHead className="min-w-[190px]">PENGIRIM & WAKTU</TableHead>
+                        <TableHead className="w-32 text-center">STATUS</TableHead>
                         <TableHead className="w-24 text-center">AKSI</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -658,80 +633,102 @@ export default function FilesIndex({
                             return (
                                 <TableRow key={file.id} className="hover:bg-slate-50/80 transition-colors group">
                                     {/* NO */}
-                                    <TableCell className="text-center font-bold text-slate-400 text-xs">
+                                    <TableCell className="text-center font-bold text-slate-400 text-xs align-middle">
                                         {rowNumber}
                                     </TableCell>
 
-                                    {/* JUDUL LINK with GDrive Icon */}
-                                    <TableCell>
-                                        <div className="flex items-center gap-2.5">
-                                            {/* Google Drive Triangle Icon */}
-                                            <svg className="w-4 h-4 shrink-0" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da" />
-                                                <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47" />
-                                                <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.15z" fill="#ea4335" />
-                                                <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d" />
-                                                <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc" />
-                                                <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00" />
-                                            </svg>
-                                            <a
-                                                href={file.drive_url}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="font-bold text-slate-900 hover:text-indigo-600 transition-colors text-xs truncate max-w-sm block"
-                                            >
-                                                {file.name}
-                                            </a>
+                                    {/* LINK GDRIVE & DETAIL PROJECT (Bertingkat / Diturunkan) */}
+                                    <TableCell className="whitespace-normal py-3 align-middle">
+                                        <div className="space-y-1.5">
+                                            {/* Baris 1: Ikon Google Drive + Judul Link + Badge Tipe Link */}
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    {/* Google Drive Triangle SVG Icon */}
+                                                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
+                                                        <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da" />
+                                                        <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47" />
+                                                        <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.15z" fill="#ea4335" />
+                                                        <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d" />
+                                                        <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc" />
+                                                        <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00" />
+                                                    </svg>
+                                                    <a
+                                                        href={file.drive_url}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="font-bold text-slate-900 hover:text-indigo-600 transition-colors text-xs leading-snug line-clamp-1"
+                                                        title={file.name}
+                                                    >
+                                                        {file.name}
+                                                    </a>
+                                                </div>
+                                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border shrink-0 ${typeMeta.style}`}>
+                                                    {typeMeta.label}
+                                                </span>
+                                            </div>
+
+                                            {/* Baris 2 (Diturunkan): Info Project & Klien */}
+                                            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-slate-500">
+                                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border ${getCategoryBadgeColor(projectName)}`}>
+                                                    <Folder className="w-2.5 h-2.5" />
+                                                    <span>{projectName}</span>
+                                                </span>
+                                                <span className="inline-flex items-center gap-1 font-medium text-slate-600">
+                                                    <span className="text-slate-300">•</span>
+                                                    <User className="w-3 h-3 text-slate-400" />
+                                                    <span className="font-semibold text-slate-700">{clientName}</span>
+                                                </span>
+                                            </div>
                                         </div>
                                     </TableCell>
 
-                                    {/* PROJECT */}
-                                    <TableCell>
-                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${getCategoryBadgeColor(projectName)}`}>
-                                            {projectName}
-                                        </span>
-                                    </TableCell>
+                                    {/* PENGIRIM & WAKTU (Bertingkat / Diturunkan) */}
+                                    <TableCell className="whitespace-normal py-3 align-middle">
+                                        <div className="space-y-1">
+                                            {/* Baris 1: Nama Pengirim + Role Tag */}
+                                            <div className="flex items-center gap-1.5 text-xs">
+                                                {isSupervisor ? (
+                                                    <User className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                                                ) : (
+                                                    <User className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                                )}
+                                                <span className="font-semibold text-slate-800 leading-tight">
+                                                    {senderName}
+                                                </span>
+                                                <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold border shrink-0 ${
+                                                    isSupervisor 
+                                                        ? 'bg-amber-50 text-amber-700 border-amber-200' 
+                                                        : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                                                }`}>
+                                                    {isSupervisor ? 'Supervisor' : 'Admin'}
+                                                </span>
+                                            </div>
 
-                                    {/* CLIENT */}
-                                    <TableCell className="font-bold text-slate-800 text-xs">
-                                        {clientName}
-                                    </TableCell>
-
-                                    {/* TIPE LINK */}
-                                    <TableCell>
-                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${typeMeta.style}`}>
-                                            {typeMeta.label}
-                                        </span>
-                                    </TableCell>
-
-                                    {/* DIKIRIM OLEH */}
-                                    <TableCell>
-                                        <div className="flex items-center gap-1.5 text-xs">
-                                            {isSupervisor ? (
-                                                <User className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                                            ) : (
-                                                <User className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                                            )}
-                                            <span className="font-semibold text-slate-700">
-                                                {senderName}
-                                            </span>
+                                            {/* Baris 2 (Diturunkan): Tanggal & Jam Pengiriman */}
+                                            <div className="flex items-center gap-1 text-[11px] text-slate-400 font-medium">
+                                                <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                                                <span>{file.sent_at || '27 Mei 2026, 14:32'}</span>
+                                            </div>
                                         </div>
-                                    </TableCell>
-
-                                    {/* TANGGAL KIRIM */}
-                                    <TableCell className="text-slate-500 text-xs font-medium">
-                                        {file.sent_at || '27 Mei 2026, 14:32'}
                                     </TableCell>
 
                                     {/* STATUS */}
-                                    <TableCell className="text-center">
-                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusMeta.style}`}>
-                                            {statusMeta.label}
-                                        </span>
+                                    <TableCell className="text-center align-middle">
+                                        <div className="flex flex-col items-center justify-center gap-0.5">
+                                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusMeta.style}`}>
+                                                <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
+                                                {statusMeta.label}
+                                            </span>
+                                            {file.days_remaining !== null && file.days_remaining !== undefined && file.days_remaining > 0 && (
+                                                <span className="text-[10px] text-slate-400 font-medium">
+                                                    Sisa {file.days_remaining} hari
+                                                </span>
+                                            )}
+                                        </div>
                                     </TableCell>
 
                                     {/* AKSI */}
-                                    <TableCell className="text-center">
+                                    <TableCell className="text-center align-middle">
                                         <div className="inline-flex items-center justify-center gap-1">
                                             {/* Copy link button */}
                                             <button
@@ -742,6 +739,17 @@ export default function FilesIndex({
                                             >
                                                 <Copy className="w-3.5 h-3.5" />
                                             </button>
+
+                                            {/* Open in Drive link button */}
+                                            <a
+                                                href={file.drive_url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                                                title="Buka di Tab Baru"
+                                            >
+                                                <ExternalLink className="w-3.5 h-3.5" />
+                                            </a>
 
                                             {/* More options button with Portal DropdownMenu */}
                                             <DropdownMenu>
@@ -791,7 +799,7 @@ export default function FilesIndex({
                         })
                     ) : (
                         <TableEmpty
-                            colSpan={9}
+                            colSpan={5}
                             message="Belum ada link file yang dikirim"
                             description="Klik tombol Tambah Link GDrive di atas untuk menambahkan link baru."
                         />

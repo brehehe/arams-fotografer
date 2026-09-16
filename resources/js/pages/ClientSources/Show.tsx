@@ -27,8 +27,11 @@ import {
 import { toast } from 'sonner';
 import {
     Modal,
+    Badge,
     AlertConfirmation,
+    StatCard,
 } from '@/components/ui';
+import { FormattedNumberInput } from '@/components/ui/formatted-number-input';
 
 interface ReferralHistoryItem {
     id: number | string;
@@ -435,73 +438,35 @@ export default function ClientSourceShow({
 
             {/* ── 2. METRIC STAT CARDS (REAL DATABASE) ────────────────────────── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Card 1: Total Referral */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                        <Users className="w-6 h-6" />
-                    </div>
-                    <div className="min-w-0">
-                        <span className="text-xs font-semibold text-slate-500 block truncate">
-                            Total Referral (Client)
-                        </span>
-                        <div className="text-2xl font-black text-slate-900 tracking-tight mt-0.5 font-sans">
-                            {metrics.total_referral_clients}
-                        </div>
-                        <span className="text-[11px] text-slate-400 font-medium">Klien terdaftar</span>
-                    </div>
-                </div>
-
-                {/* Card 2: Total Project */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                        <FileSpreadsheet className="w-6 h-6" />
-                    </div>
-                    <div className="min-w-0">
-                        <span className="text-xs font-semibold text-slate-500 block truncate">
-                            Total Project
-                        </span>
-                        <div className="text-2xl font-black text-slate-900 tracking-tight mt-0.5 font-sans">
-                            {metrics.total_projects}
-                        </div>
-                        <span className="text-[11px] text-slate-400 font-medium">Proyek aktif</span>
-                    </div>
-                </div>
-
-                {/* Card 3: Total Nilai Project */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                        <DollarSign className="w-6 h-6" />
-                    </div>
-                    <div className="min-w-0">
-                        <span className="text-xs font-semibold text-slate-500 block truncate">
-                            Total Nilai Project
-                        </span>
-                        <div className="text-xl font-black text-[#C89445] tracking-tight mt-0.5 truncate font-sans" title={formatCurrency(metrics.total_project_value)}>
-                            {formatCurrency(metrics.total_project_value)}
-                        </div>
-                        <span className="text-[11px] text-slate-400 font-medium truncate block">
-                            Nilai dari seluruh project
-                        </span>
-                    </div>
-                </div>
-
-                {/* Card 4: Referral Terakhir */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                        <Calendar className="w-6 h-6" />
-                    </div>
-                    <div className="min-w-0">
-                        <span className="text-xs font-semibold text-slate-500 block truncate">
-                            Referral Terakhir
-                        </span>
-                        <div className="text-base font-black text-slate-900 tracking-tight mt-0.5 truncate">
-                            {metrics.last_referral_date}
-                        </div>
-                        <span className="text-[11px] text-slate-400 font-medium truncate block" title={metrics.last_referral_project}>
-                            {metrics.last_referral_project}
-                        </span>
-                    </div>
-                </div>
+                <StatCard
+                    title="Total Referral (Client)"
+                    value={metrics.total_referral_clients}
+                    subtitle="Klien terdaftar"
+                    icon={Users}
+                    color="indigo"
+                />
+                <StatCard
+                    title="Total Project"
+                    value={metrics.total_projects}
+                    subtitle="Proyek aktif"
+                    icon={FileSpreadsheet}
+                    color="emerald"
+                />
+                <StatCard
+                    title="Total Nilai Project"
+                    value={metrics.total_project_value}
+                    isCurrency={true}
+                    subtitle="Nilai dari seluruh project"
+                    icon={DollarSign}
+                    color="amber"
+                />
+                <StatCard
+                    title="Referral Terakhir"
+                    value={metrics.last_referral_date || '-'}
+                    subtitle={metrics.last_referral_project || 'Belum ada project'}
+                    icon={Calendar}
+                    color="blue"
+                />
             </div>
 
             {/* ── 3. FINANCE INTEGRATION STATUS BANNER ────────────────────────── */}
@@ -794,11 +759,9 @@ export default function ClientSourceShow({
                                     <span className="px-3.5 py-2.5 bg-slate-100 border border-r-0 border-slate-200 rounded-l-xl text-xs font-bold text-slate-500">
                                         Rp
                                     </span>
-                                    <input
-                                        type="number"
-                                        min={0}
+                                    <FormattedNumberInput
                                         value={appreciationForm.amount}
-                                        onChange={(e) => setAppreciationForm({ ...appreciationForm, amount: Number(e.target.value) })}
+                                        onChange={(val) => setAppreciationForm({ ...appreciationForm, amount: val })}
                                         className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-r-xl text-xs font-bold text-slate-900 focus:bg-white focus:border-indigo-600 outline-hidden font-sans"
                                     />
                                 </div>

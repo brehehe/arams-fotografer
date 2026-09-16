@@ -20,6 +20,13 @@ class UpdateProjectStatusRequest extends FormRequest
             'progress' => 'nullable|integer|min:0|max:100',
             'workflow_step' => 'nullable|string|max:255',
             'custom_timeline' => 'nullable|array',
+            'completed_step_name' => 'nullable|string|max:255',
+            'drive_link' => 'nullable|array',
+            'drive_link.name' => 'nullable|string|max:255',
+            'drive_link.drive_url' => 'nullable|string|max:1000',
+            'drive_link.file_type' => 'nullable|string|max:50',
+            'revert_step_name' => 'nullable|string|max:255',
+            'revert_step_names' => 'nullable|array',
         ];
     }
 }

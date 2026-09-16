@@ -30,7 +30,7 @@ import {
     Sparkles,
     Check,
 } from 'lucide-react';
-import { formatRupiah, formatRupiahCompact } from '@/lib/formatters';
+import { formatRupiah, formatRupiahCompact, formatCurrencyShort } from '@/lib/formatters';
 import {
     Table,
     TableHeader,
@@ -41,6 +41,7 @@ import {
     Badge,
     BarChart,
     DonutChart,
+    StatCard,
 } from '@/components/ui';
 
 interface DashboardProps {
@@ -329,81 +330,42 @@ export default function Dashboard({
 
             {/* 2. 4 KPI Cards (Full Width 4 Kolom) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {/* Card 1: Total Project */}
-                <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
-                    <div className="flex items-start justify-between">
-                        <div>
-                            <span className="text-[10px] font-bold text-slate-800 stat-card-title uppercase tracking-wider leading-tight block">TOTAL PROJECT</span>
-                            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-0.5 leading-none">{kpis.total_projects}</div>
-                            <span className="text-[11px] text-slate-500 mt-1 block">Semua Project</span>
-                        </div>
-                        <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center shrink-0">
-                            <Folder className="w-4.5 h-4.5" />
-                        </div>
-                    </div>
-                    <div className="mt-3 pt-2 border-t border-slate-100">
-                        <Link href="/projects" className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 hover:text-[#C89445] transition-colors">
-                            <span>Lihat Detail</span><ArrowUpRight className="w-3 h-3" />
-                        </Link>
-                    </div>
-                </div>
-
-                {/* Card 2: Project Aktif */}
-                <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
-                    <div className="flex items-start justify-between">
-                        <div>
-                            <span className="text-[10px] font-bold text-slate-800 stat-card-title uppercase tracking-wider leading-tight block">PROJECT AKTIF</span>
-                            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-0.5 leading-none">{kpis.active_projects}</div>
-                            <span className="text-[11px] text-slate-500 mt-1 block">Sedang Dikerjakan</span>
-                        </div>
-                        <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center shrink-0">
-                            <TrendingUp className="w-4.5 h-4.5" />
-                        </div>
-                    </div>
-                    <div className="mt-3 pt-2 border-t border-slate-100">
-                        <Link href="/projects?status=in_progress" className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 hover:text-[#C89445] transition-colors">
-                            <span>Lihat Detail</span><ArrowUpRight className="w-3 h-3" />
-                        </Link>
-                    </div>
-                </div>
-
-                {/* Card 3: Project Selesai */}
-                <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
-                    <div className="flex items-start justify-between">
-                        <div>
-                            <span className="text-[10px] font-bold text-slate-800 stat-card-title uppercase tracking-wider leading-tight block">PROJECT SELESAI</span>
-                            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-0.5 leading-none">{kpis.completed_projects}</div>
-                            <span className="text-[11px] text-slate-500 mt-1 block">Selesai</span>
-                        </div>
-                        <div className="w-9 h-9 rounded-lg bg-purple-50 text-purple-500 flex items-center justify-center shrink-0">
-                            <CheckSquare className="w-4.5 h-4.5" />
-                        </div>
-                    </div>
-                    <div className="mt-3 pt-2 border-t border-slate-100">
-                        <Link href="/projects?status=completed" className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 hover:text-[#C89445] transition-colors">
-                            <span>Lihat Detail</span><ArrowUpRight className="w-3 h-3" />
-                        </Link>
-                    </div>
-                </div>
-
-                {/* Card 4: Total Klien */}
-                <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between">
-                    <div className="flex items-start justify-between">
-                        <div>
-                            <span className="text-[10px] font-bold text-slate-800 stat-card-title uppercase tracking-wider leading-tight block">TOTAL KLIEN</span>
-                            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-0.5 leading-none">{kpis.total_clients}</div>
-                            <span className="text-[11px] text-slate-500 mt-1 block">Klien Terdaftar</span>
-                        </div>
-                        <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center shrink-0">
-                            <Users className="w-4.5 h-4.5" />
-                        </div>
-                    </div>
-                    <div className="mt-3 pt-2 border-t border-slate-100">
-                        <Link href="/clients" className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 hover:text-[#C89445] transition-colors">
-                            <span>Lihat Detail</span><ArrowUpRight className="w-3 h-3" />
-                        </Link>
-                    </div>
-                </div>
+                <StatCard
+                    title="TOTAL PROJECT"
+                    value={kpis.total_projects}
+                    subtitle="Semua Project"
+                    icon={Folder}
+                    color="blue"
+                    layout="vertical"
+                    action={{ label: 'Lihat Detail', href: '/projects' }}
+                />
+                <StatCard
+                    title="PROJECT AKTIF"
+                    value={kpis.active_projects}
+                    subtitle="Sedang Dikerjakan"
+                    icon={TrendingUp}
+                    color="emerald"
+                    layout="vertical"
+                    action={{ label: 'Lihat Detail', href: '/projects?status=in_progress' }}
+                />
+                <StatCard
+                    title="PROJECT SELESAI"
+                    value={kpis.completed_projects}
+                    subtitle="Selesai"
+                    icon={CheckSquare}
+                    color="purple"
+                    layout="vertical"
+                    action={{ label: 'Lihat Detail', href: '/projects?status=completed' }}
+                />
+                <StatCard
+                    title="TOTAL KLIEN"
+                    value={kpis.total_clients}
+                    subtitle="Klien Terdaftar"
+                    icon={Users}
+                    color="amber"
+                    layout="vertical"
+                    action={{ label: 'Lihat Detail', href: '/clients' }}
+                />
             </div>
 
             {/* 3. Akses Cepat & Ringkasan Keuangan (Sejajar Rata 100%) */}
@@ -563,22 +525,35 @@ export default function Dashboard({
                                 {/* Total Nilai Project */}
                                 <div>
                                     <span className="text-[11px] text-slate-400 font-medium block">Total Nilai Project</span>
-                                    <div className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight mt-0.5">
-                                        {formatRupiah(financial.total_value)}
+                                    <div
+                                        className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight mt-0.5 truncate"
+                                        title={formatRupiah(financial.total_value)}
+                                    >
+                                        {formatCurrencyShort(financial.total_value)}
                                     </div>
                                 </div>
 
                                 {/* Sudah Diterima */}
                                 <div className="bg-emerald-50/80 border border-emerald-100 p-2.5 rounded-lg flex-1 flex flex-col justify-center">
                                     <span className="text-[10px] font-semibold text-emerald-800 block">Sudah Diterima</span>
-                                    <p className="text-xs sm:text-sm font-bold text-emerald-950 mt-0.5">{formatRupiah(financial.received)}</p>
+                                    <p
+                                        className="text-xs sm:text-sm font-bold text-emerald-950 mt-0.5 truncate"
+                                        title={formatRupiah(financial.received)}
+                                    >
+                                        {formatCurrencyShort(financial.received)}
+                                    </p>
                                     <span className="text-[11px] font-bold text-emerald-600 mt-0.5 inline-block">{financial.collection_rate}%</span>
                                 </div>
 
                                 {/* Belum Diterima */}
                                 <div className="bg-amber-50/80 border border-amber-100 p-2.5 rounded-lg flex-1 flex flex-col justify-center">
                                     <span className="text-[10px] font-semibold text-amber-800 block">Belum Diterima</span>
-                                    <p className="text-xs sm:text-sm font-bold text-amber-950 mt-0.5">{formatRupiah(financial.outstanding)}</p>
+                                    <p
+                                        className="text-xs sm:text-sm font-bold text-amber-950 mt-0.5 truncate"
+                                        title={formatRupiah(financial.outstanding)}
+                                    >
+                                        {formatCurrencyShort(financial.outstanding)}
+                                    </p>
                                     <span className="text-[11px] font-bold text-amber-600 mt-0.5 inline-block">{(100 - financial.collection_rate).toFixed(1)}%</span>
                                 </div>
                             </div>

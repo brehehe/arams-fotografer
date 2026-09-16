@@ -720,23 +720,23 @@ export default function ClientEdit({
 
                 case 'lainnya':
                     if (!clientNameVal) {
-                        toast.error('Nama Lengkap Pemesan wajib diisi');
-                        return false;
-                    }
-                    if (!categoryData.needs_description?.trim()) {
-                        toast.error('Deskripsi Kebutuhan wajib diisi');
-                        return false;
-                    }
-                    if (!categoryData.location?.trim() && !formData.event_location?.trim()) {
-                        toast.error('Lokasi wajib diisi');
+                        toast.error('Nama Pemesan wajib diisi');
                         return false;
                     }
                     if (!categoryData.needs_type?.trim()) {
                         toast.error('Jenis Kebutuhan wajib dipilih');
                         return false;
                     }
-                    if (!categoryData.needs_detail?.trim()) {
-                        toast.error('Detail Kebutuhan wajib diisi');
+                    if (!categoryData.event_date && !formData.event_date) {
+                        toast.error('Tanggal Acara wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.location?.trim() && !formData.event_location?.trim()) {
+                        toast.error('Lokasi wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.needs_description?.trim()) {
+                        toast.error('Deskripsi Kebutuhan wajib diisi');
                         return false;
                     }
                     return true;
@@ -962,8 +962,8 @@ export default function ClientEdit({
                     return true;
 
                 case 'event':
-                    if (!clientNameVal && !(categoryData as any).pic_name?.trim()) {
-                        toast.error('Nama Penanggung Jawab / PIC wajib diisi');
+                    if (!clientNameVal && !(categoryData as any).pic_name?.trim() && !(categoryData as any).client_name?.trim()) {
+                        toast.error('Nama Pemesan wajib diisi');
                         return false;
                     }
                     if (!categoryData.event_date && !formData.event_date) {
@@ -978,8 +978,8 @@ export default function ClientEdit({
                         toast.error('Jenis Event wajib dipilih');
                         return false;
                     }
-                    if (!categoryData.event_scale?.trim()) {
-                        toast.error('Skala Event wajib dipilih');
+                    if (!categoryData.needs_type?.trim()) {
+                        toast.error('Jenis Kebutuhan wajib dipilih');
                         return false;
                     }
                     if (!categoryData.event_location?.trim() && !formData.event_location?.trim()) {
@@ -1543,7 +1543,7 @@ export default function ClientEdit({
                                     </div>
                                     <div>
                                         <h3 className="text-sm font-bold text-slate-900">
-                                            Wilayah Domisili / Alamat Klien
+                                            Informasi Alamat
                                         </h3>
                                         <p className="text-xs text-slate-500">
                                             Pilih Provinsi, Kota, Kecamatan, dan Kelurahan Indonesia secara bertingkat.
@@ -2292,7 +2292,7 @@ export default function ClientEdit({
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                                     <div className="p-3.5 bg-slate-50/70 rounded-xl space-y-1">
                                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                                            Wilayah Domisili
+                                            Informasi Alamat
                                         </span>
                                         <p className="font-semibold text-slate-800">
                                             {[formData.village, formData.district, formData.city, formData.province].filter(Boolean).join(', ') || '-'}

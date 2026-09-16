@@ -70,15 +70,15 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
 
     // ─── Role flags ───────────────────────────────────────────────────────────
     const isSuperAdmin = userRoles.includes('Super Admin');
-    const isOwner      = userRoles.includes('Owner');
-    const isAdmin      = userRoles.includes('Admin');
+    const isOwner = userRoles.includes('Owner');
+    const isAdmin = userRoles.includes('Admin');
     const isSupervisor = user?.is_supervisor || userRoles.includes('Supervisor');
     const isPhotographer = user?.is_photographer || userRoles.includes('Photographer');
-    const isEditor       = user?.is_editor       || userRoles.includes('Editor');
+    const isEditor = user?.is_editor || userRoles.includes('Editor');
 
     // Shorthand groups
     const isOwnerOrSuperAdmin = isSuperAdmin || isOwner;
-    const isOwnerOrAdmin      = isSuperAdmin || isOwner || isAdmin;
+    const isOwnerOrAdmin = isSuperAdmin || isOwner || isAdmin;
 
     // ─── Granular access per role ─────────────────────────────────────────────
     // Dashboard       → semua role
@@ -93,31 +93,31 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
     // Files           → Super Admin, Owner, Admin, Supervisor, Photographer, Editor
     // Settings        → Super Admin, Owner saja
 
-    const canAccessClients    = isOwnerOrAdmin;                           // Supervisor tidak
-    const canAccessFinance    = isOwnerOrSuperAdmin || isSupervisor;      // Admin tidak
-    const canAccessMasterData = isOwnerOrSuperAdmin;                      // hanya Super Admin & Owner
-    const canAccessUsers      = isOwnerOrSuperAdmin;                      // hanya Super Admin & Owner
-    const canAccessReports    = isOwnerOrSuperAdmin || isSupervisor;      // Admin tidak
-    const canAccessFiles      = isOwnerOrAdmin || isSupervisor || isPhotographer || isEditor;
-    const canAccessSettings   = isOwnerOrSuperAdmin;                      // hanya Super Admin & Owner
+    const canAccessClients = isOwnerOrAdmin;                           // Supervisor tidak
+    const canAccessFinance = isOwnerOrSuperAdmin;      // Admin tidak
+    const canAccessMasterData = isOwnerOrSuperAdmin || isAdmin;          // hanya Super Admin & Owner
+    const canAccessUsers = isOwnerOrSuperAdmin;                      // hanya Super Admin & Owner
+    const canAccessReports = isOwnerOrSuperAdmin || isSupervisor;      // Admin tidak
+    const canAccessFiles = isOwnerOrAdmin || isSupervisor || isPhotographer || isEditor;
+    const canAccessSettings = isOwnerOrSuperAdmin;                      // hanya Super Admin & Owner
     const canAccessSumberKlien = isOwnerOrAdmin;                          // Supervisor tidak
 
     const mainNav = [
-        { name: 'Dashboard',          href: '/dashboard', icon: LayoutDashboard, show: true },
-        { name: 'Clients',            href: '/clients',   icon: Users,           show: canAccessClients },
-        { name: 'Projects & Orders',  href: '/projects',  icon: Briefcase,       show: true },
-        { name: 'Finance',            href: '/finance',   icon: DollarSign,      show: canAccessFinance },
-        { name: 'Calendar / Schedule',href: '/calendar',  icon: Calendar,        show: true },
+        { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, show: true },
+        { name: 'Clients', href: '/clients', icon: Users, show: canAccessClients },
+        { name: 'Projects & Orders', href: '/projects', icon: Briefcase, show: true },
+        { name: 'Finance', href: '/finance', icon: DollarSign, show: canAccessFinance },
+        { name: 'Calendar / Schedule', href: '/calendar', icon: Calendar, show: true },
     ].filter((item) => item.show !== false);
 
     const masterDataNav = [
-        { name: 'Kategori Project',    href: '/master-data/categories' },
-        { name: 'Jenis Layanan',       href: '/master-data/services' },
-        { name: 'Paket & Harga',       href: '/master-data/packages' },
-        { name: 'Add-on & Biaya',      href: '/master-data/addons' },
+        { name: 'Kategori Project', href: '/master-data/categories' },
+        { name: 'Jenis Layanan', href: '/master-data/services' },
+        { name: 'Paket & Harga', href: '/master-data/packages' },
+        { name: 'Add-on & Biaya', href: '/master-data/addons' },
         { name: 'Workflow & Template', href: '/master-data/workflows' },
-        { name: 'Metode Pembayaran',   href: '/master-data/payment-methods' },
-        { name: 'Template Catatan',    href: '/master-data/notes' },
+        { name: 'Metode Pembayaran', href: '/master-data/payment-methods' },
+        { name: 'Template Catatan', href: '/master-data/notes' },
     ];
 
     const isFormKlienActive = currentPath.startsWith('/setting/form-klien') ||
@@ -145,9 +145,9 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
 
     const secondaryNav = [
         { name: 'Sumber Klien', href: '/client-sources', icon: HeartHandshake, show: canAccessSumberKlien },
-        { name: 'Users',        href: '/users',          icon: UserCog,        show: canAccessUsers },
-        { name: 'Reports',      href: '/reports',        icon: BarChart3,      show: canAccessReports },
-        { name: 'Files',        href: '/files',          icon: HardDrive,      show: canAccessFiles },
+        { name: 'Users', href: '/users', icon: UserCog, show: canAccessUsers },
+        { name: 'Reports', href: '/reports', icon: BarChart3, show: canAccessReports },
+        { name: 'Files', href: '/files', icon: HardDrive, show: canAccessFiles },
     ].filter((item) => item.show !== false);
 
     const companyName = pageProps?.appSettings?.company_name || 'ARAMS PHOTOGRAPHY';

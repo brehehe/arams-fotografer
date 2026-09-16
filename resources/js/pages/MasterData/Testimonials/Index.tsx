@@ -2,12 +2,15 @@ import React, { useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { toast } from 'sonner';
 import { Pagination } from '@/components/ui/pagination';
+import { StatCard } from '@/components/ui/stat-card';
 import {
     Star,
     Plus,
     Search,
     Edit2,
     Trash2,
+    Eye,
+    EyeOff,
     CheckCircle2,
     Clock,
     XCircle,
@@ -49,6 +52,7 @@ interface TestimonialsIndexProps {
     stats?: {
         total: number;
         approved: number;
+        rejected?: number;
         pending: number;
         featured: number;
     };
@@ -59,14 +63,16 @@ interface TestimonialsIndexProps {
         status?: string;
         per_page?: number;
     };
+    portal_show_testimonials?: boolean;
 }
 
 export default function TestimonialsIndex({
     testimonials = { data: [], current_page: 1, last_page: 1, total: 0, from: 0, to: 0 },
-    stats = { total: 0, approved: 0, pending: 0, featured: 0 },
+    stats = { total: 0, approved: 0, rejected: 0, pending: 0, featured: 0 },
     projects = [],
     clients = [],
     filters = {},
+    portal_show_testimonials = true,
 }: TestimonialsIndexProps) {
     const { props: pageProps } = usePage<any>();
     const accentColor = pageProps?.appSettings?.primary_accent_color || '#C98922';
@@ -75,6 +81,7 @@ export default function TestimonialsIndex({
 
     const [search, setSearch] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || 'all');
+    const [portalShowTestimonials, setPortalShowTestimonials] = useState(portal_show_testimonials);
     const [modalOpen, setModalOpen] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<TestimonialItem | null>(null);
@@ -204,18 +211,29 @@ export default function TestimonialsIndex({
         });
     };
 
-    const handleToggleStatus = (item: TestimonialItem, nextStatus: 'approved' | 'pending' | 'rejected') => {
-        router.put(`/master-data/testimonials/${item.id}`, {
-            client_name: item.client_name,
-            package_name: item.package_name,
-            rating: item.rating,
-            comment: item.comment,
-            status: nextStatus,
-            is_featured: item.is_featured,
-            sort_order: item.sort_order,
+    const handleToggleActive = (item: TestimonialItem) => {
+        router.patch(`/master-data/testimonials/${item.id}/toggle`, {}, {
+            preserveScroll: true,
+            onError: () => toast.error('Gagal mengubah status ulasan'),
+        });
+    };
+
+    const handleTogglePortalShowTestimonials = () => {
+        const nextVal = !portalShowTestimonials;
+        setPortalShowTestimonials(nextVal);
+        router.post('/settings', {
+            settings: {
+                portal_show_testimonials: nextVal ? '1' : '0',
+            },
         }, {
             preserveScroll: true,
-            onSuccess: () => toast.success(`Status ulasan berhasil diubah ke ${nextStatus}`),
+            onSuccess: () => {
+                toast.success(`Seksi ulasan di portal klien berhasil ${nextVal ? 'diaktifkan (Show)' : 'dinonaktifkan (Hide)'}`);
+            },
+            onError: () => {
+                setPortalShowTestimonials(!nextVal);
+                toast.error('Gagal memperbarui pengaturan ulasan portal');
+            },
         });
     };
 
@@ -245,7 +263,7 @@ export default function TestimonialsIndex({
             <SettingsTabNav activeMainTab="admin" activeAdminSubTab="testimonials" accentColor={accentColor} />
 
             {/* ── 3. SUB-SECTION TITLE & ACTIONS: ULASAN & TESTIMONI KLIEN ──────────── */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900/60 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900/60 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
                 <div>
                     <div className="flex items-center gap-2.5">
                         <div
@@ -259,11 +277,35 @@ export default function TestimonialsIndex({
                         </h2>
                     </div>
                     <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1 sm:ml-11">
-                        Kelola ulasan, kepuasan bintang, dan apresiasi klien yang tampil di dashboard portal klien.
+                        Kelola status Show &amp; Hide ulasan klien yang tampil di dashboard portal klien (`/client/dashboard`).
                     </p>
                 </div>
 
-                <div className="flex items-center gap-2 flex-wrap sm:ml-auto">
+                <div className="flex items-center gap-2.5 flex-wrap lg:ml-auto">
+                    {/* Sakelar Global Show/Hide Seksi Ulasan di Portal */}
+                    <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 px-3 py-2 rounded-xl text-xs">
+                        <span className="text-slate-600 dark:text-slate-300 font-semibold">Tampil di Portal Klien:</span>
+                        <button
+                            type="button"
+                            onClick={handleTogglePortalShowTestimonials}
+                            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
+                                portalShowTestimonials ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-600'
+                            }`}
+                            role="switch"
+                            aria-checked={portalShowTestimonials}
+                            title="Aktifkan / Nonaktifkan seksi ulasan di portal klien"
+                        >
+                            <span
+                                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                                    portalShowTestimonials ? 'translate-x-4' : 'translate-x-0'
+                                }`}
+                            />
+                        </button>
+                        <span className={`font-bold text-[11px] ${portalShowTestimonials ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-500'}`}>
+                            {portalShowTestimonials ? 'Show (Tampil)' : 'Hide (Sembunyi)'}
+                        </span>
+                    </div>
+
                     <Link
                         href="/client/dashboard"
                         target="_blank"
@@ -272,6 +314,7 @@ export default function TestimonialsIndex({
                         <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
                         <span>Preview di Portal</span>
                     </Link>
+
                     <button
                         type="button"
                         onClick={handleOpenCreate}
@@ -284,58 +327,39 @@ export default function TestimonialsIndex({
                 </div>
             </div>
 
-            {/* ── 4. TOP STAT CARDS ─────────────────────────────────────────────── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div
-                        className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
-                        style={{ backgroundColor: `${accentColor}18`, color: accentColor }}
-                    >
-                        <MessageSquareQuote className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-bold text-slate-500 block uppercase tracking-wider">Total Ulasan</span>
-                        <h2 className="text-2xl font-black text-slate-900 tracking-tight font-sans">
-                            {stats.total}
-                        </h2>
-                    </div>
-                </div>
+            {/* ── 4. TOP STAT CARDS (Standardized StatCard) ──────────────────────── */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+                <StatCard
+                    title="Total Ulasan"
+                    value={stats.total}
+                    icon={MessageSquareQuote}
+                    color="amber"
+                    subtitle="Semua ulasan tercatat"
+                />
 
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center shrink-0">
-                        <CheckCircle2 className="w-6 h-6 text-emerald-600" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-bold text-slate-500 block uppercase tracking-wider">Disetujui / Aktif</span>
-                        <h2 className="text-2xl font-black text-emerald-600 tracking-tight font-sans">
-                            {stats.approved}
-                        </h2>
-                    </div>
-                </div>
+                <StatCard
+                    title="Show (Tampil)"
+                    value={stats.approved}
+                    icon={Eye}
+                    color="emerald"
+                    subtitle="Aktif di portal klien"
+                />
 
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center shrink-0">
-                        <Clock className="w-6 h-6 text-amber-600" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-bold text-slate-500 block uppercase tracking-wider">Menunggu Review</span>
-                        <h2 className="text-2xl font-black text-amber-600 tracking-tight font-sans">
-                            {stats.pending}
-                        </h2>
-                    </div>
-                </div>
+                <StatCard
+                    title="Hide (Sembunyi)"
+                    value={stats.rejected !== undefined ? stats.rejected : (stats.total - stats.approved)}
+                    icon={EyeOff}
+                    color="slate"
+                    subtitle="Disembunyikan dari portal"
+                />
 
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center shrink-0">
-                        <Sparkles className="w-6 h-6 text-purple-600" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-bold text-slate-500 block uppercase tracking-wider">Featured di Portal</span>
-                        <h2 className="text-2xl font-black text-purple-600 tracking-tight font-sans">
-                            {stats.featured}
-                        </h2>
-                    </div>
-                </div>
+                <StatCard
+                    title="Featured di Portal"
+                    value={stats.featured}
+                    icon={Sparkles}
+                    color="purple"
+                    subtitle="Sorotan prioritas utama"
+                />
             </div>
 
             {/* ── 3. SEARCH & STATUS FILTER BAR ───────────────────────────── */}
@@ -354,15 +378,14 @@ export default function TestimonialsIndex({
                 <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto">
                     {[
                         { id: 'all', label: 'Semua Status' },
-                        { id: 'approved', label: 'Disetujui' },
-                        { id: 'pending', label: 'Menunggu' },
-                        { id: 'rejected', label: 'Ditolak' },
+                        { id: 'approved', label: 'Show (Tampil)' },
+                        { id: 'rejected', label: 'Hide (Sembunyi)' },
                     ].map((st) => (
                         <button
                             key={st.id}
                             type="button"
                             onClick={() => handleFilterStatus(st.id)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer capitalize ${statusFilter === st.id
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer capitalize whitespace-nowrap ${statusFilter === st.id
                                     ? 'bg-[#3B46F1] text-white shadow-xs'
                                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                                 }`}
@@ -401,14 +424,22 @@ export default function TestimonialsIndex({
                                     </div>
 
                                     <span
-                                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold capitalize ${item.status === 'approved'
-                                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                                : item.status === 'pending'
-                                                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                                                    : 'bg-rose-50 text-rose-700 border border-rose-200'
+                                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold ${item.status === 'approved'
+                                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80'
+                                                : 'bg-slate-100 text-slate-600 border border-slate-200'
                                             }`}
                                     >
-                                        {item.status}
+                                        {item.status === 'approved' ? (
+                                            <>
+                                                <Eye className="w-3 h-3 text-emerald-600" />
+                                                <span>Show (Tampil)</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <EyeOff className="w-3 h-3 text-slate-400" />
+                                                <span>Hide (Sembunyi)</span>
+                                            </>
+                                        )}
                                     </span>
                                 </div>
 
@@ -430,25 +461,28 @@ export default function TestimonialsIndex({
                                 </p>
                             </div>
 
-                            {/* Actions Bar */}
+                            {/* Actions Bar: Show/Hide Toggle Button & Edit/Delete */}
                             <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                                <div className="flex items-center gap-1">
-                                    {item.status !== 'approved' && (
+                                <div className="flex items-center gap-1.5">
+                                    {item.status === 'approved' ? (
                                         <button
                                             type="button"
-                                            onClick={() => handleToggleStatus(item, 'approved')}
-                                            className="text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 px-2 py-1 rounded-lg transition-colors cursor-pointer"
+                                            onClick={() => handleToggleActive(item)}
+                                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 text-[11px] font-semibold transition-colors cursor-pointer"
+                                            title="Sembunyikan dari portal klien (Hide)"
                                         >
-                                            Setujui
+                                            <EyeOff className="w-3.5 h-3.5 text-slate-400" />
+                                            <span>Hide</span>
                                         </button>
-                                    )}
-                                    {item.status !== 'rejected' && (
+                                    ) : (
                                         <button
                                             type="button"
-                                            onClick={() => handleToggleStatus(item, 'rejected')}
-                                            className="text-[11px] font-bold text-slate-500 hover:bg-slate-100 px-2 py-1 rounded-lg transition-colors cursor-pointer"
+                                            onClick={() => handleToggleActive(item)}
+                                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] font-bold transition-colors cursor-pointer"
+                                            title="Tampilkan di portal klien (Show)"
                                         >
-                                            Tolak
+                                            <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                                            <span>Show</span>
                                         </button>
                                     )}
                                 </div>
@@ -625,15 +659,14 @@ export default function TestimonialsIndex({
                             {/* Status & Featured */}
                             <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100">
                                 <div>
-                                    <label className="text-[11px] font-bold text-slate-700 mb-1 block uppercase">Status</label>
+                                    <label className="text-[11px] font-bold text-slate-700 mb-1 block uppercase">Status Tampil</label>
                                     <select
-                                        value={formData.status}
+                                        value={formData.status === 'approved' ? 'approved' : 'rejected'}
                                         onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
                                         className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white"
                                     >
-                                        <option value="approved">Approved (Disetujui)</option>
-                                        <option value="pending">Pending (Menunggu)</option>
-                                        <option value="rejected">Rejected (Ditolak)</option>
+                                        <option value="approved">Show (Tampilkan di Portal)</option>
+                                        <option value="rejected">Hide (Sembunyikan dari Portal)</option>
                                     </select>
                                 </div>
                                 <div className="flex items-center pt-6">

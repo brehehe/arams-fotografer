@@ -48,11 +48,17 @@ import {
     Archive,
     Trash2,
     Loader2,
+    Package,
+    ChevronUp,
+    ChevronDown,
+    ExternalLink,
+    MessageCircle,
 } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 import SettingsTabNav, { SettingAdminSubTab } from '@/components/SettingsTabNav';
 import { GradientBuilder, ColorSettingRow } from '@/components/settings/ThemeControls';
 import { isDarkColor } from '@/lib/utils';
+import { formatRupiah } from '@/lib/formatters';
 
 export interface BackupItem {
     filename: string;
@@ -67,18 +73,29 @@ interface SettingsAdminProps {
     settings?: any;
     settingsMap?: Record<string, string>;
     backups?: BackupItem[];
+    packages?: Array<{
+        id: string;
+        name: string;
+        base_price: number | string;
+        duration_hours?: number;
+        description?: string;
+        category?: { id: string; name: string };
+        status: string;
+        sort_order: number;
+    }>;
 }
 
 export default function AdminSettingsPage({
     settings = {},
     settingsMap = {},
     backups = [],
+    packages = [],
 }: SettingsAdminProps) {
     const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
     const subParam = searchParams?.get('sub');
 
     const initialAdminSubTab: SettingAdminSubTab =
-        (['company', 'general', 'appearance', 'login_theme', 'backup'].includes(subParam || '')
+        (['company', 'general', 'appearance', 'login_theme', 'recommended_packages', 'backup'].includes(subParam || '')
             ? (subParam as SettingAdminSubTab)
             : 'company');
 
@@ -226,6 +243,99 @@ export default function AdminSettingsPage({
         report_received_color: getVal('report_received_color', '#059669'),
         report_pending_color: getVal('report_pending_color', '#DC2626'),
     });
+
+    // Recommended Packages (Portal Klien) State
+    const rawRecommendedIds = getVal('portal_recommended_packages', '');
+    let initialSelectedPackageIds: string[] = [];
+    try {
+        if (rawRecommendedIds) {
+            initialSelectedPackageIds = rawRecommendedIds.startsWith('[')
+                ? JSON.parse(rawRecommendedIds)
+                : rawRecommendedIds.split(',').map((id: string) => id.trim()).filter(Boolean);
+        }
+    } catch {
+        initialSelectedPackageIds = [];
+    }
+
+    const [recommendedForm, setRecommendedForm] = useState({
+        portal_show_recommended_packages: getVal('portal_show_recommended_packages', '1') !== '0',
+        portal_recommended_packages_title: getVal('portal_recommended_packages_title', 'Rekomendasi Paket Untuk Anda'),
+        portal_recommended_packages_subtitle: getVal('portal_recommended_packages_subtitle', 'Pilihan paket menarik lainnya yang mungkin Anda sukai.'),
+        portal_show_testimonials: getVal('portal_show_testimonials', '1') !== '0',
+    });
+
+    const [selectedPackageIds, setSelectedPackageIds] = useState<string[]>(initialSelectedPackageIds);
+    const [packageSearchTerm, setPackageSearchTerm] = useState('');
+    const [savingRecommended, setSavingRecommended] = useState(false);
+
+    const handleSaveRecommendedPackages = () => {
+        setSavingRecommended(true);
+        router.post(
+            '/settings',
+            {
+                settings: {
+                    portal_show_recommended_packages: recommendedForm.portal_show_recommended_packages ? '1' : '0',
+                    portal_recommended_packages_title: recommendedForm.portal_recommended_packages_title,
+                    portal_recommended_packages_subtitle: recommendedForm.portal_recommended_packages_subtitle,
+                    portal_show_testimonials: recommendedForm.portal_show_testimonials ? '1' : '0',
+                    portal_recommended_packages: JSON.stringify(selectedPackageIds),
+                },
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setSavingRecommended(false);
+                    toast.success('Pengaturan rekomendasi paket berhasil disimpan.');
+                },
+                onError: () => {
+                    setSavingRecommended(false);
+                    toast.error('Gagal menyimpan pengaturan rekomendasi paket.');
+                },
+            }
+        );
+    };
+
+    const handleToggleSelectPackage = (id: string) => {
+        if (selectedPackageIds.includes(id)) {
+            setSelectedPackageIds(selectedPackageIds.filter((item) => item !== id));
+        } else {
+            setSelectedPackageIds([...selectedPackageIds, id]);
+        }
+    };
+
+    const handleMovePackage = (index: number, direction: 'up' | 'down') => {
+        const targetIndex = direction === 'up' ? index - 1 : index + 1;
+        if (targetIndex < 0 || targetIndex >= selectedPackageIds.length) return;
+        const updated = [...selectedPackageIds];
+        const temp = updated[index];
+        updated[index] = updated[targetIndex];
+        updated[targetIndex] = temp;
+        setSelectedPackageIds(updated);
+    };
+
+    const handleRemoveSelectedPackage = (id: string) => {
+        setSelectedPackageIds(selectedPackageIds.filter((item) => item !== id));
+    };
+
+    const handleAutoSelectTopPackages = () => {
+        const top5 = packages.slice(0, 5).map((p: any) => p.id);
+        setSelectedPackageIds(top5);
+        toast.success('5 paket teratas telah dipilih otomatis.');
+    };
+
+    const getPackageSamplePreviewImage = (name: string) => {
+        const n = (name || '').toLowerCase();
+        if (n.includes('wedding') || n.includes('pernikahan') || n.includes('akad')) {
+            return 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&auto=format&fit=crop&q=80';
+        }
+        if (n.includes('prewedding') || n.includes('pre-wedding') || n.includes('engagement')) {
+            return 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=600&auto=format&fit=crop&q=80';
+        }
+        if (n.includes('portrait') || n.includes('wisuda') || n.includes('graduation')) {
+            return 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&auto=format&fit=crop&q=80';
+        }
+        return 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=600&auto=format&fit=crop&q=80';
+    };
 
     const [previewMode, setPreviewMode] = useState<'dashboard' | 'projects' | 'master_data' | 'finance' | 'login' | 'reports'>('dashboard');
     const [adminSectionTab, setAdminSectionTab] = useState<'sidebar' | 'navbar' | 'main' | 'report'>('sidebar');
@@ -2907,6 +3017,462 @@ export default function AdminSettingsPage({
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* TAB: REKOMENDASI PAKET */}
+            {adminSubTab === 'recommended_packages' && (
+                <div className="space-y-6 animate-in fade-in duration-200">
+                    {/* Header Banner */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900/60 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+                        <div>
+                            <div className="flex items-center gap-2.5">
+                                <div
+                                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                                    style={{
+                                        backgroundColor: `${themeForm.primary_accent_color || '#3C0E0E'}18`,
+                                        color: themeForm.primary_accent_color || '#3C0E0E',
+                                    }}
+                                >
+                                    <Package className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                                        Pengaturan Rekomendasi Paket Portal Klien
+                                    </h2>
+                                    <span className="text-xs text-slate-400 font-mono">http://localhost:8000/client/dashboard</span>
+                                </div>
+                            </div>
+                            <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1 sm:ml-12.5">
+                                Pilih paket-paket unggulan studio dan atur urutan prioritas yang tampil pada seksi <strong>"Rekomendasi Paket Untuk Anda"</strong> di portal klien.
+                            </p>
+                        </div>
+
+                        <div className="flex items-center gap-2.5 flex-wrap sm:ml-auto">
+                            <Link
+                                href="/client/dashboard"
+                                target="_blank"
+                                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer"
+                            >
+                                <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                                <span>Preview di Portal</span>
+                            </Link>
+
+                            <button
+                                type="button"
+                                onClick={handleSaveRecommendedPackages}
+                                disabled={savingRecommended}
+                                style={{ backgroundColor: themeForm.primary_accent_color || '#3C0E0E' }}
+                                className="inline-flex items-center gap-2 px-4 py-2.5 hover:brightness-110 text-white rounded-xl text-xs font-bold shadow-xs transition-all hover:scale-[1.02] cursor-pointer shrink-0 disabled:opacity-50"
+                            >
+                                {savingRecommended ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                <span>Simpan Pengaturan</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Controls Grid (2 Columns) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        {/* Card 1: Rekomendasi Paket Kontrol */}
+                        <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
+                            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                                <div>
+                                    <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                                        Status Tampil Rekomendasi Paket
+                                    </h3>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        Kontrol visibilitas seksi ini di halaman dashboard klien.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setRecommendedForm({
+                                        ...recommendedForm,
+                                        portal_show_recommended_packages: !recommendedForm.portal_show_recommended_packages,
+                                    })}
+                                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
+                                        recommendedForm.portal_show_recommended_packages ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-700'
+                                    }`}
+                                    role="switch"
+                                    aria-checked={recommendedForm.portal_show_recommended_packages}
+                                >
+                                    <span
+                                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                                            recommendedForm.portal_show_recommended_packages ? 'translate-x-5' : 'translate-x-0'
+                                        }`}
+                                    />
+                                </button>
+                            </div>
+
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 block">
+                                        Judul Seksi Rekomendasi
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={recommendedForm.portal_recommended_packages_title}
+                                        onChange={(e) => setRecommendedForm({
+                                            ...recommendedForm,
+                                            portal_recommended_packages_title: e.target.value,
+                                        })}
+                                        placeholder="Rekomendasi Paket Untuk Anda"
+                                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 block">
+                                        Subjudul / Deskripsi Seksi
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={recommendedForm.portal_recommended_packages_subtitle}
+                                        onChange={(e) => setRecommendedForm({
+                                            ...recommendedForm,
+                                            portal_recommended_packages_subtitle: e.target.value,
+                                        })}
+                                        placeholder="Pilihan paket menarik lainnya yang mungkin Anda sukai."
+                                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Card 2: Ulasan & Testimoni Kontrol */}
+                        <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4 flex flex-col justify-between">
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                                    <div>
+                                        <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                                            Visibilitas Ulasan Klien di Portal
+                                        </h3>
+                                        <p className="text-xs text-slate-500 mt-0.5">
+                                            Tampilkan / sembunyikan seksi ulasan &amp; testimoni di portal klien.
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setRecommendedForm({
+                                            ...recommendedForm,
+                                            portal_show_testimonials: !recommendedForm.portal_show_testimonials,
+                                        })}
+                                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
+                                            recommendedForm.portal_show_testimonials ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-700'
+                                        }`}
+                                        role="switch"
+                                        aria-checked={recommendedForm.portal_show_testimonials}
+                                    >
+                                        <span
+                                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                                                recommendedForm.portal_show_testimonials ? 'translate-x-5' : 'translate-x-0'
+                                            }`}
+                                        />
+                                    </button>
+                                </div>
+
+                                <div className="p-3.5 rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/40 text-xs space-y-1.5">
+                                    <p className="font-bold text-amber-900 dark:text-amber-300">
+                                        💡 Status Show &amp; Hide per Ulasan
+                                    </p>
+                                    <p className="text-amber-800/80 dark:text-amber-400 text-[11px] leading-relaxed">
+                                        Untuk mengatur ulasan mana saja yang tampil atau disembunyikan secara individual (Show/Hide), Anda dapat mengaturnya di menu Ulasan Klien.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <Link
+                                href="/master-data/testimonials"
+                                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 transition-colors"
+                            >
+                                <MessageSquareQuote className="w-4 h-4 text-amber-600" />
+                                <span>Kelola Show &amp; Hide Ulasan Klien</span>
+                                <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                            </Link>
+                        </div>
+                    </div>
+
+                    {/* Selected Packages Order & Priority */}
+                    <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                                        Urutan Rekomendasi Terpilih ({selectedPackageIds.length} Paket)
+                                    </h3>
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                        Urutan #1 = Posisi Terkiri
+                                    </span>
+                                </div>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    Gunakan tombol panah untuk mengatur posisi urutan paket di portal klien. Disarankan memilih 3 hingga 5 paket.
+                                </p>
+                            </div>
+
+                            {packages.length > 0 && selectedPackageIds.length === 0 && (
+                                <button
+                                    type="button"
+                                    onClick={handleAutoSelectTopPackages}
+                                    className="px-3 py-1.5 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold transition-colors cursor-pointer shrink-0"
+                                >
+                                    Pilih 5 Paket Teratas Otomatis
+                                </button>
+                            )}
+                        </div>
+
+                        {selectedPackageIds.length > 0 ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+                                {selectedPackageIds.map((id, index) => {
+                                    const pkg = packages.find((p: any) => p.id === id);
+                                    if (!pkg) return null;
+                                    return (
+                                        <div
+                                            key={id}
+                                            className="rounded-xl border border-amber-200/90 dark:border-amber-900/50 bg-amber-50/20 dark:bg-amber-950/10 p-3.5 flex flex-col justify-between space-y-3 relative group"
+                                        >
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="w-6 h-6 rounded-lg bg-[#3C0E0E] text-white text-[11px] font-black flex items-center justify-center shrink-0">
+                                                        #{index + 1}
+                                                    </span>
+                                                    <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide truncate max-w-[90px]">
+                                                        {pkg.category?.name || 'Paket'}
+                                                    </span>
+                                                </div>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemoveSelectedPackage(id)}
+                                                    className="w-5 h-5 rounded-md hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center justify-center transition-colors cursor-pointer"
+                                                    title="Hapus dari rekomendasi"
+                                                >
+                                                    <X className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+
+                                            <div>
+                                                <h4 className="font-bold text-xs text-slate-900 dark:text-white line-clamp-1">
+                                                    {pkg.name}
+                                                </h4>
+                                                <p className="text-xs font-black text-[#3C0E0E] dark:text-amber-400 mt-0.5">
+                                                    {formatRupiah(pkg.base_price)}
+                                                </p>
+                                            </div>
+
+                                            {/* Reorder Buttons */}
+                                            <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+                                                <span className="text-[10px] text-slate-400">Pindah urutan:</span>
+                                                <div className="flex items-center gap-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleMovePackage(index, 'up')}
+                                                        disabled={index === 0}
+                                                        className="p-1 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-30 hover:bg-slate-50 transition-colors cursor-pointer"
+                                                        title="Pindah ke kiri / urutan sebelumnya"
+                                                    >
+                                                        <ChevronUp className="w-3 h-3" />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleMovePackage(index, 'down')}
+                                                        disabled={index === selectedPackageIds.length - 1}
+                                                        className="p-1 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-30 hover:bg-slate-50 transition-colors cursor-pointer"
+                                                        title="Pindah ke kanan / urutan selanjutnya"
+                                                    >
+                                                        <ChevronDown className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <div className="py-8 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl space-y-2">
+                                <Package className="w-8 h-8 text-slate-300 mx-auto" />
+                                <p className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                                    Belum ada paket yang dipilih untuk rekomendasi
+                                </p>
+                                <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
+                                    Pilih paket dari daftar katalog di bawah dengan mengklik kartu paket, atau gunakan tombol pilih otomatis.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Catalog Package Selection Grid */}
+                    <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div>
+                                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                                    Daftar Paket Tersedia ({packages.length} Paket Aktif)
+                                </h3>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    Klik pada kartu paket untuk menambahkan atau menghapus dari rekomendasi portal klien.
+                                </p>
+                            </div>
+
+                            <div className="relative w-full sm:w-64">
+                                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                <input
+                                    type="text"
+                                    value={packageSearchTerm}
+                                    onChange={(e) => setPackageSearchTerm(e.target.value)}
+                                    placeholder="Cari paket / kategori..."
+                                    className="w-full pl-9 pr-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
+                            {packages
+                                .filter((pkg: any) => {
+                                    if (!packageSearchTerm.trim()) return true;
+                                    const term = packageSearchTerm.toLowerCase();
+                                    const pkgName = (pkg.name || '').toLowerCase();
+                                    const catName = (pkg.category?.name || '').toLowerCase();
+                                    return pkgName.includes(term) || catName.includes(term);
+                                })
+                                .map((pkg: any) => {
+                                    const isSelected = selectedPackageIds.includes(pkg.id);
+                                    const selectedIndex = selectedPackageIds.indexOf(pkg.id);
+
+                                    return (
+                                        <div
+                                            key={pkg.id}
+                                            onClick={() => handleToggleSelectPackage(pkg.id)}
+                                            className={`rounded-xl border p-4 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-3 ${
+                                                isSelected
+                                                    ? 'border-[#3C0E0E] bg-[#3C0E0E]/5 shadow-xs ring-1 ring-[#3C0E0E]'
+                                                    : 'border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-850 hover:border-slate-300 hover:shadow-2xs'
+                                            }`}
+                                        >
+                                            <div className="space-y-1.5">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 truncate max-w-[130px]">
+                                                        {pkg.category?.name || 'Paket Foto'}
+                                                    </span>
+                                                    <div
+                                                        className={`w-5 h-5 rounded-md flex items-center justify-center transition-colors ${
+                                                            isSelected
+                                                                ? 'bg-[#3C0E0E] text-white'
+                                                                : 'border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800'
+                                                        }`}
+                                                    >
+                                                        {isSelected && <Check className="w-3.5 h-3.5" />}
+                                                    </div>
+                                                </div>
+
+                                                <h4 className="font-bold text-xs text-slate-900 dark:text-white line-clamp-1">
+                                                    {pkg.name}
+                                                </h4>
+
+                                                {pkg.description && (
+                                                    <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                                                        {pkg.description}
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                                                <span className="text-xs font-black text-[#3C0E0E] dark:text-amber-400">
+                                                    {formatRupiah(pkg.base_price)}
+                                                </span>
+                                                {isSelected && (
+                                                    <span className="text-[10px] font-extrabold text-[#3C0E0E] bg-amber-100/80 px-2 py-0.5 rounded-full">
+                                                        Urutan #{selectedIndex + 1}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                        </div>
+                    </div>
+
+                    {/* Live Preview Section (Matching /client/dashboard) */}
+                    <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
+                        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                            <div>
+                                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                                    <Eye className="w-4 h-4 text-emerald-600" />
+                                    <span>Live Preview Tampilan di Portal Klien</span>
+                                </h3>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    Simulasi tampilan seksi <strong>Rekomendasi Paket Untuk Anda</strong> di <code className="text-amber-700 bg-amber-50 px-1 py-0.5 rounded text-[10.5px]">/client/dashboard</code>
+                                </p>
+                            </div>
+                        </div>
+
+                        {recommendedForm.portal_show_recommended_packages ? (
+                            <div className="rounded-2xl border border-[#F4EBE4] p-5 sm:p-7 bg-[#FBF6F0]/40 space-y-5">
+                                <div>
+                                    <h3
+                                        style={{ color: '#3C0E0E' }}
+                                        className="text-xs sm:text-sm font-serif font-black uppercase tracking-wider"
+                                    >
+                                        {recommendedForm.portal_recommended_packages_title || 'Rekomendasi Paket Untuk Anda'}
+                                    </h3>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        {recommendedForm.portal_recommended_packages_subtitle || 'Pilihan paket menarik lainnya yang mungkin Anda sukai.'}
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+                                    {(selectedPackageIds.length > 0 ? selectedPackageIds : packages.slice(0, 5).map((p: any) => p.id)).map((id, idx) => {
+                                        const pkg = packages.find((p: any) => p.id === id);
+                                        if (!pkg) return null;
+                                        return (
+                                            <div
+                                                key={id || idx}
+                                                className="rounded-xl border border-slate-200/80 overflow-hidden flex flex-col justify-between bg-white shadow-2xs group"
+                                            >
+                                                <div className="aspect-[4/3] bg-slate-100 overflow-hidden relative">
+                                                    <img
+                                                        src={getPackageSamplePreviewImage(pkg.name)}
+                                                        alt={pkg.name}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                    <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-black/60 text-[9px] font-bold text-white backdrop-blur-xs">
+                                                        #{idx + 1}
+                                                    </span>
+                                                </div>
+
+                                                <div className="p-3 space-y-2 flex flex-col flex-1 justify-between">
+                                                    <div className="space-y-1">
+                                                        <h4 className="font-bold text-xs text-slate-900 leading-snug line-clamp-1">
+                                                            {pkg.name}
+                                                        </h4>
+                                                        <p className="text-[10px] text-slate-500 leading-tight line-clamp-2">
+                                                            {pkg.description || pkg.category?.name || 'Dokumentasi Terbaik'}
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="pt-2 space-y-2">
+                                                        <p
+                                                            style={{ color: '#3C0E0E' }}
+                                                            className="text-xs font-black"
+                                                        >
+                                                            {formatRupiah(pkg.base_price)}
+                                                        </p>
+                                                        <div className="w-full py-1.5 rounded-lg border border-[#E8DDD5] bg-[#F4EBE4] text-[10.5px] font-bold text-[#3C0E0E] flex items-center justify-center gap-1">
+                                                            <MessageCircle className="w-3 h-3 text-[#3C0E0E]" />
+                                                            <span>Hubungi Admin</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="p-8 text-center rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-500 space-y-1">
+                                <p className="font-bold text-slate-700">Seksi Rekomendasi Paket Sedang Dinonaktifkan (Hide)</p>
+                                <p>Seksi ini tidak akan ditampilkan pada dashboard klien.</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

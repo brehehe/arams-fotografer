@@ -3,6 +3,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { toast } from 'sonner';
 import { Pagination } from '@/components/ui/pagination';
 import { SelectSearch } from '@/components/ui/select-search';
+import { StatCard } from '@/components/ui';
 
 import {
     Folder,
@@ -387,61 +388,34 @@ export default function CategoriesIndex({
 
             {/* ── 2. TOP 4 STAT CARDS ── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Card 1: Total Kategori */}
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[#EEF2FF] flex items-center justify-center shrink-0">
-                        <Folder className="w-6 h-6 text-[#4F46E5]" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-bold text-slate-600 block">Total Kategori</span>
-                        <h2 className="text-2xl font-black text-slate-900 tracking-tight font-sans">
-                            {stats.total ?? categoryList.length}
-                        </h2>
-                        <p className="text-[11px] text-slate-400 font-medium">Kategori di database</p>
-                    </div>
-                </div>
-
-                {/* Card 2: Kategori Aktif */}
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[#ECFDF5] flex items-center justify-center shrink-0">
-                        <CheckCircle2 className="w-6 h-6 text-[#10B981]" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-bold text-slate-600 block">Kategori Aktif</span>
-                        <h2 className="text-2xl font-black text-[#059669] tracking-tight font-sans">
-                            {stats.active ?? 0}
-                        </h2>
-                        <p className="text-[11px] text-slate-400 font-medium">Sedang digunakan</p>
-                    </div>
-                </div>
-
-                {/* Card 3: Kategori Nonaktif */}
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[#FEF2F2] flex items-center justify-center shrink-0">
-                        <MinusCircle className="w-6 h-6 text-[#EF4444]" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-bold text-slate-600 block">Kategori Nonaktif</span>
-                        <h2 className="text-2xl font-black text-[#DC2626] tracking-tight font-sans">
-                            {stats.inactive ?? 0}
-                        </h2>
-                        <p className="text-[11px] text-slate-400 font-medium">Tidak aktif</p>
-                    </div>
-                </div>
-
-                {/* Card 4: Digunakan di Project */}
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[#FFFBEB] flex items-center justify-center shrink-0">
-                        <FolderKanban className="w-6 h-6 text-[#D97706]" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-bold text-slate-600 block">Digunakan di Project</span>
-                        <h2 className="text-2xl font-black text-slate-900 tracking-tight font-sans">
-                            {stats.used_in_projects ?? 0}
-                        </h2>
-                        <p className="text-[11px] text-slate-400 font-medium">Project aktif</p>
-                    </div>
-                </div>
+                <StatCard
+                    title="Total Kategori"
+                    value={stats.total ?? categoryList.length}
+                    subtitle="Kategori di database"
+                    icon={Folder}
+                    color="indigo"
+                />
+                <StatCard
+                    title="Kategori Aktif"
+                    value={stats.active ?? 0}
+                    subtitle="Sedang digunakan"
+                    icon={CheckCircle2}
+                    color="emerald"
+                />
+                <StatCard
+                    title="Kategori Nonaktif"
+                    value={stats.inactive ?? 0}
+                    subtitle="Tidak aktif"
+                    icon={MinusCircle}
+                    color="rose"
+                />
+                <StatCard
+                    title="Digunakan di Project"
+                    value={stats.used_in_projects ?? 0}
+                    subtitle="Project aktif"
+                    icon={FolderKanban}
+                    color="amber"
+                />
             </div>
 
             {/* ── 3. TABLE CARD CONTAINER ── */}

@@ -1,9 +1,7 @@
-import React from 'react';
 import {
     Heart,
     HeartHandshake,
     Baby,
-    Camera,
     Users,
     Building2,
     Calendar,
@@ -12,23 +10,20 @@ import {
     Package,
     Plane,
     Sparkles,
-    Tag,
     User,
-    Check,
     Phone,
     Mail,
-    FileText,
     Gift,
-    Shield,
-    Info,
 } from 'lucide-react';
-import {
-    CategoryFormKey,
-    resolveCategoryKey,
-    AnyCategorySpecificData,
-    ChildRepeaterItem,
-} from '@/types/category-forms';
+import React from 'react';
 import { formatDate } from '@/lib/formatters';
+import type {
+    CategoryFormKey,
+    AnyCategorySpecificData,
+} from '@/types/category-forms';
+import {
+    resolveCategoryKey,
+} from '@/types/category-forms';
 
 interface CategorySpecificViewProps {
     project: any;
@@ -42,14 +37,26 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
     const rawData: AnyCategorySpecificData = project?.category_data || {};
     const client = project?.client || {};
 
+    // Intelligent fallback extraction from composite client names (e.g. "Komunitas / PIC" or "Bride & Groom")
+    const clientNameRaw = String(client.name || '').trim();
+    const slashParts = clientNameRaw.includes('/') ? clientNameRaw.split('/').map((s: string) => s.trim()) : [];
+    const ampParts = clientNameRaw.includes('&') ? clientNameRaw.split('&').map((s: string) => s.trim()) : [];
+
+    const communityFallbackName = slashParts.length > 0 ? slashParts[0] : (client.company_name || client.name || '');
+    const picFallbackName = slashParts.length > 1 ? slashParts[1] : (client.name || '');
+
+    const brideFallbackName = client.bride_name || (ampParts.length > 0 ? ampParts[0] : (client.name || ''));
+    const groomFallbackName = client.groom_name || client.partner_name || (ampParts.length > 1 ? ampParts[1] : '');
+
     const data: AnyCategorySpecificData = {
+        ...rawData,
         // Fallbacks for common fields
-        groom_name: rawData.groom_name || client.groom_name || client.partner_name || '',
+        groom_name: rawData.groom_name || groomFallbackName || '',
         groom_nickname: rawData.groom_nickname || client.groom_nickname || '',
         groom_occupation: rawData.groom_occupation || '',
         groom_birth_date: rawData.groom_birth_date || client.groom_birth_date || '',
         groom_instagram: rawData.groom_instagram || '',
-        bride_name: rawData.bride_name || client.bride_name || '',
+        bride_name: rawData.bride_name || brideFallbackName || '',
         bride_nickname: rawData.bride_nickname || client.bride_nickname || '',
         bride_occupation: rawData.bride_occupation || '',
         bride_birth_date: rawData.bride_birth_date || client.bride_birth_date || '',
@@ -70,20 +77,34 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
         children: (Array.isArray(rawData.children) && rawData.children.length > 0)
             ? rawData.children
             : (Array.isArray(client.children) ? client.children : []),
-        company_name: rawData.company_name || client.company_name || client.name || '',
-        location: rawData.location || project?.location || '',
-        session_location: rawData.session_location || project?.location || '',
-        ...rawData,
+        company_name: rawData.company_name || client.company_name || communityFallbackName || '',
+        location: rawData.location || project?.location || client.address || '',
+        event_location: rawData.event_location || project?.location || client.address || '',
+        session_location: rawData.session_location || project?.location || client.address || '',
+        akad_location: rawData.akad_location || project?.location || client.address || '',
+        destination_city_country: rawData.destination_city_country || project?.location || client.city || '',
+        event_date: rawData.event_date || project?.event_date || project?.project_date || '',
+        session_date: rawData.session_date || project?.event_date || project?.project_date || '',
+        akad_date: rawData.akad_date || project?.event_date || project?.project_date || '',
+        departure_date: rawData.departure_date || project?.event_date || project?.project_date || '',
+        client_name: rawData.client_name || client.name || '',
+        pic_name: rawData.pic_name || picFallbackName || client.name || '',
+        pic_phone: rawData.pic_phone || client.phone || client.secondary_phone || '',
+        pic_email: rawData.pic_email || client.email || '',
+        community_name: rawData.community_name || communityFallbackName || '',
+        community_type: rawData.community_type || 'Komunitas / Publik',
+        activity_type: rawData.activity_type || project?.name || 'Dokumentasi Acara & Komunitas',
     };
 
-    const renderItem = (label: string, value: any, icon?: React.ReactNode) => {
-        if (!value && value !== 0) return null;
+    const renderItem = (label: string, value: any, icon?: React.ReactNode, fallback: string = '-') => {
+        const hasVal = value !== null && value !== undefined && String(value).trim() !== '' && String(value).trim() !== 'null';
+
         return (
             <div className="space-y-1">
                 <span className="text-[11px] font-semibold text-slate-400 block">{label}</span>
-                <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5 break-words">
-                    {icon && <span className="text-slate-400 shrink-0">{icon}</span>}
-                    <span>{String(value)}</span>
+                <div className={`text-xs flex items-center gap-1.5 break-words ${hasVal ? 'font-bold text-slate-800' : 'font-normal text-slate-400'}`}>
+                    {icon && <span className={`${hasVal ? 'text-slate-500' : 'text-slate-300'} shrink-0`}>{icon}</span>}
+                    <span>{hasVal ? String(value) : fallback}</span>
                 </div>
             </div>
         );
@@ -134,37 +155,26 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
                 </>
             )}
 
-            {/* ── 2. LAINNYA / KEBUTUHAN KHUSUS ────────────────────────────── */}
+            {/* ── 2. LAINNYA / TRADISIONAL EVENT ────────────────────────────── */}
             {categoryKey === 'lainnya' && (
                 <>
                     {renderHeader(
-                        'Informasi Lainnya (Kebutuhan Khusus)',
+                        'Informasi Lainnya / Tradisional Event',
                         'Detail permohonan spesifik & arahan teknis sesi',
                         <Sparkles className="w-4 h-4 text-purple-600" />,
                         'bg-purple-50 text-purple-700'
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        {renderItem('Nama Pemesan / Klien', data.client_name || data.name || data.contact_person || (project?.client?.name && project.client.name !== '-' ? project.client.name : null))}
+                        {renderItem('Nama Pemesan', data.client_name || data.name || data.contact_person || (project?.client?.name && project.client.name !== '-' ? project.client.name : null))}
                         {renderItem('Jenis Kebutuhan', data.needs_type)}
-                        {renderItem('Lokasi', data.location, <MapPin className="w-3.5 h-3.5" />)}
-                        {renderItem('Pendekatan yang Diperlukan', data.approach_type)}
+                        {renderItem('Tanggal Acara', data.event_date ? formatDate(data.event_date) : null, <Calendar className="w-3.5 h-3.5" />)}
+                        {renderItem('Waktu Acara', data.event_time_range || data.event_time, <Clock className="w-3.5 h-3.5" />)}
+                        {renderItem('Lokasi', data.location || data.event_location, <MapPin className="w-3.5 h-3.5" />)}
                     </div>
                     {data.needs_description && (
                         <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs space-y-1">
-                            <span className="font-semibold text-slate-600 block">Deskripsi Kebutuhan:</span>
+                            <span className="font-semibold text-slate-600 block">Deskripsi / Catatan Kebutuhan:</span>
                             <p className="text-slate-800 whitespace-pre-line">{data.needs_description}</p>
-                        </div>
-                    )}
-                    {data.needs_detail && (
-                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs space-y-1">
-                            <span className="font-semibold text-slate-600 block">Detail Kebutuhan:</span>
-                            <p className="text-slate-800 whitespace-pre-line">{data.needs_detail}</p>
-                        </div>
-                    )}
-                    {data.special_notes && (
-                        <div className="p-3 bg-amber-50/50 rounded-lg border border-amber-100 text-xs space-y-1">
-                            <span className="font-semibold text-amber-800 block">Akomodasi / Catatan Khusus:</span>
-                            <p className="text-amber-900 whitespace-pre-line">{data.special_notes}</p>
                         </div>
                     )}
                 </>
@@ -476,35 +486,18 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
                 <>
                     {renderHeader(
                         'Informasi Event Utama',
-                        'Jadwal waktu, skala pengunjung, dan rundown penyelenggara',
+                        'Jadwal waktu, jenis kebutuhan, dan lokasi pelaksanaan',
                         <Sparkles className="w-4 h-4 text-indigo-600" />,
                         'bg-indigo-50 text-indigo-700'
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        {renderItem('PIC / Penanggung Jawab', data.pic_name || data.client_name || (project?.client?.name && project.client.name !== '-' ? project.client.name : null))}
+                        {renderItem('Nama Pemesan', data.pic_name || data.client_name || data.name || (project?.client?.name && project.client.name !== '-' ? project.client.name : null))}
                         {renderItem('Tanggal Event', data.event_date ? formatDate(data.event_date) : null, <Calendar className="w-3.5 h-3.5" />)}
-                        {renderItem('Waktu Event', data.event_time_range, <Clock className="w-3.5 h-3.5" />)}
-                        {renderItem('Lokasi Event', data.event_location, <MapPin className="w-3.5 h-3.5" />)}
+                        {renderItem('Waktu Event', data.event_time_range || data.event_time, <Clock className="w-3.5 h-3.5" />)}
                         {renderItem('Jenis Event', data.event_type)}
-                        {renderItem('Skala Event', data.event_scale)}
-                        {renderItem('Nama Event', data.event_name)}
-                        {renderItem('Penyelenggara / Organizer', data.organizer)}
-                        {renderItem('Tema Event', data.event_theme)}
-                        {renderItem('Jumlah Tamu / Hadirin', data.estimated_guests ? `${data.estimated_guests} Orang` : null)}
-                        {renderItem('Dress Code', data.dress_code)}
+                        {renderItem('Jenis Kebutuhan', data.needs_type)}
+                        {renderItem('Lokasi Event', data.event_location || data.location, <MapPin className="w-3.5 h-3.5" />)}
                     </div>
-                    {data.event_purpose && (
-                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs space-y-1">
-                            <span className="font-semibold text-slate-600 block">Tujuan Event:</span>
-                            <p className="text-slate-800 whitespace-pre-line">{data.event_purpose}</p>
-                        </div>
-                    )}
-                    {data.rundown_agenda && (
-                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs space-y-1">
-                            <span className="font-semibold text-slate-600 block">Rundown / Agenda Utama:</span>
-                            <p className="text-slate-800 whitespace-pre-line">{data.rundown_agenda}</p>
-                        </div>
-                    )}
                     {data.additional_notes && (
                         <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs">
                             <span className="font-semibold text-slate-600 block mb-1">Catatan Tambahan:</span>
@@ -540,7 +533,7 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
                                 👶 Daftar Anak ({data.children.length} Anak):
                             </span>
                             <div className="flex flex-wrap gap-2">
-                                {data.children.map((ch: ChildRepeaterItem, idx: number) => (
+                                {data.children.map((ch: { name?: string; age?: string | number }, idx: number) => (
                                     <div
                                         key={idx}
                                         className="px-3 py-1.5 rounded-full bg-white border border-amber-300 shadow-2xs text-xs font-semibold text-slate-800 flex items-center gap-1"
@@ -586,10 +579,10 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
                         {renderItem('Jenis Kegiatan', data.activity_type)}
                         {renderItem('Tema Kegiatan', data.activity_theme)}
                     </div>
-                    {data.activity_description && (
+                    {(data.activity_description || project?.notes) && (
                         <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs space-y-1">
                             <span className="font-semibold text-slate-600 block">Deskripsi Kegiatan:</span>
-                            <p className="text-slate-800 whitespace-pre-line">{data.activity_description}</p>
+                            <p className="text-slate-800 whitespace-pre-line">{data.activity_description || project?.notes}</p>
                         </div>
                     )}
                 </>
@@ -653,9 +646,28 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
 
             {/* ── STANDARD FALLBACK ────────────────────────────────────────── */}
             {categoryKey === 'standard' && (
-                <div className="p-4 bg-slate-50 rounded-xl text-xs text-slate-600">
-                    <p>Informasi project menggunakan konfigurasi standar.</p>
-                </div>
+                <>
+                    {renderHeader(
+                        'Informasi Layanan & Sesi',
+                        'Detail kontak klien, penanggung jawab, dan catatan sesi',
+                        <Sparkles className="w-4 h-4 text-indigo-600" />,
+                        'bg-indigo-50 text-indigo-700'
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {renderItem('Nama Klien / PIC', data.client_name || client.name, <User className="w-3.5 h-3.5" />)}
+                        {renderItem('No. Telepon / WhatsApp', client.phone || data.pic_phone, <Phone className="w-3.5 h-3.5" />)}
+                        {renderItem('Email', client.email || data.pic_email, <Mail className="w-3.5 h-3.5" />)}
+                        {renderItem('Tanggal Acara / Pelaksanaan', data.event_date ? formatDate(data.event_date) : null, <Calendar className="w-3.5 h-3.5" />)}
+                        {renderItem('Lokasi Sesi / Acara', data.location || project?.location || client.address, <MapPin className="w-3.5 h-3.5" />)}
+                        {renderItem('Jenis Layanan', project?.name || category?.name || 'Dokumentasi Standard')}
+                    </div>
+                    {(data.additional_notes || project?.notes) && (
+                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs space-y-1">
+                            <span className="font-semibold text-slate-600 block">Catatan Sesi:</span>
+                            <p className="text-slate-800 whitespace-pre-line">{data.additional_notes || project?.notes}</p>
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );

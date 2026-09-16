@@ -37,6 +37,7 @@ import {
     Badge,
     Pagination,
     AlertConfirmation,
+    StatCard,
 } from '@/components/ui';
 
 interface WeddingOrganizerItem {
@@ -326,61 +327,34 @@ export default function WeddingOrganizersIndex({
 
             {/* Stat Cards Overview */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-                <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3.5">
-                    <div className="w-11 h-11 rounded-xl bg-amber-50 text-[#C89445] flex items-center justify-center shrink-0 border border-amber-100">
-                        <HeartHandshake className="w-5 h-5" />
-                    </div>
-                    <div>
-                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                            Total WO Terdaftar
-                        </span>
-                        <div className="text-xl font-extrabold text-slate-900 mt-0.5">
-                            {stats.total} <span className="text-xs font-semibold text-slate-400">Vendor</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3.5">
-                    <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100">
-                        <Sparkles className="w-5 h-5" />
-                    </div>
-                    <div>
-                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                            Partner Resmi
-                        </span>
-                        <div className="text-xl font-extrabold text-slate-900 mt-0.5">
-                            {stats.partner_count} <span className="text-xs font-semibold text-emerald-600">Terverifikasi</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3.5">
-                    <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 border border-blue-100">
-                        <Briefcase className="w-5 h-5" />
-                    </div>
-                    <div>
-                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                            Kolaborasi Project
-                        </span>
-                        <div className="text-xl font-extrabold text-slate-900 mt-0.5">
-                            {stats.total_projects_count} <span className="text-xs font-semibold text-blue-600">Event</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3.5">
-                    <div className="w-11 h-11 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100">
-                        <Award className="w-5 h-5" />
-                    </div>
-                    <div>
-                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                            Calon Partner / Lead
-                        </span>
-                        <div className="text-xl font-extrabold text-slate-900 mt-0.5">
-                            {stats.lead_count} <span className="text-xs font-semibold text-purple-600">Prospek</span>
-                        </div>
-                    </div>
-                </div>
+                <StatCard
+                    title="Total WO Terdaftar"
+                    value={stats.total}
+                    suffix={<span className="text-xs font-semibold text-slate-400">Vendor</span>}
+                    icon={HeartHandshake}
+                    color="amber"
+                />
+                <StatCard
+                    title="Partner Resmi"
+                    value={stats.partner_count}
+                    suffix={<span className="text-xs font-semibold text-emerald-600">Terverifikasi</span>}
+                    icon={Sparkles}
+                    color="emerald"
+                />
+                <StatCard
+                    title="Kolaborasi Project"
+                    value={stats.total_projects_count}
+                    suffix={<span className="text-xs font-semibold text-blue-600">Event</span>}
+                    icon={Briefcase}
+                    color="blue"
+                />
+                <StatCard
+                    title="Calon Partner / Lead"
+                    value={stats.lead_count}
+                    suffix={<span className="text-xs font-semibold text-purple-600">Prospek</span>}
+                    icon={Award}
+                    color="purple"
+                />
             </div>
 
             {/* Filter & Search Toolbar */}

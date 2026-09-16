@@ -171,20 +171,27 @@ class ClientService
             ->event('created')
             ->log("Klien baru {$client->name} berhasil ditambahkan");
 
-        // If project / event details are provided, create linked Project
-        if (!empty($data['event_type']) || !empty($data['event_date']) || !empty($data['package_id']) || !empty($data['event_location'])) {
+        // If project / event details are provided, create linked Draft Project
+        if (!empty($data['category_id']) || !empty($data['package_id']) || !empty($data['event_type']) || !empty($data['event_date']) || !empty($data['event_location']) || !empty($data['location'])) {
             try {
                 $category = null;
-                if (!empty($data['event_type'])) {
-                    $category = \App\Models\Category::where('name', 'ilike', "%{$data['event_type']}%")->first();
+                if (!empty($data['category_id'])) {
+                    $category = \App\Models\Category::find($data['category_id']);
+                }
+                if (!$category && !empty($data['event_type'])) {
+                    $category = \App\Models\Category::whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($data['event_type']) . '%'])->first();
                 }
 
                 $package = null;
-                if (!empty($data['package_id']) && is_numeric($data['package_id'])) {
+                if (!empty($data['package_id'])) {
                     $package = \App\Models\Package::find($data['package_id']);
                 }
 
-                $projectPrice = $package ? $package->base_price : 0;
+                $projectPrice = !empty($data['custom_price']) && is_numeric($data['custom_price'])
+                    ? (float) $data['custom_price']
+                    : ($package ? (float) ($package->base_price ?? 0) : 0);
+
+                $projectName = ($category ? $category->name : ($data['event_type'] ?: 'Project')) . ' - ' . $client->name;
 
                 app(ProjectService::class)->createProject([
                     'client_id' => $client->id,
@@ -192,15 +199,16 @@ class ClientService
                     'client_source_id' => $client->client_source_id,
                     'category_id' => $category?->id ?? ($package?->category_id ?? null),
                     'package_id' => $package?->id ?? null,
-                    'name' => ($data['event_type'] ?: 'Event') . ' - ' . $client->name,
+                    'name' => $projectName,
                     'event_date' => $data['event_date'] ?? null,
                     'event_time' => $data['event_time'] ?? null,
-                    'location' => $data['event_location'] ?? $client->address,
+                    'location' => $data['location'] ?? ($data['event_location'] ?? $client->address),
                     'price' => $projectPrice,
                     'total_amount' => $projectPrice,
                     'paid_amount' => 0,
-                    'status' => 'lead',
+                    'status' => 'draft',
                     'payment_status' => 'unpaid',
+                    'category_data' => $data['category_data'] ?? null,
                 ], $causer);
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning("Failed to auto-create project for client {$client->id}: " . $e->getMessage());

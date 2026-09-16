@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import { toast } from 'sonner';
-import { Modal } from '@/components/ui';
+import { Modal, StatCard } from '@/components/ui';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -41,6 +41,7 @@ import {
     Check,
 } from 'lucide-react';
 import { formatRupiah } from '@/lib/formatters';
+import { FormattedNumberInput } from '@/components/ui/formatted-number-input';
 
 export interface FinanceInvoiceItem {
     id: string;
@@ -639,81 +640,42 @@ export default function FinanceIndex({
 
             {/* ── 2. TOP 4 STATS CARDS ─────────────────────────────────────────── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                {/* 1. Total Nilai Transaksi */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between transition-all hover:shadow-md">
-                    <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5 text-slate-600 text-xs font-bold">
-                            <span className="truncate">Total Nilai Transaksi</span>
-                            <Info className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        </div>
-                        <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0 shadow-2xs">
-                            <FileText className="w-4 h-4" />
-                        </div>
-                    </div>
-                    <div className="mt-3">
-                        <h2 className="text-xl xl:text-2xl font-black text-[#C89445] font-sans tracking-tight">
-                            {formatRupiah(totalNilaiTransaksi)}
-                        </h2>
-                        <p className="text-[11px] text-slate-400 font-medium mt-0.5">Total nilai dari semua project</p>
-                    </div>
-                </div>
-
-                {/* 2. Sudah Diterima */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between transition-all hover:shadow-md">
-                    <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5 text-slate-600 text-xs font-bold">
-                            <span className="truncate">Sudah Diterima</span>
-                            <Info className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        </div>
-                        <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0 shadow-2xs">
-                            <ArrowDownLeft className="w-4 h-4" />
-                        </div>
-                    </div>
-                    <div className="mt-3">
-                        <h2 className="text-xl xl:text-2xl font-black text-[#C89445] font-sans tracking-tight">
-                            {formatRupiah(sudahDiterima)}
-                        </h2>
-                        <p className="text-[11px] text-slate-400 font-medium mt-0.5">{persenSudahDiterima} dari total transaksi</p>
-                    </div>
-                </div>
-
-                {/* 3. Belum Diterima */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between transition-all hover:shadow-md">
-                    <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5 text-slate-600 text-xs font-bold">
-                            <span className="truncate">Belum Diterima</span>
-                            <Info className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        </div>
-                        <div className="w-9 h-9 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 shrink-0 shadow-2xs">
-                            <ArrowUpRight className="w-4 h-4" />
-                        </div>
-                    </div>
-                    <div className="mt-3">
-                        <h2 className="text-xl xl:text-2xl font-black text-[#C89445] font-sans tracking-tight">
-                            {formatRupiah(belumDiterima)}
-                        </h2>
-                        <p className="text-[11px] text-slate-400 font-medium mt-0.5">{persenBelumDiterima} dari total transaksi</p>
-                    </div>
-                </div>
-
-                {/* 4. Rata-rata Pembayaran */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between transition-all hover:shadow-md">
-                    <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5 text-slate-600 text-xs font-bold">
-                            <span className="truncate">Rata-rata Pembayaran</span>
-                            <Info className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        </div>
-                        <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0 shadow-2xs">
-                            <TrendingUp className="w-4 h-4" />
-                        </div>
-                    </div>
-                    <div className="mt-3">
-                        <h2 className="text-xl xl:text-2xl font-black text-[#C89445] font-sans tracking-tight">
-                            {formatRupiah(rataRataPembayaran)}
-                        </h2>
-                        <p className="text-[11px] text-slate-400 font-medium mt-0.5">Rata-rata per invoice</p>
-                    </div>
-                </div>
+                <StatCard
+                    title="Total Nilai Transaksi"
+                    value={totalNilaiTransaksi}
+                    isCurrency={true}
+                    subtitle="Total nilai dari semua project"
+                    icon={FileText}
+                    color="indigo"
+                    layout="vertical"
+                />
+                <StatCard
+                    title="Sudah Diterima"
+                    value={sudahDiterima}
+                    isCurrency={true}
+                    subtitle={`${persenSudahDiterima} dari total transaksi`}
+                    icon={ArrowDownLeft}
+                    color="emerald"
+                    layout="vertical"
+                />
+                <StatCard
+                    title="Belum Diterima"
+                    value={belumDiterima}
+                    isCurrency={true}
+                    subtitle={`${persenBelumDiterima} dari total transaksi`}
+                    icon={ArrowUpRight}
+                    color="rose"
+                    layout="vertical"
+                />
+                <StatCard
+                    title="Rata-rata Pembayaran"
+                    value={rataRataPembayaran}
+                    isCurrency={true}
+                    subtitle="Rata-rata per invoice"
+                    icon={TrendingUp}
+                    color="amber"
+                    layout="vertical"
+                />
             </div>
 
             {/* ── 3. ROW 2: GRAFIK TREN KEUANGAN & INVOICE PER BULAN (FULL WIDTH - BESAR & RAPI) ── */}
@@ -2682,12 +2644,9 @@ export default function FinanceIndex({
                                 <span className="text-xs font-bold text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none font-sans">
                                     Rp
                                 </span>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    step="1000"
+                                <FormattedNumberInput
                                     value={transactionAmount}
-                                    onChange={(e) => setTransactionAmount(e.target.value)}
+                                    onChange={(val) => setTransactionAmount(val)}
                                     placeholder="0"
                                     className="w-full pl-9 pr-3 py-2 text-xs font-sans font-bold text-slate-900 bg-white border border-slate-200 rounded-xl focus:outline-hidden focus:border-indigo-500"
                                     required

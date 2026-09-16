@@ -229,6 +229,26 @@ export default function ClientIntakeForm({
                     setFormData((f) => ({ ...f, location: value }));
                 }
             }
+            if (field === 'event_time_range' || field === 'event_time' || field === 'session_time' || field === 'akad_time') {
+                if (value) {
+                    setFormData((f) => ({ ...f, event_time: value }));
+                }
+            }
+            if (field === 'event_type' || field === 'needs_type') {
+                if (value) {
+                    setFormData((f) => ({ ...f, event_type: value }));
+                }
+            }
+            if (field === 'estimated_guests') {
+                if (value) {
+                    setFormData((f) => ({ ...f, estimated_guests: value }));
+                }
+            }
+            if (field === 'concept_theme') {
+                if (value) {
+                    setFormData((f) => ({ ...f, concept_theme: value }));
+                }
+            }
             if (field === 'reception_location') {
                 if (value) {
                     setFormData((f) => ({ ...f, reception_location: value }));
@@ -317,6 +337,7 @@ export default function ClientIntakeForm({
         special_requests: '',
         client_source_id: '',
         source_info: '',
+        custom_price: '',
     });
 
     // Regional cascading dropdown options
@@ -706,6 +727,19 @@ export default function ClientIntakeForm({
 
     const handleFieldChange = (field: string, value: string) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
+        if (field === 'name') {
+            setCategoryData((prev) => ({ ...prev, pic_name: value, client_name: value, name: value }));
+        } else if (field === 'event_date') {
+            setCategoryData((prev) => ({ ...prev, event_date: value, session_date: value, akad_date: value }));
+        } else if (field === 'event_time') {
+            setCategoryData((prev) => ({ ...prev, event_time_range: value, event_time: value, session_time: value, akad_time: value }));
+        } else if (field === 'location') {
+            setCategoryData((prev) => ({ ...prev, event_location: value, session_location: value, akad_location: value, location: value }));
+        } else if (field === 'estimated_guests') {
+            setCategoryData((prev) => ({ ...prev, estimated_guests: value }));
+        } else if (field === 'concept_theme') {
+            setCategoryData((prev) => ({ ...prev, concept_theme: value }));
+        }
     };
 
     const handleAddChild = () => {
@@ -854,23 +888,23 @@ export default function ClientIntakeForm({
 
             case 'lainnya':
                 if (!(categoryData as any).client_name?.trim() && !(categoryData as any).name?.trim() && !formData.name?.trim()) {
-                    toast.error('Nama Lengkap Pemesan wajib diisi');
-                    return false;
-                }
-                if (!categoryData.needs_description?.trim()) {
-                    toast.error('Deskripsi Kebutuhan wajib diisi');
-                    return false;
-                }
-                if (!categoryData.location?.trim() && !formData.location?.trim()) {
-                    toast.error('Lokasi wajib diisi');
+                    toast.error('Nama Pemesan wajib diisi');
                     return false;
                 }
                 if (!categoryData.needs_type?.trim()) {
                     toast.error('Jenis Kebutuhan wajib dipilih');
                     return false;
                 }
-                if (!categoryData.needs_detail?.trim()) {
-                    toast.error('Detail Kebutuhan wajib diisi');
+                if (!categoryData.event_date && !formData.event_date) {
+                    toast.error('Tanggal Acara wajib diisi');
+                    return false;
+                }
+                if (!categoryData.location?.trim() && !formData.location?.trim()) {
+                    toast.error('Lokasi wajib diisi');
+                    return false;
+                }
+                if (!categoryData.needs_description?.trim()) {
+                    toast.error('Deskripsi Kebutuhan wajib diisi');
                     return false;
                 }
                 return true;
@@ -1093,23 +1127,23 @@ export default function ClientIntakeForm({
 
             case 'event':
                 if (!(categoryData as any).contact_person?.trim() && !(categoryData as any).pic_name?.trim() && !(categoryData as any).client_name?.trim() && !formData.name?.trim()) {
-                    toast.error('Nama Penanggung Jawab / PIC wajib diisi');
+                    toast.error('Nama Pemesan wajib diisi');
                     return false;
                 }
-                if (!categoryData.event_date) {
+                if (!categoryData.event_date && !formData.event_date) {
                     toast.error('Tanggal Event wajib diisi');
                     return false;
                 }
-                if (!categoryData.event_time_range?.trim()) {
+                if (!categoryData.event_time_range?.trim() && !formData.event_time?.trim()) {
                     toast.error('Waktu Event wajib diisi');
                     return false;
                 }
-                if (!categoryData.event_type?.trim()) {
+                if (!categoryData.event_type?.trim() && !formData.event_type?.trim()) {
                     toast.error('Jenis Event wajib dipilih');
                     return false;
                 }
-                if (!categoryData.event_scale?.trim()) {
-                    toast.error('Skala Event wajib dipilih');
+                if (!categoryData.needs_type?.trim()) {
+                    toast.error('Jenis Kebutuhan wajib dipilih');
                     return false;
                 }
                 if (!categoryData.event_location?.trim() && !formData.location?.trim()) {
@@ -1230,6 +1264,11 @@ export default function ClientIntakeForm({
             name: candidateName,
             category_id: selectedCategory.id,
             package_id: formData.package_id || null,
+            custom_price: formData.custom_price || null,
+            event_date: formData.event_date || (categoryData as any).event_date || (categoryData as any).session_date || (categoryData as any).akad_date || null,
+            event_time: formData.event_time || (categoryData as any).event_time_range || (categoryData as any).event_time || (categoryData as any).session_time || null,
+            location: formData.location || (categoryData as any).event_location || (categoryData as any).session_location || (categoryData as any).akad_location || (categoryData as any).location || null,
+            event_type: formData.event_type || (categoryData as any).event_type || (categoryData as any).needs_type || selectedCategory.name,
             category_data: mergedCategoryData,
         };
 
@@ -1883,34 +1922,42 @@ export default function ClientIntakeForm({
                                             <label className="block text-[11px] font-bold text-slate-700 mb-1">
                                                 Kategori Project
                                             </label>
-                                            <SelectSearch
-                                                options={categoryOptions}
-                                                value={String(formData.category_id)}
-                                                onChange={handleCategoryChange}
-                                                placeholder="Pilih kategori project"
-                                                searchPlaceholder="Cari kategori..."
-                                                clearable={false}
-                                            />
+                                            <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/80 text-xs font-semibold text-slate-800">
+                                                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                                                <span className="truncate">{selectedCategory.name}</span>
+                                                <span className="ml-auto text-[10px] text-slate-400 font-normal shrink-0">Langkah 1</span>
+                                            </div>
                                         </div>
 
                                         <div>
                                             <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                Jenis Acara <span className="text-red-500">*</span>
+                                                Jenis Acara / Kebutuhan <span className="text-red-500">*</span>
                                             </label>
-                                            <NativeSelect
-                                                value={formData.event_type}
-                                                onChange={(e) => handleFieldChange('event_type', e.target.value)}
-                                                options={[
-                                                    { value: 'Pernikahan', label: 'Pernikahan' },
-                                                    { value: 'Akad Saja', label: 'Akad Saja' },
-                                                    { value: 'Resepsi Saja', label: 'Resepsi Saja' },
-                                                    { value: 'Akad & Resepsi', label: 'Akad & Resepsi' },
-                                                    { value: 'Lamaran & Engagement', label: 'Lamaran & Engagement' },
-                                                    { value: 'Prewedding', label: 'Prewedding' },
-                                                    { value: 'Siraman & Pengajian', label: 'Siraman & Pengajian' },
-                                                    { value: 'Unduh Mantu', label: 'Unduh Mantu' },
-                                                ]}
-                                            />
+                                            {activeCategoryKey === 'wedding' ? (
+                                                <NativeSelect
+                                                    value={formData.event_type}
+                                                    onChange={(e) => handleFieldChange('event_type', e.target.value)}
+                                                    options={[
+                                                        { value: 'Pernikahan', label: 'Pernikahan' },
+                                                        { value: 'Akad Saja', label: 'Akad Saja' },
+                                                        { value: 'Resepsi Saja', label: 'Resepsi Saja' },
+                                                        { value: 'Akad & Resepsi', label: 'Akad & Resepsi' },
+                                                        { value: 'Lamaran & Engagement', label: 'Lamaran & Engagement' },
+                                                        { value: 'Prewedding', label: 'Prewedding' },
+                                                        { value: 'Siraman & Pengajian', label: 'Siraman & Pengajian' },
+                                                        { value: 'Unduh Mantu', label: 'Unduh Mantu' },
+                                                    ]}
+                                                />
+                                            ) : (
+                                                <input
+                                                    type="text"
+                                                    required
+                                                    value={formData.event_type || (categoryData as any).event_type || (categoryData as any).needs_type || selectedCategory.name}
+                                                    onChange={(e) => handleFieldChange('event_type', e.target.value)}
+                                                    placeholder="Contoh: Dokumentasi Event"
+                                                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                                                />
+                                            )}
                                         </div>
 
                                         <div>
@@ -1919,7 +1966,7 @@ export default function ClientIntakeForm({
                                             </label>
                                             <SelectSearch
                                                 options={[
-                                                    ...packages.map((p) => ({
+                                                    ...availablePackages.map((p) => ({
                                                         value: p.id,
                                                         label: p.name,
                                                         subtitle: p.description
@@ -1938,6 +1985,32 @@ export default function ClientIntakeForm({
                                         </div>
                                     </div>
 
+                                    {/* Custom Price Field if Lainnya or Custom Package */}
+                                    {(activeCategoryKey === 'lainnya' || selectedPackage?.name?.toLowerCase().includes('custom') || Number(selectedPackage?.base_price) === 0) && (
+                                        <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200/80 animate-in fade-in duration-200">
+                                            <label className="block text-[11px] font-bold text-amber-900 mb-1">
+                                                Nominal Harga Paket (Custom) <span className="text-red-500">*</span>
+                                            </label>
+                                            <div className="relative max-w-sm">
+                                                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-xs font-bold text-amber-700">
+                                                    Rp
+                                                </span>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    step="50000"
+                                                    value={formData.custom_price || ''}
+                                                    onChange={(e) => handleFieldChange('custom_price', e.target.value)}
+                                                    placeholder="Contoh: 2500000"
+                                                    className="w-full pl-10 pr-3.5 py-2 rounded-lg border border-amber-300 bg-white text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
+                                                />
+                                            </div>
+                                            <p className="text-[10px] text-amber-700 mt-1">
+                                                Masukkan perkiraan nominal harga paket kustom ini. Nominal masih dapat disesuaikan dan dikonfirmasi lebih lanjut oleh studio.
+                                            </p>
+                                        </div>
+                                    )}
+
                                     {/* Row 2: Tanggal, Waktu, Tempat */}
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                         <div>
@@ -1947,7 +2020,7 @@ export default function ClientIntakeForm({
                                             <input
                                                 type="date"
                                                 required
-                                                value={formData.event_date}
+                                                value={formData.event_date || (categoryData as any).event_date || (categoryData as any).session_date || ''}
                                                 onChange={(e) => handleFieldChange('event_date', e.target.value)}
                                                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
                                             />
@@ -1960,9 +2033,9 @@ export default function ClientIntakeForm({
                                             <input
                                                 type="text"
                                                 required
-                                                value={formData.event_time}
+                                                value={formData.event_time || (categoryData as any).event_time_range || (categoryData as any).event_time || (categoryData as any).session_time || ''}
                                                 onChange={(e) => handleFieldChange('event_time', e.target.value)}
-                                                placeholder="Contoh: 16:00 - Selesai"
+                                                placeholder="Contoh: 09:00 - 16:00"
                                                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
                                             />
                                         </div>
@@ -1974,7 +2047,7 @@ export default function ClientIntakeForm({
                                             <input
                                                 type="text"
                                                 required
-                                                value={formData.location}
+                                                value={formData.location || (categoryData as any).event_location || (categoryData as any).session_location || (categoryData as any).location || ''}
                                                 onChange={(e) => handleFieldChange('location', e.target.value)}
                                                 placeholder="Masukkan tempat / venue"
                                                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
@@ -2290,26 +2363,41 @@ export default function ClientIntakeForm({
                                                 </div>
                                                 <div>
                                                     <span className="text-slate-400 block text-[10px]">Jenis Acara</span>
-                                                    <span className="font-semibold text-slate-800">{formData.event_type}</span>
+                                                    <span className="font-semibold text-slate-800">
+                                                        {formData.event_type || (categoryData as any).event_type || (categoryData as any).needs_type || selectedCategory.name}
+                                                    </span>
                                                 </div>
                                                 <div>
                                                     <span className="text-slate-400 block text-[10px]">Paket yang Diminati</span>
-                                                    <span className="font-semibold text-indigo-700">{selectedPackage?.name || 'Belum memilih paket'}</span>
+                                                    <span className="font-semibold text-indigo-700">
+                                                        {selectedPackage?.name || 'Belum memilih paket'}
+                                                        {formData.custom_price
+                                                            ? ` (Rp ${Number(formData.custom_price).toLocaleString('id-ID')})`
+                                                            : (selectedPackage?.base_price && Number(selectedPackage.base_price) > 0
+                                                                ? ` (Rp ${Number(selectedPackage.base_price).toLocaleString('id-ID')})`
+                                                                : '')}
+                                                    </span>
                                                 </div>
                                             </div>
 
                                             <div className="space-y-2 p-3 rounded-xl bg-slate-50/70 border border-slate-100">
                                                 <div>
                                                     <span className="text-slate-400 block text-[10px]">Tanggal Project / Sesi</span>
-                                                    <span className="font-semibold text-slate-800">{formData.event_date || '-'}</span>
+                                                    <span className="font-semibold text-slate-800">
+                                                        {formData.event_date || (categoryData as any).event_date || (categoryData as any).session_date || (categoryData as any).akad_date || '-'}
+                                                    </span>
                                                 </div>
                                                 <div>
                                                     <span className="text-slate-400 block text-[10px]">Waktu / Jam Sesi</span>
-                                                    <span className="font-semibold text-slate-800">{formData.event_time || '-'}</span>
+                                                    <span className="font-semibold text-slate-800">
+                                                        {formData.event_time || (categoryData as any).event_time_range || (categoryData as any).event_time || (categoryData as any).session_time || '-'}
+                                                    </span>
                                                 </div>
                                                 <div>
                                                     <span className="text-slate-400 block text-[10px]">Tempat / Lokasi</span>
-                                                    <span className="font-semibold text-slate-800">{formData.location || '-'}</span>
+                                                    <span className="font-semibold text-slate-800">
+                                                        {formData.location || (categoryData as any).event_location || (categoryData as any).session_location || (categoryData as any).akad_location || (categoryData as any).location || '-'}
+                                                    </span>
                                                 </div>
                                                 {activeCategoryKey === 'wedding' && (
                                                     <div>
@@ -2319,14 +2407,18 @@ export default function ClientIntakeForm({
                                                 )}
                                                 <div>
                                                     <span className="text-slate-400 block text-[10px]">Jumlah Tamu (Estimasi)</span>
-                                                    <span className="font-semibold text-slate-800">{formData.estimated_guests || '-'}</span>
+                                                    <span className="font-semibold text-slate-800">
+                                                        {formData.estimated_guests || (categoryData as any).estimated_guests || (categoryData as any).members_count || '-'}
+                                                    </span>
                                                 </div>
                                             </div>
 
                                             <div className="space-y-2 p-3 rounded-xl bg-slate-50/70 border border-slate-100">
                                                 <div>
                                                     <span className="text-slate-400 block text-[10px]">Warna Tema / Konsep</span>
-                                                    <span className="font-semibold text-slate-800">{formData.concept_theme || '-'}</span>
+                                                    <span className="font-semibold text-slate-800">
+                                                        {formData.concept_theme || (categoryData as any).concept_theme || '-'}
+                                                    </span>
                                                 </div>
                                                 <div>
                                                     <span className="text-slate-400 block text-[10px]">Vendor Lain yang Terlibat</span>

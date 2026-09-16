@@ -4,8 +4,10 @@ namespace App\Services;
 
 use App\Models\Category;
 use App\Models\Client;
+use App\Models\FileLink;
 use App\Models\Package;
 use App\Models\Project;
+use App\Models\ProjectSchedule;
 use App\Models\User;
 use App\Services\FinanceService;
 use App\Traits\HasWebpUpload;
@@ -560,6 +562,8 @@ class ProjectService
             ->event('created')
             ->log("Project baru {$project->name} ({$project->project_number}) berhasil dibuat");
 
+        $this->syncProjectSchedule($project);
+
         return $project;
     }
 
@@ -664,6 +668,8 @@ class ProjectService
             ->event('updated')
             ->log("Project {$project->name} ({$project->project_number}) berhasil diperbarui");
 
+        $this->syncProjectSchedule($project);
+
         return $project;
     }
 
@@ -678,6 +684,54 @@ class ProjectService
         if (isset($filtered['status']) && $filtered['status'] === 'completed' && !isset($filtered['progress'])) {
             $filtered['progress'] = 100;
         }
+
+        // Handle FileLink shortcut when completing a step
+        if (!empty($data['drive_link']['drive_url'])) {
+            $url = trim($data['drive_link']['drive_url']);
+            if (!preg_match('~^(?:f|ht)tps?://~i', $url)) {
+                $url = 'https://' . $url;
+            }
+            $stepTag = !empty($data['completed_step_name']) ? "[Tahap: {$data['completed_step_name']}] " : '';
+            $linkName = $stepTag . (!empty($data['drive_link']['name']) ? $data['drive_link']['name'] : 'Hasil Pengerjaan');
+
+            FileLink::create([
+                'project_id' => $project->id,
+                'name' => $linkName,
+                'drive_url' => $url,
+                'file_type' => $data['drive_link']['file_type'] ?? 'gdrive',
+                'created_by' => ($causer ?? auth()->user())?->id,
+            ]);
+        }
+
+        // Handle deleting linked files if workflow step is reverted
+        if (!empty($data['revert_step_names']) && is_array($data['revert_step_names'])) {
+            foreach ($data['revert_step_names'] as $stepName) {
+                $stepName = trim($stepName);
+                if (!empty($stepName)) {
+                    FileLink::where('project_id', $project->id)
+                        ->where(function ($q) use ($stepName) {
+                            $q->where('name', 'like', "[Tahap: {$stepName}]%")
+                              ->orWhere('name', 'like', "%{$stepName}%");
+                        })
+                        ->delete();
+                }
+            }
+        } elseif (!empty($data['revert_step_name'])) {
+            $stepName = trim($data['revert_step_name']);
+            FileLink::where('project_id', $project->id)
+                ->where(function ($q) use ($stepName) {
+                    $q->where('name', 'like', "[Tahap: {$stepName}]%")
+                      ->orWhere('name', 'like', "%{$stepName}%");
+                })
+                ->delete();
+        }
+
+        unset(
+            $filtered['completed_step_name'],
+            $filtered['drive_link'],
+            $filtered['revert_step_name'],
+            $filtered['revert_step_names']
+        );
 
         $project->update($filtered);
 
@@ -864,5 +918,49 @@ class ProjectService
             'payment_methods' => $paymentMethods,
             'company_settings' => $companySettings,
         ];
+    }
+
+    /**
+     * Automatically synchronize ProjectSchedule for calendar integration.
+     */
+    public function syncProjectSchedule(Project $project): void
+    {
+        if (empty($project->event_date)) {
+            return;
+        }
+
+        $project->loadMissing('category');
+        $catName = $project->category?->name ?? '';
+        $scheduleType = 'shooting';
+        if (stripos($catName, 'event') !== false || stripos($catName, 'corporate') !== false) {
+            $scheduleType = 'event';
+        } elseif (stripos($catName, 'meeting') !== false) {
+            $scheduleType = 'meeting';
+        }
+
+        $existing = ProjectSchedule::where('project_id', $project->id)->first();
+        if ($existing) {
+            $existing->update([
+                'title'      => "Sesi: {$project->name}",
+                'date'       => $project->event_date,
+                'start_time' => $project->event_time ? substr($project->event_time, 0, 5) : ($existing->start_time ?: '09:00'),
+                'location'   => $project->location,
+                'type'       => $scheduleType,
+                'status'     => $project->status === 'completed' ? 'completed' : 'scheduled',
+                'notes'      => $project->notes,
+            ]);
+        } else {
+            ProjectSchedule::create([
+                'project_id' => $project->id,
+                'title'      => "Sesi: {$project->name}",
+                'date'       => $project->event_date,
+                'start_time' => $project->event_time ? substr($project->event_time, 0, 5) : '09:00',
+                'end_time'   => null,
+                'location'   => $project->location,
+                'type'       => $scheduleType,
+                'status'     => 'scheduled',
+                'notes'      => $project->notes,
+            ]);
+        }
     }
 }

@@ -40,6 +40,7 @@ class TestimonialController extends Controller
         $stats = [
             'total' => Testimonial::count(),
             'approved' => Testimonial::where('status', 'approved')->count(),
+            'rejected' => Testimonial::where('status', '!=', 'approved')->count(),
             'pending' => Testimonial::where('status', 'pending')->count(),
             'featured' => Testimonial::where('is_featured', true)->count(),
         ];
@@ -53,6 +54,7 @@ class TestimonialController extends Controller
             'projects' => $projects,
             'clients' => $clients,
             'filters' => $request->only(['search', 'status', 'per_page']),
+            'portal_show_testimonials' => \App\Models\Setting::get('portal_show_testimonials', '1') !== '0',
         ]);
     }
 
@@ -128,6 +130,15 @@ class TestimonialController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'Ulasan klien berhasil diperbarui.');
+    }
+
+    public function toggleActive(Testimonial $testimonial): RedirectResponse
+    {
+        $newStatus = ($testimonial->status === 'approved') ? 'rejected' : 'approved';
+        $testimonial->update(['status' => $newStatus]);
+
+        $statusText = ($newStatus === 'approved') ? 'ditampilkan di portal klien (Show)' : 'disembunyikan dari portal klien (Hide)';
+        return redirect()->back()->with('success', "Ulasan dari '{$testimonial->client_name}' berhasil {$statusText}.");
     }
 
     public function destroy(Testimonial $testimonial): RedirectResponse

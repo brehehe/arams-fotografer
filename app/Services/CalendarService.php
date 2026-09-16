@@ -18,9 +18,10 @@ class CalendarService
 
         // --- Schedules (from ProjectSchedule) ---
         $schedules = ProjectSchedule::with([
-            'project:id,name,project_number,client_id,category_id',
+            'project:id,name,project_number,client_id,category_id,package_id,total_amount,paid_amount,payment_status',
             'project.client:id,name,phone,bride_name,groom_name',
             'project.category:id,name,color',
+            'project.package:id,name,base_price',
         ])
             ->orderBy('date')
             ->orderBy('start_time')
@@ -35,13 +36,23 @@ class CalendarService
                     ? "{$client->bride_name} & {$client->groom_name}"
                     : ($client?->name ?? '-');
 
+                $paymentStatus = $project?->payment_status;
+                if (!$paymentStatus && $project) {
+                    $total = (float) ($project->total_amount ?? 0);
+                    $paid  = (float) ($project->paid_amount ?? 0);
+                    $paymentStatus = $paid >= $total && $total > 0 ? 'paid' : ($paid > 0 ? 'partial' : 'unpaid');
+                }
+
                 return [
                     'id'             => $s->id,
                     'schedule_id'    => $s->id,
                     'project_id'     => $s->project_id,
                     'project_number' => $project?->project_number,
+                    'project_name'   => $project?->name,
+                    'package_name'   => $project?->package?->name,
                     'title'          => $s->title,
                     'client_name'    => $clientName,
+                    'client_phone'   => $client?->phone,
                     'category_name'  => $cat?->name ?? 'Pemotretan',
                     'category_color' => $cat?->color ?? '#3B82F6',
                     'date'           => $s->date ? (is_string($s->date) ? substr($s->date, 0, 10) : $s->date->format('Y-m-d')) : null,
@@ -51,21 +62,27 @@ class CalendarService
                     'type'           => $this->mapScheduleType($s->type),
                     'type_raw'       => $s->type,
                     'status'         => $this->mapProjectStatus($s->status),
-                    'payment_status' => null,
+                    'payment_status' => $paymentStatus,
+                    'total_amount'   => $project?->total_amount,
+                    'paid_amount'    => $project?->paid_amount,
                     'notes'          => $s->notes,
                     'source'         => 'schedule',
                 ];
             });
 
-        // --- Project Events ---
+        // --- Project Events (for projects without dedicated schedules) ---
+        $existingProjectIds = $schedules->pluck('project_id')->filter()->unique();
+
         $projectEvents = Project::with([
-            'client:id,name,bride_name,groom_name',
+            'client:id,name,phone,bride_name,groom_name',
             'category:id,name,color',
+            'package:id,name,base_price',
         ])
-            ->select('id', 'name', 'client_id', 'category_id', 'event_date', 'event_time',
+            ->select('id', 'name', 'client_id', 'category_id', 'package_id', 'event_date', 'event_time',
                      'end_date', 'location', 'status', 'payment_status', 'project_number',
                      'notes', 'price', 'total_amount', 'paid_amount')
             ->whereNotNull('event_date')
+            ->whereNotIn('id', $existingProjectIds)
             ->orderBy('event_date')
             ->get()
             ->toBase()
@@ -96,8 +113,11 @@ class CalendarService
                     'schedule_id'    => null,
                     'project_id'     => $p->id,
                     'project_number' => $p->project_number,
+                    'project_name'   => $p->name,
+                    'package_name'   => $p->package?->name,
                     'title'          => $p->name,
                     'client_name'    => $clientName,
+                    'client_phone'   => $client?->phone,
                     'category_name'  => $catName ?: 'Pemotretan',
                     'category_color' => $p->category?->color ?? '#3B82F6',
                     'date'           => $eventDate->format('Y-m-d'),
@@ -108,11 +128,10 @@ class CalendarService
                     'type_raw'       => strtolower($catName) ?: 'shooting',
                     'status'         => $this->mapProjectStatus($p->status),
                     'payment_status' => $p->payment_status,
-                    'notes'          => $p->notes,
-                    'source'         => 'project',
-                    'price'          => $p->price,
                     'total_amount'   => $p->total_amount,
                     'paid_amount'    => $p->paid_amount,
+                    'notes'          => $p->notes,
+                    'source'         => 'project',
                 ];
             });
 

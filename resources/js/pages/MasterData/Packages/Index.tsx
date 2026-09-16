@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import { toast } from 'sonner';
 import { Pagination } from '@/components/ui/pagination';
+import { StatCard } from '@/components/ui';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -37,6 +38,7 @@ import {
     Info,
 } from 'lucide-react';
 import { formatRupiah } from '@/lib/formatters';
+import { FormattedNumberInput } from '@/components/ui/formatted-number-input';
 
 interface PackageItem {
     id: number | string;
@@ -359,57 +361,34 @@ export default function PackagesIndex({
 
             {/* ── 2. TOP 4 STAT CARDS ── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[#EEF2FF] flex items-center justify-center shrink-0">
-                        <Box className="w-6 h-6 text-[#4F46E5]" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-bold text-slate-600 block">Total Paket</span>
-                        <h2 className="text-2xl font-black text-slate-900 tracking-tight font-sans">
-                            {stats.total ?? packageList.length}
-                        </h2>
-                        <p className="text-[11px] text-slate-400 font-medium">Paket terdaftar</p>
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[#ECFDF5] flex items-center justify-center shrink-0">
-                        <CheckCircle2 className="w-6 h-6 text-[#10B981]" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-bold text-slate-600 block">Paket Aktif</span>
-                        <h2 className="text-2xl font-black text-[#059669] tracking-tight font-sans">
-                            {stats.active ?? 0}
-                        </h2>
-                        <p className="text-[11px] text-slate-400 font-medium">Bisa dipilih saat buat project</p>
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[#FEF2F2] flex items-center justify-center shrink-0">
-                        <MinusCircle className="w-6 h-6 text-[#EF4444]" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-bold text-slate-600 block">Paket Nonaktif</span>
-                        <h2 className="text-2xl font-black text-[#DC2626] tracking-tight font-sans">
-                            {stats.inactive ?? 0}
-                        </h2>
-                        <p className="text-[11px] text-slate-400 font-medium">Dinonaktifkan</p>
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[#FFFBEB] flex items-center justify-center shrink-0">
-                        <Folder className="w-6 h-6 text-[#D97706]" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-bold text-slate-600 block">Kategori Terkait</span>
-                        <h2 className="text-2xl font-black text-slate-900 tracking-tight font-sans">
-                            {stats.total_categories ?? categories.length}
-                        </h2>
-                        <p className="text-[11px] text-slate-400 font-medium">Kategori aktif</p>
-                    </div>
-                </div>
+                <StatCard
+                    title="Total Paket"
+                    value={stats.total ?? packageList.length}
+                    subtitle="Paket terdaftar"
+                    icon={Box}
+                    color="indigo"
+                />
+                <StatCard
+                    title="Paket Aktif"
+                    value={stats.active ?? 0}
+                    subtitle="Bisa dipilih saat buat project"
+                    icon={CheckCircle2}
+                    color="emerald"
+                />
+                <StatCard
+                    title="Paket Nonaktif"
+                    value={stats.inactive ?? 0}
+                    subtitle="Dinonaktifkan"
+                    icon={MinusCircle}
+                    color="rose"
+                />
+                <StatCard
+                    title="Kategori Terkait"
+                    value={stats.total_categories ?? categories.length}
+                    subtitle="Kategori aktif"
+                    icon={Folder}
+                    color="amber"
+                />
             </div>
 
             {/* ── 3. FILTER TOOLBAR ──────────────────────── */}
@@ -700,14 +679,12 @@ export default function PackagesIndex({
                                     <label className="block font-bold text-slate-700 mb-1">
                                         Harga Paket (Rp) <span className="text-rose-500">*</span>
                                     </label>
-                                    <input
-                                        type="number"
-                                        required
-                                        min="0"
-                                        step="100000"
+                                    <FormattedNumberInput
                                         value={form.base_price}
-                                        onChange={(e) => setForm({ ...form, base_price: Number(e.target.value) })}
-                                        className="w-full px-3 py-2 rounded-xl border border-slate-200 font-medium text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                        onChange={(val) => setForm({ ...form, base_price: val })}
+                                        prefix="Rp "
+                                        className="h-10 text-xs font-bold"
+                                        placeholder="0"
                                     />
                                 </div>
 

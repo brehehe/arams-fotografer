@@ -48,6 +48,7 @@ import { FormattedNumberInput } from '@/components/ui/formatted-number-input';
 import { formatRupiah } from '@/lib/formatters';
 import { resolveWorkflow } from '@/lib/workflows';
 import { CategorySpecificForm } from '@/components/projects/CategorySpecificForm';
+import { CategorySpecificView } from '@/components/projects/CategorySpecificView';
 import {
     CategoryFormKey,
     resolveCategoryKey,
@@ -294,6 +295,10 @@ export default function ProjectsEdit({
         if (cl) {
             setCategoryData((prev) => ({
                 ...prev,
+                client_name: cl.name || '',
+                name: cl.name || '',
+                company_name: (cl as any).company_name || cl.name || '',
+                community_name: cl.name || '',
                 bride_name: prev.bride_name || cl.bride_name || '',
                 groom_name: prev.groom_name || cl.groom_name || '',
                 partner_1: prev.partner_1 || cl.bride_name || '',
@@ -665,10 +670,25 @@ export default function ProjectsEdit({
         return subtotalPaketSetelahDiskon + totalTambahanBiaya + calculatedTaxAmount;
     }, [subtotalPaketSetelahDiskon, totalTambahanBiaya, calculatedTaxAmount]);
 
-    const nominalDp = useMemo(() => {
+    const effectiveDpAmount = useMemo(() => {
+        if (
+            paymentInstallments.length > 0 &&
+            (paymentInstallments[0].type === 'dp' || paymentInstallments[0].name.toLowerCase().includes('dp'))
+        ) {
+            return Number(paymentInstallments[0].amount) || 0;
+        }
         if (dpPercent <= 0) return 0;
         return Math.round((totalProject * dpPercent) / 100);
-    }, [totalProject, dpPercent]);
+    }, [paymentInstallments, totalProject, dpPercent]);
+
+    const effectiveDpPercent = useMemo(() => {
+        if (totalProject > 0 && effectiveDpAmount > 0) {
+            return Math.min(100, Math.round((effectiveDpAmount / totalProject) * 100));
+        }
+        return dpPercent;
+    }, [totalProject, effectiveDpAmount, dpPercent]);
+
+    const nominalDp = effectiveDpAmount;
 
     // Formatted Dates for display
     const formattedProjectDate = useMemo(() => {
@@ -695,10 +715,10 @@ export default function ProjectsEdit({
             const extra = c.children && c.children.length > 1
                 ? `👶 Kembar (${c.children.length} Bayi: ${c.children.map((k) => k.name).filter(Boolean).join(', ')})`
                 : c.child_name
-                ? `👶 ${c.child_name}`
-                : c.groom_name && c.bride_name
-                ? `👰🤵 ${c.groom_name} & ${c.bride_name}`
-                : null;
+                    ? `👶 ${c.child_name}`
+                    : c.groom_name && c.bride_name
+                        ? `👰🤵 ${c.groom_name} & ${c.bride_name}`
+                        : null;
             return {
                 value: String(c.id),
                 label: c.name,
@@ -1152,6 +1172,8 @@ export default function ProjectsEdit({
             tax: calculatedTaxAmount,
             total_amount: totalProject,
             thumbnail: projectThumbnail || null,
+            dp_amount: effectiveDpAmount,
+            dp_percentage: effectiveDpPercent,
             payment_method: paymentMethodName,
             notes: [
                 projectNotes,
@@ -1309,10 +1331,10 @@ export default function ProjectsEdit({
                     >
                         <div
                             className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-all ${currentStep === 1
-                                    ? 'bg-[#4F46E5] text-white shadow-md ring-4 ring-indigo-50'
-                                    : currentStep > 1
-                                        ? 'bg-indigo-100 text-[#4F46E5]'
-                                        : 'bg-slate-100 text-slate-500'
+                                ? 'bg-[#4F46E5] text-white shadow-md ring-4 ring-indigo-50'
+                                : currentStep > 1
+                                    ? 'bg-indigo-100 text-[#4F46E5]'
+                                    : 'bg-slate-100 text-slate-500'
                                 }`}
                         >
                             {currentStep > 1 ? <Check className="w-4 h-4 stroke-[2.5]" /> : '1'}
@@ -1340,10 +1362,10 @@ export default function ProjectsEdit({
                     >
                         <div
                             className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-all ${currentStep === 2
-                                    ? 'bg-[#4F46E5] text-white shadow-md ring-4 ring-indigo-50'
-                                    : currentStep > 2
-                                        ? 'bg-indigo-100 text-[#4F46E5]'
-                                        : 'bg-slate-100 text-slate-500'
+                                ? 'bg-[#4F46E5] text-white shadow-md ring-4 ring-indigo-50'
+                                : currentStep > 2
+                                    ? 'bg-indigo-100 text-[#4F46E5]'
+                                    : 'bg-slate-100 text-slate-500'
                                 }`}
                         >
                             {currentStep > 2 ? <Check className="w-4 h-4 stroke-[2.5]" /> : '2'}
@@ -1371,10 +1393,10 @@ export default function ProjectsEdit({
                     >
                         <div
                             className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-all ${currentStep === 3
-                                    ? 'bg-[#4F46E5] text-white shadow-md ring-4 ring-indigo-50'
-                                    : currentStep > 3
-                                        ? 'bg-indigo-100 text-[#4F46E5]'
-                                        : 'bg-slate-100 text-slate-500'
+                                ? 'bg-[#4F46E5] text-white shadow-md ring-4 ring-indigo-50'
+                                : currentStep > 3
+                                    ? 'bg-indigo-100 text-[#4F46E5]'
+                                    : 'bg-slate-100 text-slate-500'
                                 }`}
                         >
                             {currentStep > 3 ? <Check className="w-4 h-4 stroke-[2.5]" /> : '3'}
@@ -1402,8 +1424,8 @@ export default function ProjectsEdit({
                     >
                         <div
                             className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-all ${currentStep === 4
-                                    ? 'bg-[#4F46E5] text-white shadow-md ring-4 ring-indigo-50'
-                                    : 'bg-slate-100 text-slate-500'
+                                ? 'bg-[#4F46E5] text-white shadow-md ring-4 ring-indigo-50'
+                                : 'bg-slate-100 text-slate-500'
                                 }`}
                         >
                             4
@@ -1520,10 +1542,18 @@ export default function ProjectsEdit({
                                     type="date"
                                     value={projectDate}
                                     onChange={(e) => {
-                                        setProjectDate(e.target.value);
+                                        const newDate = e.target.value;
+                                        setProjectDate(newDate);
                                         if (!shootingEventDate || shootingEventDate === projectDate) {
-                                            setShootingEventDate(e.target.value);
+                                            setShootingEventDate(newDate);
                                         }
+                                        setCategoryData((prev) => ({
+                                            ...prev,
+                                            event_date: newDate,
+                                            session_date: newDate,
+                                            akad_date: newDate,
+                                            departure_date: newDate,
+                                        }));
                                     }}
                                     className="w-full h-[42px] px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:border-[#4F46E5] focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
                                 />
@@ -1550,7 +1580,18 @@ export default function ProjectsEdit({
                                 <Input
                                     icon={<MapPin className="w-4 h-4 text-slate-400" />}
                                     value={projectLocation}
-                                    onChange={(e) => setProjectLocation(e.target.value)}
+                                    onChange={(e) => {
+                                        const newLoc = e.target.value;
+                                        setProjectLocation(newLoc);
+                                        setCategoryData((prev) => ({
+                                            ...prev,
+                                            location: newLoc,
+                                            event_location: newLoc,
+                                            session_location: newLoc,
+                                            akad_location: newLoc,
+                                            destination_city_country: newLoc,
+                                        }));
+                                    }}
                                     placeholder="Contoh: Studio Arams, Jakarta Selatan atau Alamat Lengkap Venue"
                                     className="h-[42px]"
                                 />
@@ -1564,7 +1605,13 @@ export default function ProjectsEdit({
                                 <SelectSearch
                                     options={shootingDurationOptions}
                                     value={shootingDuration}
-                                    onChange={setShootingDuration}
+                                    onChange={(val) => {
+                                        setShootingDuration(val);
+                                        setCategoryData((prev) => ({
+                                            ...prev,
+                                            session_duration: val,
+                                        }));
+                                    }}
                                     clearable={false}
                                 />
                             </div>
@@ -1648,11 +1695,16 @@ export default function ProjectsEdit({
                                     <Sparkles className="w-4 h-4" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-base text-slate-900">
-                                        2. Informasi {selectedCategory?.name || 'Kategori'}
-                                    </h3>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-bold text-base text-slate-900">
+                                            2. Informasi {selectedCategory?.name || 'Kategori'}
+                                        </h3>
+                                        <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                                            Opsional
+                                        </span>
+                                    </div>
                                     <p className="text-[11px] text-slate-400">
-                                        Form data spesifik untuk kebutuhan kategori {selectedCategory?.name || 'project'}
+                                        Form data spesifik untuk kebutuhan kategori {selectedCategory?.name || 'project'} (dapat dikosongkan jika belum tersedia)
                                     </p>
                                 </div>
                             </div>
@@ -1667,6 +1719,7 @@ export default function ProjectsEdit({
                             data={categoryData}
                             onChange={handleCategoryDataChange}
                             mode="admin"
+                            hideGeneralFields={true}
                         />
                     </div>
 
@@ -1792,7 +1845,7 @@ export default function ProjectsEdit({
                                     onChange={(e) => setAdditionalNotes(e.target.value)}
                                     placeholder="Catatan tambahan untuk tim..."
                                 />
-                                <div className="pt-1">
+                                {/* <div className="pt-1">
                                     <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1.5">Visible untuk</span>
                                     <div className="flex items-center gap-3 text-xs flex-wrap">
                                         <label className="flex items-center gap-1.5 cursor-pointer text-slate-700">
@@ -1832,7 +1885,7 @@ export default function ProjectsEdit({
                                             <span>Client</span>
                                         </label>
                                     </div>
-                                </div>
+                                </div> */}
                             </div>
                         </div>
                     </div>
@@ -1865,7 +1918,7 @@ export default function ProjectsEdit({
             {/* ═════════════════════════════════════════════════════════════════ */}
             {currentStep === 2 && (
                 <div className="space-y-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start text-slate-900">
+                    <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 items-start text-slate-900">
                         {/* Card 1: Penugasan Personel (col-span-12 lg:col-span-6) */}
                         <div className="lg:col-span-6 bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs space-y-4">
                             <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
@@ -1892,7 +1945,7 @@ export default function ProjectsEdit({
                         </div>
 
                         {/* Card 2: Checklist Persiapan & Requirement Khusus (col-span-12 lg:col-span-6) */}
-                        <div className="lg:col-span-6 bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs space-y-4">
+                        {/* <div className="lg:col-span-6 bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs space-y-4">
                             <div className="border-b border-slate-100 pb-3">
                                 <h3 className="font-bold text-base text-slate-900">Checklist Persiapan &amp; Operasional Tim</h3>
                                 <p className="text-[11px] text-slate-400">Checklist SOP standar sebelum dan saat pelaksanaan event</p>
@@ -1919,8 +1972,8 @@ export default function ProjectsEdit({
                                                 })
                                             }
                                             className={`w-4 h-4 rounded-md flex items-center justify-center shrink-0 transition-colors ${step2Requirements[req.key]
-                                                    ? 'bg-[#4F46E5] text-white'
-                                                    : 'bg-slate-100 border border-slate-300 text-transparent'
+                                                ? 'bg-[#4F46E5] text-white'
+                                                : 'bg-slate-100 border border-slate-300 text-transparent'
                                                 }`}
                                         >
                                             <Check className="w-3 h-3 stroke-[3]" />
@@ -1941,7 +1994,7 @@ export default function ProjectsEdit({
                                     Workflow &amp; jadwal target deadline otomatis dikalkulasi berdasarkan kategori &amp; tanggal event, dan dapat Anda review lengkap pada Step 4.
                                 </p>
                             </div>
-                        </div>
+                        </div> */}
                     </div>
 
                     {/* Step 2 Bottom Actions */}
@@ -2280,8 +2333,8 @@ export default function ProjectsEdit({
                                                                 setTaxType('percent');
                                                             }}
                                                             className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-colors cursor-pointer ${taxType === 'percent' && taxPercent === rate
-                                                                    ? 'bg-[#4F46E5] text-white'
-                                                                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                                                                ? 'bg-[#4F46E5] text-white'
+                                                                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
                                                                 }`}
                                                         >
                                                             {rate}%
@@ -2514,11 +2567,23 @@ export default function ProjectsEdit({
                                 </div>
                                 <div className="flex items-center justify-between gap-2.5">
                                     <span className="text-slate-400 shrink-0">DP Pertama:</span>
-                                    <span className="font-bold text-indigo-700 text-right">{dpPercent}% ({formatRupiah(nominalDp)})</span>
+                                    <span className="font-bold text-indigo-700 text-right">{effectiveDpPercent}% ({formatRupiah(effectiveDpAmount)})</span>
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    {/* ── CARD SPESIFIK KATEGORI REVIEW ───────────────────────────── */}
+                    <CategorySpecificView
+                        project={{
+                            name: projectName,
+                            category: selectedCategory,
+                            category_data: categoryData,
+                            client: selectedClient,
+                            location: projectLocation,
+                            event_date: shootingEventDate || projectDate,
+                        }}
+                    />
 
                     {/* Row 2: Layanan Deliverables vs Alur Kerja Workflow Tim */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch text-slate-900">
@@ -2774,7 +2839,7 @@ export default function ProjectsEdit({
                                 <div className="flex items-center justify-between">
                                     <span className="font-bold text-indigo-950">Tagihan DP Pertama</span>
                                     <span className="font-black text-[#4F46E5] font-sans">
-                                        {formatRupiah(nominalDp)} ({dpPercent}%)
+                                        {formatRupiah(effectiveDpAmount)} ({effectiveDpPercent}%)
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5">
@@ -2881,8 +2946,8 @@ export default function ProjectsEdit({
                                 type="button"
                                 onClick={() => setAddonModalTab('database')}
                                 className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${addonModalTab === 'database'
-                                        ? 'bg-white text-[#4F46E5] shadow-xs'
-                                        : 'hover:text-slate-900'
+                                    ? 'bg-white text-[#4F46E5] shadow-xs'
+                                    : 'hover:text-slate-900'
                                     }`}
                             >
                                 <Database className="w-3.5 h-3.5" />
@@ -2892,8 +2957,8 @@ export default function ProjectsEdit({
                                 type="button"
                                 onClick={() => setAddonModalTab('custom')}
                                 className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${addonModalTab === 'custom'
-                                        ? 'bg-white text-[#4F46E5] shadow-xs'
-                                        : 'hover:text-slate-900'
+                                    ? 'bg-white text-[#4F46E5] shadow-xs'
+                                    : 'hover:text-slate-900'
                                     }`}
                             >
                                 <Sparkles className="w-3.5 h-3.5" />
@@ -3097,8 +3162,8 @@ export default function ProjectsEdit({
                                 type="button"
                                 onClick={() => setExpenseModalTab('database')}
                                 className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${expenseModalTab === 'database'
-                                        ? 'bg-white text-emerald-600 shadow-xs'
-                                        : 'hover:text-slate-900'
+                                    ? 'bg-white text-emerald-600 shadow-xs'
+                                    : 'hover:text-slate-900'
                                     }`}
                             >
                                 <Database className="w-3.5 h-3.5" />
@@ -3108,8 +3173,8 @@ export default function ProjectsEdit({
                                 type="button"
                                 onClick={() => setExpenseModalTab('custom')}
                                 className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${expenseModalTab === 'custom'
-                                        ? 'bg-white text-emerald-600 shadow-xs'
-                                        : 'hover:text-slate-900'
+                                    ? 'bg-white text-emerald-600 shadow-xs'
+                                    : 'hover:text-slate-900'
                                     }`}
                             >
                                 <Sparkles className="w-3.5 h-3.5" />
@@ -3151,8 +3216,8 @@ export default function ProjectsEdit({
                                                             type="button"
                                                             onClick={() => handleSelectMasterOps(String(opsItem.id))}
                                                             className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 border transition-all cursor-pointer ${isSelected
-                                                                    ? 'bg-emerald-50 border-emerald-500 text-emerald-950 font-bold ring-1 ring-emerald-500 shadow-xs'
-                                                                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                                                                ? 'bg-emerald-50 border-emerald-500 text-emerald-950 font-bold ring-1 ring-emerald-500 shadow-xs'
+                                                                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                                                                 }`}
                                                         >
                                                             <span>{getExpenseIcon(opsItem.name)}</span>

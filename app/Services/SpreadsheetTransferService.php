@@ -34,7 +34,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class SpreadsheetTransferService
 {
     private const CLIENT_HEADERS = [
-        'contoh', 'nama', 'tipe_klien', 'kategori', 'email', 'telepon', 'telepon_kedua',
+        'nama', 'tipe_klien', 'kategori', 'email', 'telepon', 'telepon_kedua',
         'instagram', 'kontak_preferensi', 'provinsi', 'kota', 'kecamatan', 'kelurahan',
         'kode_pos', 'alamat', 'sumber', 'sumber_klien', 'wedding_organizer', 'status',
         'nama_perusahaan', 'nama_pasangan', 'nama_mempelai_wanita', 'nama_mempelai_pria',
@@ -42,7 +42,7 @@ class SpreadsheetTransferService
     ];
 
     private const PROJECT_HEADERS = [
-        'contoh', 'referensi_proyek', 'nama_proyek', 'email_klien', 'telepon_klien', 'kategori',
+        'referensi_proyek', 'nama_proyek', 'email_klien', 'telepon_klien', 'kategori',
         'paket', 'status', 'tanggal_acara', 'jam_acara', 'tanggal_selesai', 'deadline', 'lokasi',
         'email_supervisor', 'email_fotografer', 'email_editor', 'harga', 'diskon', 'pajak',
         'total', 'sudah_dibayar', 'catatan',
@@ -74,19 +74,13 @@ class SpreadsheetTransferService
         $guide->fromArray([
             ['TEMPLATE IMPORT KLIEN — ARAMS'],
             ['1. Isi sheet "Klien". Kolom nama wajib diisi; kolom lain opsional.'],
-            ['2. Hapus atau biarkan baris contoh; baris dengan contoh=YA tidak pernah diimpor.'],
-            ['3. Kategori, sumber klien, dan wedding organizer harus sama dengan nama master data.'],
-            ['4. data_kategori_json hanya dipakai untuk data khusus; gunakan JSON valid, misalnya {"concept_theme":"Outdoor"}.'],
-            ['5. Simpan sebagai .xlsx lalu unggah melalui tombol Impor di halaman Klien.'],
+            ['2. Kategori, sumber klien, dan wedding organizer harus sama dengan nama master data aktif di sistem.'],
+            ['3. data_kategori_json hanya dipakai untuk data khusus; gunakan format JSON valid.'],
+            ['4. Simpan sebagai file Excel (.xlsx) lalu unggah melalui tombol Impor di halaman Klien.'],
         ]);
 
         $clients = $spreadsheet->createSheet()->setTitle('Klien');
         $clients->fromArray(self::CLIENT_HEADERS, null, 'A1');
-        $clients->fromArray([[
-            'YA', 'Nadia Pratama & Reza Mahendra', 'wedding', 'Wedding', 'nadia@example.com', '081234567890', '',
-            '@nadia', 'whatsapp', 'DKI Jakarta', 'Jakarta Selatan', '', '', '12190', 'Jl. Contoh No. 1',
-            'Instagram', '', '', 'active', '', '', 'Nadia Pratama', 'Reza Mahendra', '', '', '', 'VIP, Referral', '',
-        ]], null, 'A2');
         $this->styleSheet($guide);
         $this->styleSheet($clients, true);
 
@@ -102,18 +96,12 @@ class SpreadsheetTransferService
             ['1. Isi sheet "Proyek" terlebih dahulu. referensi_proyek, nama_proyek, email/telepon klien, dan kategori wajib diisi.'],
             ['2. Klien harus sudah diimpor atau dibuat sebelumnya. Kategori dan paket dicocokkan dengan master data aktif.'],
             ['3. Isi data khusus pada sheet kategori yang sesuai, lalu hubungkan melalui referensi_proyek.'],
-            ['4. Hapus atau biarkan baris contoh; baris dengan contoh=YA tidak pernah diimpor.'],
-            ['5. Semua tanggal menggunakan YYYY-MM-DD. Nilai uang ditulis angka tanpa Rp atau pemisah ribuan.'],
-            ['6. Sheet kategori memakai nama field sistem; jangan mengubah judul kolom. Kolom *_json memakai JSON valid.'],
+            ['4. Semua tanggal menggunakan format YYYY-MM-DD. Nilai uang ditulis angka murni tanpa Rp atau pemisah ribuan.'],
+            ['5. Sheet kategori memakai nama field sistem; jangan mengubah judul kolom. Kolom *_json memakai format JSON valid.'],
         ]);
 
         $projects = $spreadsheet->createSheet()->setTitle('Proyek');
         $projects->fromArray(self::PROJECT_HEADERS, null, 'A1');
-        $projects->fromArray([[
-            'YA', 'PRJ-CONTOH-001', 'Wedding Nadia & Reza', 'nadia@example.com', '081234567890', 'Wedding', '',
-            'booking', '2026-12-20', '09:00', '', '2026-12-27', 'Jakarta Selatan', '', '', '',
-            25000000, 0, 0, 25000000, 0, 'Hapus baris contoh sebelum mengimpor data nyata.',
-        ]], null, 'A2');
         $this->styleSheet($guide);
         $this->styleSheet($projects, true);
 
@@ -123,9 +111,7 @@ class SpreadsheetTransferService
             $sheetNames[] = $title;
             $sheet = $spreadsheet->createSheet()->setTitle($title);
             $fields = self::CATEGORY_FIELDS[$this->categoryKey($category)] ?? self::CATEGORY_FIELDS['standard'];
-            $sheet->fromArray(array_merge(['contoh', 'referensi_proyek'], $fields), null, 'A1');
-            $sample = array_fill(0, count($fields), '');
-            $sheet->fromArray([array_merge(['YA', 'PRJ-CONTOH-001'], $sample)], null, 'A2');
+            $sheet->fromArray(array_merge(['referensi_proyek'], $fields), null, 'A1');
             $this->styleSheet($sheet, true);
         }
 

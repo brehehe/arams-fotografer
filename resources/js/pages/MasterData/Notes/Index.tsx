@@ -31,6 +31,7 @@ import {
     Modal,
     AlertConfirmation,
     Badge,
+    StatCard,
     Pagination,
 } from '@/components/ui';
 
@@ -362,61 +363,34 @@ export default function NoteTemplatesIndex({
 
             {/* ── 4 STAT CARDS ──────────────────────────────────────────────── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Card 1: Total Template */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                        <ClipboardList className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-semibold text-slate-500 block">Total Template</span>
-                        <div className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">
-                            {stats.total}
-                        </div>
-                        <span className="text-[11px] text-slate-400 font-medium">Semua template</span>
-                    </div>
-                </div>
-
-                {/* Card 2: Template Aktif */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                        <CheckCircle2 className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-semibold text-slate-500 block">Template Aktif</span>
-                        <div className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">
-                            {stats.active}
-                        </div>
-                        <span className="text-[11px] text-slate-400 font-medium">Sedang digunakan</span>
-                    </div>
-                </div>
-
-                {/* Card 3: Template Nonaktif */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-                        <MinusCircle className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-semibold text-slate-500 block">Template Nonaktif</span>
-                        <div className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">
-                            {stats.inactive}
-                        </div>
-                        <span className="text-[11px] text-slate-400 font-medium">Tidak digunakan</span>
-                    </div>
-                </div>
-
-                {/* Card 4: Digunakan di Project */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                        <Folder className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-semibold text-slate-500 block">Digunakan di Project</span>
-                        <div className="text-2xl font-black text-slate-900 tracking-tight mt-0.5">
-                            {stats.used_in_project}
-                        </div>
-                        <span className="text-[11px] text-slate-400 font-medium">Total penggunaan</span>
-                    </div>
-                </div>
+                <StatCard
+                    title="Total Template"
+                    value={stats.total}
+                    subtitle="Semua template"
+                    icon={ClipboardList}
+                    color="indigo"
+                />
+                <StatCard
+                    title="Template Aktif"
+                    value={stats.active}
+                    subtitle="Sedang digunakan"
+                    icon={CheckCircle2}
+                    color="emerald"
+                />
+                <StatCard
+                    title="Template Nonaktif"
+                    value={stats.inactive}
+                    subtitle="Tidak digunakan"
+                    icon={MinusCircle}
+                    color="rose"
+                />
+                <StatCard
+                    title="Digunakan di Project"
+                    value={stats.used_in_project}
+                    subtitle="Total penggunaan"
+                    icon={Folder}
+                    color="amber"
+                />
             </div>
 
             {/* ── SEARCH & FILTER CONTROLS ───────────────────────────────────── */}

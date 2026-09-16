@@ -14,9 +14,11 @@ import {
     Briefcase,
     Layers,
     ExternalLink,
+    Phone,
+    Package,
 } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
-import { formatDate } from '@/lib/formatters';
+import { formatDate, formatRupiah } from '@/lib/formatters';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface CalendarItem {
@@ -24,8 +26,11 @@ interface CalendarItem {
     schedule_id?: string | null;
     project_id: number | string;
     project_number?: string;
+    project_name?: string;
+    package_name?: string;
     title: string;
     client_name: string;
+    client_phone?: string;
     category_name: string;
     category_color: string;
     date: string;
@@ -36,6 +41,8 @@ interface CalendarItem {
     type_raw: string;
     status: string;
     payment_status?: string | null;
+    total_amount?: number | string | null;
+    paid_amount?: number | string | null;
     notes: string | null;
     source?: string;
     color?: string;
@@ -88,6 +95,22 @@ const COLOR_OPTIONS = [
     { name: 'slate', hex: '#64748B', bg: '#F8FAFC', border: '#E2E8F0', text: '#334155', dot: '#475569' },
 ];
 
+const MONTH_NAMES = [
+    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+];
+const MONTH_NAMES_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
+const DAY_NAMES = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+const DAY_NAMES_FULL = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+
+const formatDateToYMD = (d: Date): string => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+};
+
 const TIME_SLOTS = [
     '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'
 ];
@@ -98,10 +121,13 @@ export default function CalendarIndex({
     clients_list = [],
     schedule_summary = { total_week: 12, project: 8, meeting: 3, deadline: 1, other: 0 },
 }: CalendarIndexProps) {
+    const today = useMemo(() => new Date(), []);
+    const todayStr = useMemo(() => formatDateToYMD(today), [today]);
+
     // Current View State
-    const [viewMode, setViewMode] = useState<'bulan' | 'minggu' | 'hari' | 'daftar'>('minggu');
-    const [currentDate, setCurrentDate] = useState<Date>(new Date(2026, 4, 27)); // Reference: 27 Mei 2026
-    const [selectedDate, setSelectedDate] = useState<string>('2026-05-27');
+    const [viewMode, setViewMode] = useState<'bulan' | 'minggu' | 'hari' | 'daftar'>('bulan');
+    const [currentDate, setCurrentDate] = useState<Date>(today);
+    const [selectedDate, setSelectedDate] = useState<string>(todayStr);
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<CalendarItem | null>(null);
 
@@ -119,21 +145,13 @@ export default function CalendarIndex({
         client_id: '',
         project_id: '',
         description: '',
-        start_date: '2026-05-27',
+        start_date: todayStr,
         start_time: '09:00',
-        end_date: '2026-05-27',
+        end_date: todayStr,
         end_time: '12:00',
         location: '',
         color: '#6366F1',
     });
-
-    const monthNames = [
-        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-    ];
-    const monthNamesShort = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
-    const dayNames = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-    const dayNamesFull = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
 
     // 1. Compute Days for the active Week
     const weekDays = useMemo(() => {
@@ -147,15 +165,15 @@ export default function CalendarIndex({
         for (let i = 0; i < 7; i++) {
             const cur = new Date(monday);
             cur.setDate(monday.getDate() + i);
-            const dateStr = cur.toISOString().split('T')[0];
-            const isToday = cur.getDate() === 27 && cur.getMonth() === 4 && cur.getFullYear() === 2026;
+            const dateStr = formatDateToYMD(cur);
+            const isToday = dateStr === todayStr;
             const isSelected = dateStr === selectedDate;
 
             days.push({
-                dayName: dayNames[i],
-                dayNameFull: dayNamesFull[i],
+                dayName: DAY_NAMES[i],
+                dayNameFull: DAY_NAMES_FULL[i],
                 dayNum: cur.getDate(),
-                monthName: monthNamesShort[cur.getMonth()],
+                monthName: MONTH_NAMES_SHORT[cur.getMonth()],
                 year: cur.getFullYear(),
                 dateStr: dateStr,
                 isToday: isToday,
@@ -165,7 +183,7 @@ export default function CalendarIndex({
         }
 
         return days;
-    }, [currentDate, selectedDate]);
+    }, [currentDate, selectedDate, todayStr]);
 
     // 2. Compute Days for the active Month (35 or 42 cells)
     const monthDays = useMemo(() => {
@@ -183,12 +201,12 @@ export default function CalendarIndex({
 
         for (let i = startDayOfWeek - 1; i >= 0; i--) {
             const d = new Date(year, month - 1, prevMonthLastDay - i);
-            const dateStr = d.toISOString().split('T')[0];
+            const dateStr = formatDateToYMD(d);
             days.push({
                 dateStr: dateStr,
                 dayNum: d.getDate(),
                 isCurrentMonth: false,
-                isToday: false,
+                isToday: dateStr === todayStr,
                 isSelected: dateStr === selectedDate,
                 fullDate: d,
             });
@@ -196,12 +214,12 @@ export default function CalendarIndex({
 
         for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
             const d = new Date(year, month, i);
-            const dateStr = d.toISOString().split('T')[0];
+            const dateStr = formatDateToYMD(d);
             days.push({
                 dateStr: dateStr,
                 dayNum: i,
                 isCurrentMonth: true,
-                isToday: d.getDate() === 27 && d.getMonth() === 4 && d.getFullYear() === 2026,
+                isToday: dateStr === todayStr,
                 isSelected: dateStr === selectedDate,
                 fullDate: d,
             });
@@ -211,19 +229,19 @@ export default function CalendarIndex({
 
         for (let i = 1; i <= remaining; i++) {
             const d = new Date(year, month + 1, i);
-            const dateStr = d.toISOString().split('T')[0];
+            const dateStr = formatDateToYMD(d);
             days.push({
                 dateStr: dateStr,
                 dayNum: d.getDate(),
                 isCurrentMonth: false,
-                isToday: false,
+                isToday: dateStr === todayStr,
                 isSelected: dateStr === selectedDate,
                 fullDate: d,
             });
         }
 
         return days;
-    }, [currentDate, selectedDate]);
+    }, [currentDate, selectedDate, todayStr]);
 
     // 3. Navigation Controls
     const handlePrev = () => {
@@ -235,7 +253,7 @@ export default function CalendarIndex({
             d.setMonth(d.getMonth() - 1);
         } else if (viewMode === 'hari') {
             d.setDate(d.getDate() - 1);
-            setSelectedDate(d.toISOString().split('T')[0]);
+            setSelectedDate(formatDateToYMD(d));
         }
 
         setCurrentDate(d);
@@ -250,22 +268,22 @@ export default function CalendarIndex({
             d.setMonth(d.getMonth() + 1);
         } else if (viewMode === 'hari') {
             d.setDate(d.getDate() + 1);
-            setSelectedDate(d.toISOString().split('T')[0]);
+            setSelectedDate(formatDateToYMD(d));
         }
 
         setCurrentDate(d);
     };
 
     const handleToday = () => {
-        const today = new Date(2026, 4, 27);
-        setCurrentDate(today);
-        setSelectedDate('2026-05-27');
+        const now = new Date();
+        setCurrentDate(now);
+        setSelectedDate(formatDateToYMD(now));
     };
 
     // 4. Header Date Label
     const dateLabel = useMemo(() => {
         if (viewMode === 'bulan' || viewMode === 'daftar') {
-            return `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+            return `${MONTH_NAMES[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
         }
 
         if (viewMode === 'hari') {
@@ -276,7 +294,7 @@ export default function CalendarIndex({
                 let dow = selD.getDay();
                 dow = dow === 0 ? 6 : dow - 1;
 
-                return `${dayNamesFull[dow]}, ${selD.getDate()} ${monthNames[selD.getMonth()]} ${selD.getFullYear()}`;
+                return `${DAY_NAMES_FULL[dow]}, ${selD.getDate()} ${MONTH_NAMES[selD.getMonth()]} ${selD.getFullYear()}`;
             }
 
             return selectedDate;
@@ -286,227 +304,63 @@ export default function CalendarIndex({
             return `${weekDays[0].dayNum} – ${weekDays[6].dayNum} ${weekDays[6].monthName} ${weekDays[6].year}`;
         }
 
-        return `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+        return `${MONTH_NAMES[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
     }, [viewMode, currentDate, selectedDate, weekDays]);
 
-    // Sample default events for the mock week if no backend events exist
-    const defaultWeekEvents: CalendarItem[] = useMemo(() => {
-        return [
-            {
-                id: 'evt-1',
-                project_id: 'p-1',
-                title: 'Project Wedding',
-                client_name: 'Kevin & Jessica',
-                category_name: 'Wedding',
-                category_color: '#6366F1',
-                date: '2026-05-25',
-                start_time: '09:00',
-                end_time: '12:00',
-                location: 'Gedung Serbaguna',
-                type: 'Project',
-                type_raw: 'wedding',
-                status: 'Confirmed',
-                notes: 'Wedding ceremony and reception coverage.',
-                color: 'purple',
-            },
-            {
-                id: 'evt-2',
-                project_id: 'p-2',
-                title: 'Meeting Internal',
-                client_name: 'Evaluasi Project',
-                category_name: 'Meeting',
-                category_color: '#EAB308',
-                date: '2026-05-26',
-                start_time: '10:00',
-                end_time: '11:30',
-                location: 'Office',
-                type: 'Meeting',
-                type_raw: 'meeting',
-                status: 'Confirmed',
-                notes: 'Evaluasi mingguan & pembagian jadwal fotografer.',
-                color: 'yellow',
-            },
-            {
-                id: 'evt-3',
-                project_id: 'p-3',
-                title: 'Project Prewedding',
-                client_name: 'Rina & Andi',
-                category_name: 'Prewedding',
-                category_color: '#10B981',
-                date: '2026-05-26',
-                start_time: '14:00',
-                end_time: '17:00',
-                location: 'Kota Tua',
-                type: 'Project',
-                type_raw: 'prewedding',
-                status: 'Confirmed',
-                notes: 'Casual prewedding photoshoot.',
-                color: 'green',
-            },
-            {
-                id: 'evt-4',
-                project_id: 'p-4',
-                title: 'Project Family',
-                client_name: 'Budi Santoso',
-                category_name: 'Family',
-                category_color: '#3B82F6',
-                date: '2026-05-27',
-                start_time: '09:00',
-                end_time: '12:00',
-                location: 'Taman Menteng',
-                type: 'Project',
-                type_raw: 'family',
-                status: 'Confirmed',
-                notes: 'Outdoor family photoshoot with props.',
-                color: 'blue',
-            },
-            {
-                id: 'evt-5',
-                project_id: 'p-5',
-                title: 'Deadline Editing',
-                client_name: 'Wedding Day',
-                category_name: 'Deadline',
-                category_color: '#EF4444',
-                date: '2026-05-27',
-                start_time: '13:30',
-                end_time: '17:00',
-                location: 'Online',
-                type: 'Deadline',
-                type_raw: 'editing',
-                status: 'Pending',
-                notes: 'Final teaser & 50 edited master photos delivery.',
-                color: 'red',
-            },
-            {
-                id: 'evt-6',
-                project_id: 'p-6',
-                title: 'Project Birthday',
-                client_name: 'Alya 1st Birthday',
-                category_name: 'Birthday',
-                category_color: '#8B5CF6',
-                date: '2026-05-28',
-                start_time: '11:00',
-                end_time: '13:00',
-                location: 'Studio Arams',
-                type: 'Project',
-                type_raw: 'birthday',
-                status: 'Confirmed',
-                notes: 'Smash cake photoshoot.',
-                color: 'purple',
-            },
-            {
-                id: 'evt-7',
-                project_id: 'p-7',
-                title: 'Meeting Client',
-                client_name: 'Maternity Session',
-                category_name: 'Meeting',
-                category_color: '#EAB308',
-                date: '2026-05-28',
-                start_time: '15:00',
-                end_time: '16:00',
-                location: 'Office',
-                type: 'Meeting',
-                type_raw: 'meeting',
-                status: 'Confirmed',
-                notes: 'Moodboard and wardrobe consultation.',
-                color: 'yellow',
-            },
-            {
-                id: 'evt-8',
-                project_id: 'p-8',
-                title: 'Project Maternity',
-                client_name: 'Dewi Lestari',
-                category_name: 'Maternity',
-                category_color: '#10B981',
-                date: '2026-05-29',
-                start_time: '09:00',
-                end_time: '12:00',
-                location: 'Studio Arams',
-                type: 'Project',
-                type_raw: 'maternity',
-                status: 'Confirmed',
-                notes: 'Studio glam maternity session.',
-                color: 'green',
-            },
-            {
-                id: 'evt-9',
-                project_id: 'p-9',
-                title: 'Review & Approval',
-                client_name: 'Album Design',
-                category_name: 'Review',
-                category_color: '#3B82F6',
-                date: '2026-05-29',
-                start_time: '14:00',
-                end_time: '16:00',
-                location: 'Online',
-                type: 'Meeting',
-                type_raw: 'review',
-                status: 'Confirmed',
-                notes: 'Layout review before printing.',
-                color: 'blue',
-            },
-            {
-                id: 'evt-10',
-                project_id: 'p-10',
-                title: 'Project Event',
-                client_name: 'Company Gathering',
-                category_name: 'Corporate',
-                category_color: '#F97316',
-                date: '2026-05-30',
-                start_time: '10:00',
-                end_time: '16:00',
-                location: 'Ancol, Jakarta',
-                type: 'Event',
-                type_raw: 'corporate',
-                status: 'Confirmed',
-                notes: 'Full day company gathering coverage.',
-                color: 'orange',
-            },
-            {
-                id: 'evt-11',
-                project_id: 'p-11',
-                title: 'Project Wedding',
-                client_name: 'Andika & Sari',
-                category_name: 'Wedding',
-                category_color: '#EF4444',
-                date: '2026-05-31',
-                start_time: '09:00',
-                end_time: '17:00',
-                location: 'Gedung Graha',
-                type: 'Project',
-                type_raw: 'wedding',
-                status: 'Confirmed',
-                notes: 'Akad nikah & resepsi.',
-                color: 'red',
-            },
-        ];
-    }, []);
-
-    // Combine backend events with demo items if events are empty
+    // Combine backend events
     const displayEvents = useMemo(() => {
-        if (events && events.length > 0) {
-            return events.map(e => {
-                const lower = (e.type || e.category_name || '').toLowerCase();
-                let cName = 'purple';
-
-                if (lower.includes('meet')) {
-cName = 'yellow';
-} else if (lower.includes('prewed') || lower.includes('matern')) {
-cName = 'green';
-} else if (lower.includes('family') || lower.includes('review')) {
-cName = 'blue';
-} else if (lower.includes('dead') || lower.includes('edit')) {
-cName = 'red';
-} else if (lower.includes('event') || lower.includes('corp')) {
-cName = 'orange';
-}
-
-                return { ...e, color: cName };
-            });
+        if (!events || events.length === 0) {
+            return [];
         }
 
-        return defaultWeekEvents;
-    }, [events, defaultWeekEvents]);
+        return events.map(e => {
+            const lower = (e.type || e.category_name || '').toLowerCase();
+            let cName = 'purple';
+
+            if (lower.includes('meet')) {
+                cName = 'yellow';
+            } else if (lower.includes('prewed') || lower.includes('matern')) {
+                cName = 'green';
+            } else if (lower.includes('family') || lower.includes('review')) {
+                cName = 'blue';
+            } else if (lower.includes('dead') || lower.includes('edit')) {
+                cName = 'red';
+            } else if (lower.includes('event') || lower.includes('corp')) {
+                cName = 'orange';
+            }
+
+            return { ...e, color: e.color || cName };
+        });
+    }, [events]);
+
+    const formattedTodayLabel = useMemo(() => {
+        const now = new Date();
+        let dow = now.getDay();
+        dow = dow === 0 ? 6 : dow - 1;
+
+        return `${DAY_NAMES_FULL[dow]}, ${now.getDate()} ${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
+    }, []);
+
+    const todayItems = useMemo(() => {
+        return displayEvents
+            .filter(item => item.date === todayStr)
+            .sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
+    }, [displayEvents, todayStr]);
+
+    const upcomingItems = useMemo(() => {
+        return displayEvents
+            .filter(item => item.date && item.date >= todayStr)
+            .sort((a, b) => {
+                const cmp = (a.date || '').localeCompare(b.date || '');
+
+                if (cmp !== 0) {
+                    return cmp;
+                }
+
+                return (a.start_time || '').localeCompare(b.start_time || '');
+            })
+            .slice(0, 5);
+    }, [displayEvents, todayStr]);
 
     // Handle Submit Tambah Jadwal
     const handleAddScheduleSubmit = (e: React.FormEvent) => {
@@ -529,9 +383,9 @@ cName = 'orange';
                     client_id: '',
                     project_id: '',
                     description: '',
-                    start_date: '2026-05-27',
+                    start_date: todayStr,
                     start_time: '09:00',
-                    end_date: '2026-05-27',
+                    end_date: todayStr,
                     end_time: '12:00',
                     location: '',
                     color: '#6366F1',
@@ -640,7 +494,7 @@ cName = 'orange';
                                     <div className="space-y-1">
                                         <label className="text-[11px] font-bold text-slate-600 block">Tahun:</label>
                                         <div className="flex items-center gap-1.5">
-                                            {[2025, 2026, 2027].map((yr) => (
+                                            {[new Date().getFullYear() - 1, new Date().getFullYear(), new Date().getFullYear() + 1].map((yr) => (
                                                 <button
                                                     key={yr}
                                                     type="button"
@@ -649,11 +503,10 @@ cName = 'orange';
                                                         d.setFullYear(yr);
                                                         setCurrentDate(d);
                                                     }}
-                                                    className={`flex-1 py-1 text-xs rounded-lg font-bold border transition-colors cursor-pointer ${
-                                                        currentDate.getFullYear() === yr
-                                                            ? 'bg-[#3B46F1] text-white border-indigo-600'
-                                                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                                                    }`}
+                                                    className={`flex-1 py-1 text-xs rounded-lg font-bold border transition-colors cursor-pointer ${currentDate.getFullYear() === yr
+                                                        ? 'bg-[#3B46F1] text-white border-indigo-600'
+                                                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                                                        }`}
                                                 >
                                                     {yr}
                                                 </button>
@@ -665,7 +518,7 @@ cName = 'orange';
                                     <div className="space-y-1">
                                         <label className="text-[11px] font-bold text-slate-600 block">Bulan:</label>
                                         <div className="grid grid-cols-4 gap-1.5">
-                                            {monthNamesShort.map((m, idx) => (
+                                            {MONTH_NAMES_SHORT.map((m, idx) => (
                                                 <button
                                                     key={m}
                                                     type="button"
@@ -675,11 +528,10 @@ cName = 'orange';
                                                         setCurrentDate(d);
                                                         setIsDatePickerOpen(false);
                                                     }}
-                                                    className={`py-1.5 text-[11px] font-bold rounded-lg border transition-colors cursor-pointer text-center ${
-                                                        currentDate.getMonth() === idx
-                                                            ? 'bg-[#3B46F1] text-white border-indigo-600'
-                                                            : 'bg-slate-50 text-slate-700 border-slate-100 hover:bg-indigo-50 hover:text-indigo-600'
-                                                    }`}
+                                                    className={`py-1.5 text-[11px] font-bold rounded-lg border transition-colors cursor-pointer text-center ${currentDate.getMonth() === idx
+                                                        ? 'bg-[#3B46F1] text-white border-indigo-600'
+                                                        : 'bg-slate-50 text-slate-700 border-slate-100 hover:bg-indigo-50 hover:text-indigo-600'
+                                                        }`}
                                                 >
                                                     {m}
                                                 </button>
@@ -699,11 +551,10 @@ cName = 'orange';
                                     key={mode}
                                     type="button"
                                     onClick={() => setViewMode(mode)}
-                                    className={`px-3.5 py-1.5 rounded-lg capitalize transition-all cursor-pointer font-bold ${
-                                        viewMode === mode
-                                            ? 'bg-[#3B46F1] text-white shadow-xs'
-                                            : 'text-slate-600 hover:text-slate-900'
-                                    }`}
+                                    className={`px-3.5 py-1.5 rounded-lg capitalize transition-all cursor-pointer font-bold ${viewMode === mode
+                                        ? 'bg-[#3B46F1] text-white shadow-xs'
+                                        : 'text-slate-600 hover:text-slate-900'
+                                        }`}
                                 >
                                     {mode}
                                 </button>
@@ -734,7 +585,7 @@ cName = 'orange';
                 {viewMode === 'bulan' && (
                     <div className="p-4 sm:p-5 space-y-3 rounded-b-2xl">
                         <div className="grid grid-cols-7 text-center font-bold text-xs text-slate-500 border-b border-slate-100 pb-2.5">
-                            {dayNames.map(d => (
+                            {DAY_NAMES.map(d => (
                                 <div key={d}>{d}</div>
                             ))}
                         </div>
@@ -751,25 +602,23 @@ cName = 'orange';
                                             setSelectedDate(cell.dateStr);
                                             setViewMode('hari');
                                         }}
-                                        className={`min-h-[105px] sm:min-h-[115px] p-2 rounded-xl border transition-all cursor-pointer flex flex-col justify-between group relative ${
-                                            cell.isSelected
-                                                ? 'ring-2 ring-[#3B46F1] border-indigo-200 bg-indigo-50/30'
-                                                : cell.isCurrentMonth
+                                        className={`min-h-[105px] sm:min-h-[115px] p-2 rounded-xl border transition-all cursor-pointer flex flex-col justify-between group relative ${cell.isSelected
+                                            ? 'ring-2 ring-[#3B46F1] border-indigo-200 bg-indigo-50/30'
+                                            : cell.isCurrentMonth
                                                 ? 'bg-white border-slate-200 hover:border-indigo-300 hover:shadow-xs'
                                                 : 'bg-slate-50/50 border-slate-100 opacity-60'
-                                        }`}
+                                            }`}
                                     >
                                         <div className="flex items-center justify-between">
                                             <span
-                                                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                                                    cell.isToday
-                                                        ? 'bg-[#3B46F1] text-white shadow-xs'
-                                                        : cell.isSelected
+                                                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${cell.isToday
+                                                    ? 'bg-[#3B46F1] text-white shadow-xs'
+                                                    : cell.isSelected
                                                         ? 'bg-indigo-100 text-indigo-700'
                                                         : cell.isCurrentMonth
-                                                        ? 'text-slate-800'
-                                                        : 'text-slate-400'
-                                                }`}
+                                                            ? 'text-slate-800'
+                                                            : 'text-slate-400'
+                                                    }`}
                                             >
                                                 {cell.dayNum}
                                             </span>
@@ -856,13 +705,12 @@ cName = 'orange';
                                     <div
                                         key={idx}
                                         onClick={() => setSelectedDate(day.dateStr)}
-                                        className={`py-3 px-2 border-r border-slate-100 last:border-r-0 flex flex-col items-center gap-0.5 cursor-pointer transition-colors ${
-                                            day.isSelected
-                                                ? 'bg-indigo-50/70 ring-1 ring-inset ring-indigo-400'
-                                                : day.isToday
+                                        className={`py-3 px-2 border-r border-slate-100 last:border-r-0 flex flex-col items-center gap-0.5 cursor-pointer transition-colors ${day.isSelected
+                                            ? 'bg-indigo-50/70 ring-1 ring-inset ring-indigo-400'
+                                            : day.isToday
                                                 ? 'bg-indigo-50/40 hover:bg-indigo-50/60'
                                                 : 'hover:bg-slate-100/60'
-                                        }`}
+                                            }`}
                                     >
                                         <span className={`text-[11px] font-semibold ${day.isSelected || day.isToday ? 'text-indigo-600 font-bold' : 'text-slate-600'}`}>
                                             {day.dayName}
@@ -897,12 +745,12 @@ cName = 'orange';
                                             const slotHour = parseInt(time.split(':')[0], 10);
                                             const cellEvents = displayEvents.filter(e => {
                                                 if (e.date !== day.dateStr) {
-return false;
-}
+                                                    return false;
+                                                }
 
                                                 if (!e.start_time) {
-return slotIdx === 0;
-}
+                                                    return slotIdx === 0;
+                                                }
 
                                                 const eventHour = parseInt(e.start_time.split(':')[0], 10);
 
@@ -925,13 +773,12 @@ return slotIdx === 0;
                                                         }));
                                                         setAddModalOpen(true);
                                                     }}
-                                                    className={`border-r border-slate-100 last:border-r-0 p-1.5 relative transition-colors ${
-                                                        day.isSelected
-                                                            ? 'bg-indigo-50/25'
-                                                            : day.isToday
+                                                    className={`border-r border-slate-100 last:border-r-0 p-1.5 relative transition-colors ${day.isSelected
+                                                        ? 'bg-indigo-50/25'
+                                                        : day.isToday
                                                             ? 'bg-indigo-50/10'
                                                             : 'hover:bg-slate-50/50'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     {cellEvents.map(evt => {
                                                         const colorStyle = getColorStyle(evt.color);
@@ -1034,12 +881,12 @@ return slotIdx === 0;
                                 const slotHour = parseInt(time.split(':')[0], 10);
                                 const hourEvents = displayEvents.filter(e => {
                                     if (e.date !== selectedDate) {
-return false;
-}
+                                        return false;
+                                    }
 
                                     if (!e.start_time) {
-return false;
-}
+                                        return false;
+                                    }
 
                                     const eventHour = parseInt(e.start_time.split(':')[0], 10);
 
@@ -1135,11 +982,10 @@ return false;
                                         key={cat}
                                         type="button"
                                         onClick={() => setListTypeFilter(cat)}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                                            listTypeFilter === cat
-                                                ? 'bg-[#3B46F1] text-white'
-                                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                        }`}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${listTypeFilter === cat
+                                            ? 'bg-[#3B46F1] text-white'
+                                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                            }`}
                                     >
                                         {cat}
                                     </button>
@@ -1217,7 +1063,7 @@ return false;
                     <div className="flex items-center justify-between">
                         <div>
                             <h3 className="text-sm font-bold text-slate-900">Jadwal Hari Ini</h3>
-                            <p className="text-[11px] text-slate-400 font-medium">Rabu, 27 Mei 2026</p>
+                            <p className="text-[11px] text-slate-400 font-medium">{formattedTodayLabel}</p>
                         </div>
                         <button
                             type="button"
@@ -1229,45 +1075,54 @@ return false;
                     </div>
 
                     <div className="space-y-3">
-                        {/* Item 1 */}
-                        <div className="p-3 rounded-xl border border-slate-100 hover:border-slate-200 transition-colors flex items-start justify-between gap-2 bg-slate-50/40">
-                            <div className="space-y-1">
-                                <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
-                                    <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                                    <span>09:00 - 12:00</span>
-                                </div>
-                                <h4 className="text-xs font-bold text-slate-900">Project Family - Budi Santoso</h4>
-                                <div className="text-[10.5px] text-slate-400 flex items-center gap-1">
-                                    <MapPin className="w-3 h-3 text-slate-400" />
-                                    <span>Taman Menteng</span>
-                                </div>
-                            </div>
-                            <div className="flex flex-col items-end gap-2">
-                                <span className="px-2 py-0.5 rounded text-[9.5px] font-bold bg-[#EFF6FF] text-[#2563EB] border border-blue-100">
-                                    Berlangsung
-                                </span>
-                            </div>
-                        </div>
+                        {todayItems.length > 0 ? (
+                            todayItems.slice(0, 3).map((item) => {
+                                const colorCfg = getColorStyle(item.color);
 
-                        {/* Item 2 */}
-                        <div className="p-3 rounded-xl border border-slate-100 hover:border-slate-200 transition-colors flex items-start justify-between gap-2 bg-slate-50/40">
-                            <div className="space-y-1">
-                                <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
-                                    <div className="w-2 h-2 rounded-full bg-rose-500"></div>
-                                    <span>13:30 - 17:00</span>
-                                </div>
-                                <h4 className="text-xs font-bold text-slate-900">Deadline Editing - Wedding Day</h4>
-                                <div className="text-[10.5px] text-slate-400 flex items-center gap-1">
-                                    <MapPin className="w-3 h-3 text-slate-400" />
-                                    <span>Online</span>
-                                </div>
+                                return (
+                                    <div
+                                        key={item.id}
+                                        onClick={() => setSelectedItem(item)}
+                                        className="p-3 rounded-xl border border-slate-100 hover:border-slate-300 hover:shadow-xs transition-all flex items-start justify-between gap-2 bg-slate-50/40 cursor-pointer"
+                                    >
+                                        <div className="space-y-1 min-w-0 flex-1">
+                                            <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
+                                                <div
+                                                    className="w-2 h-2 rounded-full shrink-0"
+                                                    style={{ backgroundColor: colorCfg.dot || '#6366F1' }}
+                                                />
+                                                <span>{item.start_time || '09:00'} - {item.end_time || 'Selesai'}</span>
+                                            </div>
+                                            <h4 className="text-xs font-bold text-slate-900 truncate">
+                                                {item.title}{item.client_name ? ` - ${item.client_name}` : ''}
+                                            </h4>
+                                            <div className="text-[10.5px] text-slate-400 flex items-center gap-1 truncate">
+                                                <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                                                <span className="truncate">{item.location || 'Lokasi belum ditentukan'}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-2 shrink-0">
+                                            <span
+                                                className="px-2 py-0.5 rounded text-[9.5px] font-bold border"
+                                                style={{
+                                                    backgroundColor: colorCfg.bg,
+                                                    borderColor: colorCfg.border,
+                                                    color: colorCfg.text,
+                                                }}
+                                            >
+                                                {item.status || item.type || 'Jadwal'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <div className="py-6 text-center border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                                <CalendarDays className="w-7 h-7 text-slate-300 mx-auto mb-1.5" />
+                                <p className="text-xs font-semibold text-slate-600">Tidak ada jadwal hari ini</p>
+                                <p className="text-[11px] text-slate-400 mt-0.5">Semua jadwal yang dibuat otomatis tercatat di sini</p>
                             </div>
-                            <div className="flex flex-col items-end gap-2">
-                                <span className="px-2 py-0.5 rounded text-[9.5px] font-bold bg-[#FEF2F2] text-[#DC2626] border border-rose-100">
-                                    Mendatang
-                                </span>
-                            </div>
-                        </div>
+                        )}
                     </div>
                 </div>
 
@@ -1285,45 +1140,54 @@ return false;
                     </div>
 
                     <div className="space-y-3">
-                        {/* Item 1 */}
-                        <div className="p-3 rounded-xl border border-slate-100 hover:border-slate-200 transition-colors flex items-start justify-between gap-2 bg-slate-50/40">
-                            <div className="space-y-1">
-                                <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
-                                    <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                                    <span>Kam, 28 Mei 2026 - 11:00</span>
-                                </div>
-                                <h4 className="text-xs font-bold text-slate-900">Project Birthday - Alya 1st Birthday</h4>
-                                <div className="text-[10.5px] text-slate-400 flex items-center gap-1">
-                                    <MapPin className="w-3 h-3 text-slate-400" />
-                                    <span>Studio Arams</span>
-                                </div>
-                            </div>
-                            <div className="flex flex-col items-end gap-2">
-                                <span className="px-2 py-0.5 rounded text-[9.5px] font-bold bg-[#EEF2FF] text-[#4F46E5] border border-indigo-100">
-                                    Mendatang
-                                </span>
-                            </div>
-                        </div>
+                        {upcomingItems.length > 0 ? (
+                            upcomingItems.slice(0, 3).map((item) => {
+                                const colorCfg = getColorStyle(item.color);
 
-                        {/* Item 2 */}
-                        <div className="p-3 rounded-xl border border-slate-100 hover:border-slate-200 transition-colors flex items-start justify-between gap-2 bg-slate-50/40">
-                            <div className="space-y-1">
-                                <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
-                                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                                    <span>Jum, 29 Mei 2026 - 09:00</span>
-                                </div>
-                                <h4 className="text-xs font-bold text-slate-900">Project Maternity - Dewi Lestari</h4>
-                                <div className="text-[10.5px] text-slate-400 flex items-center gap-1">
-                                    <MapPin className="w-3 h-3 text-slate-400" />
-                                    <span>Studio Arams</span>
-                                </div>
+                                return (
+                                    <div
+                                        key={item.id}
+                                        onClick={() => setSelectedItem(item)}
+                                        className="p-3 rounded-xl border border-slate-100 hover:border-slate-300 hover:shadow-xs transition-all flex items-start justify-between gap-2 bg-slate-50/40 cursor-pointer"
+                                    >
+                                        <div className="space-y-1 min-w-0 flex-1">
+                                            <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
+                                                <div
+                                                    className="w-2 h-2 rounded-full shrink-0"
+                                                    style={{ backgroundColor: colorCfg.dot || '#6366F1' }}
+                                                />
+                                                <span>{formatDate(item.date)} - {item.start_time || '09:00'}</span>
+                                            </div>
+                                            <h4 className="text-xs font-bold text-slate-900 truncate">
+                                                {item.title}{item.client_name ? ` - ${item.client_name}` : ''}
+                                            </h4>
+                                            <div className="text-[10.5px] text-slate-400 flex items-center gap-1 truncate">
+                                                <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                                                <span className="truncate">{item.location || 'Lokasi belum ditentukan'}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-2 shrink-0">
+                                            <span
+                                                className="px-2 py-0.5 rounded text-[9.5px] font-bold border"
+                                                style={{
+                                                    backgroundColor: colorCfg.bg,
+                                                    borderColor: colorCfg.border,
+                                                    color: colorCfg.text,
+                                                }}
+                                            >
+                                                {item.status || item.type || 'Mendatang'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <div className="py-6 text-center border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                                <CalendarDays className="w-7 h-7 text-slate-300 mx-auto mb-1.5" />
+                                <p className="text-xs font-semibold text-slate-600">Belum ada jadwal mendatang</p>
+                                <p className="text-[11px] text-slate-400 mt-0.5">Buat project atau tambah jadwal baru</p>
                             </div>
-                            <div className="flex flex-col items-end gap-2">
-                                <span className="px-2 py-0.5 rounded text-[9.5px] font-bold bg-[#ECFDF5] text-[#059669] border border-emerald-100">
-                                    Mendatang
-                                </span>
-                            </div>
-                        </div>
+                        )}
                     </div>
                 </div>
 
@@ -1596,72 +1460,184 @@ return false;
             )}
 
             {/* ════════════════════════════════════════════════════════════════ */}
-            {/* ── 5. MODAL: DETAIL EVENT POPUP ── */}
+            {/* ── 5. MODAL: DETAIL EVENT & PROJECT POPUP ── */}
             {selectedItem && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150"
                     onClick={() => setSelectedItem(null)}
                 >
                     <div
-                        className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 space-y-4"
+                        className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4 max-h-[90vh] overflow-y-auto"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="flex items-start justify-between gap-3">
-                            <div className="space-y-1">
-                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">
-                                    {selectedItem.type}
-                                </span>
-                                <h3 className="text-base font-black text-slate-900 mt-1">{selectedItem.title}</h3>
-                                <p className="text-xs text-slate-500 font-semibold">{selectedItem.client_name}</p>
+                        <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
+                            <div className="space-y-1.5 min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span
+                                        className="px-2.5 py-0.5 rounded text-[10px] font-bold border"
+                                        style={{
+                                            backgroundColor: `${selectedItem.category_color}15`,
+                                            borderColor: `${selectedItem.category_color}40`,
+                                            color: selectedItem.category_color,
+                                        }}
+                                    >
+                                        {selectedItem.category_name}
+                                    </span>
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                        {selectedItem.type}
+                                    </span>
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${selectedItem.status === 'Confirmed'
+                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                        : selectedItem.status === 'Pending'
+                                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                            : 'bg-slate-100 text-slate-700 border-slate-200'
+                                        }`}>
+                                        {selectedItem.status}
+                                    </span>
+                                </div>
+                                <h3 className="text-base font-black text-slate-900 leading-snug">
+                                    {selectedItem.title}
+                                </h3>
+                                {selectedItem.project_number && (
+                                    <p className="text-xs font-mono font-bold text-slate-500">
+                                        {selectedItem.project_number} {selectedItem.project_name && selectedItem.project_name !== selectedItem.title ? `• ${selectedItem.project_name}` : ''}
+                                    </p>
+                                )}
                             </div>
                             <button
                                 type="button"
                                 onClick={() => setSelectedItem(null)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer shrink-0"
                             >
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
 
-                        <div className="space-y-2.5 text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-100">
-                            <div className="flex items-center justify-between">
-                                <span className="text-slate-500">Tanggal:</span>
+                        {/* Project Details Grid */}
+                        <div className="space-y-2 text-xs bg-slate-50/70 p-4 rounded-xl border border-slate-100">
+                            {/* Client Row */}
+                            <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200/60">
+                                <span className="text-slate-500 font-medium flex items-center gap-1.5">
+                                    <Users className="w-3.5 h-3.5 text-slate-400" />
+                                    Klien:
+                                </span>
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold text-slate-800 text-right">{selectedItem.client_name}</span>
+                                    {selectedItem.client_phone && (
+                                        <a
+                                            href={`https://wa.me/${selectedItem.client_phone.replace(/\D/g, '')}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="p-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-md text-[10px] font-bold inline-flex items-center gap-0.5 transition-colors"
+                                            title="Chat WhatsApp"
+                                        >
+                                            <Phone className="w-3 h-3" />
+                                            <span>WA</span>
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Package Row (if available) */}
+                            {selectedItem.package_name && (
+                                <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200/60">
+                                    <span className="text-slate-500 font-medium flex items-center gap-1.5">
+                                        <Package className="w-3.5 h-3.5 text-slate-400" />
+                                        Paket:
+                                    </span>
+                                    <span className="font-bold text-slate-800 text-right">{selectedItem.package_name}</span>
+                                </div>
+                            )}
+
+                            {/* Date Row */}
+                            <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200/60">
+                                <span className="text-slate-500 font-medium flex items-center gap-1.5">
+                                    <CalendarDays className="w-3.5 h-3.5 text-slate-400" />
+                                    Tanggal:
+                                </span>
                                 <span className="font-bold text-slate-800">{formatDate(selectedItem.date)}</span>
                             </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-slate-500">Waktu:</span>
-                                <span className="font-bold text-slate-800">{selectedItem.start_time || '09:00'} - {selectedItem.end_time || '12:00'}</span>
+
+                            {/* Time Row */}
+                            {/* <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200/60">
+                                <span className="text-slate-500 font-medium flex items-center gap-1.5">
+                                    <Clock className="w-3.5 h-3.5 text-slate-400" />
+                                    Waktu:
+                                </span>
+                                <span className="font-bold text-slate-800">
+                                    {selectedItem.start_time || '09:00'} - {selectedItem.end_time || 'Selesai'}
+                                </span>
+                            </div> */}
+
+                            {/* Location Row */}
+                            <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200/60">
+                                <span className="text-slate-500 font-medium flex items-center gap-1.5 shrink-0">
+                                    <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                                    Lokasi:
+                                </span>
+                                <span className="font-bold text-slate-800 text-right truncate">
+                                    {selectedItem.location || 'Lokasi belum ditentukan'}
+                                </span>
                             </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-slate-500">Lokasi:</span>
-                                <span className="font-bold text-slate-800">{selectedItem.location || 'Studio'}</span>
-                            </div>
+
+                            {/* Total Amount & Payment Status (if available) */}
+                            {/* {selectedItem.total_amount !== undefined && selectedItem.total_amount !== null && (
+                                <div className="flex items-center justify-between gap-2 pt-0.5">
+                                    <span className="text-slate-500 font-medium">Nilai / Status Bayar:</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-mono font-black text-slate-900">
+                                            {formatRupiah(selectedItem.total_amount)}
+                                        </span>
+                                        {selectedItem.payment_status && (
+                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                                                selectedItem.payment_status === 'paid'
+                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                    : selectedItem.payment_status === 'partial'
+                                                    ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                                    : 'bg-rose-50 text-rose-700 border-rose-200'
+                                            }`}>
+                                                {selectedItem.payment_status === 'paid'
+                                                    ? 'Lunas'
+                                                    : selectedItem.payment_status === 'partial'
+                                                    ? 'DP / Sebagian'
+                                                    : 'Belum Bayar'}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            )} */}
+
+                            {/* Notes */}
                             {selectedItem.notes && (
                                 <div className="pt-2 border-t border-slate-200">
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Catatan:</span>
-                                    <p className="text-xs text-slate-700">{selectedItem.notes}</p>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                                        Catatan / Konsep:
+                                    </span>
+                                    <p className="text-xs text-slate-700 whitespace-pre-line bg-white p-2.5 rounded-lg border border-slate-200/70">
+                                        {selectedItem.notes}
+                                    </p>
                                 </div>
                             )}
                         </div>
 
-                        <div className="pt-2">
+                        {/* Actions */}
+                        <div className="flex items-center gap-2 pt-1">
                             {selectedItem.project_id ? (
                                 <Link
                                     href={`/projects/${String(selectedItem.project_id).replace('p-', '')}`}
-                                    className="w-full py-2.5 bg-[#4F46E5] hover:bg-[#4338CA] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+                                    className="flex-1 py-2.5 bg-[#4F46E5] hover:bg-[#4338CA] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-xs"
                                 >
                                     <ExternalLink className="w-3.5 h-3.5" />
                                     Buka Detail Project
                                 </Link>
-                            ) : (
-                                <button
-                                    type="button"
-                                    onClick={() => setSelectedItem(null)}
-                                    className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-                                >
-                                    Tutup
-                                </button>
-                            )}
+                            ) : null}
+                            <button
+                                type="button"
+                                onClick={() => setSelectedItem(null)}
+                                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                            >
+                                Tutup
+                            </button>
                         </div>
                     </div>
                 </div>

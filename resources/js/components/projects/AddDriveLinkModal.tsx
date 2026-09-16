@@ -62,9 +62,10 @@ export default function AddDriveLinkModal({
                     onClose();
                     if (onSuccess) onSuccess();
                 },
-                onError: () => {
+                onError: (errs) => {
                     setIsSubmitting(false);
-                    toast.error('Gagal menambahkan link');
+                    const msg = Object.values(errs || {})[0] || 'Gagal menambahkan link';
+                    toast.error(String(msg));
                 },
             }
         );

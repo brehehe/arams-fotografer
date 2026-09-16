@@ -173,6 +173,7 @@ export interface EngagementCategoryData {
 export interface EventCategoryData {
     pic_name?: string;
     client_name?: string;
+    needs_type?: string;
     event_date?: string;
     event_time_range?: string;
     event_type?: string;
@@ -348,12 +349,16 @@ export const MATERNITY_LOCATIONS = [
 ];
 
 export const LAINNYA_NEEDS_TYPES = [
-    'Dokumentasi Personal',
-    'Dokumentasi Keluarga',
-    'Dokumentasi Acara',
-    'Foto Produk',
-    'Foto Profesional',
-    'Konten',
+    'Foto Only',
+    'Video Only',
+    'Foto & Video',
+    'Lainnya',
+];
+
+export const EVENT_NEEDS_TYPES = [
+    'Foto Only',
+    'Video Only',
+    'Foto & Video',
     'Lainnya',
 ];
 
@@ -624,11 +629,16 @@ export const FIELD_LABELS: Record<string, string> = {
 
 export function formatValidationErrors(err: Record<string, any>): string {
     const entries = Object.entries(err || {});
-    if (entries.length === 0) return 'Silakan periksa kembali isian formulir Anda.';
+
+    if (entries.length === 0) {
+        return 'Silakan periksa kembali isian formulir Anda.';
+    }
+
     return entries
         .map(([field, msg]) => {
             const label = FIELD_LABELS[field] || field.replace(/_/g, ' ');
             const message = Array.isArray(msg) ? msg.join(', ') : String(msg);
+
             return `${label}: ${message}`;
         })
         .join(' • ');

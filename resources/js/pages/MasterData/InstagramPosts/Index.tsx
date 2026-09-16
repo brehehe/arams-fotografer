@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { toast } from 'sonner';
 import { Pagination } from '@/components/ui/pagination';
+import { StatCard } from '@/components/ui';
 import {
     Instagram,
     Plus,
@@ -263,41 +264,27 @@ export default function InstagramPostsIndex({
 
             {/* ── 2. TOP STAT CARDS ─────────────────────────────────────────────── */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[#FDF2F8] flex items-center justify-center shrink-0">
-                        <Instagram className="w-6 h-6 text-rose-600" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-bold text-slate-500 block uppercase tracking-wider">Total Feed</span>
-                        <h2 className="text-2xl font-black text-slate-900 tracking-tight font-sans">
-                            {stats.total}
-                        </h2>
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center shrink-0">
-                        <Eye className="w-6 h-6 text-emerald-600" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-bold text-slate-500 block uppercase tracking-wider">Aktif di Portal</span>
-                        <h2 className="text-2xl font-black text-emerald-600 tracking-tight font-sans">
-                            {stats.active}
-                        </h2>
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center shrink-0">
-                        <EyeOff className="w-6 h-6 text-slate-500" />
-                    </div>
-                    <div>
-                        <span className="text-xs font-bold text-slate-500 block uppercase tracking-wider">Nonaktif</span>
-                        <h2 className="text-2xl font-black text-slate-600 tracking-tight font-sans">
-                            {stats.inactive}
-                        </h2>
-                    </div>
-                </div>
+                <StatCard
+                    title="Total Feed"
+                    value={stats.total}
+                    subtitle="Feed Instagram"
+                    icon={Instagram}
+                    color="rose"
+                />
+                <StatCard
+                    title="Aktif di Portal"
+                    value={stats.active}
+                    subtitle="Tampil di portal klien"
+                    icon={Eye}
+                    color="emerald"
+                />
+                <StatCard
+                    title="Nonaktif"
+                    value={stats.inactive}
+                    subtitle="Tidak ditampilkan"
+                    icon={EyeOff}
+                    color="slate"
+                />
             </div>
 
             {/* ── 3. SEARCH BAR ────────────────────────────────────────────── */}

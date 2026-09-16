@@ -393,14 +393,11 @@ class ProcessClientIntake
                 }
             }
 
-            /*
-             * =========================================================================
-             * FITUR PEMBUATAN PROJECT & INVOICE OTOMATIS (DI-NONAKTIFKAN / DI-KOMEN)
-             * =========================================================================
-             * Saat form-klien disubmit, sistem hanya mencatat sebagai pendaftaran baru
-             * (Lead & Catatan Klien), tanpa langsung membuat Project baru dan Invoice.
-             * Jika nanti ingin diaktifkan kembali, cukup buka blok komentar di bawah ini.
-             *
+            // Resolve custom price if provided
+            if (!empty($validated['custom_price']) && is_numeric($validated['custom_price'])) {
+                $price = (float) $validated['custom_price'];
+            }
+
             // 4. Prepare Project Info based on form_type
             $categoryPrefix = $category->name ?? 'Project';
             if ($formType === 'wedding') {
@@ -412,7 +409,7 @@ class ProcessClientIntake
             }
             $projectNumber = $this->projectService->generateProjectNumber();
 
-            // 5. Create Project
+            // 5. Create Draft Project (bisa diedit selanjutnya di menu Projects)
             $project = Project::create([
                 'project_number' => $projectNumber,
                 'name' => $projectName,
@@ -424,63 +421,28 @@ class ProcessClientIntake
                 'workflow_step' => 'booking',
                 'progress' => 10,
                 'event_date' => $validated['event_date']
+                    ?? ($catData['event_date'] ?? null)
                     ?? ($catData['session_date'] ?? null)
                     ?? ($catData['akad_date'] ?? null)
-                    ?? ($catData['event_date'] ?? null)
                     ?? ($catData['departure_date'] ?? null)
                     ?? Carbon::now()->addDays(30),
-                'event_time' => $validated['event_time'] ?? ($catData['event_time'] ?? null),
+                'event_time' => $validated['event_time'] ?? ($catData['event_time_range'] ?? ($catData['event_time'] ?? null)),
                 'location' => !empty($validated['reception_location']) && $validated['reception_location'] !== ($validated['location'] ?? '')
                     ? (($validated['location'] ?? '') ? "Akad: {$validated['location']} | Resepsi: {$validated['reception_location']}" : $validated['reception_location'])
                     : ($validated['location']
-                        ?? ($catData['session_location'] ?? null)
-                        ?? ($catData['location'] ?? null)
-                        ?? ($catData['akad_location'] ?? null)
                         ?? ($catData['event_location'] ?? null)
+                        ?? ($catData['location'] ?? null)
+                        ?? ($catData['session_location'] ?? null)
+                        ?? ($catData['akad_location'] ?? null)
                         ?? ($catData['destination'] ?? null)
                         ?? null),
                 'price' => $price,
                 'total_amount' => $price,
                 'paid_amount' => 0,
-                'payment_status' => 'pending',
+                'payment_status' => 'unpaid',
                 'category_data' => $validated['category_data'] ?? null,
                 'notes' => $formattedNotes ?: ($validated['notes'] ?? 'Dibuat otomatis via Form Booking Online Klien.'),
             ]);
-
-            // 5. Generate First Invoice if package has price
-            if ($price > 0) {
-                $invoiceNumber = $this->financeService->generateInvoiceNumber();
-                $issueDate = Carbon::now();
-                $dueDate = Carbon::parse($validated['event_date'])->subDays(7);
-                if ($dueDate->isPast()) {
-                    $dueDate = Carbon::now()->addDays(3);
-                }
-
-                $invoice = Invoice::create([
-                    'project_id' => $project->id,
-                    'client_id' => $client->id,
-                    'invoice_number' => $invoiceNumber,
-                    'status' => 'draft',
-                    'issue_date' => $issueDate,
-                    'due_date' => $dueDate,
-                    'subtotal' => $price,
-                    'tax' => 0,
-                    'discount' => 0,
-                    'total' => $price,
-                    'paid_amount' => 0,
-                    'notes' => 'Invoice diterbitkan otomatis untuk paket ' . ($package?->name ?? 'Wedding'),
-                ]);
-
-                InvoiceItem::create([
-                    'invoice_id' => $invoice->id,
-                    'name' => $package?->name ?? 'Paket Layanan Foto',
-                    'description' => 'Paket Utama - ' . $projectName,
-                    'quantity' => 1,
-                    'unit_price' => $price,
-                    'total' => $price,
-                ]);
-            }
-            */
 
             // 6. Log Activity
             activity()

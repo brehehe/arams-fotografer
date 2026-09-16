@@ -48,6 +48,7 @@ import {
     X,
 } from 'lucide-react';
 import { formatRupiah, formatRupiahCompact, formatNumber } from '@/lib/formatters';
+import { FormattedNumberInput } from '@/components/ui/formatted-number-input';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -446,6 +447,7 @@ export default function ClientsIndex({
         status: 'active',
         notes: '',
         tags: [] as string[],
+        custom_price: '',
     };
 
     interface RegionItem {
@@ -536,6 +538,18 @@ export default function ClientsIndex({
             }
             if (field === 'session_date' || field === 'akad_date' || field === 'event_date' || field === 'departure_date') {
                 if (value) setFormData((f) => ({ ...f, event_date: value }));
+            }
+            if (field === 'event_time_range' || field === 'event_time' || field === 'session_time' || field === 'akad_time') {
+                if (value) setFormData((f) => ({ ...f, event_time: value }));
+            }
+            if (field === 'event_type' || field === 'needs_type') {
+                if (value) setFormData((f) => ({ ...f, event_type: value }));
+            }
+            if (field === 'estimated_guests') {
+                if (value) setFormData((f) => ({ ...f, estimated_guests: value }));
+            }
+            if (field === 'concept_theme') {
+                if (value) setFormData((f) => ({ ...f, concept_theme: value }));
             }
             if (field === 'session_location' || field === 'location' || field === 'akad_location' || field === 'event_location' || field === 'destination_city_country') {
                 if (value) setFormData((f) => ({ ...f, event_location: value, location: value }));
@@ -938,23 +952,23 @@ export default function ClientsIndex({
 
                 case 'lainnya':
                     if (!clientNameVal) {
-                        toast.error('Nama Lengkap Pemesan wajib diisi');
-                        return false;
-                    }
-                    if (!categoryData.needs_description?.trim()) {
-                        toast.error('Deskripsi Kebutuhan wajib diisi');
-                        return false;
-                    }
-                    if (!categoryData.location?.trim() && !formData.event_location?.trim()) {
-                        toast.error('Lokasi wajib diisi');
+                        toast.error('Nama Pemesan wajib diisi');
                         return false;
                     }
                     if (!categoryData.needs_type?.trim()) {
                         toast.error('Jenis Kebutuhan wajib dipilih');
                         return false;
                     }
-                    if (!categoryData.needs_detail?.trim()) {
-                        toast.error('Detail Kebutuhan wajib diisi');
+                    if (!categoryData.event_date && !formData.event_date) {
+                        toast.error('Tanggal Acara wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.location?.trim() && !formData.event_location?.trim()) {
+                        toast.error('Lokasi wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.needs_description?.trim()) {
+                        toast.error('Deskripsi Kebutuhan wajib diisi');
                         return false;
                     }
                     return true;
@@ -1180,8 +1194,8 @@ export default function ClientsIndex({
                     return true;
 
                 case 'event':
-                    if (!clientNameVal && !(categoryData as any).pic_name?.trim()) {
-                        toast.error('Nama Penanggung Jawab / PIC wajib diisi');
+                    if (!clientNameVal && !(categoryData as any).pic_name?.trim() && !(categoryData as any).client_name?.trim()) {
+                        toast.error('Nama Pemesan wajib diisi');
                         return false;
                     }
                     if (!categoryData.event_date && !formData.event_date) {
@@ -1196,8 +1210,8 @@ export default function ClientsIndex({
                         toast.error('Jenis Event wajib dipilih');
                         return false;
                     }
-                    if (!categoryData.event_scale?.trim()) {
-                        toast.error('Skala Event wajib dipilih');
+                    if (!categoryData.needs_type?.trim()) {
+                        toast.error('Jenis Kebutuhan wajib dipilih');
                         return false;
                     }
                     if (!categoryData.event_location?.trim() && !formData.event_location?.trim()) {
@@ -1383,8 +1397,9 @@ export default function ClientsIndex({
             children: validChildren.length > 0 ? validChildren : null,
             event_type: selectedCat?.name || formData.event_type || 'Dokumentasi',
             event_date: formData.event_date || categoryData.session_date || categoryData.akad_date || categoryData.event_date || categoryData.departure_date || null,
-            event_time: formData.event_time || categoryData.akad_time || categoryData.event_time || null,
+            event_time: formData.event_time || categoryData.event_time_range || categoryData.event_time || categoryData.akad_time || null,
             event_location: formData.event_location || categoryData.session_location || categoryData.akad_location || categoryData.event_location || categoryData.location || formData.address || null,
+            custom_price: formData.custom_price || null,
             phone: formData.phone.trim() || categoryData.pic_phone || '081234567890',
             email: formData.email?.trim() ? formData.email.trim() : null,
             preferred_contact: (formData.preferred_contact || 'whatsapp').toLowerCase(),
@@ -1518,132 +1533,42 @@ export default function ClientsIndex({
 
                 {/* 4 Top Summary Stat Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-                    {/* 1. TOTAL CLIENTS */}
-                    <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
-                        <div>
-                            <div className="flex items-start justify-between">
-                                <div>
-                                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                                        TOTAL CLIENTS
-                                    </span>
-                                    <span className="text-3xl font-extrabold text-slate-900 font-mono block mt-1.5">
-                                        {stats.total_clients || clients.total || 48}
-                                    </span>
-                                    <span className="text-xs text-slate-400 block mt-1">
-                                        Semua Klien Terdaftar
-                                    </span>
-                                </div>
-                                <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0">
-                                    <Users className="w-5 h-5" />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="mt-4 pt-3 border-t border-slate-100">
-                            <button
-                                type="button"
-                                onClick={() => handleStatusChange('Semua')}
-                                className="text-xs font-semibold text-slate-700 hover:text-amber-600 transition-colors flex items-center gap-1 cursor-pointer"
-                            >
-                                <span>Lihat Detail</span>
-                                <ArrowRight className="w-3.5 h-3.5" />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* 2. CLIENT AKTIF */}
-                    <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
-                        <div>
-                            <div className="flex items-start justify-between">
-                                <div>
-                                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                                        CLIENT AKTIF
-                                    </span>
-                                    <span className="text-3xl font-extrabold text-slate-900 font-mono block mt-1.5">
-                                        {stats.active_clients || 35}
-                                    </span>
-                                    <span className="text-xs text-slate-400 block mt-1">
-                                        Klien dengan Project Aktif
-                                    </span>
-                                </div>
-                                <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
-                                    <UserCheck className="w-5 h-5" />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="mt-4 pt-3 border-t border-slate-100">
-                            <button
-                                type="button"
-                                onClick={() => handleStatusChange('active')}
-                                className="text-xs font-semibold text-slate-700 hover:text-emerald-600 transition-colors flex items-center gap-1 cursor-pointer"
-                            >
-                                <span>Lihat Detail</span>
-                                <ArrowRight className="w-3.5 h-3.5" />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* 3. CLIENT BARU BULAN INI */}
-                    <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
-                        <div>
-                            <div className="flex items-start justify-between">
-                                <div>
-                                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                                        CLIENT BARU BULAN INI
-                                    </span>
-                                    <span className="text-3xl font-extrabold text-slate-900 font-mono block mt-1.5">
-                                        {stats.new_this_month || 6}
-                                    </span>
-                                    <span className="text-xs text-slate-400 block mt-1">
-                                        Bergabung bulan ini
-                                    </span>
-                                </div>
-                                <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600 shrink-0">
-                                    <UserPlus className="w-5 h-5" />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="mt-4 pt-3 border-t border-slate-100">
-                            <button
-                                type="button"
-                                onClick={() => handleStatusChange('Semua')}
-                                className="text-xs font-semibold text-slate-700 hover:text-purple-600 transition-colors flex items-center gap-1 cursor-pointer"
-                            >
-                                <span>Lihat Detail</span>
-                                <ArrowRight className="w-3.5 h-3.5" />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* 4. TOTAL PROJECT */}
-                    <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
-                        <div>
-                            <div className="flex items-start justify-between">
-                                <div>
-                                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                                        TOTAL PROJECT
-                                    </span>
-                                    <span className="text-3xl font-extrabold text-slate-900 font-mono block mt-1.5">
-                                        {stats.total_projects || 39}
-                                    </span>
-                                    <span className="text-xs text-slate-400 block mt-1">
-                                        Dari Semua Klien
-                                    </span>
-                                </div>
-                                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
-                                    <Folder className="w-5 h-5" />
-                                </div>
-                            </div>
-                        </div>
-                        <div className="mt-4 pt-3 border-t border-slate-100">
-                            <Link
-                                href="/projects"
-                                className="text-xs font-semibold text-slate-700 hover:text-blue-600 transition-colors flex items-center gap-1 cursor-pointer"
-                            >
-                                <span>Lihat Detail</span>
-                                <ArrowRight className="w-3.5 h-3.5" />
-                            </Link>
-                        </div>
-                    </div>
+                    <StatCard
+                        title="TOTAL CLIENTS"
+                        value={stats.total_clients || clients.total || 48}
+                        subtitle="Semua Klien Terdaftar"
+                        icon={Users}
+                        color="amber"
+                        layout="vertical"
+                        action={{ label: 'Lihat Detail', onClick: () => handleStatusChange('Semua') }}
+                    />
+                    <StatCard
+                        title="CLIENT AKTIF"
+                        value={stats.active_clients || 35}
+                        subtitle="Klien dengan Project Aktif"
+                        icon={UserCheck}
+                        color="emerald"
+                        layout="vertical"
+                        action={{ label: 'Lihat Detail', onClick: () => handleStatusChange('active') }}
+                    />
+                    <StatCard
+                        title="CLIENT BARU BULAN INI"
+                        value={stats.new_this_month || 6}
+                        subtitle="Bergabung bulan ini"
+                        icon={UserPlus}
+                        color="purple"
+                        layout="vertical"
+                        action={{ label: 'Lihat Detail', onClick: () => handleStatusChange('Semua') }}
+                    />
+                    <StatCard
+                        title="TOTAL PROJECT"
+                        value={stats.total_projects || 39}
+                        subtitle="Dari Semua Klien"
+                        icon={Folder}
+                        color="blue"
+                        layout="vertical"
+                        action={{ label: 'Lihat Detail', href: '/projects' }}
+                    />
                 </div>
 
                 {/* Main Content: Daftar Clients */}
@@ -2444,7 +2369,7 @@ export default function ClientsIndex({
                                             <MapPin className="w-4 h-4" />
                                         </div>
                                         <h4 className="text-xs font-bold text-slate-900">
-                                            Informasi Alamat & Domisili
+                                            Informasi Alamat
                                         </h4>
                                     </div>
 
@@ -2751,40 +2676,42 @@ export default function ClientsIndex({
                                             <label className="block text-[11px] font-bold text-slate-700 mb-1">
                                                 Kategori Project
                                             </label>
-                                            <SelectSearch
-                                                options={categoryOptions}
-                                                value={String(selectedCategory?.id || formData.category_id || '')}
-                                                onChange={handleCategoryChange}
-                                                placeholder="Pilih kategori project"
-                                                searchPlaceholder="Cari kategori..."
-                                                clearable={false}
-                                                className="w-full bg-white"
-                                            />
+                                            <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/80 text-xs font-semibold text-slate-800">
+                                                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                                                <span className="truncate">{selectedCategory?.name || 'Kategori'}</span>
+                                                <span className="ml-auto text-[10px] text-slate-400 font-normal shrink-0">Langkah 1</span>
+                                            </div>
                                         </div>
 
                                         <div>
                                             <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                Jenis Acara <span className="text-red-500">*</span>
+                                                Jenis Acara / Kebutuhan <span className="text-red-500">*</span>
                                             </label>
-                                            <NativeSelect
-                                                value={formData.event_type}
-                                                onChange={(e) => setFormData({ ...formData, event_type: e.target.value })}
-                                                options={[
-                                                    { value: 'Pernikahan', label: 'Pernikahan' },
-                                                    { value: 'Akad Saja', label: 'Akad Saja' },
-                                                    { value: 'Resepsi Saja', label: 'Resepsi Saja' },
-                                                    { value: 'Akad & Resepsi', label: 'Akad & Resepsi' },
-                                                    { value: 'Lamaran & Engagement', label: 'Lamaran & Engagement' },
-                                                    { value: 'Prewedding', label: 'Prewedding' },
-                                                    { value: 'Siraman & Pengajian', label: 'Siraman & Pengajian' },
-                                                    { value: 'Unduh Mantu', label: 'Unduh Mantu' },
-                                                    { value: 'Family Session', label: 'Family Session' },
-                                                    { value: 'Maternity Session', label: 'Maternity Session' },
-                                                    { value: 'Newborn Session', label: 'Newborn Session' },
-                                                    { value: 'Corporate Documentation', label: 'Corporate Documentation' },
-                                                    { value: 'Event Documentation', label: 'Event Documentation' },
-                                                ]}
-                                            />
+                                            {activeCategoryKey === 'wedding' ? (
+                                                <NativeSelect
+                                                    value={formData.event_type}
+                                                    onChange={(e) => setFormData({ ...formData, event_type: e.target.value })}
+                                                    options={[
+                                                        { value: 'Pernikahan', label: 'Pernikahan' },
+                                                        { value: 'Akad Saja', label: 'Akad Saja' },
+                                                        { value: 'Resepsi Saja', label: 'Resepsi Saja' },
+                                                        { value: 'Akad & Resepsi', label: 'Akad & Resepsi' },
+                                                        { value: 'Lamaran & Engagement', label: 'Lamaran & Engagement' },
+                                                        { value: 'Prewedding', label: 'Prewedding' },
+                                                        { value: 'Siraman & Pengajian', label: 'Siraman & Pengajian' },
+                                                        { value: 'Unduh Mantu', label: 'Unduh Mantu' },
+                                                    ]}
+                                                />
+                                            ) : (
+                                                <input
+                                                    type="text"
+                                                    required
+                                                    value={formData.event_type || (categoryData as any).event_type || (categoryData as any).needs_type || selectedCategory?.name || ''}
+                                                    onChange={(e) => setFormData({ ...formData, event_type: e.target.value })}
+                                                    placeholder="Contoh: Dokumentasi Event"
+                                                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
+                                                />
+                                            )}
                                         </div>
 
                                         <div>
@@ -2813,6 +2740,29 @@ export default function ClientsIndex({
                                         </div>
                                     </div>
 
+                                    {/* Custom Price Field if Lainnya or Custom Package */}
+                                    {(activeCategoryKey === 'lainnya' || selectedPackage?.name?.toLowerCase().includes('custom') || Number(selectedPackage?.base_price) === 0) && (
+                                        <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200/80 animate-in fade-in duration-200">
+                                            <label className="block text-[11px] font-bold text-amber-900 mb-1">
+                                                Nominal Harga Paket (Custom) <span className="text-red-500">*</span>
+                                            </label>
+                                            <div className="relative max-w-sm">
+                                                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-xs font-bold text-amber-700">
+                                                    Rp
+                                                </span>
+                                                <FormattedNumberInput
+                                                    value={formData.custom_price || ''}
+                                                    onChange={(val) => setFormData({ ...formData, custom_price: String(val) })}
+                                                    placeholder="Contoh: 2.500.000"
+                                                    className="w-full pl-10 pr-3.5 py-2 rounded-lg border border-amber-300 bg-white text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
+                                                />
+                                            </div>
+                                            <p className="text-[10px] text-amber-700 mt-1">
+                                                Masukkan nominal harga paket kustom ini. Project akan disimpan sebagai status Draft dan dapat diedit kapan saja.
+                                            </p>
+                                        </div>
+                                    )}
+
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                                         <div>
                                             <label className="block text-[11px] font-bold text-slate-700 mb-1">
@@ -2820,7 +2770,7 @@ export default function ClientsIndex({
                                             </label>
                                             <input
                                                 type="date"
-                                                value={formData.event_date}
+                                                value={formData.event_date || (categoryData as any).event_date || (categoryData as any).session_date || ''}
                                                 onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
                                                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
                                             />
@@ -2832,9 +2782,9 @@ export default function ClientsIndex({
                                             </label>
                                             <input
                                                 type="text"
-                                                value={formData.event_time}
+                                                value={formData.event_time || (categoryData as any).event_time_range || (categoryData as any).event_time || (categoryData as any).session_time || ''}
                                                 onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
-                                                placeholder="Contoh: 08:00 - 14:00 WIB"
+                                                placeholder="Contoh: 09:00 - 16:00"
                                                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
                                             />
                                         </div>
@@ -2845,7 +2795,7 @@ export default function ClientsIndex({
                                             </label>
                                             <input
                                                 type="text"
-                                                value={formData.event_location}
+                                                value={formData.event_location || (categoryData as any).event_location || (categoryData as any).session_location || (categoryData as any).location || ''}
                                                 onChange={(e) => setFormData({ ...formData, event_location: e.target.value })}
                                                 placeholder="Contoh: Grand Ballroom Hotel Hilton"
                                                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
@@ -3186,7 +3136,7 @@ export default function ClientsIndex({
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                                         <div className="p-3 bg-slate-50/70 rounded-xl space-y-1">
                                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                                                Wilayah Domisili
+                                                Informasi Alamat
                                             </span>
                                             <p className="font-semibold text-slate-800">
                                                 {[formData.village, formData.district, formData.city, formData.province].filter(Boolean).join(', ') || '-'}
@@ -3244,21 +3194,41 @@ export default function ClientsIndex({
                                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                                                 Jenis Acara
                                             </span>
-                                            <span className="font-semibold text-slate-800">{formData.event_type}</span>
+                                            <span className="font-semibold text-slate-800">
+                                                {formData.event_type || (categoryData as any).event_type || (categoryData as any).needs_type || selectedCategory?.name || '-'}
+                                            </span>
+                                        </div>
+                                        <div className="p-3 bg-slate-50/70 rounded-xl">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                                Paket &amp; Harga
+                                            </span>
+                                            <span className="font-semibold text-indigo-700">
+                                                {selectedPackage?.name || 'Belum memilih paket'}
+                                                {formData.custom_price
+                                                    ? ` (Rp ${Number(formData.custom_price).toLocaleString('id-ID')})`
+                                                    : (selectedPackage?.base_price && Number(selectedPackage.base_price) > 0
+                                                        ? ` (Rp ${Number(selectedPackage.base_price).toLocaleString('id-ID')})`
+                                                        : '')}
+                                            </span>
                                         </div>
                                         <div className="p-3 bg-slate-50/70 rounded-xl">
                                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                                                 Tanggal &amp; Waktu
                                             </span>
                                             <span className="font-semibold text-slate-800">
-                                                {formData.event_date || '-'} {formData.event_time ? `(${formData.event_time})` : ''}
+                                                {formData.event_date || (categoryData as any).event_date || (categoryData as any).session_date || (categoryData as any).akad_date || '-'}
+                                                {(formData.event_time || (categoryData as any).event_time_range || (categoryData as any).event_time || (categoryData as any).session_time)
+                                                    ? ` (${formData.event_time || (categoryData as any).event_time_range || (categoryData as any).event_time || (categoryData as any).session_time})`
+                                                    : ''}
                                             </span>
                                         </div>
                                         <div className="p-3 bg-slate-50/70 rounded-xl">
                                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                                                 Lokasi Acara
                                             </span>
-                                            <span className="font-semibold text-slate-800">{formData.event_location || '-'}</span>
+                                            <span className="font-semibold text-slate-800">
+                                                {formData.event_location || (formData as any).location || (categoryData as any).event_location || (categoryData as any).session_location || (categoryData as any).location || '-'}
+                                            </span>
                                         </div>
                                         <div className="p-3 bg-slate-50/70 rounded-xl">
                                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
@@ -3276,7 +3246,7 @@ export default function ClientsIndex({
                                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                                                 Estimasi Tamu
                                             </span>
-                                            <span className="font-semibold text-slate-800">{formData.estimated_guests || '-'}</span>
+                                            <span className="font-semibold text-slate-800">{formData.estimated_guests || (categoryData as any).estimated_guests || '-'}</span>
                                         </div>
                                     </div>
 
@@ -3302,7 +3272,7 @@ export default function ClientsIndex({
                         isOpen={!!detailModalClient}
                         onClose={() => setDetailModalClient(null)}
                         title={`Profil: ${detailModalClient.name}`}
-                        subtitle={`ID Klien: #${detailModalClient.id} • ${[detailModalClient.district, detailModalClient.city, detailModalClient.province].filter(Boolean).join(', ') || detailModalClient.city || 'Domisili'}`}
+                        subtitle={`ID Klien: #${detailModalClient.id} • ${[detailModalClient.district, detailModalClient.city, detailModalClient.province].filter(Boolean).join(', ') || detailModalClient.city || 'Alamat'}`}
                         maxWidth="3xl"
                         icon={
                             <img
@@ -3381,7 +3351,7 @@ export default function ClientsIndex({
                                 </div>
                                 <div>
                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                                        Wilayah Domisili
+                                        Informasi Alamat
                                     </span>
                                     <span className="font-semibold text-slate-900 block mt-0.5 truncate">
                                         {[detailModalClient.district, detailModalClient.city, detailModalClient.province].filter(Boolean).join(', ') || detailModalClient.city || '-'}
@@ -3422,7 +3392,7 @@ export default function ClientsIndex({
 
                             <div className="p-3.5 rounded-xl border border-slate-200/80 bg-white space-y-1">
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                                    Alamat Domisili
+                                    Alamat Lengkap
                                 </span>
                                 <p className="text-slate-700 leading-relaxed">
                                     {detailModalClient.address || 'Belum ada catatan alamat lengkap.'}

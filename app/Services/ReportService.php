@@ -151,7 +151,7 @@ class ReportService
         }
 
         // 3. Category Revenue Breakdown
-        $totalCatRevenue = Project::whereYear('created_at', $year)->sum('total_amount') ?: 1;
+        $totalCatRevenue = (float) Project::whereYear('created_at', $year)->sum('total_amount');
         $categoriesReport = Category::select('id', 'name', 'slug', 'icon', 'color', 'workflow_type')
             ->withCount(['projects' => function ($q) use ($year) {
                 $q->whereYear('created_at', $year);
@@ -177,14 +177,14 @@ class ReportService
                     'projects_count' => (int) ($cat->projects_count ?? 0),
                     'projects_sum_total_amount' => $totalVal,
                     'projects_sum_paid_amount' => (float) ($cat->projects_sum_paid_amount ?? 0),
-                    'percentage' => round(($totalVal / $totalCatRevenue) * 100, 1),
+                    'percentage' => $totalCatRevenue > 0 ? round(($totalVal / $totalCatRevenue) * 100, 1) : 0,
                 ];
             });
 
         $topCategory = $categoriesReport->filter(fn ($c) => ($c['projects_count'] ?? 0) > 0)->first();
 
         // 4. Packages Report (Top booked packages and revenue)
-        $totalProjectsRevenue = Project::whereYear('created_at', $year)->sum('total_amount') ?: 1;
+        $totalProjectsRevenue = (float) Project::whereYear('created_at', $year)->sum('total_amount');
         $packagesReport = Package::with('category:id,name,color')
             ->withCount(['projects' => function ($q) use ($year) {
                 $q->whereYear('created_at', $year);
@@ -213,7 +213,7 @@ class ReportService
                     'total_revenue' => $totalVal,
                     'total_paid' => (float) ($pkg->projects_sum_paid_amount ?? 0),
                     'avg_deal' => $count > 0 ? round($totalVal / $count) : 0,
-                    'percentage' => round(($totalVal / $totalProjectsRevenue) * 100, 1),
+                    'percentage' => $totalProjectsRevenue > 0 ? round(($totalVal / $totalProjectsRevenue) * 100, 1) : 0,
                 ];
             });
 
@@ -232,8 +232,8 @@ class ReportService
                 'projects_count' => $unassignedCount,
                 'total_revenue' => $unassignedTotal,
                 'total_paid' => $unassignedPaid,
-                'avg_deal' => round($unassignedTotal / $unassignedCount),
-                'percentage' => round(($unassignedTotal / $totalProjectsRevenue) * 100, 1),
+                'avg_deal' => $unassignedCount > 0 ? round($unassignedTotal / $unassignedCount) : 0,
+                'percentage' => $totalProjectsRevenue > 0 ? round(($unassignedTotal / $totalProjectsRevenue) * 100, 1) : 0,
             ]);
         }
 
@@ -244,12 +244,12 @@ class ReportService
         $woSources = ClientSource::where('type', 'wedding_organizer')->get();
         $woSourceIds = $woSources->pluck('id');
 
-        $totalWoRevenue = Project::whereYear('created_at', $year)
+        $totalWoRevenue = (float) Project::whereYear('created_at', $year)
             ->where(function ($q) use ($woSourceIds) {
                 $q->whereIn('client_source_id', $woSourceIds)
                   ->orWhereNotNull('wedding_organizer_id');
             })
-            ->sum('total_amount') ?: 1;
+            ->sum('total_amount');
 
         $woReport = $woSources->map(function ($wo) use ($year, $totalWoRevenue) {
             $matchingWo = WeddingOrganizer::where('name', $wo->name)->first();
@@ -284,7 +284,7 @@ class ReportService
                 'projects_count' => $projectsCount,
                 'total_revenue' => $totalVal,
                 'total_paid' => $totalPaid,
-                'percentage' => round(($totalVal / $totalWoRevenue) * 100, 1),
+                'percentage' => $totalWoRevenue > 0 ? round(($totalVal / $totalWoRevenue) * 100, 1) : 0,
             ];
         })
         ->filter(fn ($wo) => $wo['projects_count'] > 0 || $wo['total_revenue'] > 0)
@@ -297,7 +297,7 @@ class ReportService
             ->groupBy('payment_status')
             ->get();
 
-        $totalPayVal = $rawPaymentStatuses->sum('total_val') ?: 1;
+        $totalPayVal = (float) $rawPaymentStatuses->sum('total_val');
         $paymentStatusBreakdown = $rawPaymentStatuses->map(function ($p) use ($totalPayVal) {
             $val = (float) $p->total_val;
             $paid = (float) $p->total_paid;
@@ -316,7 +316,7 @@ class ReportService
                 'total_amount' => $val,
                 'paid_amount' => $paid,
                 'unpaid_amount' => $unpaid,
-                'percentage' => round(($val / $totalPayVal) * 100, 1),
+                'percentage' => $totalPayVal > 0 ? round(($val / $totalPayVal) * 100, 1) : 0,
             ];
         });
 
@@ -326,7 +326,7 @@ class ReportService
             ->groupBy('status')
             ->get();
 
-        $totalProjCount = $totalProjects ?: 1;
+        $totalProjCount = (int) $totalProjects;
         $projectStatusBreakdown = $rawProjectStatuses->map(function ($s) use ($totalProjCount) {
             return [
                 'status' => $s->status ?? 'inquiry',
@@ -340,7 +340,7 @@ class ReportService
                 },
                 'count' => (int) $s->count,
                 'total_amount' => (float) $s->total_val,
-                'percentage' => round(((int) $s->count / $totalProjCount) * 100, 1),
+                'percentage' => $totalProjCount > 0 ? round(((int) $s->count / $totalProjCount) * 100, 1) : 0,
             ];
         });
 
@@ -397,7 +397,7 @@ class ReportService
                 ->get();
         }
 
-        $totalSourceClients = $allSources->sum('client_count') ?: 1;
+        $totalSourceClients = (int) $allSources->sum('client_count');
 
         // For string-based, try to match to a ClientSource master record
         $csLookup = $allClientSources->keyBy(fn ($cs) => strtolower(trim($cs->name)));
@@ -415,28 +415,17 @@ class ReportService
                     ?? $csLookup->first(fn ($cs) => str_contains(strtolower($cs->name), $key)
                         || str_contains($key, strtolower($cs->name)));
                 if ($master) {
-                    $sourceId = $master->id;
-                    $sourceName = $master->name;
-                    $sourceType = $master->type;
+                    $sourceId     = $master->id;
+                    $sourceName   = $master->name;
+                    $sourceType   = $master->type;
                     $sourceAvatar = $master->avatar;
                 }
             }
 
             // Get project stats for this source's clients
-            if ($sourceId) {
-                $clientIds = \Illuminate\Support\Facades\DB::table('clients')
-                    ->whereNull('deleted_at')
-                    ->where('client_source_id', $sourceId)
-                    ->whereYear('created_at', $year)
-                    ->pluck('id');
-            } else {
-                $clientIds = \Illuminate\Support\Facades\DB::table('clients')
-                    ->whereNull('deleted_at')
-                    ->whereNull('client_source_id')
-                    ->whereRaw('LOWER(TRIM(source)) = ?', [strtolower(trim($sourceName))])
-                    ->whereYear('created_at', $year)
-                    ->pluck('id');
-            }
+            $clientIds = $sourceId
+                ? \Illuminate\Support\Facades\DB::table('clients')->whereNull('deleted_at')->where('client_source_id', $sourceId)->whereYear('created_at', $year)->pluck('id')
+                : \Illuminate\Support\Facades\DB::table('clients')->whereNull('deleted_at')->whereNull('client_source_id')->whereRaw('LOWER(TRIM(source)) = ?', [strtolower(trim($sourceName))])->whereYear('created_at', $year)->pluck('id');
 
             if ($clientIds->isEmpty()) {
                 // Fall back to all-time
@@ -466,7 +455,7 @@ class ReportService
                 'project_count'     => (int) ($projectStats->total_projects ?? 0),
                 'total_revenue'     => (float) ($projectStats->total_val ?? 0),
                 'total_paid'        => (float) ($projectStats->total_paid ?? 0),
-                'percentage'        => round(($s->client_count / $totalSourceClients) * 100, 1),
+                'percentage'        => $totalSourceClients > 0 ? round(($s->client_count / $totalSourceClients) * 100, 1) : 0,
             ];
         })->sortByDesc('total_revenue')->values();
 
