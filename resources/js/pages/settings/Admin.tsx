@@ -195,6 +195,17 @@ export default function AdminSettingsPage({
         login_card_bg_gradient: getVal('login_card_bg_gradient', ''),
         login_accent_color: getVal('login_accent_color', '#4A151B'),
         login_tagline: getVal('login_tagline', 'STUDIO & CINEMA PHOTOGRAPHY SYSTEM'),
+        // Login content fields
+        login_bg_photo: getVal('login_bg_photo', ''),
+        login_headline: getVal('login_headline', 'Abadikan Setiap Momen Berharga Anda'),
+        login_description: getVal('login_description', 'Terima kasih telah mempercayakan momen spesial Anda kepada kami.'),
+        login_welcome_text: getVal('login_welcome_text', 'Welcome Back!'),
+        login_pillar_1_title: getVal('login_pillar_1_title', 'Kualitas Terbaik'),
+        login_pillar_1_desc: getVal('login_pillar_1_desc', 'Peralatan profesional & editing berkualitas tinggi.'),
+        login_pillar_2_title: getVal('login_pillar_2_title', '100% Aman'),
+        login_pillar_2_desc: getVal('login_pillar_2_desc', 'Data & file Anda aman bersama kami.'),
+        login_pillar_3_title: getVal('login_pillar_3_title', 'Layanan Personal'),
+        login_pillar_3_desc: getVal('login_pillar_3_desc', 'Kami mendengar & mewujudkan visi Anda.'),
         font_family_heading: getVal('font_family_heading', 'Plus Jakarta Sans'),
         font_family_body: getVal('font_family_body', 'Plus Jakarta Sans'),
         app_heading_color: getVal('app_heading_color', '#0F172A'),
@@ -551,6 +562,22 @@ export default function AdminSettingsPage({
     };
 
     const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+    const loginBgPhotoRef = React.useRef<HTMLInputElement | null>(null);
+
+    const handleLoginBgPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('Ukuran gambar maksimal 5MB');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const dataUrl = ev.target?.result as string;
+            setThemeForm((prev) => ({ ...prev, login_bg_photo: dataUrl }));
+        };
+        reader.readAsDataURL(file);
+    };
 
     const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -2589,6 +2616,147 @@ export default function AdminSettingsPage({
                                     </div>
                                 </div>
 
+                                {/* Card: Gambar Background & Konten Teks */}
+                                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+                                    <div className="border-b border-slate-100 pb-2.5">
+                                        <span className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                                            <Upload className="w-4 h-4 text-emerald-600" />
+                                            <span>Gambar Background & Konten Teks Login</span>
+                                        </span>
+                                        <span className="text-[11px] text-slate-400">
+                                            Ganti foto background kolom kiri dan edit semua teks yang tampil di halaman login
+                                        </span>
+                                    </div>
+
+                                    {/* Gambar Background */}
+                                    <div className="space-y-2">
+                                        <label className="block text-[11px] font-bold text-slate-700">
+                                            Foto Background Kolom Kiri
+                                        </label>
+                                        <div className="flex items-start gap-3">
+                                            {/* Preview thumbnail */}
+                                            <div className="relative w-20 h-14 rounded-xl overflow-hidden border border-slate-200 shadow-xs shrink-0 bg-slate-100">
+                                                <img
+                                                    src={themeForm.login_bg_photo || '/images/wedding-couple.jpg'}
+                                                    alt="Preview background"
+                                                    className="w-full h-full object-cover"
+                                                />
+                                                {themeForm.login_bg_photo && (
+                                                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                                                        <Check className="w-4 h-4 text-white" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="flex flex-col gap-1.5 flex-1">
+                                                <input
+                                                    ref={loginBgPhotoRef}
+                                                    type="file"
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                    onChange={handleLoginBgPhotoChange}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => loginBgPhotoRef.current?.click()}
+                                                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2 border-2 border-dashed border-slate-300 hover:border-emerald-400 hover:bg-emerald-50/40 rounded-xl text-[11px] font-bold text-slate-600 hover:text-emerald-700 transition-all cursor-pointer"
+                                                >
+                                                    <Upload className="w-3.5 h-3.5" />
+                                                    <span>Upload Foto Baru (maks. 5MB)</span>
+                                                </button>
+                                                {themeForm.login_bg_photo && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setThemeForm({ ...themeForm, login_bg_photo: '' })}
+                                                        className="text-[10px] font-semibold text-rose-500 hover:text-rose-700 text-center underline cursor-pointer"
+                                                    >
+                                                        Reset ke foto default
+                                                    </button>
+                                                )}
+                                                <p className="text-[10px] text-slate-400 leading-tight">
+                                                    Mendukung JPG, PNG, WebP. Foto default: <code className="font-mono bg-slate-100 px-1 rounded">/images/wedding-couple.jpg</code>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Headline & Deskripsi */}
+                                    <div className="grid grid-cols-1 gap-3 pt-1 border-t border-slate-100">
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Judul Headline Kolom Kiri
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={themeForm.login_headline}
+                                                onChange={(e) => setThemeForm({ ...themeForm, login_headline: e.target.value })}
+                                                placeholder="Abadikan Setiap Momen Berharga Anda"
+                                                className="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 bg-white focus:outline-hidden focus:border-indigo-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Deskripsi Singkat Kolom Kiri
+                                            </label>
+                                            <textarea
+                                                rows={2}
+                                                value={themeForm.login_description}
+                                                onChange={(e) => setThemeForm({ ...themeForm, login_description: e.target.value })}
+                                                placeholder="Terima kasih telah mempercayakan momen spesial Anda kepada kami."
+                                                className="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 bg-white focus:outline-hidden focus:border-indigo-500 resize-none"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                Teks Sambutan Kartu Login (Kanan)
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={themeForm.login_welcome_text}
+                                                onChange={(e) => setThemeForm({ ...themeForm, login_welcome_text: e.target.value })}
+                                                placeholder="Welcome Back!"
+                                                className="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 bg-white focus:outline-hidden focus:border-indigo-500"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* 3 Poin Fitur (Pillars) */}
+                                    <div className="space-y-3 pt-2 border-t border-slate-100">
+                                        <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                                            <Layers className="w-3.5 h-3.5 text-slate-500" />
+                                            3 Poin Fitur (Bagian Bawah Kolom Kiri)
+                                        </span>
+                                        {([
+                                            { key1: 'login_pillar_1_title' as const, key2: 'login_pillar_1_desc' as const, no: 1 },
+                                            { key1: 'login_pillar_2_title' as const, key2: 'login_pillar_2_desc' as const, no: 2 },
+                                            { key1: 'login_pillar_3_title' as const, key2: 'login_pillar_3_desc' as const, no: 3 },
+                                        ]).map(({ key1, key2, no }) => (
+                                            <div key={no} className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Poin {no}</span>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <div>
+                                                        <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Judul</label>
+                                                        <input
+                                                            type="text"
+                                                            value={themeForm[key1]}
+                                                            onChange={(e) => setThemeForm({ ...themeForm, [key1]: e.target.value })}
+                                                            className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-[11px] font-medium text-slate-800 bg-white focus:outline-hidden focus:border-indigo-400"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Deskripsi</label>
+                                                        <input
+                                                            type="text"
+                                                            value={themeForm[key2]}
+                                                            onChange={(e) => setThemeForm({ ...themeForm, [key2]: e.target.value })}
+                                                            className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-[11px] font-medium text-slate-800 bg-white focus:outline-hidden focus:border-indigo-400"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
                                 <div className="flex items-center justify-between pt-2">
                                     <button
                                         type="button"
@@ -2640,7 +2808,7 @@ export default function AdminSettingsPage({
                                             className="col-span-2 p-3 text-white flex flex-col justify-between relative overflow-hidden min-h-[250px]"
                                         >
                                             <img
-                                                src="/images/wedding-couple.jpg"
+                                                src={themeForm.login_bg_photo || '/images/wedding-couple.jpg'}
                                                 alt="Wedding couple"
                                                 className="absolute inset-0 w-full h-full object-cover opacity-35 filter brightness-75 contrast-125"
                                             />
@@ -2664,7 +2832,7 @@ export default function AdminSettingsPage({
 
                                             <div className="relative z-10 space-y-1">
                                                 <span className="text-[8px] font-extrabold text-white leading-tight block drop-shadow-xs">
-                                                    Abadikan Setiap Momen Berharga
+                                                    {themeForm.login_headline || 'Abadikan Setiap Momen Berharga'}
                                                 </span>
                                                 <span
                                                     className="text-[6.5px] font-bold uppercase tracking-wider block opacity-90"
@@ -2692,7 +2860,7 @@ export default function AdminSettingsPage({
                                                             }}
                                                             className="font-extrabold text-[10px] block"
                                                         >
-                                                            Welcome Back!
+                                                            {themeForm.login_welcome_text || 'Welcome Back!'}
                                                         </span>
                                                         <span className={`text-[7.5px] block mt-0.5 ${isDarkLoginCard ? 'text-slate-300' : 'text-slate-400'}`}>
                                                             Masuk ke sistem {form.company_name || 'Arams'}

@@ -31,6 +31,17 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
     const loginAccent          = appSettings.login_accent_color       || '#2563EB';
     const loginTagline         = appSettings.login_tagline            || 'STUDIO & CINEMA PHOTOGRAPHY SYSTEM';
     const fontHeading          = appSettings.font_family_heading      || 'Plus Jakarta Sans';
+    // Content fields
+    const loginBgPhoto         = appSettings.login_bg_photo          || '/images/wedding-couple.jpg';
+    const loginHeadline        = appSettings.login_headline           || 'Abadikan Setiap\nMomen Berharga Anda';
+    const loginDescription     = appSettings.login_description        || `Terima kasih telah mempercayakan momen spesial Anda kepada ${appSettings.company_name || 'Arams Photography'}.`;
+    const loginWelcomeText     = appSettings.login_welcome_text       || 'Welcome Back!';
+    const pillar1Title         = appSettings.login_pillar_1_title     || 'Kualitas Terbaik';
+    const pillar1Desc          = appSettings.login_pillar_1_desc      || 'Peralatan profesional & editing berkualitas tinggi.';
+    const pillar2Title         = appSettings.login_pillar_2_title     || '100% Aman';
+    const pillar2Desc          = appSettings.login_pillar_2_desc      || 'Data & file Anda aman bersama kami.';
+    const pillar3Title         = appSettings.login_pillar_3_title     || 'Layanan Personal';
+    const pillar3Desc          = appSettings.login_pillar_3_desc      || 'Kami mendengar & mewujudkan visi Anda.';
 
     const isDarkCard = isDarkColor(loginCardBg);
 
@@ -68,7 +79,7 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
                 {/* Background photo */}
                 <div className="absolute inset-0 z-0">
                     <img
-                        src="/images/wedding-couple.jpg"
+                        src={loginBgPhoto}
                         alt="Arams Couple"
                         className="w-full h-full object-cover opacity-50 filter brightness-75 contrast-110"
                     />
@@ -104,24 +115,28 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
                         style={{ fontFamily: `'${fontHeading}', serif` }}
                         className="text-3xl xl:text-4xl font-black text-white tracking-tight leading-tight"
                     >
-                        Abadikan Setiap<br />
-                        Momen Berharga Anda
+                        {loginHeadline.split('\n').map((line: string, i: number, arr: string[]) => (
+                            <React.Fragment key={i}>
+                                {line}
+                                {i < arr.length - 1 && <br />}
+                            </React.Fragment>
+                        ))}
                     </h1>
                     <div
                         style={{ backgroundColor: `${loginAccent}80` }}
                         className="w-12 h-0.5 mt-2 mb-2"
                     />
                     <p className="text-xs text-rose-100/70 leading-relaxed max-w-xs">
-                        Terima kasih telah mempercayakan momen spesial Anda kepada {companyName}.
+                        {loginDescription}
                     </p>
                 </div>
 
                 {/* Bottom: 3 Pillars */}
                 <div className="relative z-10 grid grid-cols-3 gap-3 pt-8 border-t border-white/10">
                     {[
-                        { icon: Camera,     title: 'Kualitas Terbaik', desc: 'Peralatan profesional & editing berkualitas tinggi.' },
-                        { icon: Shield,     title: '100% Aman',        desc: 'Data & file Anda aman bersama kami.' },
-                        { icon: Headphones, title: 'Layanan Personal', desc: 'Kami mendengar & mewujudkan visi Anda.' },
+                        { icon: Camera,     title: pillar1Title, desc: pillar1Desc },
+                        { icon: Shield,     title: pillar2Title, desc: pillar2Desc },
+                        { icon: Headphones, title: pillar3Title, desc: pillar3Desc },
                     ].map(({ icon: Icon, title, desc }) => (
                         <div key={title} className="space-y-1.5">
                             <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-rose-200">
@@ -167,7 +182,7 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
                             }}
                             className="text-3xl xl:text-4xl font-black tracking-tight"
                         >
-                            Welcome Back!
+                            {loginWelcomeText}
                         </h2>
                         <p className={`text-sm ${isDarkCard ? 'text-slate-300' : 'text-slate-500'}`}>
                             Masuk ke sistem {companyName}
