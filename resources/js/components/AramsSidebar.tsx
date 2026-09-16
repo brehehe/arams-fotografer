@@ -84,23 +84,23 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
     // Dashboard       → semua role
     // Clients         → Super Admin, Owner, Admin
     // Projects        → semua role
-    // Finance         → Super Admin, Owner, Supervisor (Admin tidak)
+    // Finance         → Super Admin, Owner saja (Admin tidak bisa lihat)
     // Calendar        → semua role
-    // Master Data     → Super Admin, Owner saja
+    // Master Data     → Super Admin, Owner, Admin
     // Sumber Klien    → Super Admin, Owner, Admin
-    // Users           → Super Admin, Owner saja
-    // Reports         → Super Admin, Owner, Supervisor (Admin tidak)
+    // Users           → Super Admin, Owner, Admin
+    // Reports         → Super Admin, Owner, Admin, Supervisor
     // Files           → Super Admin, Owner, Admin, Supervisor, Photographer, Editor
-    // Settings        → Super Admin, Owner saja
+    // Settings        → Super Admin, Owner, Admin
 
-    const canAccessClients = isOwnerOrAdmin;                           // Supervisor tidak
-    const canAccessFinance = isOwnerOrSuperAdmin;      // Admin tidak
-    const canAccessMasterData = isOwnerOrSuperAdmin || isAdmin;          // hanya Super Admin & Owner
-    const canAccessUsers = isOwnerOrSuperAdmin;                      // hanya Super Admin & Owner
-    const canAccessReports = isOwnerOrSuperAdmin || isSupervisor;      // Admin tidak
+    const canAccessClients = isOwnerOrAdmin;
+    const canAccessFinance = isOwnerOrSuperAdmin;                      // Hanya Super Admin & Owner (Admin tidak)
+    const canAccessMasterData = isOwnerOrAdmin;
+    const canAccessUsers = isOwnerOrAdmin;                             // Admin sama seperti Super Admin
+    const canAccessReports = isOwnerOrAdmin || isSupervisor;           // Admin sama seperti Super Admin
     const canAccessFiles = isOwnerOrAdmin || isSupervisor || isPhotographer || isEditor;
-    const canAccessSettings = isOwnerOrSuperAdmin;                      // hanya Super Admin & Owner
-    const canAccessSumberKlien = isOwnerOrAdmin;                          // Supervisor tidak
+    const canAccessSettings = isOwnerOrAdmin;                          // Admin sama seperti Super Admin
+    const canAccessSumberKlien = isOwnerOrAdmin;
 
     const mainNav = [
         { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, show: true },
