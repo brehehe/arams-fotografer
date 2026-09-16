@@ -119,6 +119,43 @@ class DatabaseSeeder extends Seeder
         ]);
         $editor->assignRole($editorRole);
 
+        // 2b. Role-specific accounts: Super Admin, Admin (role), Supervisor
+        $superAdmin = User::create([
+            'name'              => 'Super Administrator',
+            'email'             => 'superadmin@arams.com',
+            'phone'             => '0811-0000-0001',
+            'avatar'            => 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&auto=format&fit=crop&q=80',
+            'status'            => 'active',
+            'last_login_at'     => Carbon::parse('2026-05-20 08:00:00'),
+            'password'          => Hash::make('password'),
+            'email_verified_at' => now(),
+        ]);
+        $superAdmin->assignRole($superAdminRole);
+
+        $adminRole2User = User::create([
+            'name'              => 'Admin Arams 2',
+            'email'             => 'admin2@arams.com',
+            'phone'             => '0811-0000-0002',
+            'avatar'            => 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+            'status'            => 'active',
+            'last_login_at'     => Carbon::parse('2026-05-19 09:30:00'),
+            'password'          => Hash::make('password'),
+            'email_verified_at' => now(),
+        ]);
+        $adminRole2User->assignRole($adminRole);
+
+        $supervisor = User::create([
+            'name'              => 'Supervisor Arams',
+            'email'             => 'supervisor@arams.com',
+            'phone'             => '0811-0000-0003',
+            'avatar'            => 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
+            'status'            => 'active',
+            'last_login_at'     => Carbon::parse('2026-05-18 11:00:00'),
+            'password'          => Hash::make('password'),
+            'email_verified_at' => now(),
+        ]);
+        $supervisor->assignRole($supervisorRole);
+
         // 3. Settings
         $defaultSettings = [
             ['key' => 'company_name', 'value' => 'Arams Photography', 'group' => 'company'],

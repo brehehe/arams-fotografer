@@ -66,34 +66,58 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
     };
 
     const user = pageProps?.auth?.user;
-    const isOwnerOrAdmin = user?.is_admin || user?.roles?.some((r: string) => ['Super Admin', 'Owner', 'Admin'].includes(r));
-    const isSupervisor = user?.is_supervisor || user?.roles?.includes('Supervisor');
-    const isPhotographer = user?.is_photographer || user?.roles?.includes('Photographer');
-    const isEditor = user?.is_editor || user?.roles?.includes('Editor');
+    const userRoles: string[] = user?.roles ?? [];
 
-    const canAccessClients = isOwnerOrAdmin || isSupervisor;
-    const canAccessFinance = isOwnerOrAdmin || isSupervisor;
-    const canAccessMasterData = isOwnerOrAdmin;
-    const canAccessUsers = isOwnerOrAdmin;
-    const canAccessReports = isOwnerOrAdmin || isSupervisor;
-    const canAccessSettings = isOwnerOrAdmin;
+    // ─── Role flags ───────────────────────────────────────────────────────────
+    const isSuperAdmin = userRoles.includes('Super Admin');
+    const isOwner      = userRoles.includes('Owner');
+    const isAdmin      = userRoles.includes('Admin');
+    const isSupervisor = user?.is_supervisor || userRoles.includes('Supervisor');
+    const isPhotographer = user?.is_photographer || userRoles.includes('Photographer');
+    const isEditor       = user?.is_editor       || userRoles.includes('Editor');
+
+    // Shorthand groups
+    const isOwnerOrSuperAdmin = isSuperAdmin || isOwner;
+    const isOwnerOrAdmin      = isSuperAdmin || isOwner || isAdmin;
+
+    // ─── Granular access per role ─────────────────────────────────────────────
+    // Dashboard       → semua role
+    // Clients         → Super Admin, Owner, Admin
+    // Projects        → semua role
+    // Finance         → Super Admin, Owner, Supervisor (Admin tidak)
+    // Calendar        → semua role
+    // Master Data     → Super Admin, Owner saja
+    // Sumber Klien    → Super Admin, Owner, Admin
+    // Users           → Super Admin, Owner saja
+    // Reports         → Super Admin, Owner, Supervisor (Admin tidak)
+    // Files           → Super Admin, Owner, Admin, Supervisor, Photographer, Editor
+    // Settings        → Super Admin, Owner saja
+
+    const canAccessClients    = isOwnerOrAdmin;                           // Supervisor tidak
+    const canAccessFinance    = isOwnerOrSuperAdmin || isSupervisor;      // Admin tidak
+    const canAccessMasterData = isOwnerOrSuperAdmin;                      // hanya Super Admin & Owner
+    const canAccessUsers      = isOwnerOrSuperAdmin;                      // hanya Super Admin & Owner
+    const canAccessReports    = isOwnerOrSuperAdmin || isSupervisor;      // Admin tidak
+    const canAccessFiles      = isOwnerOrAdmin || isSupervisor || isPhotographer || isEditor;
+    const canAccessSettings   = isOwnerOrSuperAdmin;                      // hanya Super Admin & Owner
+    const canAccessSumberKlien = isOwnerOrAdmin;                          // Supervisor tidak
 
     const mainNav = [
-        { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, show: true },
-        { name: 'Clients', href: '/clients', icon: Users, show: canAccessClients },
-        { name: 'Projects & Orders', href: '/projects', icon: Briefcase, show: true },
-        { name: 'Finance', href: '/finance', icon: DollarSign, show: canAccessFinance },
-        { name: 'Calendar / Schedule', href: '/calendar', icon: Calendar, show: true },
+        { name: 'Dashboard',          href: '/dashboard', icon: LayoutDashboard, show: true },
+        { name: 'Clients',            href: '/clients',   icon: Users,           show: canAccessClients },
+        { name: 'Projects & Orders',  href: '/projects',  icon: Briefcase,       show: true },
+        { name: 'Finance',            href: '/finance',   icon: DollarSign,      show: canAccessFinance },
+        { name: 'Calendar / Schedule',href: '/calendar',  icon: Calendar,        show: true },
     ].filter((item) => item.show !== false);
 
     const masterDataNav = [
-        { name: 'Kategori Project', href: '/master-data/categories' },
-        { name: 'Jenis Layanan', href: '/master-data/services' },
-        { name: 'Paket & Harga', href: '/master-data/packages' },
-        { name: 'Add-on & Biaya', href: '/master-data/addons' },
+        { name: 'Kategori Project',    href: '/master-data/categories' },
+        { name: 'Jenis Layanan',       href: '/master-data/services' },
+        { name: 'Paket & Harga',       href: '/master-data/packages' },
+        { name: 'Add-on & Biaya',      href: '/master-data/addons' },
         { name: 'Workflow & Template', href: '/master-data/workflows' },
-        { name: 'Metode Pembayaran', href: '/master-data/payment-methods' },
-        { name: 'Template Catatan', href: '/master-data/notes' },
+        { name: 'Metode Pembayaran',   href: '/master-data/payment-methods' },
+        { name: 'Template Catatan',    href: '/master-data/notes' },
     ];
 
     const isFormKlienActive = currentPath.startsWith('/setting/form-klien') ||
@@ -120,10 +144,10 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
     ];
 
     const secondaryNav = [
-        { name: 'Sumber Klien', href: '/client-sources', icon: HeartHandshake, show: canAccessClients },
-        { name: 'Users', href: '/users', icon: UserCog, show: canAccessUsers },
-        { name: 'Reports', href: '/reports', icon: BarChart3, show: canAccessReports },
-        { name: 'Files', href: '/files', icon: HardDrive, show: true },
+        { name: 'Sumber Klien', href: '/client-sources', icon: HeartHandshake, show: canAccessSumberKlien },
+        { name: 'Users',        href: '/users',          icon: UserCog,        show: canAccessUsers },
+        { name: 'Reports',      href: '/reports',        icon: BarChart3,      show: canAccessReports },
+        { name: 'Files',        href: '/files',          icon: HardDrive,      show: canAccessFiles },
     ].filter((item) => item.show !== false);
 
     const companyName = pageProps?.appSettings?.company_name || 'ARAMS PHOTOGRAPHY';

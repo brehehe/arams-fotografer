@@ -671,6 +671,60 @@ export default function ClientEdit({
         };
     }, [activeCategoryKey, categoryData, formData]);
 
+    // Step validation
+    const validateStep = (stepNum: number): boolean => {
+        if (stepNum === 1) {
+            if (activeCategoryKey === 'wedding') {
+                const hasWeddingName = (categoryData as any).groom_name?.trim() || (categoryData as any).bride_name?.trim();
+                if (!hasWeddingName && !formData.name.trim()) {
+                    toast.error('Nama calon pengantin (CPP & CPW) wajib diisi');
+                    return false;
+                }
+            } else if (activeCategoryKey === 'newborn') {
+                const firstBaby = ((categoryData as any).babies?.[0]?.name || (categoryData as any).baby_name || formData.child_name || '').trim();
+                if (!firstBaby && !formData.name.trim() && !(categoryData as any).father_name && !(categoryData as any).mother_name) {
+                    toast.error('Nama bayi atau orang tua wajib diisi');
+                    return false;
+                }
+            } else {
+                if (!formData.name.trim() && !(categoryData as any).contact_person && !(categoryData as any).company_name && !(categoryData as any).celebrant_name) {
+                    toast.error('Nama klien / pemesan wajib diisi');
+                    return false;
+                }
+            }
+        }
+        if (stepNum === 2) {
+            if (!formData.phone.trim()) {
+                toast.error('Nomor WhatsApp / telepon utama wajib diisi');
+                return false;
+            }
+            if (!formData.email.trim()) {
+                toast.error('Email wajib diisi');
+                return false;
+            }
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(formData.email.trim())) {
+                toast.error('Format email tidak valid');
+                return false;
+            }
+        }
+        if (stepNum === 3) {
+            if (!formData.event_date) {
+                toast.error('Tanggal acara / sesi wajib diisi');
+                return false;
+            }
+            if (!formData.event_time.trim()) {
+                toast.error('Waktu / jam sesi wajib diisi');
+                return false;
+            }
+            if (!formData.event_location.trim()) {
+                toast.error('Tempat / lokasi sesi wajib diisi');
+                return false;
+            }
+        }
+        return true;
+    };
+
     // Submit handler
     const handleSubmit = (e?: React.FormEvent) => {
         if (e) e.preventDefault();
@@ -705,6 +759,31 @@ export default function ClientEdit({
 
         if (!formData.phone.trim()) {
             toast.error('Nomor telepon / WhatsApp wajib diisi');
+            return;
+        }
+
+        if (!formData.email.trim()) {
+            toast.error('Email wajib diisi');
+            return;
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData.email.trim())) {
+            toast.error('Format email tidak valid');
+            return;
+        }
+
+        if (!formData.event_date) {
+            toast.error('Tanggal acara / sesi wajib diisi');
+            return;
+        }
+
+        if (!formData.event_time.trim()) {
+            toast.error('Waktu / jam sesi wajib diisi');
+            return;
+        }
+
+        if (!formData.event_location.trim()) {
+            toast.error('Tempat / lokasi sesi wajib diisi');
             return;
         }
 
@@ -830,7 +909,11 @@ export default function ClientEdit({
                         {currentStep < 4 ? (
                             <button
                                 type="button"
-                                onClick={() => setCurrentStep((s) => Math.min(4, s + 1))}
+                                onClick={() => {
+                                    if (validateStep(currentStep)) {
+                                        setCurrentStep((s) => Math.min(4, s + 1));
+                                    }
+                                }}
                                 className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
                             >
                                 <span>Lanjut: {steps[currentStep]?.title || 'Langkah Berikutnya'}</span>
@@ -1089,7 +1172,7 @@ export default function ClientEdit({
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                                     <div>
                                         <label className="block text-xs font-bold text-slate-700 mb-1.5">
                                             Provinsi <span className="text-red-500">*</span>
@@ -1123,7 +1206,7 @@ export default function ClientEdit({
 
                                     <div>
                                         <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                                            Kecamatan
+                                            Kecamatan <span className="text-red-500">*</span>
                                         </label>
                                         <SelectSearch
                                             options={districtOptions}
@@ -1136,10 +1219,12 @@ export default function ClientEdit({
                                             className="w-full bg-white"
                                         />
                                     </div>
+                                </div>
 
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
                                     <div>
                                         <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                                            Kelurahan / Desa
+                                            Kelurahan / Desa <span className="text-red-500">*</span>
                                         </label>
                                         <SelectSearch
                                             options={villageOptions}
@@ -1150,21 +1235,6 @@ export default function ClientEdit({
                                             disabled={!formData.district_code || loadingVillages}
                                             clearable={false}
                                             className="w-full bg-white"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3.5 pt-1">
-                                    <div className="sm:col-span-3">
-                                        <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                                            Alamat Lengkap (Jalan, No. Rumah, RT/RW, Patokan)
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={formData.address}
-                                            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                            placeholder="Jl. Melati No. 12, RT 02 / RW 05"
-                                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
                                         />
                                     </div>
 
@@ -1180,6 +1250,24 @@ export default function ClientEdit({
                                             className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
                                         />
                                     </div>
+                                </div>
+
+                                <div className="pt-1">
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <label className="block text-xs font-bold text-slate-700">
+                                            Alamat Lengkap (Jalan, No. Rumah, RT/RW, Patokan) <span className="text-red-500">*</span>
+                                        </label>
+                                        <span className="text-[10px] text-slate-400">{formData.address.length} / 255</span>
+                                    </div>
+                                    <textarea
+                                        rows={3}
+                                        maxLength={255}
+                                        required
+                                        value={formData.address}
+                                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                                        placeholder="Masukkan alamat lengkap (nama jalan, nomor, RT/RW, dll)"
+                                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all resize-none"
+                                    />
                                 </div>
                             </div>
 
@@ -1260,7 +1348,7 @@ export default function ClientEdit({
 
                                         <div>
                                             <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                                                Email
+                                                Email <span className="text-red-500">*</span>
                                             </label>
                                             <div className="relative">
                                                 <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -1453,10 +1541,11 @@ export default function ClientEdit({
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                     <div>
                                         <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                                            Tanggal Acara / Sesi
+                                            Tanggal Acara / Sesi <span className="text-red-500">*</span>
                                         </label>
                                         <input
                                             type="date"
+                                            required
                                             value={formData.event_date}
                                             onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
                                             className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
@@ -1465,10 +1554,11 @@ export default function ClientEdit({
 
                                     <div>
                                         <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                                            Waktu / Jam Sesi / Acara
+                                            Waktu / Jam Sesi / Acara <span className="text-red-500">*</span>
                                         </label>
                                         <input
                                             type="text"
+                                            required
                                             value={formData.event_time}
                                             onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
                                             placeholder="Contoh: 08:00 - 14:00 WIB"
@@ -1478,10 +1568,11 @@ export default function ClientEdit({
 
                                     <div>
                                         <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                                            Tempat / Lokasi Sesi
+                                            Tempat / Lokasi Sesi <span className="text-red-500">*</span>
                                         </label>
                                         <input
                                             type="text"
+                                            required
                                             value={formData.event_location}
                                             onChange={(e) => setFormData({ ...formData, event_location: e.target.value })}
                                             placeholder="Contoh: Grand Ballroom Hotel Hilton"

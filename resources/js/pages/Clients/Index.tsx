@@ -907,6 +907,29 @@ export default function ClientsIndex({
                 toast.error('Nomor WhatsApp / telepon utama wajib diisi');
                 return false;
             }
+            if (!formData.email.trim()) {
+                toast.error('Email wajib diisi');
+                return false;
+            }
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(formData.email.trim())) {
+                toast.error('Format email tidak valid');
+                return false;
+            }
+        }
+        if (stepNum === 3) {
+            if (!formData.event_date) {
+                toast.error('Tanggal acara / sesi wajib diisi');
+                return false;
+            }
+            if (!formData.event_time.trim()) {
+                toast.error('Waktu / jam sesi wajib diisi');
+                return false;
+            }
+            if (!formData.event_location.trim()) {
+                toast.error('Tempat / lokasi sesi wajib diisi');
+                return false;
+            }
         }
         return true;
     };
@@ -2203,7 +2226,7 @@ export default function ClientsIndex({
 
                                             <div>
                                                 <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                    Email
+                                                    Email <span className="text-red-500">*</span>
                                                 </label>
                                                 <div className="relative">
                                                     <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -2386,7 +2409,7 @@ export default function ClientsIndex({
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                                         <div>
                                             <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                Tanggal Acara / Sesi
+                                                Tanggal Acara / Sesi <span className="text-red-500">*</span>
                                             </label>
                                             <input
                                                 type="date"
@@ -2398,7 +2421,7 @@ export default function ClientsIndex({
 
                                         <div>
                                             <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                Waktu / Jam Sesi / Acara
+                                                Waktu / Jam Sesi / Acara <span className="text-red-500">*</span>
                                             </label>
                                             <input
                                                 type="text"
@@ -2411,7 +2434,7 @@ export default function ClientsIndex({
 
                                         <div>
                                             <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                Tempat / Lokasi Sesi
+                                                Tempat / Lokasi Sesi <span className="text-red-500">*</span>
                                             </label>
                                             <input
                                                 type="text"
