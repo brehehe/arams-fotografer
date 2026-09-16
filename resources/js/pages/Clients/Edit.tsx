@@ -25,6 +25,8 @@ import {
     Bookmark,
     Info,
     Globe,
+    AlertCircle,
+    X,
 } from 'lucide-react';
 import { SelectSearch, type SelectSearchOption } from '@/components/ui/select-search';
 import { NativeSelect } from '@/components/ui/native-select';

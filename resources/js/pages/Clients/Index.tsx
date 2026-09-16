@@ -44,6 +44,8 @@ import {
     Edit2,
     Bookmark,
     Info,
+    AlertCircle,
+    X,
 } from 'lucide-react';
 import { formatRupiah, formatRupiahCompact, formatNumber } from '@/lib/formatters';
 import {
