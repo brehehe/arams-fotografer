@@ -918,22 +918,6 @@ export default function ClientIntakeForm({
                     toast.error('Nama Lengkap Pemesan wajib diisi');
                     return false;
                 }
-                if (!categoryData.photo_purpose?.trim()) {
-                    toast.error('Tujuan Foto wajib dipilih');
-                    return false;
-                }
-                if (!categoryData.session_type?.trim()) {
-                    toast.error('Jenis Sesi wajib dipilih');
-                    return false;
-                }
-                if (!categoryData.outfit_looks_count) {
-                    toast.error('Jumlah Look / Outfit wajib diisi');
-                    return false;
-                }
-                if (!categoryData.session_duration?.trim()) {
-                    toast.error('Durasi Sesi wajib dipilih');
-                    return false;
-                }
                 return true;
 
             case 'prewedding':

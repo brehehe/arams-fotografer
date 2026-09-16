@@ -186,14 +186,13 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
                 <>
                     {renderHeader(
                         'Informasi Foto Perorangan',
-                        'Tujuan foto, jenis sesi, durasi, dan setup studio',
+                        'Jenis sesi, durasi, outfit, dan setup studio',
                         <User className="w-4 h-4 text-indigo-600" />,
                         'bg-indigo-50 text-indigo-700'
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                         {renderItem('Nama Pemesan', data.client_name || data.name || (project?.client?.name && project.client.name !== '-' ? project.client.name : null))}
                         {renderItem('Nama Panggilan', data.nickname)}
-                        {renderItem('Tujuan Foto', data.photo_purpose)}
                         {renderItem('Jenis Sesi', data.session_type)}
                         {renderItem('Jumlah Look / Outfit', data.outfit_looks_count ? `${data.outfit_looks_count} Look` : null)}
                         {renderItem('Durasi Sesi', data.session_duration, <Clock className="w-3.5 h-3.5" />)}
@@ -249,7 +248,7 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         {renderItem('Nama Brand / Perusahaan', data.company_name)}
-                        {renderItem('Nama PIC / Pemesan', data.pic_name || data.client_name || (project?.client?.name && project.client.name !== '-' ? project.client.name : null))}
+                        {renderItem('Nama Pemesan', data.pic_name || data.client_name || (project?.client?.name && project.client.name !== '-' ? project.client.name : null))}
                         {renderItem('Tujuan / Kebutuhan', data.commercial_purpose)}
                         {renderItem('Jenis Produk / Brand', data.product_brand_type)}
                         {renderItem('Jumlah Produk', data.products_count ? `${data.products_count} Item / SKU` : null)}

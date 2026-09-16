@@ -982,22 +982,6 @@ export default function ClientsIndex({
                         toast.error('Nama Lengkap Pemesan wajib diisi');
                         return false;
                     }
-                    if (categoryData.photo_purpose !== undefined && !categoryData.photo_purpose?.trim()) {
-                        toast.error('Tujuan Foto wajib dipilih');
-                        return false;
-                    }
-                    if (categoryData.session_type !== undefined && !categoryData.session_type?.trim()) {
-                        toast.error('Jenis Sesi wajib dipilih');
-                        return false;
-                    }
-                    if (categoryData.outfit_looks_count !== undefined && !categoryData.outfit_looks_count) {
-                        toast.error('Jumlah Look / Outfit wajib diisi');
-                        return false;
-                    }
-                    if (categoryData.session_duration !== undefined && !categoryData.session_duration?.trim()) {
-                        toast.error('Durasi Sesi wajib dipilih');
-                        return false;
-                    }
                     return true;
 
                 case 'prewedding':
@@ -2137,7 +2121,7 @@ export default function ClientsIndex({
                     isOpen={createModalOpen}
                     onClose={() => setCreateModalOpen(false)}
                     title="Tambah Client Baru"
-                    subtitle="Lengkapi data profil, kontak, domisili, acara, dan preferensi klien sesuai formulir intake."
+                    subtitle="Lengkapi data profil, kontak, alamat, acara, dan preferensi klien sesuai formulir intake."
                     maxWidth="4xl"
                     className="max-h-[92vh]"
                     footer={

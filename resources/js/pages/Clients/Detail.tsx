@@ -1115,22 +1115,6 @@ export default function ClientDetail({
                         toast.error('Nama Lengkap Pemesan wajib diisi');
                         return false;
                     }
-                    if (editCategoryData.photo_purpose !== undefined && !editCategoryData.photo_purpose?.trim()) {
-                        toast.error('Tujuan Foto wajib dipilih');
-                        return false;
-                    }
-                    if (editCategoryData.session_type !== undefined && !editCategoryData.session_type?.trim()) {
-                        toast.error('Jenis Sesi wajib dipilih');
-                        return false;
-                    }
-                    if (editCategoryData.outfit_looks_count !== undefined && !editCategoryData.outfit_looks_count) {
-                        toast.error('Jumlah Look / Outfit wajib diisi');
-                        return false;
-                    }
-                    if (editCategoryData.session_duration !== undefined && !editCategoryData.session_duration?.trim()) {
-                        toast.error('Durasi Sesi wajib dipilih');
-                        return false;
-                    }
                     return true;
 
                 case 'prewedding':
@@ -5899,7 +5883,7 @@ Terima kasih!`}
                     isOpen={isEditClientModalOpen}
                     onClose={() => setIsEditClientModalOpen(false)}
                     title="Edit Informasi Klien"
-                    subtitle="Perbarui data kategori, identitas khusus, wilayah domisili, kontak, paket, dan acara."
+                    subtitle="Perbarui data kategori, identitas khusus, alamat, kontak, paket, dan acara."
                     maxWidth="4xl"
                     className="max-h-[92vh]"
                     footer={

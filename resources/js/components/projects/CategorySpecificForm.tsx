@@ -26,7 +26,6 @@ import {
     MATERNITY_CONCEPTS,
     MATERNITY_LOCATIONS,
     LAINNYA_NEEDS_TYPES,
-    PERORANGAN_PURPOSES,
     PERORANGAN_SESSION_TYPES,
     PERORANGAN_DURATIONS,
     PERORANGAN_BACKDROPS,
@@ -306,37 +305,47 @@ return;
                             Informasi Event Utama
                         </span>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {!hideGeneralFields && (
-                                <div className="sm:col-span-2">
-                                    {renderLabel('Nama Pemesan', true)}
-                                    <Input
-                                        value={data.pic_name || data.client_name || data.name || data.contact_person || ''}
-                                        onChange={(e) => {
-                                            onChange('pic_name', e.target.value);
-                                            onChange('client_name', e.target.value);
-                                            onChange('name', e.target.value);
-                                        }}
-                                        placeholder="Nama pemesan"
-                                        className="h-[38px] text-xs bg-white"
-                                    />
-                                    {(errors['pic_name'] || errors['client_name'] || errors['name']) && (
-                                        <p className="text-[11px] text-rose-500 mt-1">{errors['pic_name'] || errors['client_name'] || errors['name']}</p>
-                                    )}
-                                </div>
-                            )}
+                            <div className="sm:col-span-2">
+                                {renderLabel('Nama Pemesan', true)}
+                                <Input
+                                    value={data.pic_name || data.client_name || data.name || data.contact_person || ''}
+                                    onChange={(e) => {
+                                        onChange('pic_name', e.target.value);
+                                        onChange('client_name', e.target.value);
+                                        onChange('name', e.target.value);
+                                    }}
+                                    placeholder="Nama pemesan"
+                                    className="h-[38px] text-xs bg-white"
+                                />
+                                {(errors['pic_name'] || errors['client_name'] || errors['name']) && (
+                                    <p className="text-[11px] text-rose-500 mt-1">{errors['pic_name'] || errors['client_name'] || errors['name']}</p>
+                                )}
+                            </div>
 
-                            {!hideGeneralFields && (
-                                <div>
-                                    {renderLabel('Tanggal Event', true)}
-                                    <Input
-                                        type="date"
-                                        value={data.event_date || ''}
-                                        onChange={(e) => onChange('event_date', e.target.value)}
-                                        className="h-[38px] text-xs bg-white"
-                                    />
-                                    {errors['event_date'] && <p className="text-[11px] text-rose-500 mt-1">{errors['event_date']}</p>}
-                                </div>
-                            )}
+                            <div>
+                                {renderLabel('Tanggal Event', true)}
+                                <Input
+                                    type="date"
+                                    value={data.event_date || ''}
+                                    onChange={(e) => onChange('event_date', e.target.value)}
+                                    className="h-[38px] text-xs bg-white"
+                                />
+                                {errors['event_date'] && <p className="text-[11px] text-rose-500 mt-1">{errors['event_date']}</p>}
+                            </div>
+
+                            <div>
+                                {renderLabel('Waktu Event (Time Range)', true)}
+                                <Input
+                                    value={data.event_time_range || data.event_time || ''}
+                                    onChange={(e) => {
+                                        onChange('event_time_range', e.target.value);
+                                        onChange('event_time', e.target.value);
+                                    }}
+                                    placeholder="Contoh: 09:00 - 16:00 WIB"
+                                    className="h-[38px] text-xs bg-white"
+                                />
+                                {errors['event_time_range'] && <p className="text-[11px] text-rose-500 mt-1">{errors['event_time_range']}</p>}
+                            </div>
 
                             <div>
                                 {renderLabel('Jenis Event', true)}
@@ -368,37 +377,21 @@ return;
                                 {errors['needs_type'] && <p className="text-[11px] text-rose-500 mt-1">{errors['needs_type']}</p>}
                             </div>
 
-                            <div className={hideGeneralFields ? 'sm:col-span-2' : ''}>
-                                {renderLabel('Waktu Event (Time Range)', true)}
+                            <div className="sm:col-span-2">
+                                {renderLabel('Lokasi Event', true)}
                                 <Input
-                                    value={data.event_time_range || data.event_time || ''}
+                                    value={data.event_location || data.location || ''}
                                     onChange={(e) => {
-                                        onChange('event_time_range', e.target.value);
-                                        onChange('event_time', e.target.value);
+                                        onChange('event_location', e.target.value);
+                                        onChange('location', e.target.value);
                                     }}
-                                    placeholder="Contoh: 09:00 - 16:00 WIB"
+                                    placeholder="Contoh: Kediaman Mempelai / Gedung Serbaguna"
                                     className="h-[38px] text-xs bg-white"
                                 />
-                                {errors['event_time_range'] && <p className="text-[11px] text-rose-500 mt-1">{errors['event_time_range']}</p>}
+                                {(errors['event_location'] || errors['location']) && (
+                                    <p className="text-[11px] text-rose-500 mt-1">{errors['event_location'] || errors['location']}</p>
+                                )}
                             </div>
-
-                            {!hideGeneralFields && (
-                                <div className="sm:col-span-2">
-                                    {renderLabel('Lokasi Event', true)}
-                                    <Input
-                                        value={data.event_location || data.location || ''}
-                                        onChange={(e) => {
-                                            onChange('event_location', e.target.value);
-                                            onChange('location', e.target.value);
-                                        }}
-                                        placeholder="Contoh: Kediaman Mempelai / Gedung Serbaguna"
-                                        className="h-[38px] text-xs bg-white"
-                                    />
-                                    {(errors['event_location'] || errors['location']) && (
-                                        <p className="text-[11px] text-rose-500 mt-1">{errors['event_location'] || errors['location']}</p>
-                                    )}
-                                </div>
-                            )}
                         </div>
                     </div>
 
@@ -436,7 +429,7 @@ return;
                                         onChange('client_name', e.target.value);
                                         onChange('name', e.target.value);
                                     }}
-                                    placeholder="Contoh: Amanda Putri"
+                                    placeholder="Nama lengkap pemesan"
                                     className="h-[38px] text-xs bg-white"
                                 />
                                 {(errors['client_name'] || errors['name']) && (
@@ -456,22 +449,7 @@ return;
                         </div>
 
                         <div>
-                            {renderLabel('Tujuan Foto', true)}
-                            <NativeSelect
-                                value={data.photo_purpose || ''}
-                                onChange={(e) => onChange('photo_purpose', e.target.value)}
-                                className="h-[38px] text-xs bg-white"
-                            >
-                                <option value="">Pilih Tujuan Foto...</option>
-                                {PERORANGAN_PURPOSES.map((p) => (
-                                    <option key={p} value={p}>{p}</option>
-                                ))}
-                            </NativeSelect>
-                            {errors['photo_purpose'] && <p className="text-[11px] text-rose-500 mt-1">{errors['photo_purpose']}</p>}
-                        </div>
-
-                        <div>
-                            {renderLabel('Jenis Sesi', true)}
+                            {renderLabel('Jenis Sesi', false)}
                             <NativeSelect
                                 value={data.session_type || ''}
                                 onChange={(e) => onChange('session_type', e.target.value)}
@@ -486,7 +464,7 @@ return;
                         </div>
 
                         <div>
-                            {renderLabel('Jumlah Look / Outfit', true)}
+                            {renderLabel('Jumlah Look / Outfit', false)}
                             <Input
                                 type="number"
                                 min="1"
@@ -1721,37 +1699,44 @@ return;
                             Informasi Event Utama
                         </span>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {!hideGeneralFields && (
-                                <div className="sm:col-span-2">
-                                    {renderLabel('Nama Pemesan', true)}
-                                    <Input
-                                        value={data.pic_name || data.client_name || data.name || ''}
-                                        onChange={(e) => {
-                                            onChange('pic_name', e.target.value);
-                                            onChange('client_name', e.target.value);
-                                            onChange('name', e.target.value);
-                                        }}
-                                        placeholder="Nama pemesan event"
-                                        className="h-[38px] text-xs bg-white"
-                                    />
-                                    {(errors['pic_name'] || errors['client_name'] || errors['name']) && (
-                                        <p className="text-[11px] text-rose-500 mt-1">{errors['pic_name'] || errors['client_name'] || errors['name']}</p>
-                                    )}
-                                </div>
-                            )}
+                            <div className="sm:col-span-2">
+                                {renderLabel('Nama Pemesan', true)}
+                                <Input
+                                    value={data.pic_name || data.client_name || data.name || ''}
+                                    onChange={(e) => {
+                                        onChange('pic_name', e.target.value);
+                                        onChange('client_name', e.target.value);
+                                        onChange('name', e.target.value);
+                                    }}
+                                    placeholder="Nama pemesan event"
+                                    className="h-[38px] text-xs bg-white"
+                                />
+                                {(errors['pic_name'] || errors['client_name'] || errors['name']) && (
+                                    <p className="text-[11px] text-rose-500 mt-1">{errors['pic_name'] || errors['client_name'] || errors['name']}</p>
+                                )}
+                            </div>
 
-                            {!hideGeneralFields && (
-                                <div>
-                                    {renderLabel('Tanggal Event', true)}
-                                    <Input
-                                        type="date"
-                                        value={data.event_date || ''}
-                                        onChange={(e) => onChange('event_date', e.target.value)}
-                                        className="h-[38px] text-xs bg-white"
-                                    />
-                                    {errors['event_date'] && <p className="text-[11px] text-rose-500 mt-1">{errors['event_date']}</p>}
-                                </div>
-                            )}
+                            <div>
+                                {renderLabel('Tanggal Event', true)}
+                                <Input
+                                    type="date"
+                                    value={data.event_date || ''}
+                                    onChange={(e) => onChange('event_date', e.target.value)}
+                                    className="h-[38px] text-xs bg-white"
+                                />
+                                {errors['event_date'] && <p className="text-[11px] text-rose-500 mt-1">{errors['event_date']}</p>}
+                            </div>
+
+                            <div>
+                                {renderLabel('Waktu Event (Time Range)', true)}
+                                <Input
+                                    value={data.event_time_range || ''}
+                                    onChange={(e) => onChange('event_time_range', e.target.value)}
+                                    placeholder="Contoh: 09:00 - 16:00 WIB"
+                                    className="h-[38px] text-xs bg-white"
+                                />
+                                {errors['event_time_range'] && <p className="text-[11px] text-rose-500 mt-1">{errors['event_time_range']}</p>}
+                            </div>
 
                             <div>
                                 {renderLabel('Jenis Event', true)}
@@ -1783,34 +1768,21 @@ return;
                                 {errors['needs_type'] && <p className="text-[11px] text-rose-500 mt-1">{errors['needs_type']}</p>}
                             </div>
 
-                            <div className={hideGeneralFields ? 'sm:col-span-2' : ''}>
-                                {renderLabel('Waktu Event (Time Range)', true)}
+                            <div className="sm:col-span-2">
+                                {renderLabel('Lokasi Event', true)}
                                 <Input
-                                    value={data.event_time_range || ''}
-                                    onChange={(e) => onChange('event_time_range', e.target.value)}
-                                    placeholder="Contoh: 09:00 - 16:00 WIB"
+                                    value={data.event_location || data.location || ''}
+                                    onChange={(e) => {
+                                        onChange('event_location', e.target.value);
+                                        onChange('location', e.target.value);
+                                    }}
+                                    placeholder="Contoh: JCC Senayan Hall B, Jakarta Pusat"
                                     className="h-[38px] text-xs bg-white"
                                 />
-                                {errors['event_time_range'] && <p className="text-[11px] text-rose-500 mt-1">{errors['event_time_range']}</p>}
+                                {(errors['event_location'] || errors['location']) && (
+                                    <p className="text-[11px] text-rose-500 mt-1">{errors['event_location'] || errors['location']}</p>
+                                )}
                             </div>
-
-                            {!hideGeneralFields && (
-                                <div className="sm:col-span-2">
-                                    {renderLabel('Lokasi Event', true)}
-                                    <Input
-                                        value={data.event_location || data.location || ''}
-                                        onChange={(e) => {
-                                            onChange('event_location', e.target.value);
-                                            onChange('location', e.target.value);
-                                        }}
-                                        placeholder="Contoh: JCC Senayan Hall B, Jakarta Pusat"
-                                        className="h-[38px] text-xs bg-white"
-                                    />
-                                    {(errors['event_location'] || errors['location']) && (
-                                        <p className="text-[11px] text-rose-500 mt-1">{errors['event_location'] || errors['location']}</p>
-                                    )}
-                                </div>
-                            )}
                         </div>
                     </div>
 
