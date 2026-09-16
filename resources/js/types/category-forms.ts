@@ -265,7 +265,7 @@ export function resolveCategoryKey(category?: {
     const slug = (category.slug || '').toLowerCase().trim();
     const name = (category.name || '').toLowerCase().trim();
 
-    const candidate = ft || slug || name;
+    const candidate = slug || (ft && ft !== 'standard' ? ft : '') || name || ft;
 
     if (candidate.includes('maternity')) {
         return 'maternity';
@@ -592,3 +592,44 @@ export const KOMUNITAS_ACTIVITIES = [
     'Kompetisi / Turnamen',
     'Lainnya',
 ];
+
+export const FIELD_LABELS: Record<string, string> = {
+    name: 'Nama Klien / Pemesan',
+    phone: 'Nomor WhatsApp / Telepon',
+    email: 'Email',
+    preferred_contact: 'Kontak Pilihan (whatsapp / email / phone)',
+    category_id: 'Kategori Project',
+    client_type: 'Tipe Klien',
+    event_date: 'Tanggal Acara / Sesi',
+    event_time: 'Waktu / Jam Sesi',
+    event_location: 'Lokasi Sesi / Acara',
+    address: 'Alamat Lengkap',
+    city: 'Kota / Kabupaten',
+    province: 'Provinsi',
+    district: 'Kecamatan',
+    village: 'Kelurahan / Desa',
+    postal_code: 'Kode Pos',
+    package_id: 'Paket Layanan',
+    client_source_id: 'Sumber Klien',
+    wedding_organizer_id: 'Wedding Organizer',
+    referred_by_client_id: 'Referral Klien',
+    bride_name: 'Nama Calon Pengantin Wanita (CPW)',
+    groom_name: 'Nama Calon Pengantin Pria (CPP)',
+    child_name: 'Nama Anak / Bayi',
+    company_name: 'Nama Perusahaan / Brand',
+    contact_person: 'Contact Person / PIC',
+    status: 'Status Klien',
+    notes: 'Catatan Klien',
+};
+
+export function formatValidationErrors(err: Record<string, any>): string {
+    const entries = Object.entries(err || {});
+    if (entries.length === 0) return 'Silakan periksa kembali isian formulir Anda.';
+    return entries
+        .map(([field, msg]) => {
+            const label = FIELD_LABELS[field] || field.replace(/_/g, ' ');
+            const message = Array.isArray(msg) ? msg.join(', ') : String(msg);
+            return `${label}: ${message}`;
+        })
+        .join(' • ');
+}

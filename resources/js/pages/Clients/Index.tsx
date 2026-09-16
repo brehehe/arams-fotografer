@@ -79,6 +79,8 @@ import {
     CategoryFormKey,
     resolveCategoryKey,
     AnyCategorySpecificData,
+    FIELD_LABELS,
+    formatValidationErrors,
 } from '@/types/category-forms';
 import { ImportSpreadsheetModal } from '@/components/data-transfer/ImportSpreadsheetModal';
 
@@ -512,11 +514,32 @@ export default function ClientsIndex({
     const handleCategoryDataChange = (field: string, value: any) => {
         setCategoryData((prev) => {
             const next = { ...prev, [field]: value };
+            // Auto-sync client name fields with formData.name
+            if (['client_name', 'name', 'pic_name', 'contact_person'].includes(field)) {
+                if (value && typeof value === 'string' && value.trim()) {
+                    setFormData((f) => ({ ...f, name: value.trim() }));
+                }
+            }
+            if (field === 'nickname' && value && typeof value === 'string') {
+                setFormData((f) => ({ ...f, nickname: value.trim() }));
+            }
+            if ((field === 'phone' || field === 'pic_phone') && value && typeof value === 'string') {
+                setFormData((f) => ({ ...f, phone: value.trim() }));
+            }
+            if ((field === 'email' || field === 'pic_email') && value && typeof value === 'string') {
+                setFormData((f) => ({ ...f, email: value.trim() }));
+            }
+            if ((field === 'instagram' || field === 'client_instagram') && value && typeof value === 'string') {
+                setFormData((f) => ({ ...f, instagram: value.trim() }));
+            }
             if (field === 'session_date' || field === 'akad_date' || field === 'event_date' || field === 'departure_date') {
                 if (value) setFormData((f) => ({ ...f, event_date: value }));
             }
             if (field === 'session_location' || field === 'location' || field === 'akad_location' || field === 'event_location' || field === 'destination_city_country') {
-                if (value) setFormData((f) => ({ ...f, event_location: value }));
+                if (value) setFormData((f) => ({ ...f, event_location: value, location: value }));
+            }
+            if (field === 'reception_location') {
+                if (value) setFormData((f) => ({ ...f, reception_location: value }));
             }
             return next;
         });
@@ -817,10 +840,10 @@ export default function ClientsIndex({
         }
 
         return {
-            name: categoryData.contact_person || formData.name || '-',
-            nickname: formData.bride_nickname || formData.groom_nickname || '-',
-            occupation: formData.occupation || '-',
-            instagram: formData.instagram || '-',
+            name: (categoryData as any).client_name || (categoryData as any).name || (categoryData as any).contact_person || formData.name || '-',
+            nickname: formData.bride_nickname || formData.groom_nickname || (categoryData as any).nickname || '-',
+            occupation: formData.occupation || (categoryData as any).client_occupation || '-',
+            instagram: formData.instagram || (categoryData as any).client_instagram || '-',
             birth_date: '-',
             role: 'Pemesan',
         };
@@ -882,53 +905,380 @@ export default function ClientsIndex({
     };
 
     const validateCreateStep = (stepNum: number) => {
+        const clientNameVal =
+            (formData.name && formData.name.trim() !== '-' ? formData.name.trim() : '') ||
+            ((categoryData as any).client_name && (categoryData as any).client_name.trim() !== '-' ? (categoryData as any).client_name.trim() : '') ||
+            ((categoryData as any).name && (categoryData as any).name.trim() !== '-' ? (categoryData as any).name.trim() : '') ||
+            ((categoryData as any).contact_person && (categoryData as any).contact_person.trim() !== '-' ? (categoryData as any).contact_person.trim() : '') ||
+            ((categoryData as any).pic_name && (categoryData as any).pic_name.trim() !== '-' ? (categoryData as any).pic_name.trim() : '') ||
+            (primaryContactInfo.name && primaryContactInfo.name.trim() !== '-' ? primaryContactInfo.name.trim() : '');
+
         if (stepNum === 1) {
-            if (activeCategoryKey === 'wedding') {
-                const hasWeddingName = (categoryData.groom_name || formData.groom_name || '').trim() || (categoryData.bride_name || formData.bride_name || '').trim();
-                if (!hasWeddingName && !formData.name.trim()) {
-                    toast.error('Nama calon pengantin (CPP & CPW) wajib diisi');
-                    return false;
+            switch (activeCategoryKey) {
+                case 'maternity':
+                    if (!categoryData.mom_name?.trim() && !categoryData.mother_name?.trim() && !formData.mother_name?.trim() && !clientNameVal) {
+                        toast.error('Nama Ibu wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.partner_name?.trim() && !categoryData.father_name?.trim() && !formData.father_name?.trim()) {
+                        toast.error('Nama Ayah / Pasangan wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.gestational_age_weeks) {
+                        toast.error('Usia Kehamilan Saat Sesi wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.hpl_date) {
+                        toast.error('HPL (Hari Perkiraan Lahir) wajib diisi');
+                        return false;
+                    }
+                    return true;
+
+                case 'lainnya':
+                    if (!clientNameVal) {
+                        toast.error('Nama Lengkap Pemesan wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.needs_description?.trim()) {
+                        toast.error('Deskripsi Kebutuhan wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.location?.trim() && !formData.event_location?.trim()) {
+                        toast.error('Lokasi wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.needs_type?.trim()) {
+                        toast.error('Jenis Kebutuhan wajib dipilih');
+                        return false;
+                    }
+                    if (!categoryData.needs_detail?.trim()) {
+                        toast.error('Detail Kebutuhan wajib diisi');
+                        return false;
+                    }
+                    return true;
+
+                case 'perorangan':
+                    if (!clientNameVal) {
+                        toast.error('Nama Lengkap Pemesan wajib diisi');
+                        return false;
+                    }
+                    if (categoryData.photo_purpose !== undefined && !categoryData.photo_purpose?.trim()) {
+                        toast.error('Tujuan Foto wajib dipilih');
+                        return false;
+                    }
+                    if (categoryData.session_type !== undefined && !categoryData.session_type?.trim()) {
+                        toast.error('Jenis Sesi wajib dipilih');
+                        return false;
+                    }
+                    if (categoryData.outfit_looks_count !== undefined && !categoryData.outfit_looks_count) {
+                        toast.error('Jumlah Look / Outfit wajib diisi');
+                        return false;
+                    }
+                    if (categoryData.session_duration !== undefined && !categoryData.session_duration?.trim()) {
+                        toast.error('Durasi Sesi wajib dipilih');
+                        return false;
+                    }
+                    return true;
+
+                case 'prewedding':
+                    if ((!categoryData.groom_name?.trim() && !formData.groom_name?.trim()) || (!categoryData.bride_name?.trim() && !formData.bride_name?.trim())) {
+                        if (!clientNameVal) {
+                            toast.error('Nama Lengkap Kedua Pasangan wajib diisi');
+                            return false;
+                        }
+                    }
+                    if (!categoryData.session_date && !formData.event_date) {
+                        toast.error('Tanggal Sesi Foto Prewedding wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.concept_theme?.trim() && !formData.concept_theme?.trim()) {
+                        toast.error('Konsep / Tema Foto wajib dipilih');
+                        return false;
+                    }
+                    if (!categoryData.session_location?.trim() && !formData.event_location?.trim()) {
+                        toast.error('Lokasi Sesi Foto wajib diisi');
+                        return false;
+                    }
+                    return true;
+
+                case 'commercial':
+                    if (!clientNameVal && !(categoryData as any).pic_name?.trim()) {
+                        toast.error('Nama Contact Person / PIC wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.commercial_purpose?.trim()) {
+                        toast.error('Tujuan / Jenis Kebutuhan Foto wajib dipilih');
+                        return false;
+                    }
+                    if (!categoryData.product_brand_type?.trim()) {
+                        toast.error('Jenis Produk / Brand wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.products_count) {
+                        toast.error('Jumlah Produk wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.background_type?.trim()) {
+                        toast.error('Latar / Background Foto wajib dipilih');
+                        return false;
+                    }
+                    if (!categoryData.photo_style_mood?.trim()) {
+                        toast.error('Gaya Foto / Mood wajib dipilih');
+                        return false;
+                    }
+                    if (!categoryData.photo_usage || !Array.isArray(categoryData.photo_usage) || categoryData.photo_usage.length === 0) {
+                        toast.error('Pilih minimal satu Penggunaan Foto');
+                        return false;
+                    }
+                    return true;
+
+                case 'traveling':
+                    if (!clientNameVal) {
+                        toast.error('Nama Pemesan / Kontak Utama wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.destination_city_country?.trim()) {
+                        toast.error('Tujuan Destinasi (Negara / Kota) wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.travelers_count) {
+                        toast.error('Jumlah Traveler wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.trip_type?.trim()) {
+                        toast.error('Jenis Trip wajib dipilih');
+                        return false;
+                    }
+                    if (!categoryData.trip_duration_days) {
+                        toast.error('Durasi Trip wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.departure_date && !formData.event_date) {
+                        toast.error('Tanggal Berangkat wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.return_date) {
+                        toast.error('Tanggal Pulang wajib diisi');
+                        return false;
+                    }
+                    return true;
+
+                case 'wedding':
+                    if (!categoryData.groom_name?.trim() && !formData.groom_name?.trim()) {
+                        toast.error('Nama Lengkap CPP (Mempelai Pria) wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.groom_nickname?.trim() && !formData.groom_nickname?.trim()) {
+                        toast.error('Nama Panggilan CPP (Mempelai Pria) wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.bride_name?.trim() && !formData.bride_name?.trim()) {
+                        toast.error('Nama Lengkap CPW (Mempelai Wanita) wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.bride_nickname?.trim() && !formData.bride_nickname?.trim()) {
+                        toast.error('Nama Panggilan CPW (Mempelai Wanita) wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.akad_date && !formData.event_date) {
+                        toast.error('Tanggal Akad wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.akad_time?.trim() && !formData.event_time?.trim()) {
+                        toast.error('Waktu Akad wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.akad_location?.trim() && !formData.event_location?.trim()) {
+                        toast.error('Lokasi Akad wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.reception_date) {
+                        toast.error('Tanggal Resepsi wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.reception_time?.trim()) {
+                        toast.error('Waktu Resepsi wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.reception_location?.trim() && !formData.reception_location?.trim()) {
+                        toast.error('Lokasi Resepsi wajib diisi');
+                        return false;
+                    }
+                    return true;
+
+                case 'birthday':
+                    if (!categoryData.celebrant_name?.trim() && !clientNameVal) {
+                        toast.error('Nama yang Berulang Tahun wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.celebrant_age) {
+                        toast.error('Usia wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.birthday_theme?.trim()) {
+                        toast.error('Tema Ulang Tahun wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.event_type?.trim() && !formData.event_type?.trim()) {
+                        toast.error('Jenis Acara wajib dipilih');
+                        return false;
+                    }
+                    if (!categoryData.estimated_guests && !formData.estimated_guests) {
+                        toast.error('Jumlah Tamu wajib diisi');
+                        return false;
+                    }
+                    return true;
+
+                case 'corporate':
+                    if (!categoryData.company_name?.trim() && !formData.company_name?.trim()) {
+                        toast.error('Nama Perusahaan wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.event_type?.trim() && !formData.event_type?.trim()) {
+                        toast.error('Jenis Acara wajib dipilih');
+                        return false;
+                    }
+                    if (!categoryData.event_scale?.trim()) {
+                        toast.error('Skala Acara wajib dipilih');
+                        return false;
+                    }
+                    if (!categoryData.documentation_purpose?.trim()) {
+                        toast.error('Tujuan Dokumentasi wajib dipilih');
+                        return false;
+                    }
+                    if (!categoryData.pic_name?.trim() && !clientNameVal) {
+                        toast.error('Nama PIC Acara wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.pic_phone?.trim() && !formData.phone?.trim()) {
+                        toast.error('Nomor Telepon / WA PIC wajib diisi');
+                        return false;
+                    }
+                    return true;
+
+                case 'engagement':
+                    if ((!categoryData.groom_name?.trim() && !formData.groom_name?.trim()) || (!categoryData.bride_name?.trim() && !formData.bride_name?.trim())) {
+                        if (!clientNameVal) {
+                            toast.error('Nama Calon Pria dan Wanita wajib diisi');
+                            return false;
+                        }
+                    }
+                    if (!categoryData.engagement_date && !formData.event_date) {
+                        toast.error('Tanggal Lamaran wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.engagement_time?.trim() && !formData.event_time?.trim()) {
+                        toast.error('Waktu Lamaran wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.engagement_location?.trim() && !formData.event_location?.trim()) {
+                        toast.error('Lokasi Lamaran wajib diisi');
+                        return false;
+                    }
+                    return true;
+
+                case 'event':
+                    if (!clientNameVal && !(categoryData as any).pic_name?.trim()) {
+                        toast.error('Nama Penanggung Jawab / PIC wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.event_date && !formData.event_date) {
+                        toast.error('Tanggal Event wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.event_time_range?.trim() && !formData.event_time?.trim()) {
+                        toast.error('Waktu Event wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.event_type?.trim() && !formData.event_type?.trim()) {
+                        toast.error('Jenis Event wajib dipilih');
+                        return false;
+                    }
+                    if (!categoryData.event_scale?.trim()) {
+                        toast.error('Skala Event wajib dipilih');
+                        return false;
+                    }
+                    if (!categoryData.event_location?.trim() && !formData.event_location?.trim()) {
+                        toast.error('Lokasi Event wajib diisi');
+                        return false;
+                    }
+                    return true;
+
+                case 'family':
+                    if (!categoryData.family_name?.trim()) {
+                        toast.error('Nama Keluarga wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.father_name?.trim() && !formData.father_name?.trim()) {
+                        toast.error('Nama Ayah wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.mother_name?.trim() && !formData.mother_name?.trim()) {
+                        toast.error('Nama Ibu wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.members_count) {
+                        toast.error('Jumlah Anggota Keluarga wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.session_location?.trim() && !formData.event_location?.trim()) {
+                        toast.error('Lokasi Sesi Foto wajib diisi');
+                        return false;
+                    }
+                    return true;
+
+                case 'komunitas':
+                    if (!categoryData.community_name?.trim()) {
+                        toast.error('Nama Komunitas wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.community_type?.trim()) {
+                        toast.error('Jenis Komunitas wajib dipilih');
+                        return false;
+                    }
+                    if (!categoryData.pic_name?.trim() && !clientNameVal) {
+                        toast.error('Nama PIC Komunitas wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.pic_phone?.trim() && !formData.phone?.trim()) {
+                        toast.error('Nomor Telepon / WA PIC wajib diisi');
+                        return false;
+                    }
+                    if (!categoryData.activity_type?.trim()) {
+                        toast.error('Jenis Kegiatan Komunitas wajib dipilih');
+                        return false;
+                    }
+                    return true;
+
+                case 'newborn': {
+                    const firstBabyName = categoryData.babies?.[0]?.name?.trim() || categoryData.baby_name?.trim() || formData.child_name?.trim();
+                    if (!firstBabyName && !clientNameVal && !categoryData.father_name && !categoryData.mother_name && !formData.father_name && !formData.mother_name) {
+                        toast.error('Nama Lengkap Bayi wajib diisi');
+                        return false;
+                    }
+                    return true;
                 }
-            } else if (activeCategoryKey === 'newborn') {
-                const firstBaby = (categoryData.babies?.[0]?.name || categoryData.baby_name || formData.child_name || '').trim();
-                if (!firstBaby && !formData.name.trim() && !categoryData.father_name && !categoryData.mother_name) {
-                    toast.error('Nama bayi atau orang tua wajib diisi');
-                    return false;
-                }
-            } else {
-                if (!formData.name.trim() && !categoryData.contact_person && !categoryData.company_name && !categoryData.celebrant_name) {
-                    toast.error('Nama klien / pemesan wajib diisi');
-                    return false;
-                }
+
+                default:
+                    if (!clientNameVal) {
+                        toast.error('Nama Lengkap Pemesan / Klien wajib diisi');
+                        return false;
+                    }
+                    return true;
             }
         }
         if (stepNum === 2) {
-            if (!formData.phone.trim() && !categoryData.pic_phone) {
-                toast.error('Nomor WhatsApp / telepon utama wajib diisi');
+            const phone = formData.phone?.trim() || (categoryData as any).pic_phone?.trim() || (categoryData as any).phone?.trim();
+            if (!phone) {
+                toast.error('Nomor WhatsApp wajib diisi untuk konfirmasi.');
                 return false;
             }
-            if (!formData.email.trim()) {
-                toast.error('Email wajib diisi');
-                return false;
-            }
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(formData.email.trim())) {
-                toast.error('Format email tidak valid');
-                return false;
-            }
-        }
-        if (stepNum === 3) {
-            if (!formData.event_date) {
-                toast.error('Tanggal acara / sesi wajib diisi');
-                return false;
-            }
-            if (!formData.event_time.trim()) {
-                toast.error('Waktu / jam sesi wajib diisi');
-                return false;
-            }
-            if (!formData.event_location.trim()) {
-                toast.error('Tempat / lokasi sesi wajib diisi');
-                return false;
+            if (formData.email?.trim()) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(formData.email.trim())) {
+                    toast.error('Format email tidak valid');
+                    return false;
+                }
             }
         }
         return true;
@@ -955,7 +1305,15 @@ export default function ClientsIndex({
         const activeKey = resolveCategoryKey(selectedCat);
 
         // Derive client name based on category
-        let clientName = formData.name.trim();
+        const candidateName =
+            (formData.name && formData.name.trim() !== '-' ? formData.name.trim() : '') ||
+            ((categoryData as any).client_name && (categoryData as any).client_name.trim() !== '-' ? (categoryData as any).client_name.trim() : '') ||
+            ((categoryData as any).name && (categoryData as any).name.trim() !== '-' ? (categoryData as any).name.trim() : '') ||
+            ((categoryData as any).contact_person && (categoryData as any).contact_person.trim() !== '-' ? (categoryData as any).contact_person.trim() : '') ||
+            ((categoryData as any).pic_name && (categoryData as any).pic_name.trim() !== '-' ? (categoryData as any).pic_name.trim() : '') ||
+            (primaryContactInfo.name && primaryContactInfo.name.trim() !== '-' ? primaryContactInfo.name.trim() : '');
+
+        let clientName = candidateName;
         if (!clientName) {
             if (activeKey === 'wedding') {
                 const groom = (categoryData.groom_name || formData.groom_name || '').trim();
@@ -994,13 +1352,19 @@ export default function ClientsIndex({
                 ? categoryData.children
                 : (Array.isArray(formData.children) ? formData.children : []));
 
+        const mergedCategoryData = {
+            ...categoryData,
+            client_name: (categoryData as any).client_name || clientName,
+            name: (categoryData as any).name || clientName,
+        };
+
         const payload = {
             ...formData,
             name: clientName || 'Klien Baru',
             client_type: selectedCat?.slug || formData.client_type || 'wedding',
-            category_id: selectedCat?.id || formData.category_id,
+            category_id: selectedCat?.id || formData.category_id || null,
             package_id: formData.package_id || null,
-            category_data: categoryData,
+            category_data: mergedCategoryData,
             bride_name: categoryData.bride_name || formData.bride_name || null,
             bride_nickname: categoryData.bride_nickname || formData.bride_nickname || null,
             groom_name: categoryData.groom_name || formData.groom_name || null,
@@ -1020,6 +1384,11 @@ export default function ClientsIndex({
             event_time: formData.event_time || categoryData.akad_time || categoryData.event_time || null,
             event_location: formData.event_location || categoryData.session_location || categoryData.akad_location || categoryData.event_location || categoryData.location || formData.address || null,
             phone: formData.phone.trim() || categoryData.pic_phone || '081234567890',
+            email: formData.email?.trim() ? formData.email.trim() : null,
+            preferred_contact: (formData.preferred_contact || 'whatsapp').toLowerCase(),
+            client_source_id: formData.client_source_id || null,
+            referred_by_client_id: formData.referred_by_client_id || null,
+            wedding_organizer_id: formData.wedding_organizer_id || null,
         };
 
         setIsSubmitting(true);
@@ -1042,9 +1411,11 @@ export default function ClientsIndex({
             },
             onError: (err) => {
                 setIsSubmitting(false);
-                setFormErrors(err);
+                setFormErrors((err as Record<string, string>) || {});
+                const errorDetail = formatValidationErrors(err as Record<string, any>);
                 toast.error('Gagal Menyimpan Data Klien', {
-                    description: 'Silakan periksa kembali isian formulir Anda.',
+                    description: errorDetail,
+                    duration: 10000,
                 });
             },
         });
@@ -1945,6 +2316,38 @@ export default function ClientsIndex({
                         </div>
 
                         {/* ================================================================= */}
+                        {/* VALIDATION ERROR ALERT BANNER */}
+                        {/* ================================================================= */}
+                        {Object.keys(formErrors).length > 0 && (
+                            <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 animate-in fade-in space-y-2 shadow-xs">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 font-bold text-xs text-rose-800">
+                                        <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                                        <span>Perhatian: Terdapat {Object.keys(formErrors).length} kendala validasi data formulir:</span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormErrors({})}
+                                        className="text-rose-400 hover:text-rose-700 text-xs p-1 cursor-pointer"
+                                        title="Tutup pesan error"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                                <ul className="list-disc list-inside text-xs text-rose-700 space-y-1 ml-1 font-medium">
+                                    {Object.entries(formErrors).map(([key, val]) => {
+                                        const readableKey = FIELD_LABELS[key] || key.replace(/_/g, ' ');
+                                        return (
+                                            <li key={key}>
+                                                <strong className="font-bold text-rose-900">{readableKey}:</strong> {Array.isArray(val) ? val.join(', ') : String(val)}
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            </div>
+                        )}
+
+                        {/* ================================================================= */}
                         {/* STEP 1: INFORMASI AWAL & DETAIL KLIEN */}
                         {/* ================================================================= */}
                         {createCurrentStep === 1 && (
@@ -2200,7 +2603,9 @@ export default function ClientsIndex({
                                                             <option value="cpp">Ayah — {categoryData.father_name || formData.father_name || 'Ayah'}</option>
                                                         </>
                                                     ) : (
-                                                        <option value="client">Pemesan — {categoryData.contact_person || formData.name || 'Pemesan'}</option>
+                                                        <option value="client">
+                                                            Pemesan — {(categoryData as any).client_name || (categoryData as any).name || (categoryData as any).contact_person || (categoryData as any).pic_name || (formData.name && formData.name !== '-' ? formData.name : '') || 'Pemesan'}
+                                                        </option>
                                                     )}
                                                 </NativeSelect>
                                             </div>

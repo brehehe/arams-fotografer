@@ -23,25 +23,25 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
     const { props: pageProps } = usePage<any>();
     const appSettings = pageProps?.appSettings || {};
 
-    const companyName          = appSettings.company_name             || 'Arams Photography';
-    const loginBg              = appSettings.login_bg_color           || '#2E0F15';
-    const loginBgGradient      = appSettings.login_bg_gradient        || 'linear-gradient(180deg, #2E0F15 0%, #200A0E 100%)';
-    const loginCardBg          = appSettings.login_card_bg            || '#FFFFFF';
-    const loginCardBgGradient  = appSettings.login_card_bg_gradient   || '';
-    const loginAccent          = appSettings.login_accent_color       || '#2563EB';
-    const loginTagline         = appSettings.login_tagline            || 'STUDIO & CINEMA PHOTOGRAPHY SYSTEM';
-    const fontHeading          = appSettings.font_family_heading      || 'Plus Jakarta Sans';
+    const companyName = appSettings.company_name || 'Arams Photography';
+    const loginBg = appSettings.login_bg_color || '#2E0F15';
+    const loginBgGradient = appSettings.login_bg_gradient || 'linear-gradient(180deg, #2E0F15 0%, #200A0E 100%)';
+    const loginCardBg = appSettings.login_card_bg || '#FFFFFF';
+    const loginCardBgGradient = appSettings.login_card_bg_gradient || '';
+    const loginAccent = appSettings.login_accent_color || '#2563EB';
+    const loginTagline = appSettings.login_tagline || 'STUDIO & CINEMA PHOTOGRAPHY SYSTEM';
+    const fontHeading = appSettings.font_family_heading || 'Plus Jakarta Sans';
     // Content fields
-    const loginBgPhoto         = appSettings.login_bg_photo          || '/images/wedding-couple.jpg';
-    const loginHeadline        = appSettings.login_headline           || 'Abadikan Setiap\nMomen Berharga Anda';
-    const loginDescription     = appSettings.login_description        || `Terima kasih telah mempercayakan momen spesial Anda kepada ${appSettings.company_name || 'Arams Photography'}.`;
-    const loginWelcomeText     = appSettings.login_welcome_text       || 'Welcome Back!';
-    const pillar1Title         = appSettings.login_pillar_1_title     || 'Kualitas Terbaik';
-    const pillar1Desc          = appSettings.login_pillar_1_desc      || 'Peralatan profesional & editing berkualitas tinggi.';
-    const pillar2Title         = appSettings.login_pillar_2_title     || '100% Aman';
-    const pillar2Desc          = appSettings.login_pillar_2_desc      || 'Data & file Anda aman bersama kami.';
-    const pillar3Title         = appSettings.login_pillar_3_title     || 'Layanan Personal';
-    const pillar3Desc          = appSettings.login_pillar_3_desc      || 'Kami mendengar & mewujudkan visi Anda.';
+    const loginBgPhoto = appSettings.login_bg_photo || '/images/wedding-couple.jpg';
+    const loginHeadline = appSettings.login_headline || 'Abadikan Setiap\nMomen Berharga Anda';
+    const loginDescription = appSettings.login_description || `Terima kasih telah mempercayakan momen spesial Anda kepada ${appSettings.company_name || 'Arams Photography'}.`;
+    const loginWelcomeText = appSettings.login_welcome_text || 'Welcome Back!';
+    const pillar1Title = appSettings.login_pillar_1_title || 'Kualitas Terbaik';
+    const pillar1Desc = appSettings.login_pillar_1_desc || 'Peralatan profesional & editing berkualitas tinggi.';
+    const pillar2Title = appSettings.login_pillar_2_title || '100% Aman';
+    const pillar2Desc = appSettings.login_pillar_2_desc || 'Data & file Anda aman bersama kami.';
+    const pillar3Title = appSettings.login_pillar_3_title || 'Layanan Personal';
+    const pillar3Desc = appSettings.login_pillar_3_desc || 'Kami mendengar & mewujudkan visi Anda.';
 
     const isDarkCard = isDarkColor(loginCardBg);
 
@@ -134,8 +134,8 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
                 {/* Bottom: 3 Pillars */}
                 <div className="relative z-10 grid grid-cols-3 gap-3 pt-8 border-t border-white/10">
                     {[
-                        { icon: Camera,     title: pillar1Title, desc: pillar1Desc },
-                        { icon: Shield,     title: pillar2Title, desc: pillar2Desc },
+                        { icon: Camera, title: pillar1Title, desc: pillar1Desc },
+                        { icon: Shield, title: pillar2Title, desc: pillar2Desc },
                         { icon: Headphones, title: pillar3Title, desc: pillar3Desc },
                     ].map(({ icon: Icon, title, desc }) => (
                         <div key={title} className="space-y-1.5">
@@ -154,9 +154,8 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
                 style={{
                     background: loginCardBgGradient || loginCardBg,
                 }}
-                className={`flex-1 flex flex-col justify-center px-8 sm:px-12 lg:px-16 xl:px-20 py-12 transition-colors ${
-                    isDarkCard ? 'text-slate-100' : 'text-slate-800'
-                }`}
+                className={`flex-1 flex flex-col justify-center px-8 sm:px-12 lg:px-16 xl:px-20 py-12 transition-colors ${isDarkCard ? 'text-slate-100' : 'text-slate-800'
+                    }`}
             >
                 {/* Mobile logo (only on small screens) */}
                 <div className="flex items-center gap-3 mb-8 lg:hidden">
@@ -213,12 +212,11 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
                                     autoComplete="email"
                                     value={data.email}
                                     onChange={(e) => setData('email', e.target.value)}
-                                    placeholder="admin@arams.com"
-                                    className={`w-full pl-10 pr-4 py-3 rounded-xl text-sm outline-none transition-all placeholder:text-slate-400 ${
-                                        isDarkCard
+                                    placeholder="admin@gmail.com"
+                                    className={`w-full pl-10 pr-4 py-3 rounded-xl text-sm outline-none transition-all placeholder:text-slate-400 ${isDarkCard
                                             ? 'bg-white/10 border border-white/20 text-white focus:bg-white/15 focus:border-white/40 focus:ring-2 focus:ring-white/10'
                                             : 'bg-slate-50 border border-slate-200 focus:bg-white focus:border-slate-400 text-slate-900 focus:ring-2 focus:ring-slate-200'
-                                    }`}
+                                        }`}
                                 />
                             </div>
                             {errors.email && (
@@ -241,18 +239,16 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
                                     value={data.password}
                                     onChange={(e) => setData('password', e.target.value)}
                                     placeholder="••••••••"
-                                    className={`w-full pl-10 pr-10 py-3 rounded-xl text-sm outline-none transition-all placeholder:text-slate-400 ${
-                                        isDarkCard
+                                    className={`w-full pl-10 pr-10 py-3 rounded-xl text-sm outline-none transition-all placeholder:text-slate-400 ${isDarkCard
                                             ? 'bg-white/10 border border-white/20 text-white focus:bg-white/15 focus:border-white/40 focus:ring-2 focus:ring-white/10'
                                             : 'bg-slate-50 border border-slate-200 focus:bg-white focus:border-slate-400 text-slate-900 focus:ring-2 focus:ring-slate-200'
-                                    }`}
+                                        }`}
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 transition-colors cursor-pointer ${
-                                        isDarkCard ? 'text-slate-400 hover:text-white' : 'text-slate-400 hover:text-slate-700'
-                                    }`}
+                                    className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 transition-colors cursor-pointer ${isDarkCard ? 'text-slate-400 hover:text-white' : 'text-slate-400 hover:text-slate-700'
+                                        }`}
                                 >
                                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 </button>

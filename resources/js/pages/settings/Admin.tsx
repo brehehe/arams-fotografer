@@ -2871,7 +2871,7 @@ export default function AdminSettingsPage({
                                                         <div>
                                                             <span className={`text-[7px] font-bold block mb-0.5 ${isDarkLoginCard ? 'text-slate-200' : 'text-slate-500'}`}>Email</span>
                                                             <div className={`rounded-md px-2 py-1 text-[7.5px] font-medium border ${isDarkLoginCard ? 'bg-white/10 border-white/20 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
-                                                                admin@arams.com
+                                                                admin@gmail.com
                                                             </div>
                                                         </div>
                                                         <div>
