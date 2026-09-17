@@ -98,7 +98,7 @@ return [
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
             'dump' => [
-                'dump_binary_path' => env('PG_DUMP_PATH', '/opt/homebrew/opt/postgresql@17/bin'),
+                'dump_binary_path' => env('PG_DUMP_PATH', '/usr/bin'),
                 'use_single_transaction' => true,
                 'timeout' => 60 * 5,
             ],

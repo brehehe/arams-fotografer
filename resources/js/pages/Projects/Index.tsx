@@ -132,7 +132,7 @@ export default function ProjectsIndex({
     supervisors = [],
     upcoming_deadlines = [],
     recent_activities = [],
-    stats = { total: 24, draft: 0, berlangsung: 12, selesai: 8, menunggu: 2, dibatalkan: 2, avg_progress: 58 },
+    stats = { total: 0, draft: 0, berlangsung: 0, selesai: 0, menunggu: 0, dibatalkan: 0, avg_progress: 0 },
 }: ProjectsIndexProps) {
     const { auth } = usePage().props as any;
     const user = auth?.user;

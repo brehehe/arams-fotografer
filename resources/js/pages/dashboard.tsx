@@ -373,13 +373,7 @@ export default function Dashboard({
         return { icon: UserCheck, bg: 'bg-purple-50 text-purple-600 border-purple-100' };
     };
 
-    const displayLeadSources = lead_sources && lead_sources.length > 0 ? lead_sources : [
-        { source: 'Instagram Arams Pictures', count: 18, percentage: 41.0, total_revenue: 0 },
-        { source: 'Glory Wedding Organizer', count: 12, percentage: 27.3, total_revenue: 0 },
-        { source: 'Rina Pratiwi', count: 8, percentage: 18.2, total_revenue: 0 },
-        { source: 'Nedi Setiawan', count: 6, percentage: 13.6, total_revenue: 0 },
-        { source: 'Google Search', count: 5, percentage: 11.4, total_revenue: 0 },
-    ];
+    const displayLeadSources = lead_sources && lead_sources.length > 0 ? lead_sources : [];
 
     return (
         <div className="space-y-4 pb-2 w-full max-w-full">

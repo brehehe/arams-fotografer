@@ -1552,7 +1552,7 @@ export default function ClientsIndex({
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
                     <StatCard
                         title="TOTAL CLIENTS"
-                        value={stats.total_clients || clients.total || 48}
+                        value={stats?.total_clients ?? clients?.total ?? 0}
                         subtitle="Semua Klien Terdaftar"
                         icon={Users}
                         color="amber"
@@ -1561,7 +1561,7 @@ export default function ClientsIndex({
                     />
                     <StatCard
                         title="CLIENT AKTIF"
-                        value={stats.active_clients || 35}
+                        value={stats?.active_clients ?? 0}
                         subtitle="Klien dengan Project Aktif"
                         icon={UserCheck}
                         color="emerald"
@@ -1570,7 +1570,7 @@ export default function ClientsIndex({
                     />
                     <StatCard
                         title="CLIENT BARU BULAN INI"
-                        value={stats.new_this_month || 6}
+                        value={stats?.new_this_month ?? 0}
                         subtitle="Bergabung bulan ini"
                         icon={UserPlus}
                         color="purple"
@@ -1579,7 +1579,7 @@ export default function ClientsIndex({
                     />
                     <StatCard
                         title="TOTAL PROJECT"
-                        value={stats.total_projects || 39}
+                        value={stats?.total_projects ?? 0}
                         subtitle="Dari Semua Klien"
                         icon={Folder}
                         color="blue"
@@ -2259,10 +2259,10 @@ export default function ClientsIndex({
                                                     onClick={() => (isDone ? setCreateCurrentStep(s.number) : null)}
                                                     disabled={!isDone}
                                                     className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all relative z-10 ${isDone
-                                                            ? 'bg-[#C89445] text-white cursor-pointer hover:opacity-90 shadow-md'
-                                                            : isCurrent
-                                                                ? 'bg-[#C89445] text-white ring-4 ring-[#C89445]/20 shadow-md font-extrabold'
-                                                                : 'bg-white border-2 border-slate-300 text-slate-400 cursor-not-allowed'
+                                                        ? 'bg-[#C89445] text-white cursor-pointer hover:opacity-90 shadow-md'
+                                                        : isCurrent
+                                                            ? 'bg-[#C89445] text-white ring-4 ring-[#C89445]/20 shadow-md font-extrabold'
+                                                            : 'bg-white border-2 border-slate-300 text-slate-400 cursor-not-allowed'
                                                         }`}
                                                 >
                                                     {isDone ? <Check className="w-4 h-4 stroke-[3]" /> : s.number}
@@ -2270,10 +2270,10 @@ export default function ClientsIndex({
                                             </div>
                                             <span
                                                 className={`text-[11px] sm:text-xs max-w-[130px] line-clamp-2 leading-tight ${isCurrent
-                                                        ? 'font-bold text-[#C89445]'
-                                                        : isDone
-                                                            ? 'text-slate-700 font-semibold'
-                                                            : 'text-slate-400'
+                                                    ? 'font-bold text-[#C89445]'
+                                                    : isDone
+                                                        ? 'text-slate-700 font-semibold'
+                                                        : 'text-slate-400'
                                                     }`}
                                             >
                                                 {s.title}
@@ -3024,8 +3024,8 @@ export default function ClientsIndex({
                                                             type="button"
                                                             onClick={() => toggleTag(tag)}
                                                             className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${isSelected
-                                                                    ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                                                                    : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
+                                                                ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                                                : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
                                                                 }`}
                                                         >
                                                             #{tag}

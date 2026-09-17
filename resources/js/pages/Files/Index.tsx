@@ -111,10 +111,10 @@ export default function FilesIndex({
     file_links = { data: [], current_page: 1, last_page: 1, total: 0, from: 0, to: 0 },
     projects = [],
     stats = {
-        total_links: 68,
-        total_projects: 42,
-        sent_by_admin: 38,
-        sent_by_supervisor: 30,
+        total_links: 0,
+        total_projects: 0,
+        sent_by_admin: 0,
+        sent_by_supervisor: 0,
     },
     filters = { status: 'all', search: '', project_id: 'all', sender: 'all', type: 'all' },
     default_expiry_days = 30,
@@ -140,131 +140,7 @@ export default function FilesIndex({
         custom_expires_at: '',
     });
 
-    // Mock realistic records matching Gambar 2 if empty
-    const fallbackFiles: FileItem[] = [
-        {
-            id: '1',
-            name: 'Hasil Foto Wedding Kevin & Jessica',
-            drive_url: 'https://drive.google.com/drive/folders/1example-kevin-jessica',
-            file_type: 'hasil_foto',
-            project: { id: 'p1', name: 'Wedding', client: { name: 'Kevin & Jessica' } },
-            project_category: 'Wedding',
-            sender_name: 'Admin Arams',
-            sender_role: 'admin',
-            sent_at: '27 Mei 2026, 14:32',
-            status: 'terkirim',
-        },
-        {
-            id: '2',
-            name: 'Video Highlight Kevin & Jessica',
-            drive_url: 'https://drive.google.com/drive/folders/2example-kevin-jessica-hl',
-            file_type: 'highlight_video',
-            project: { id: 'p1', name: 'Wedding', client: { name: 'Kevin & Jessica' } },
-            project_category: 'Wedding',
-            sender_name: 'Supervisor Bimo',
-            sender_role: 'supervisor',
-            sent_at: '28 Mei 2026, 09:15',
-            status: 'terkirim',
-        },
-        {
-            id: '3',
-            name: 'Hasil Foto Budi & Sarah',
-            drive_url: 'https://drive.google.com/drive/folders/3example-budi-sarah',
-            file_type: 'hasil_foto',
-            project: { id: 'p2', name: 'Wedding', client: { name: 'Budi & Sarah' } },
-            project_category: 'Wedding',
-            sender_name: 'Admin Arams',
-            sender_role: 'admin',
-            sent_at: '24 Mei 2026, 16:20',
-            status: 'terkirim',
-        },
-        {
-            id: '4',
-            name: 'Video Dokumentasi Budi & Sarah',
-            drive_url: 'https://drive.google.com/drive/folders/4example-budi-doc',
-            file_type: 'video_dokumentasi',
-            project: { id: 'p2', name: 'Wedding', client: { name: 'Budi & Sarah' } },
-            project_category: 'Wedding',
-            sender_name: 'Supervisor Andi',
-            sender_role: 'supervisor',
-            sent_at: '25 Mei 2026, 10:05',
-            status: 'terkirim',
-        },
-        {
-            id: '5',
-            name: 'Foto Prewedding Andi & Lestari',
-            drive_url: 'https://drive.google.com/drive/folders/5example-andi-lestari',
-            file_type: 'hasil_foto',
-            project: { id: 'p3', name: 'Prewedding', client: { name: 'Andi & Lestari' } },
-            project_category: 'Prewedding',
-            sender_name: 'Admin Arams',
-            sender_role: 'admin',
-            sent_at: '20 Mei 2026, 11:40',
-            status: 'terkirim',
-        },
-        {
-            id: '6',
-            name: 'Video Cinematic Prewedding',
-            drive_url: 'https://drive.google.com/drive/folders/6example-cinematic',
-            file_type: 'highlight_video',
-            project: { id: 'p3', name: 'Prewedding', client: { name: 'Andi & Lestari' } },
-            project_category: 'Prewedding',
-            sender_name: 'Supervisor Bimo',
-            sender_role: 'supervisor',
-            sent_at: '21 Mei 2026, 15:22',
-            status: 'dibuka',
-        },
-        {
-            id: '7',
-            name: 'Hasil Foto Doni & Kartika',
-            drive_url: 'https://drive.google.com/drive/folders/7example-doni-kartika',
-            file_type: 'hasil_foto',
-            project: { id: 'p4', name: 'Wedding', client: { name: 'Doni & Kartika' } },
-            project_category: 'Wedding',
-            sender_name: 'Admin Arams',
-            sender_role: 'admin',
-            sent_at: '18 Mei 2026, 13:10',
-            status: 'terkirim',
-        },
-        {
-            id: '8',
-            name: 'Video Dokumentasi Doni & Kartika',
-            drive_url: 'https://drive.google.com/drive/folders/8example-doni-doc',
-            file_type: 'video_dokumentasi',
-            project: { id: 'p4', name: 'Wedding', client: { name: 'Doni & Kartika' } },
-            project_category: 'Wedding',
-            sender_name: 'Supervisor Andi',
-            sender_role: 'supervisor',
-            sent_at: '19 Mei 2026, 10:55',
-            status: 'terkirim',
-        },
-        {
-            id: '9',
-            name: 'Foto Engagement Rizky & Ayu',
-            drive_url: 'https://drive.google.com/drive/folders/9example-rizky-ayu',
-            file_type: 'hasil_foto',
-            project: { id: 'p5', name: 'Engagement', client: { name: 'Rizky & Ayu' } },
-            project_category: 'Engagement',
-            sender_name: 'Admin Arams',
-            sender_role: 'admin',
-            sent_at: '16 Mei 2026, 17:30',
-            status: 'dibuka',
-        },
-        {
-            id: '10',
-            name: 'Video Teaser Rizky & Ayu',
-            drive_url: 'https://drive.google.com/drive/folders/10example-rizky-teaser',
-            file_type: 'highlight_video',
-            project: { id: 'p5', name: 'Engagement', client: { name: 'Rizky & Ayu' } },
-            project_category: 'Engagement',
-            sender_name: 'Supervisor Bimo',
-            sender_role: 'supervisor',
-            sent_at: '17 Mei 2026, 11:05',
-            status: 'terkirim',
-        },
-    ];
-
-    const displayFiles = file_links.data && file_links.data.length > 0 ? file_links.data : fallbackFiles;
+    const displayFiles = file_links.data || [];
 
     const handleFilter = (customParams: Record<string, any> = {}) => {
         router.get(
@@ -472,15 +348,15 @@ export default function FilesIndex({
                 />
                 <StatCard
                     title="Dikirim oleh Admin"
-                    value={stats.sent_by_admin}
-                    subtitle="55.9% dari total"
+                    value={stats.sent_by_admin ?? 0}
+                    subtitle={stats.total_links > 0 ? `${((stats.sent_by_admin / stats.total_links) * 100).toFixed(1)}% dari total` : '0% dari total'}
                     icon={User}
                     color="amber"
                 />
                 <StatCard
                     title="Dikirim oleh Supervisor"
-                    value={stats.sent_by_supervisor}
-                    subtitle="44.1% dari total"
+                    value={stats.sent_by_supervisor ?? 0}
+                    subtitle={stats.total_links > 0 ? `${((stats.sent_by_supervisor / stats.total_links) * 100).toFixed(1)}% dari total` : '0% dari total'}
                     icon={Users}
                     color="blue"
                 />

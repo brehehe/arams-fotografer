@@ -93,10 +93,10 @@ export default function ClientSourcesIndex({
     sources,
     filters = {},
     stats = {
-        total_sources: 28,
-        total_projects: 76,
-        total_sales: 185450000,
-        average_project_value: 2439474,
+        total_sources: 0,
+        total_projects: 0,
+        total_sales: 0,
+        average_project_value: 0,
     },
 }: ClientSourcesIndexProps) {
     const listData = sources || {

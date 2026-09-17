@@ -134,7 +134,7 @@ function MethodLogo({ name, type }: { name: string; type?: string }) {
 export default function PaymentMethodsIndex({
     paymentMethods,
     payment_methods,
-    stats = { total: 7, active: 6, inactive: 1, used_in_invoices: 156 },
+    stats = { total: 0, active: 0, inactive: 0, used_in_invoices: 0 },
     filters = {},
 }: PaymentMethodsIndexProps) {
     const rawPaginated = paymentMethods || payment_methods || { data: [], current_page: 1, last_page: 1, total: 0, from: 0, to: 0 };

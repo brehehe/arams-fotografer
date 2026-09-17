@@ -83,18 +83,18 @@ export default function NoteTemplatesIndex({
     templates,
     filters = {},
     stats = {
-        total: 12,
-        active: 11,
-        inactive: 1,
-        used_in_project: 86,
+        total: 0,
+        active: 0,
+        inactive: 0,
+        used_in_project: 0,
     },
     type_counts = {
-        all: 12,
-        meeting: 4,
-        follow_up: 2,
-        project_process: 3,
-        handover: 2,
-        other: 1,
+        all: 0,
+        meeting: 0,
+        follow_up: 0,
+        project_process: 0,
+        handover: 0,
+        other: 0,
     },
 }: NoteTemplatesIndexProps) {
     const listData = templates || {
