@@ -92,9 +92,9 @@ class CalendarService
                     ? "{$client->bride_name} & {$client->groom_name}"
                     : ($client?->name ?? '-');
 
-                $eventDate  = Carbon::parse($p->event_date);
-                $startTime  = $p->event_time
-                    ? substr($p->event_time, 0, 5)
+                $normalizedTime = ProjectSchedule::normalizeTime($p->event_time);
+                $startTime  = $normalizedTime
+                    ? substr($normalizedTime, 0, 5)
                     : null;
 
                 $endTime = null;

@@ -954,12 +954,15 @@ class ProjectService
             $scheduleType = 'meeting';
         }
 
+        [$startTime, $endTime] = $this->parseTimeRange($project->event_time);
+
         $existing = ProjectSchedule::where('project_id', $project->id)->first();
         if ($existing) {
             $existing->update([
                 'title'      => "Sesi: {$project->name}",
                 'date'       => $project->event_date,
-                'start_time' => $project->event_time ? substr($project->event_time, 0, 5) : ($existing->start_time ?: '09:00'),
+                'start_time' => $startTime ?: ($existing->start_time ?: '09:00:00'),
+                'end_time'   => $endTime ?: $existing->end_time,
                 'location'   => $project->location,
                 'type'       => $scheduleType,
                 'status'     => $project->status === 'completed' ? 'completed' : 'scheduled',
@@ -970,13 +973,62 @@ class ProjectService
                 'project_id' => $project->id,
                 'title'      => "Sesi: {$project->name}",
                 'date'       => $project->event_date,
-                'start_time' => $project->event_time ? substr($project->event_time, 0, 5) : '09:00',
-                'end_time'   => null,
+                'start_time' => $startTime ?: '09:00:00',
+                'end_time'   => $endTime,
                 'location'   => $project->location,
                 'type'       => $scheduleType,
                 'status'     => 'scheduled',
                 'notes'      => $project->notes,
             ]);
         }
+    }
+
+    /**
+     * Parse start and optional end times from an event time string or range.
+     * Examples:
+     * - "10.00" -> ["10:00:00", null]
+     * - "10:00" -> ["10:00:00", null]
+     * - "10.00 - 14.00" -> ["10:00:00", "14:00:00"]
+     * - "08:30 - 17:00 WIB" -> ["08:30:00", "17:00:00"]
+     * - "Jam 10" -> ["10:00:00", null]
+     *
+     * @return array{0: ?string, 1: ?string}
+     */
+    public function parseTimeRange(?string $timeStr): array
+    {
+        if (empty($timeStr) || !is_string($timeStr)) {
+            return [null, null];
+        }
+
+        $timeStr = trim($timeStr);
+
+        // Match HH:MM or HH.MM occurrences
+        if (preg_match_all('/\b(\d{1,2})[:.](\d{2})(?:[:.](\d{2}))?\b/', $timeStr, $matches, PREG_SET_ORDER)) {
+            $times = [];
+            foreach ($matches as $m) {
+                $h = (int) $m[1];
+                $min = (int) $m[2];
+                $s = isset($m[3]) ? (int) $m[3] : 0;
+                if ($h >= 0 && $h <= 23 && $min >= 0 && $min <= 59 && $s >= 0 && $s <= 59) {
+                    $times[] = sprintf('%02d:%02d:%02d', $h, $min, $s);
+                }
+            }
+            if (!empty($times)) {
+                return [
+                    $times[0],
+                    count($times) > 1 ? $times[1] : null,
+                ];
+            }
+        }
+
+        // Single hour format: e.g. "Jam 10" or "10"
+        if (preg_match('/\b(\d{1,2})\b/', $timeStr, $matches)) {
+            $h = (int) $matches[1];
+            if ($h >= 0 && $h <= 23) {
+                return [sprintf('%02d:00:00', $h), null];
+            }
+        }
+
+        return [null, null];
     }
 }
