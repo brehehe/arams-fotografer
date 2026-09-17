@@ -107,10 +107,13 @@ class SettingController extends Controller
     {
         $settings = $request->input('settings', []);
         $logoFile = $request->hasFile('company_logo') ? $request->file('company_logo') : null;
+        $signatureFile = $request->hasFile('invoice_signature_image')
+            ? $request->file('invoice_signature_image')
+            : ($request->hasFile('company_signature') ? $request->file('company_signature') : null);
 
-        $this->settingService->updateSettings($settings, $logoFile, auth()->user());
+        $this->settingService->updateSettings($settings, $logoFile, auth()->user(), $signatureFile);
 
-        return redirect()->back()->with('success', 'Pengaturan dan logo berhasil disimpan.');
+        return redirect()->back()->with('success', 'Pengaturan berhasil disimpan.');
     }
 
     public function runBackup(Request $request): RedirectResponse

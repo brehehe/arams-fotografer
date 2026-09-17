@@ -77,8 +77,8 @@ export function CategorySpecificForm({
 
     const handleAddChild = () => {
         if (!newChildName.trim()) {
-return;
-}
+            return;
+        }
 
         const currentChildren: ChildRepeaterItem[] = Array.isArray(data.children) ? [...data.children] : [];
         currentChildren.push({
@@ -127,20 +127,20 @@ return;
 
         if (index === 0) {
             if (field === 'name') {
-onChange('baby_name', val);
-}
+                onChange('baby_name', val);
+            }
 
             if (field === 'nickname') {
-onChange('baby_nickname', val);
-}
+                onChange('baby_nickname', val);
+            }
 
             if (field === 'birth_date') {
-onChange('baby_birth_date', val);
-}
+                onChange('baby_birth_date', val);
+            }
 
             if (field === 'gender') {
-onChange('baby_gender', val);
-}
+                onChange('baby_gender', val);
+            }
         }
     };
 
@@ -151,8 +151,8 @@ onChange('baby_gender', val);
 
     const handleRemoveBaby = (index: number) => {
         if (babiesList.length <= 1) {
-return;
-}
+            return;
+        }
 
         const updated = babiesList.filter((_, i) => i !== index);
         onChange('babies', updated);
@@ -777,11 +777,10 @@ return;
                                         type="button"
                                         key={usage}
                                         onClick={() => toggleCommercialUsage(usage)}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 cursor-pointer ${
-                                            isSelected
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 cursor-pointer ${isSelected
                                                 ? 'bg-[#3C0E0E] text-white border-[#3C0E0E] shadow-2xs'
                                                 : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
-                                        }`}
+                                            }`}
                                     >
                                         {isSelected && <Check className="w-3 h-3" />}
                                         <span>{usage}</span>
@@ -1947,7 +1946,7 @@ return;
                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-amber-400 bg-amber-50/50 hover:bg-amber-100/60 text-amber-900 text-xs font-bold transition-all cursor-pointer"
                             >
                                 <Plus className="w-3.5 h-3.5 text-amber-700" />
-                                <span>+ Tambah Anak</span>
+                                <span>Tambah Anak</span>
                             </button>
                         )}
                     </div>

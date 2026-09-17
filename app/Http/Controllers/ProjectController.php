@@ -145,8 +145,13 @@ class ProjectController extends Controller
         return redirect()->back()->with('success', 'Project berhasil dihapus.');
     }
 
-    public function showInvoice(Project $project, Request $request): Response
+    public function showInvoice(Project $project, Request $request): Response|RedirectResponse
     {
+        if ($request->user()?->hasRole('Supervisor')) {
+            return redirect()->route('projects.show', $project->id)
+                ->with('error', 'Supervisor tidak memiliki hak akses untuk melihat atau mengelola invoice.');
+        }
+
         $this->authorize('view', $project);
 
         $data = $this->projectService->getProjectInvoiceData($project, $request->query('invoice_id'));
@@ -154,9 +159,14 @@ class ProjectController extends Controller
         return Inertia::render('Projects/Invoice', $data);
     }
 
-    public function showInvoiceById(\App\Models\Invoice $invoice): Response
+    public function showInvoiceById(\App\Models\Invoice $invoice, Request $request): Response|RedirectResponse
     {
         $project = $invoice->project;
+        if ($request->user()?->hasRole('Supervisor')) {
+            return redirect()->route('projects.show', $project->id)
+                ->with('error', 'Supervisor tidak memiliki hak akses untuk melihat atau mengelola invoice.');
+        }
+
         $this->authorize('view', $project);
 
         $data = $this->projectService->getProjectInvoiceData($project, $invoice->id);

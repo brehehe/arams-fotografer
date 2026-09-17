@@ -42,7 +42,7 @@ class ProjectPolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasAnyRole(['Super Admin', 'Owner', 'Admin', 'Supervisor']);
+        return $user->hasAnyRole(['Super Admin', 'Owner', 'Admin']);
     }
 
     /**

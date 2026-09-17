@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { toast } from 'sonner';
 import {
     Calendar as CalendarIcon,
@@ -225,6 +225,35 @@ export default function ProjectsEdit({
     },
     workflow_definitions = [],
 }: ProjectsEditProps) {
+    const { auth } = usePage().props as any;
+    const user = auth?.user;
+    const userRoles: string[] = user?.roles ?? [];
+    const isSupervisor = Boolean(user?.is_supervisor || userRoles.includes('Supervisor'));
+
+    if (isSupervisor) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+                <Head title="Akses Dibatasi - Edit Project" />
+                <div className="max-w-md w-full bg-white p-6 rounded-2xl border border-slate-200 shadow-xl text-center space-y-4">
+                    <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto">
+                        <Edit3 className="w-6 h-6" />
+                    </div>
+                    <h2 className="text-base font-bold text-slate-900">Akses Dibatasi</h2>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                        Role Supervisor tidak memiliki wewenang untuk mengedit project ini. Silakan hubungi Administrator atau Owner.
+                    </p>
+                    <Link
+                        href={`/projects/${project?.id}`}
+                        className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-[#3C0E0E] hover:bg-[#2A0909] text-white rounded-xl text-xs font-bold transition-colors"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        <span>Kembali ke Detail Project</span>
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
     const [submitting, setSubmitting] = useState(false);
     const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
 
@@ -2445,7 +2474,7 @@ export default function ProjectsEdit({
             {currentStep === 4 && (
                 <div className="space-y-6">
                     {/* Top Row: 4 Summary Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-slate-900">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-slate-900">
                         {/* Card 1: Informasi Project */}
                         <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs space-y-2 text-xs flex flex-col justify-between">
                             <h4 className="font-bold text-sm text-slate-900 border-b border-slate-100 pb-2 flex items-center justify-between">

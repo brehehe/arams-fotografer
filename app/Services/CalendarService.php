@@ -211,6 +211,7 @@ class CalendarService
                     'id'             => $p->id,
                     'name'           => $p->name,
                     'project_number' => $p->project_number,
+                    'client_id'      => $p->client_id,
                     'client_name'    => $clientName,
                     'location'       => $p->location,
                 ];

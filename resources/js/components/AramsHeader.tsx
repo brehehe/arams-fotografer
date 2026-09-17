@@ -1,15 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Link, router, usePage } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import {
     Menu,
     Search,
-    SlidersHorizontal,
     Bell,
     ChevronDown,
     User as UserIcon,
     Settings as SettingsIcon,
+    Check,
     LogOut,
-    ExternalLink,
     AlertTriangle,
     Clock,
     Calendar,
@@ -20,10 +18,10 @@ import {
     CheckCheck,
     X,
     Sparkles,
-    FileText,
     ArrowRight,
     Loader2,
 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface AramsHeaderProps {
     onMenuToggle?: () => void;
@@ -69,6 +67,12 @@ export default function AramsHeader({
         roles: [{ name: 'Administrator' }],
     };
 
+    const userRoles: string[] = Array.isArray(user?.roles)
+        ? user.roles.map((r: any) => (typeof r === 'string' ? r : r?.name))
+        : [];
+    const isSupervisor = Boolean(user?.is_supervisor || userRoles.includes('Supervisor'));
+    const canAccessSettingsAndUsers = !isSupervisor && (userRoles.includes('Super Admin') || userRoles.includes('Owner') || userRoles.includes('Admin'));
+
     const [userDropdownOpen, setUserDropdownOpen] = useState(false);
     const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
     const [notifFilter, setNotifFilter] = useState<'all' | 'files' | 'schedule_finance'>('all');
@@ -103,7 +107,6 @@ export default function AramsHeader({
     const headerBgGradient = appSettings?.header_bg_gradient || '';
     const headerTextColor = appSettings?.header_text_color || '#0F172A';
     const headerBorderColor = appSettings?.header_border_color || 'rgba(226, 232, 240, 0.8)';
-    const fontHeading = appSettings?.font_family_heading || 'Plus Jakarta Sans';
 
     const breadcrumbColor = appSettings?.breadcrumb_color || appSettings?.primary_accent_color || '#C98922';
     const breadcrumbActiveColor = appSettings?.breadcrumb_active_color || '#FFFFFF';
@@ -123,13 +126,14 @@ export default function AramsHeader({
     const fetchNotifications = async () => {
         try {
             setLoadingNotifs(true);
-            const res = await fetch('/api/notifications');
+            const res = await fetch('/api/notifications?portal=admin');
+
             if (res.ok) {
                 const data = await res.json();
                 setNotifications(data.notifications || []);
                 setUnreadCount(data.unread_count || 0);
             }
-        } catch (e) {
+        } catch {
             // ignore network errors
         } finally {
             setLoadingNotifs(false);
@@ -137,7 +141,26 @@ export default function AramsHeader({
     };
 
     useEffect(() => {
-        fetchNotifications();
+        let isMounted = true;
+
+        (async () => {
+            try {
+                const res = await fetch('/api/notifications?portal=admin');
+
+                if (res.ok && isMounted) {
+                    const data = await res.json();
+
+                    setNotifications(data.notifications || []);
+                    setUnreadCount(data.unread_count || 0);
+                }
+            } catch {
+                // ignore
+            }
+        })();
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     // 2. Mark All Notifications as Read
@@ -146,7 +169,7 @@ export default function AramsHeader({
             await fetch('/api/notifications/mark-read', { method: 'POST', headers: { 'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as any)?.content || '' } });
             setUnreadCount(0);
             setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-        } catch (e) {
+        } catch {
             setUnreadCount(0);
         }
     };
@@ -154,8 +177,6 @@ export default function AramsHeader({
     // 3. Debounced Global Search
     useEffect(() => {
         if (!searchQuery || searchQuery.trim().length < 2) {
-            setSearchResults({ projects: [], clients: [], files: [], invoices: [] });
-            setSearching(false);
             return;
         }
 
@@ -163,12 +184,13 @@ export default function AramsHeader({
         const timer = setTimeout(async () => {
             try {
                 const res = await fetch(`/api/global-search?q=${encodeURIComponent(searchQuery.trim())}`);
+
                 if (res.ok) {
                     const data = await res.json();
                     setSearchResults(data.results || { projects: [], clients: [], files: [], invoices: [] });
                     setSearchOpen(true);
                 }
-            } catch (e) {
+            } catch {
                 // ignore
             } finally {
                 setSearching(false);
@@ -193,6 +215,7 @@ export default function AramsHeader({
         };
 
         window.addEventListener('keydown', handleKeyDown);
+
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, []);
 
@@ -202,19 +225,27 @@ export default function AramsHeader({
             if (searchDropdownRef.current && !searchDropdownRef.current.contains(e.target as Node) && !searchInputRef.current?.contains(e.target as Node)) {
                 setSearchOpen(false);
             }
+
             if (notifDropdownRef.current && !notifDropdownRef.current.contains(e.target as Node)) {
                 setNotifDropdownOpen(false);
             }
         };
 
         document.addEventListener('mousedown', handleClickOutside);
+
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     // Filtered Notifications
     const filteredNotifications = notifications.filter((item) => {
-        if (notifFilter === 'files') return item.category === 'files';
-        if (notifFilter === 'schedule_finance') return item.category === 'schedule' || item.category === 'finance';
+        if (notifFilter === 'files') {
+return item.category === 'files';
+}
+
+        if (notifFilter === 'schedule_finance') {
+return item.category === 'schedule' || item.category === 'finance';
+}
+
         return true;
     });
 
@@ -504,7 +535,9 @@ export default function AramsHeader({
                             type="text"
                             value={searchQuery}
                             onFocus={() => {
-                                if (searchQuery.trim().length >= 2) setSearchOpen(true);
+                                if (searchQuery.trim().length >= 2) {
+setSearchOpen(true);
+}
                             }}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Search project, client, photographer..."
@@ -713,7 +746,10 @@ export default function AramsHeader({
                         type="button"
                         onClick={() => {
                             setNotifDropdownOpen(!notifDropdownOpen);
-                            if (!notifDropdownOpen) fetchNotifications();
+
+                            if (!notifDropdownOpen) {
+fetchNotifications();
+}
                         }}
                         style={{ color: headerTextColor }}
                         className="relative p-2 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
@@ -848,14 +884,14 @@ export default function AramsHeader({
                                 )}
                             </div>
 
-                            {/* Footer Link to Files / Dashboard */}
+                            {/* Footer Link to Projects */}
                             <div className="p-2 bg-slate-50 border-t border-slate-100 text-center">
                                 <Link
-                                    href="/files"
+                                    href="/projects"
                                     onClick={() => setNotifDropdownOpen(false)}
                                     className="text-[11px] font-bold text-slate-700 hover:text-slate-900 hover:underline flex items-center justify-center gap-1"
                                 >
-                                    <span>Lihat Semua Manajemen File &amp; Link</span>
+                                    <span>Lihat Semua Project</span>
                                     <ArrowRight className="w-3 h-3" />
                                 </Link>
                             </div>
@@ -910,22 +946,24 @@ export default function AramsHeader({
                                     <p className="text-xs font-semibold text-slate-900">{user.name}</p>
                                     <p className="text-[11px] text-slate-500 truncate">{user.email}</p>
                                 </div>
-                                <div className="py-1">
-                                    <Link
-                                        href="/setting/admin"
-                                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
-                                    >
-                                        <SettingsIcon className="w-4 h-4 text-slate-400" />
-                                        <span>Pengaturan Sistem</span>
-                                    </Link>
-                                    <Link
-                                        href="/users"
-                                        className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
-                                    >
-                                        <UserIcon className="w-4 h-4 text-slate-400" />
-                                        <span>Manajemen User</span>
-                                    </Link>
-                                </div>
+                                {canAccessSettingsAndUsers && (
+                                    <div className="py-1">
+                                        <Link
+                                            href="/setting/admin"
+                                            className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
+                                        >
+                                            <SettingsIcon className="w-4 h-4 text-slate-400" />
+                                            <span>Pengaturan Sistem</span>
+                                        </Link>
+                                        <Link
+                                            href="/users"
+                                            className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
+                                        >
+                                            <UserIcon className="w-4 h-4 text-slate-400" />
+                                            <span>Manajemen User</span>
+                                        </Link>
+                                    </div>
+                                )}
                                 <div className="pt-1 border-t border-slate-100">
                                     <Link
                                         href="/logout"

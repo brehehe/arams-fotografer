@@ -59,6 +59,7 @@ import SettingsTabNav, { SettingAdminSubTab } from '@/components/SettingsTabNav'
 import { GradientBuilder, ColorSettingRow } from '@/components/settings/ThemeControls';
 import { isDarkColor } from '@/lib/utils';
 import { formatRupiah } from '@/lib/formatters';
+import { SignaturePad } from '@/components/settings/SignaturePad';
 
 export interface BackupItem {
     filename: string;
@@ -197,6 +198,7 @@ export default function AdminSettingsPage({
         company_description: getVal('company_description', getVal('company_tagline', 'Jasa fotografi & videografi profesional untuk mengabadikan setiap momen berharga Anda dengan kualitas sinematik terbaik.')),
         company_operational_hours: getVal('company_operational_hours', 'Senin - Minggu, 09.00 - 18.00 WIB'),
         company_logo: getVal('company_logo', ''),
+        invoice_signature_image: getVal('invoice_signature_image', getVal('company_signature', '')),
     });
 
     // Theme & Appearance Customization Form State
@@ -774,6 +776,53 @@ export default function AdminSettingsPage({
         });
     };
 
+    const [isSavingSignature, setIsSavingSignature] = useState(false);
+
+    const handleSaveSignature = (signatureDataUrl: string, file?: File | Blob) => {
+        setIsSavingSignature(true);
+        setForm((prev) => ({ ...prev, invoice_signature_image: signatureDataUrl }));
+
+        const formData = new FormData();
+        if (file) {
+            formData.append('invoice_signature_image', file);
+        }
+        formData.append('settings[invoice_signature_image]', signatureDataUrl);
+        formData.append('settings[company_signature]', signatureDataUrl);
+
+        router.post('/settings', formData, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success('Tanda Tangan Digital Berhasil Disimpan & Dikonversi ke WebP');
+                setIsSavingSignature(false);
+            },
+            onError: () => {
+                toast.error('Gagal menyimpan tanda tangan digital');
+                setIsSavingSignature(false);
+            },
+        });
+    };
+
+    const handleDeleteSignature = () => {
+        setIsSavingSignature(true);
+        setForm((prev) => ({ ...prev, invoice_signature_image: '' }));
+        router.post('/settings', {
+            settings: {
+                invoice_signature_image: '',
+                company_signature: '',
+            },
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success('Tanda Tangan Berhasil Dihapus');
+                setIsSavingSignature(false);
+            },
+            onError: () => {
+                toast.error('Gagal menghapus tanda tangan');
+                setIsSavingSignature(false);
+            },
+        });
+    };
+
     // Preferences Form State
     const [prefForm, setPrefForm] = useState({
         currency: getVal('currency', 'IDR'),
@@ -1116,7 +1165,7 @@ export default function AdminSettingsPage({
                                 </div>
 
                                 {/* Row 5: Alamat Lengkap & Kota */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 gap-4">
                                     <div>
                                         <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                                             Alamat Studio / Kantor
@@ -1167,7 +1216,7 @@ export default function AdminSettingsPage({
                                         <FileText className="w-4 h-4 text-[#5B21B6]" />
                                         <span className="text-xs font-bold text-slate-800">Penandatangan Invoice &amp; Dokumen Resmi (TTD)</span>
                                     </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div className="grid grid-cols-1 gap-3">
                                         <div>
                                             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                                                 Nama Direktur / Penandatangan
@@ -1209,6 +1258,18 @@ export default function AdminSettingsPage({
                                             />
                                             <p className="text-[10px] text-slate-500 mt-1">Lokasi penerbitan pada baris tanggal TTD.</p>
                                         </div>
+                                    </div>
+
+                                    {/* Signature Pad Canvas & Upload Section */}
+                                    <div className="pt-3 border-t border-purple-200/60">
+                                        <SignaturePad
+                                            value={form.invoice_signature_image}
+                                            directorName={form.invoice_director_name}
+                                            directorTitle={form.invoice_director_title}
+                                            onSave={handleSaveSignature}
+                                            onDelete={handleDeleteSignature}
+                                            isLoading={isSavingSignature}
+                                        />
                                     </div>
                                 </div>
 
@@ -1367,6 +1428,26 @@ export default function AdminSettingsPage({
                                         <Globe className="w-4 h-4 text-slate-400 shrink-0" />
                                         <span className="text-blue-600 font-medium">{form.company_website || 'https://www.arams.com'}</span>
                                     </div>
+                                </div>
+
+                                {/* Mini Signature Preview in Preview Card */}
+                                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-[10px] text-slate-400 font-medium">Tanda Tangan Dokumen</p>
+                                        <p className="text-[11px] font-bold text-slate-800">{form.invoice_director_name}</p>
+                                        <p className="text-[9px] text-slate-500">{form.invoice_director_title}</p>
+                                    </div>
+                                    {form.invoice_signature_image ? (
+                                        <div className="h-10 flex items-center">
+                                            <img
+                                                src={form.invoice_signature_image}
+                                                alt="TTD"
+                                                className="h-9 max-w-[100px] object-contain"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <span className="text-[10px] italic text-slate-300">Belum ada TTD</span>
+                                    )}
                                 </div>
                             </div>
                         </div>

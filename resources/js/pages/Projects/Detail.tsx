@@ -116,6 +116,10 @@ export default function ProjectDetail({
 }: ProjectDetailProps) {
     const { auth } = usePage().props as any;
     const user = auth?.user;
+    const userRoles: string[] = user?.roles ?? [];
+    const isSupervisor = Boolean(user?.is_supervisor || userRoles.includes('Supervisor'));
+    // Supervisor cannot add, edit, or view invoices
+    const canManageInvoices = !isSupervisor;
 
     // Active Navigation Tab
     const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'files' | 'catatan' | 'invoice' | 'highlight' | 'slide'>('overview');
@@ -138,6 +142,8 @@ export default function ProjectDetail({
     const [isEditAllNotesOpen, setIsEditAllNotesOpen] = useState(false);
     const [editAllNotesContent, setEditAllNotesContent] = useState('');
     const [isUpdatingNotes, setIsUpdatingNotes] = useState(false);
+    const [confirmDeleteProject, setConfirmDeleteProject] = useState(false);
+    const [isDeletingProject, setIsDeletingProject] = useState(false);
 
     // Specific note editing state
     const [editingNoteData, setEditingNoteData] = useState<{
@@ -555,8 +561,8 @@ export default function ProjectDetail({
                 date: isDone
                     ? 'Selesai Dikerjakan'
                     : isCurrent
-                    ? `Sedang Dikerjakan (${targetDeadline})`
-                    : `Target: ${targetDeadline}`,
+                        ? `Sedang Dikerjakan (${targetDeadline})`
+                        : `Target: ${targetDeadline}`,
                 done: isDone,
                 current: isCurrent,
             };
@@ -794,6 +800,7 @@ export default function ProjectDetail({
     };
 
     const handleQuickStatusChange = (newStatus: string) => {
+        if (isSupervisor) return;
         let newProgress = project.progress;
         let newStep = project.workflow_step;
 
@@ -828,6 +835,22 @@ export default function ProjectDetail({
                 },
             }
         );
+    };
+
+    const handleDeleteProject = () => {
+        if (isSupervisor || !project?.id) return;
+        setIsDeletingProject(true);
+        router.delete(`/projects/${project.id}`, {
+            onSuccess: () => {
+                setConfirmDeleteProject(false);
+                setIsDeletingProject(false);
+                toast.success('Project berhasil dihapus.');
+            },
+            onError: () => {
+                setIsDeletingProject(false);
+                toast.error('Gagal menghapus project.');
+            },
+        });
     };
 
     return (
@@ -905,13 +928,15 @@ export default function ProjectDetail({
 
                     {/* Action Buttons */}
                     <div className="flex items-center gap-2 flex-wrap shrink-0">
-                        <Link
-                            href={`/projects/${project?.id}/edit`}
-                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 rounded-xl text-xs font-bold shadow-2xs transition-all hover:scale-[1.02] whitespace-nowrap shrink-0"
-                        >
-                            <Edit3 className="w-3.5 h-3.5 text-slate-500" />
-                            <span>Edit Project</span>
-                        </Link>
+                        {!isSupervisor && (
+                            <Link
+                                href={`/projects/${project?.id}/edit`}
+                                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 rounded-xl text-xs font-bold shadow-2xs transition-all hover:scale-[1.02] whitespace-nowrap shrink-0"
+                            >
+                                <Edit3 className="w-3.5 h-3.5 text-slate-500" />
+                                <span>Edit Project</span>
+                            </Link>
+                        )}
 
                         {/* Aksi Lainnya Dropdown */}
                         <div className="relative">
@@ -926,23 +951,25 @@ export default function ProjectDetail({
 
                             {actionDropdownOpen && (
                                 <div className="absolute right-0 mt-2 w-52 bg-white rounded-2xl border border-slate-200 shadow-xl py-1.5 z-50 animate-in fade-in zoom-in duration-150">
+                                    {canManageInvoices && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setActionDropdownOpen(false);
+                                                openPaymentModal();
+                                            }}
+                                            className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer whitespace-nowrap"
+                                        >
+                                            <CreditCard className="w-4 h-4 text-emerald-600" />
+                                            <span>Catat Pembayaran</span>
+                                        </button>
+                                    )}
                                     <button
                                         type="button"
                                         onClick={() => {
-                                             setActionDropdownOpen(false);
-                                             openPaymentModal();
-                                         }}
-                                        className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer whitespace-nowrap"
-                                    >
-                                        <CreditCard className="w-4 h-4 text-emerald-600" />
-                                        <span>Catat Pembayaran</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                             setActionDropdownOpen(false);
-                                             setIsLinkModalOpen(true);
-                                         }}
+                                            setActionDropdownOpen(false);
+                                            setIsLinkModalOpen(true);
+                                        }}
                                         className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer whitespace-nowrap"
                                     >
                                         <Upload className="w-4 h-4 text-blue-600" />
@@ -957,58 +984,75 @@ export default function ProjectDetail({
                                         <ExternalLink className="w-4 h-4 text-purple-600" />
                                         <span>Portal Klien</span>
                                     </a>
-                                    <div className="border-t border-slate-100 my-1" />
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                             setActionDropdownOpen(false);
-                                             toast.info('Status project dibatalkan.');
-                                         }}
-                                        className="w-full px-3.5 py-2 text-left text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2.5 cursor-pointer whitespace-nowrap"
-                                    >
-                                        <Trash2 className="w-4 h-4 text-rose-500" />
-                                        <span>Batalkan Project</span>
-                                    </button>
+                                    {!isSupervisor && (
+                                        <>
+                                            <div className="border-t border-slate-100 my-1" />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setActionDropdownOpen(false);
+                                                    handleQuickStatusChange('cancelled');
+                                                }}
+                                                className="w-full px-3.5 py-2 text-left text-xs font-semibold text-amber-700 hover:bg-amber-50 flex items-center gap-2.5 cursor-pointer whitespace-nowrap"
+                                            >
+                                                <X className="w-4 h-4 text-amber-600" />
+                                                <span>Batalkan Project</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setActionDropdownOpen(false);
+                                                    setConfirmDeleteProject(true);
+                                                }}
+                                                className="w-full px-3.5 py-2 text-left text-xs font-semibold text-rose-600 hover:bg-rose-50 flex items-center gap-2.5 cursor-pointer whitespace-nowrap"
+                                            >
+                                                <Trash2 className="w-4 h-4 text-rose-500" />
+                                                <span>Hapus Project</span>
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             )}
                         </div>
 
                         {/* Buat / Lihat Invoice DP Button */}
-                        <div className="relative inline-flex rounded-xl shadow-sm shrink-0 whitespace-nowrap">
-                            <Link
-                                href={`/projects/${project?.id}/invoice`}
-                                className="inline-flex items-center gap-2 px-3.5 py-2 bg-[#3B46F1] hover:bg-[#323BD8] text-white rounded-l-xl text-xs font-bold transition-all shadow-2xs cursor-pointer whitespace-nowrap"
-                            >
-                                <Receipt className="w-3.5 h-3.5" />
-                                <span>Lihat Invoice DP</span>
-                            </Link>
-                            <button
-                                type="button"
-                                onClick={() => setInvoiceDropdownOpen(!invoiceDropdownOpen)}
-                                className="px-2.5 py-2 bg-[#323BD8] hover:bg-[#2831BE] text-white rounded-r-xl text-xs border-l border-white/20 transition-colors cursor-pointer shrink-0"
-                            >
-                                <ChevronDown className="w-3.5 h-3.5" />
-                            </button>
+                        {canManageInvoices && (
+                            <div className="relative inline-flex rounded-xl shadow-sm shrink-0 whitespace-nowrap">
+                                <Link
+                                    href={`/projects/${project?.id}/invoice`}
+                                    className="inline-flex items-center gap-2 px-3.5 py-2 bg-[#3B46F1] hover:bg-[#323BD8] text-white rounded-l-xl text-xs font-bold transition-all shadow-2xs cursor-pointer whitespace-nowrap"
+                                >
+                                    <Receipt className="w-3.5 h-3.5" />
+                                    <span>Lihat Invoice</span>
+                                </Link>
+                                <button
+                                    type="button"
+                                    onClick={() => setInvoiceDropdownOpen(!invoiceDropdownOpen)}
+                                    className="px-2.5 py-2 bg-[#323BD8] hover:bg-[#2831BE] text-white rounded-r-xl text-xs border-l border-white/20 transition-colors cursor-pointer shrink-0"
+                                >
+                                    <ChevronDown className="w-3.5 h-3.5" />
+                                </button>
 
-                            {invoiceDropdownOpen && (
-                                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl border border-slate-200 shadow-xl py-1.5 z-50 animate-in fade-in zoom-in duration-150">
-                                    <Link
-                                        href={`/projects/${project?.id}/invoice`}
-                                        className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                                    >
-                                        <FileText className="w-4 h-4 text-indigo-600" />
-                                        <span>Lihat Preview Invoice</span>
-                                    </Link>
-                                    <Link
-                                        href={`/projects/${project?.id}/invoice`}
-                                        className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
-                                    >
-                                        <Printer className="w-4 h-4 text-slate-600" />
-                                        <span>Cetak PDF</span>
-                                    </Link>
-                                </div>
-                            )}
-                        </div>
+                                {invoiceDropdownOpen && (
+                                    <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl border border-slate-200 shadow-xl py-1.5 z-50 animate-in fade-in zoom-in duration-150">
+                                        <Link
+                                            href={`/projects/${project?.id}/invoice`}
+                                            className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                                        >
+                                            <FileText className="w-4 h-4 text-indigo-600" />
+                                            <span>Lihat Preview Invoice</span>
+                                        </Link>
+                                        <Link
+                                            href={`/projects/${project?.id}/invoice`}
+                                            className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                                        >
+                                            <Printer className="w-4 h-4 text-slate-600" />
+                                            <span>Cetak PDF</span>
+                                        </Link>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -1019,55 +1063,50 @@ export default function ProjectDetail({
                     <button
                         type="button"
                         onClick={() => setActiveTab('overview')}
-                        className={`py-3.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-                            activeTab === 'overview'
-                                ? 'border-[#3B46F1] text-[#3B46F1]'
-                                : 'border-transparent text-slate-500 hover:text-slate-800'
-                        }`}
+                        className={`py-3.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${activeTab === 'overview'
+                            ? 'border-[#3B46F1] text-[#3B46F1]'
+                            : 'border-transparent text-slate-500 hover:text-slate-800'
+                            }`}
                     >
                         Overview
                     </button>
                     <button
                         type="button"
                         onClick={() => setActiveTab('timeline')}
-                        className={`py-3.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-                            activeTab === 'timeline'
-                                ? 'border-[#3B46F1] text-[#3B46F1]'
-                                : 'border-transparent text-slate-500 hover:text-slate-800'
-                        }`}
+                        className={`py-3.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${activeTab === 'timeline'
+                            ? 'border-[#3B46F1] text-[#3B46F1]'
+                            : 'border-transparent text-slate-500 hover:text-slate-800'
+                            }`}
                     >
                         Timeline &amp; Workflow
                     </button>
                     <button
                         type="button"
                         onClick={() => setActiveTab('files')}
-                        className={`py-3.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-                            activeTab === 'files'
-                                ? 'border-[#3B46F1] text-[#3B46F1]'
-                                : 'border-transparent text-slate-500 hover:text-slate-800'
-                        }`}
+                        className={`py-3.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${activeTab === 'files'
+                            ? 'border-[#3B46F1] text-[#3B46F1]'
+                            : 'border-transparent text-slate-500 hover:text-slate-800'
+                            }`}
                     >
                         Files &amp; Google Drive
                     </button>
                     <button
                         type="button"
                         onClick={() => setActiveTab('catatan')}
-                        className={`py-3.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-                            activeTab === 'catatan'
-                                ? 'border-[#3B46F1] text-[#3B46F1]'
-                                : 'border-transparent text-slate-500 hover:text-slate-800'
-                        }`}
+                        className={`py-3.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${activeTab === 'catatan'
+                            ? 'border-[#3B46F1] text-[#3B46F1]'
+                            : 'border-transparent text-slate-500 hover:text-slate-800'
+                            }`}
                     >
                         Catatan &amp; Brief
                     </button>
                     <button
                         type="button"
                         onClick={() => setActiveTab('highlight')}
-                        className={`py-3.5 border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                            activeTab === 'highlight'
-                                ? 'border-[#3B46F1] text-[#3B46F1]'
-                                : 'border-transparent text-slate-500 hover:text-slate-800'
-                        }`}
+                        className={`py-3.5 border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${activeTab === 'highlight'
+                            ? 'border-[#3B46F1] text-[#3B46F1]'
+                            : 'border-transparent text-slate-500 hover:text-slate-800'
+                            }`}
                     >
                         <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                         <span>Highlight Project</span>
@@ -1078,11 +1117,10 @@ export default function ProjectDetail({
                     <button
                         type="button"
                         onClick={() => setActiveTab('slide')}
-                        className={`py-3.5 border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                            activeTab === 'slide'
-                                ? 'border-[#3B46F1] text-[#3B46F1]'
-                                : 'border-transparent text-slate-500 hover:text-slate-800'
-                        }`}
+                        className={`py-3.5 border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${activeTab === 'slide'
+                            ? 'border-[#3B46F1] text-[#3B46F1]'
+                            : 'border-transparent text-slate-500 hover:text-slate-800'
+                            }`}
                     >
                         <Layers className="w-3.5 h-3.5 text-indigo-500" />
                         <span>Slide Project</span>
@@ -1090,13 +1128,15 @@ export default function ProjectDetail({
                             {project?.promo_slides?.length || 0}
                         </span>
                     </button>
-                    <Link
-                        href={`/projects/${project?.id}/invoice`}
-                        className="py-3.5 border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1"
-                    >
-                        <span>Invoice</span>
-                        <ExternalLink className="w-3 h-3 opacity-60" />
-                    </Link>
+                    {canManageInvoices && (
+                        <Link
+                            href={`/projects/${project?.id}/invoice`}
+                            className="py-3.5 border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1"
+                        >
+                            <span>Invoice</span>
+                            <ExternalLink className="w-3 h-3 opacity-60" />
+                        </Link>
+                    )}
                 </div>
             </div>
 
@@ -1124,8 +1164,10 @@ export default function ProjectDetail({
                                 <span className="truncate flex-1 min-w-0" title={formattedReferral}>
                                     <strong className="font-semibold text-slate-600">Ref:</strong> {formattedReferral}
                                 </span>
-                                <span 
-                                    className="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md text-[10px] truncate max-w-[55%] shrink-0 border border-slate-200/60"
+                            </div>
+                            <div className="pt-2 mt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 gap-2 min-w-0">
+                                <span
+                                    className="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md text-[10px] truncate shrink-0 border border-slate-200/60"
                                     title={project?.category?.name || 'Umum'}
                                 >
                                     {project?.category?.name || 'Umum'}
@@ -1145,22 +1187,28 @@ export default function ProjectDetail({
                                             Status &amp; Riwayat
                                         </h3>
                                     </div>
-                                    <div className="relative">
-                                        <select
-                                            value={project?.status || 'draft'}
-                                            onChange={(e) => handleQuickStatusChange(e.target.value)}
-                                            className={`pl-2.5 pr-6 py-1 rounded-lg text-[10px] font-bold border cursor-pointer outline-hidden bg-white shadow-2xs hover:ring-2 hover:ring-indigo-200 transition-all appearance-none ${statusBadge.bg}`}
-                                            title="Klik untuk mengubah status project langsung ke database"
-                                        >
-                                            <option value="draft">DRAFT</option>
-                                            <option value="in_progress">DALAM PROSES</option>
-                                            <option value="editing">EDITING</option>
-                                            <option value="completed">SELESAI</option>
-                                            <option value="on_hold">DITUNDA</option>
-                                            <option value="cancelled">DIBATALKAN</option>
-                                        </select>
-                                        <ChevronDown className="w-3 h-3 text-slate-500 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                    </div>
+                                    {isSupervisor ? (
+                                        <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border ${statusBadge.bg}`}>
+                                            {statusBadge.label}
+                                        </span>
+                                    ) : (
+                                        <div className="relative">
+                                            <select
+                                                value={project?.status || 'draft'}
+                                                onChange={(e) => handleQuickStatusChange(e.target.value)}
+                                                className={`pl-2.5 pr-6 py-1 rounded-lg text-[10px] font-bold border cursor-pointer outline-hidden bg-white shadow-2xs hover:ring-2 hover:ring-indigo-200 transition-all appearance-none ${statusBadge.bg}`}
+                                                title="Klik untuk mengubah status project langsung ke database"
+                                            >
+                                                <option value="draft">DRAFT</option>
+                                                <option value="in_progress">DALAM PROSES</option>
+                                                <option value="editing">EDITING</option>
+                                                <option value="completed">SELESAI</option>
+                                                <option value="on_hold">DITUNDA</option>
+                                                <option value="cancelled">DIBATALKAN</option>
+                                            </select>
+                                            <ChevronDown className="w-3 h-3 text-slate-500 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="space-y-2 text-xs">
                                     <div className="flex justify-between items-center">
@@ -1216,12 +1264,12 @@ export default function ProjectDetail({
                                                     member.type === 'Photografer'
                                                         ? 'bg-amber-50 text-amber-700 border-amber-200'
                                                         : member.type === 'Videografer'
-                                                        ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                                        : member.type === 'Editor Foto'
-                                                        ? 'bg-purple-50 text-purple-700 border-purple-200'
-                                                        : member.type === 'Editor Video'
-                                                        ? 'bg-violet-50 text-violet-700 border-violet-200'
-                                                        : 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                                                            ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                                            : member.type === 'Editor Foto'
+                                                                ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                                                : member.type === 'Editor Video'
+                                                                    ? 'bg-violet-50 text-violet-700 border-violet-200'
+                                                                    : 'bg-emerald-50 text-emerald-700 border-emerald-200';
                                                 return (
                                                     <div key={idx} className="flex justify-between items-center gap-2 py-0.5">
                                                         <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-md border shrink-0 ${typeColor}`}>
@@ -1614,16 +1662,14 @@ export default function ProjectDetail({
                             </div>
 
                             {/* Checklist & Status Termin / Tagihan Terintegrasi Finance */}
-                            <div className={`p-2.5 rounded-xl border transition-all mt-auto ${
-                                !nextUnpaidInvoice || isDpPaid
-                                    ? 'bg-emerald-50/90 border-emerald-200 text-emerald-950'
-                                    : 'bg-amber-50/90 border-amber-200 text-amber-950'
-                            }`}>
+                            <div className={`p-2.5 rounded-xl border transition-all mt-auto ${!nextUnpaidInvoice || isDpPaid
+                                ? 'bg-emerald-50/90 border-emerald-200 text-emerald-950'
+                                : 'bg-amber-50/90 border-amber-200 text-amber-950'
+                                }`}>
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                                     <div className="flex items-center gap-2 min-w-0">
-                                        <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
-                                            !nextUnpaidInvoice ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
-                                        }`}>
+                                        <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${!nextUnpaidInvoice ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
+                                            }`}>
                                             {!nextUnpaidInvoice ? <Check className="w-3 h-3 stroke-[3]" /> : <Clock className="w-3 h-3" />}
                                         </div>
                                         <div className="min-w-0">
@@ -1639,23 +1685,25 @@ export default function ProjectDetail({
                                             </div>
                                         </div>
                                     </div>
-                                    {nextUnpaidInvoice ? (
-                                        <button
-                                            type="button"
-                                            onClick={() => openPaymentModal(nextUnpaidInvoice.remaining_amount, `Pembayaran ${nextUnpaidInvoice.notes || nextUnpaidInvoice.invoice_number}`, nextUnpaidInvoice.id)}
-                                            className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-bold rounded-lg shadow-2xs transition-all cursor-pointer flex items-center gap-1 shrink-0 whitespace-nowrap"
-                                            title="Konfirmasi Pembayaran Termin"
-                                        >
-                                            <CheckCircle2 className="w-3 h-3" />
-                                            <span>Konfirmasi Bayar</span>
-                                        </button>
-                                    ) : (
-                                        <Link
-                                            href={`/projects/${project.id}/invoice`}
-                                            className="text-[8.5px] font-bold uppercase px-1.5 py-0.5 rounded-md bg-emerald-100/80 text-emerald-800 border border-emerald-300/60 shrink-0 hover:bg-emerald-200"
-                                        >
-                                            LIHAT INVOICE
-                                        </Link>
+                                    {canManageInvoices && (
+                                        nextUnpaidInvoice ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => openPaymentModal(nextUnpaidInvoice.remaining_amount, `Pembayaran ${nextUnpaidInvoice.notes || nextUnpaidInvoice.invoice_number}`, nextUnpaidInvoice.id)}
+                                                className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-bold rounded-lg shadow-2xs transition-all cursor-pointer flex items-center gap-1 shrink-0 whitespace-nowrap"
+                                                title="Konfirmasi Pembayaran Termin"
+                                            >
+                                                <CheckCircle2 className="w-3 h-3" />
+                                                <span>Konfirmasi Bayar</span>
+                                            </button>
+                                        ) : (
+                                            <Link
+                                                href={`/projects/${project.id}/invoice`}
+                                                className="text-[8.5px] font-bold uppercase px-1.5 py-0.5 rounded-md bg-emerald-100/80 text-emerald-800 border border-emerald-300/60 shrink-0 hover:bg-emerald-200"
+                                            >
+                                                LIHAT INVOICE
+                                            </Link>
+                                        )
                                     )}
                                 </div>
                             </div>
@@ -1663,7 +1711,7 @@ export default function ProjectDetail({
                     </div>
 
                     {/* ── ROW 3: WORKFLOW & SERVICES (BALANCED 2-COLUMN DASHBOARD) ─── */}
-                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-stretch">
+                    <div className="grid grid-cols-1 gap-5 items-stretch">
                         {/* ── LEFT COLUMN (Span 6): Layanan & Deliverables + Riwayat Transaksi ─ */}
                         <div className="xl:col-span-6 flex flex-col gap-5 min-w-0">
                             {/* Card 1: Layanan & Deliverables Paket */}
@@ -1732,10 +1780,10 @@ export default function ProjectDetail({
                                                             item.type === 'Video'
                                                                 ? 'bg-cyan-50 text-cyan-700 border-cyan-200'
                                                                 : item.type === 'Album'
-                                                                ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                                                : item.type === 'Special'
-                                                                ? 'bg-purple-50 text-purple-700 border-purple-200'
-                                                                : 'bg-sky-50 text-sky-700 border-sky-200';
+                                                                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                                                    : item.type === 'Special'
+                                                                        ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                                                        : 'bg-sky-50 text-sky-700 border-sky-200';
 
                                                         return (
                                                             <div key={item.id} className="p-2.5 rounded-xl bg-slate-50/80 border border-slate-200/70 space-y-1.5 transition-all hover:bg-slate-50">
@@ -1773,7 +1821,7 @@ export default function ProjectDetail({
                             </div>
 
                             {/* Card 2: Termin Tagihan & Invoice Project */}
-                            {projectInvoices.length > 0 && (
+                            {canManageInvoices && projectInvoices.length > 0 && (
                                 <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all space-y-3">
                                     <div className="flex items-center justify-between gap-2 flex-wrap">
                                         <div className="flex items-center gap-2">
@@ -1881,14 +1929,16 @@ export default function ProjectDetail({
                                             <p className="text-[10px] text-slate-400">Catatan pembayaran yang tervalidasi</p>
                                         </div>
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => openPaymentModal()}
-                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[11px] font-bold transition-colors cursor-pointer"
-                                    >
-                                        <Plus className="w-3 h-3" />
-                                        <span>Catat Pembayaran</span>
-                                    </button>
+                                    {canManageInvoices && (
+                                        <button
+                                            type="button"
+                                            onClick={() => openPaymentModal()}
+                                            className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[11px] font-bold transition-colors cursor-pointer"
+                                        >
+                                            <Plus className="w-3 h-3" />
+                                            <span>Catat Pembayaran</span>
+                                        </button>
+                                    )}
                                 </div>
 
                                 <div className="overflow-x-auto">
@@ -2003,23 +2053,21 @@ export default function ProjectDetail({
                                         {timelineSteps.map((step) => (
                                             <div
                                                 key={step.id}
-                                                className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 ${
-                                                    step.done
-                                                        ? 'bg-emerald-50/40 border-emerald-100'
-                                                        : step.current
+                                                className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 ${step.done
+                                                    ? 'bg-emerald-50/40 border-emerald-100'
+                                                    : step.current
                                                         ? 'bg-indigo-50/60 border-indigo-200 ring-1 ring-indigo-200/80 shadow-2xs'
                                                         : 'bg-white border-slate-100'
-                                                }`}
+                                                    }`}
                                             >
                                                 <div className="flex items-center gap-3 min-w-0">
                                                     <div
-                                                        className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${
-                                                            step.done
-                                                                ? 'bg-emerald-600 text-white'
-                                                                : step.current
+                                                        className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${step.done
+                                                            ? 'bg-emerald-600 text-white'
+                                                            : step.current
                                                                 ? 'bg-[#3B46F1] text-white ring-2 ring-indigo-200'
                                                                 : 'bg-slate-100 text-slate-500'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {step.done ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : step.id}
                                                     </div>
@@ -2127,23 +2175,21 @@ export default function ProjectDetail({
                         {timelineSteps.map((step) => (
                             <div
                                 key={step.id}
-                                className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all ${
-                                    step.done
-                                        ? 'bg-emerald-50/40 border-emerald-200'
-                                        : step.current
+                                className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all ${step.done
+                                    ? 'bg-emerald-50/40 border-emerald-200'
+                                    : step.current
                                         ? 'bg-indigo-50/60 border-indigo-300 shadow-xs ring-1 ring-indigo-200'
                                         : 'bg-white border-slate-200/80'
-                                }`}
+                                    }`}
                             >
                                 <div className="flex items-center gap-3.5 min-w-0">
                                     <div
-                                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                                            step.done
-                                                ? 'bg-emerald-600 text-white'
-                                                : step.current
+                                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${step.done
+                                            ? 'bg-emerald-600 text-white'
+                                            : step.current
                                                 ? 'bg-[#3B46F1] text-white ring-2 ring-indigo-200'
                                                 : 'bg-slate-100 text-slate-400'
-                                        }`}
+                                            }`}
                                     >
                                         {step.done ? <Check className="w-4 h-4 stroke-[3]" /> : step.id}
                                     </div>
@@ -2386,20 +2432,18 @@ export default function ProjectDetail({
                                 {entries.map((note) => (
                                     <div
                                         key={note.id}
-                                        className={`rounded-2xl border p-4.5 sm:p-5 transition-all space-y-3 shadow-2xs hover:shadow-xs group/card ${
-                                            note.isInitial
-                                                ? 'bg-amber-50/50 border-amber-200/80'
-                                                : 'bg-white border-slate-200/90'
-                                        }`}
+                                        className={`rounded-2xl border p-4.5 sm:p-5 transition-all space-y-3 shadow-2xs hover:shadow-xs group/card ${note.isInitial
+                                            ? 'bg-amber-50/50 border-amber-200/80'
+                                            : 'bg-white border-slate-200/90'
+                                            }`}
                                     >
                                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100/90 pb-2.5">
                                             <div className="flex items-center gap-2.5 min-w-0">
                                                 <div
-                                                    className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
-                                                        note.isInitial
-                                                            ? 'bg-amber-100 text-amber-800'
-                                                            : 'bg-indigo-100 text-indigo-700'
-                                                    }`}
+                                                    className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${note.isInitial
+                                                        ? 'bg-amber-100 text-amber-800'
+                                                        : 'bg-indigo-100 text-indigo-700'
+                                                        }`}
                                                 >
                                                     {note.isInitial ? (
                                                         <StickyNote className="w-3.5 h-3.5" />
@@ -2641,14 +2685,14 @@ export default function ProjectDetail({
                         const activeSlide = slidesList.length > 0
                             ? slidesList[slidePreviewIndex % slidesList.length]
                             : {
-                                  title: `Eksklusif: ${project?.name || 'Dokumentasi Project'}`,
-                                  tag: 'EXCLUSIVE PROJECT',
-                                  description: 'Momen berharga dan karya visual eksklusif Anda telah siap. Klik tombol di bawah untuk meninjau dokumentasi lengkap.',
-                                  button_text: 'Lihat Detail Project',
-                                  button_url: `/client/projects/${project?.id || ''}`,
-                                  image: project?.thumbnail || '/images/wedding-couple.jpg',
-                                  is_active: true,
-                              };
+                                title: `Eksklusif: ${project?.name || 'Dokumentasi Project'}`,
+                                tag: 'EXCLUSIVE PROJECT',
+                                description: 'Momen berharga dan karya visual eksklusif Anda telah siap. Klik tombol di bawah untuk meninjau dokumentasi lengkap.',
+                                button_text: 'Lihat Detail Project',
+                                button_url: `/client/projects/${project?.id || ''}`,
+                                image: project?.thumbnail || '/images/wedding-couple.jpg',
+                                is_active: true,
+                            };
 
                         return (
                             <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-3">
@@ -2756,9 +2800,8 @@ export default function ProjectDetail({
                                 {project.promo_slides.map((slide: any, idx: number) => (
                                     <div
                                         key={slide.id}
-                                        className={`bg-white rounded-2xl border overflow-hidden shadow-2xs hover:shadow-md transition-all flex flex-col justify-between ${
-                                            slide.is_active ? 'border-slate-200/80' : 'border-slate-200 opacity-60'
-                                        }`}
+                                        className={`bg-white rounded-2xl border overflow-hidden shadow-2xs hover:shadow-md transition-all flex flex-col justify-between ${slide.is_active ? 'border-slate-200/80' : 'border-slate-200 opacity-60'
+                                            }`}
                                     >
                                         <div className="space-y-3">
                                             {/* Thumbnail & Badges */}
@@ -2776,11 +2819,10 @@ export default function ProjectDetail({
                                                 </div>
                                                 <div className="absolute top-2.5 right-2.5 flex items-center gap-1">
                                                     <span
-                                                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                                            slide.is_active
-                                                                ? 'bg-emerald-500 text-white'
-                                                                : 'bg-slate-500 text-white'
-                                                        }`}
+                                                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${slide.is_active
+                                                            ? 'bg-emerald-500 text-white'
+                                                            : 'bg-slate-500 text-white'
+                                                            }`}
                                                     >
                                                         {slide.is_active ? 'Aktif' : 'Nonaktif'}
                                                     </span>
@@ -2816,11 +2858,10 @@ export default function ProjectDetail({
                                                 <button
                                                     type="button"
                                                     onClick={() => handleToggleSlideActive(slide)}
-                                                    className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
-                                                        slide.is_active
-                                                            ? 'text-amber-700 bg-amber-50 hover:bg-amber-100'
-                                                            : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
-                                                    }`}
+                                                    className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${slide.is_active
+                                                        ? 'text-amber-700 bg-amber-50 hover:bg-amber-100'
+                                                        : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
+                                                        }`}
                                                 >
                                                     {slide.is_active ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                                                     <span>{slide.is_active ? 'Nonaktifkan' : 'Aktifkan'}</span>
@@ -3106,6 +3147,19 @@ export default function ProjectDetail({
                 confirmText={revertModal.isSubmitting ? 'Memproses...' : 'Ya, Kembalikan Status'}
                 variant="danger"
             />
+
+            {/* Modal Konfirmasi Hapus Project */}
+            {!isSupervisor && (
+                <AlertConfirmation
+                    isOpen={confirmDeleteProject}
+                    onClose={() => !isDeletingProject && setConfirmDeleteProject(false)}
+                    onConfirm={handleDeleteProject}
+                    title="Hapus Project?"
+                    description={`Apakah Anda yakin ingin menghapus project "${project?.name}"? Data project yang dihapus dapat dipulihkan dari tempat sampah.`}
+                    confirmText={isDeletingProject ? 'Menghapus...' : 'Ya, Hapus Project'}
+                    variant="danger"
+                />
+            )}
         </div>
     );
 }

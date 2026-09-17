@@ -1,4 +1,3 @@
-import React, { useState, useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import {
     LayoutDashboard,
@@ -15,11 +14,10 @@ import {
     Circle,
     Calendar,
     DollarSign,
-    Menu,
     X,
     HeartHandshake,
-    ExternalLink,
 } from 'lucide-react';
+import React, { useState } from 'react';
 
 interface AramsSidebarProps {
     isOpen?: boolean;
@@ -35,7 +33,6 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
         !currentPath.startsWith('/master-data/instagram-posts') &&
         !currentPath.startsWith('/master-data/portfolio-categories') &&
         !currentPath.startsWith('/master-data/portfolios');
-    const [masterDataOpen, setMasterDataOpen] = useState(isMasterData);
 
     const isSettingSection = currentPath.startsWith('/setting') ||
         currentPath.startsWith('/settings') ||
@@ -44,24 +41,26 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
         currentPath.startsWith('/master-data/instagram-posts') ||
         currentPath.startsWith('/master-data/portfolio-categories') ||
         currentPath.startsWith('/master-data/portfolios');
-    const [settingsOpen, setSettingsOpen] = useState(isSettingSection);
 
-    useEffect(() => {
-        if (isMasterData) {
-            setMasterDataOpen(true);
-        }
-    }, [currentPath, isMasterData]);
+    const [manualMasterDataOpen, setManualMasterDataOpen] = useState<boolean | null>(null);
+    const [manualSettingsOpen, setManualSettingsOpen] = useState<boolean | null>(null);
 
-    useEffect(() => {
-        if (isSettingSection) {
-            setSettingsOpen(true);
-        }
-    }, [currentPath, isSettingSection]);
+    const masterDataOpen = manualMasterDataOpen ?? isMasterData;
+    const settingsOpen = manualSettingsOpen ?? isSettingSection;
 
     const isCurrent = (path: string) => {
-        if (path === '/dashboard') return currentPath === '/dashboard' || currentPath === '/';
-        if (path === '/wedding-organizer') return currentPath.startsWith('/wedding-organizer') || currentPath.startsWith('/wedding-organizers') || currentPath.startsWith('/weeding-organizer');
-        if (path === '/client-sources') return currentPath.startsWith('/client-sources') || currentPath.startsWith('/sumber-klien');
+        if (path === '/dashboard') {
+return currentPath === '/dashboard' || currentPath === '/';
+}
+
+        if (path === '/wedding-organizer') {
+return currentPath.startsWith('/wedding-organizer') || currentPath.startsWith('/wedding-organizers') || currentPath.startsWith('/weeding-organizer');
+}
+
+        if (path === '/client-sources') {
+return currentPath.startsWith('/client-sources') || currentPath.startsWith('/sumber-klien');
+}
+
         return currentPath === path || currentPath.startsWith(path + '/');
     };
 
@@ -89,7 +88,7 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
     // Master Data     → Super Admin, Owner, Admin
     // Sumber Klien    → Super Admin, Owner, Admin
     // Users           → Super Admin, Owner, Admin
-    // Reports         → Super Admin, Owner, Admin, Supervisor
+    // Reports         → Super Admin, Owner, Admin (Supervisor dihide)
     // Files           → Super Admin, Owner, Admin, Supervisor, Photographer, Editor
     // Settings        → Super Admin, Owner, Admin
 
@@ -97,7 +96,7 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
     const canAccessFinance = isOwnerOrSuperAdmin;                      // Hanya Super Admin & Owner (Admin tidak)
     const canAccessMasterData = isOwnerOrAdmin;
     const canAccessUsers = isOwnerOrAdmin;                             // Admin sama seperti Super Admin
-    const canAccessReports = isOwnerOrAdmin || isSupervisor;           // Admin sama seperti Super Admin
+    const canAccessReports = isOwnerOrAdmin;                           // Super Admin, Owner, Admin (Supervisor tidak)
     const canAccessFiles = isOwnerOrAdmin || isSupervisor || isPhotographer || isEditor;
     const canAccessSettings = isOwnerOrAdmin;                          // Admin sama seperti Super Admin
     const canAccessSumberKlien = isOwnerOrAdmin;
@@ -132,18 +131,18 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
 
     const isAdminActive =
         (currentPath.startsWith('/setting/admin') ||
-        currentPath.startsWith('/settings/admin') ||
-        (currentPath.startsWith('/settings') && !isFormKlienActive && !isPortalKlienActive) ||
-        (currentPath === '/setting') ||
-        currentPath.startsWith('/master-data/promo-slides') ||
-        currentPath.startsWith('/master-data/testimonials') ||
-        currentPath.startsWith('/master-data/instagram-posts') ||
-        currentPath.startsWith('/master-data/portfolio-categories') ||
-        currentPath.startsWith('/master-data/portfolios')) && !isRecommendedPackagesActive;
+            currentPath.startsWith('/settings/admin') ||
+            (currentPath.startsWith('/settings') && !isFormKlienActive && !isPortalKlienActive) ||
+            (currentPath === '/setting') ||
+            currentPath.startsWith('/master-data/promo-slides') ||
+            currentPath.startsWith('/master-data/testimonials') ||
+            currentPath.startsWith('/master-data/instagram-posts') ||
+            currentPath.startsWith('/master-data/portfolio-categories') ||
+            currentPath.startsWith('/master-data/portfolios')) && !isRecommendedPackagesActive;
 
     const settingNav = [
         { name: 'Admin', href: '/setting/admin', active: isAdminActive },
-        { name: 'Rekomendasi Paket', href: '/setting/admin?sub=recommended_packages', active: isRecommendedPackagesActive },
+        // { name: 'Rekomendasi Paket', href: '/setting/admin?sub=recommended_packages', active: isRecommendedPackagesActive },
         { name: 'Form Klien', href: '/setting/form-klien', active: isFormKlienActive },
         { name: 'Portal Klien', href: '/setting/portal-klien', active: isPortalKlienActive },
     ];
@@ -164,14 +163,6 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
     const sidebarActiveBgGradient = pageProps?.appSettings?.sidebar_active_bg_gradient || '';
     const sidebarActiveText = pageProps?.appSettings?.sidebar_active_text || '#FFFFFF';
     const sidebarTextColor = pageProps?.appSettings?.sidebar_text_color || '#94A3B8';
-
-    const initials = companyName
-        .split(' ')
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((w: string) => w[0])
-        .join('')
-        .toUpperCase() || 'AP';
 
     return (
         <>
@@ -244,22 +235,26 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
                 <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1 scrollbar-thin scrollbar-thumb-slate-800">
                     {mainNav.map((item) => {
                         const active = isCurrent(item.href);
+
                         return (
                             <Link
                                 key={item.name}
                                 href={item.href}
                                 style={active ? {
-                                    background: sidebarActiveBgGradient || sidebarActiveBg,
-                                    color: sidebarActiveText,
-                                } : (sidebarTextColor ? { color: sidebarTextColor } : undefined)}
-                                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all group ${active
-                                    ? 'shadow-md shadow-black/20 text-white font-bold'
-                                    : 'hover:bg-white/10'
+                                    background: sidebarActiveBgGradient || (sidebarActiveBg ? `${sidebarActiveBg}cc` : 'rgba(255, 255, 255, 0.12)'),
+                                    color: sidebarActiveText || '#FFFFFF',
+                                } : (sidebarTextColor ? { color: sidebarTextColor } : { color: '#FDA4AF' })}
+                                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all group relative overflow-hidden ${active
+                                    ? 'shadow-md shadow-black/25 text-white font-bold border border-white/20 bg-white/10'
+                                    : 'hover:bg-white/10 hover:text-white'
                                     }`}
                             >
+                                {active && (
+                                    <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-[#F4EBE4] shadow-xs" />
+                                )}
                                 <item.icon
-                                    className="w-4 h-4 shrink-0"
-                                    style={{ color: active ? sidebarActiveText : (sidebarTextColor || undefined) }}
+                                    className="w-4 h-4 shrink-0 transition-transform group-hover:scale-105"
+                                    style={{ color: active ? (sidebarActiveText || '#FFFFFF') : (sidebarTextColor || '#FDA4AF') }}
                                 />
                                 <span className="flex-1">{item.name}</span>
                             </Link>
@@ -271,21 +266,21 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
                         <div className="pt-0.5">
                             <button
                                 type="button"
-                                onClick={() => setMasterDataOpen(!masterDataOpen)}
+                                onClick={() => setManualMasterDataOpen(!masterDataOpen)}
                                 style={!isMasterData && sidebarTextColor ? { color: sidebarTextColor } : undefined}
-                                className={`flex items-center justify-between w-full px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${isMasterData
-                                    ? 'text-white font-bold bg-white/5'
-                                    : 'hover:bg-white/10'
+                                className={`flex items-center justify-between w-full px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer group ${isMasterData
+                                    ? 'text-white font-bold bg-white/10 border border-white/15 shadow-xs'
+                                    : 'hover:bg-white/10 hover:text-white'
                                     }`}
                             >
                                 <div className="flex items-center gap-3">
                                     <Database
-                                        className="w-4 h-4 shrink-0"
-                                        style={{ color: isMasterData ? (sidebarActiveBg || '#F05322') : (sidebarTextColor || undefined) }}
+                                        className="w-4 h-4 shrink-0 transition-transform group-hover:scale-105"
+                                        style={{ color: isMasterData ? '#F4EBE4' : (sidebarTextColor || '#FDA4AF') }}
                                     />
                                     <span>Master Data</span>
                                 </div>
-                                <div style={{ color: sidebarTextColor || undefined }}>
+                                <div style={{ color: isMasterData ? '#F4EBE4' : (sidebarTextColor || '#FDA4AF') }}>
                                     {masterDataOpen ? (
                                         <ChevronDown className="w-3.5 h-3.5" />
                                     ) : (
@@ -296,25 +291,26 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
 
                             {/* Master Data Submenu */}
                             {masterDataOpen && (
-                                <div className="mt-1 ml-4 pl-3 border-l border-white/10 space-y-0.5 py-0.5 animate-in slide-in-from-top-1 duration-150">
+                                <div className="mt-1 ml-4 pl-3 border-l border-white/15 space-y-0.5 py-0.5 animate-in slide-in-from-top-1 duration-150">
                                     {masterDataNav.map((sub) => {
                                         const subActive = currentPath === sub.href || currentPath.startsWith(sub.href + '/');
+
                                         return (
                                             <Link
                                                 key={sub.name}
                                                 href={sub.href}
                                                 style={subActive ? {
-                                                    background: sidebarActiveBgGradient || sidebarActiveBg,
-                                                    color: sidebarActiveText,
-                                                } : (sidebarTextColor ? { color: sidebarTextColor } : undefined)}
+                                                    background: sidebarActiveBgGradient || (sidebarActiveBg ? `${sidebarActiveBg}cc` : 'rgba(255, 255, 255, 0.15)'),
+                                                    color: sidebarActiveText || '#FFFFFF',
+                                                } : (sidebarTextColor ? { color: sidebarTextColor } : { color: '#FDA4AF' })}
                                                 className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors ${subActive
-                                                    ? 'font-bold shadow-xs'
-                                                    : 'hover:bg-white/10 font-medium'
+                                                    ? 'font-bold shadow-xs border border-white/15 bg-white/15 text-white'
+                                                    : 'hover:bg-white/10 hover:text-white font-medium text-rose-200/80'
                                                     }`}
                                             >
                                                 <span>{sub.name}</span>
                                                 {subActive && (
-                                                    <Circle className="w-1.5 h-1.5 fill-current" />
+                                                    <Circle className="w-1.5 h-1.5 fill-current text-[#F4EBE4]" />
                                                 )}
                                             </Link>
                                         );
@@ -327,22 +323,26 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
                     {/* Secondary Navigation */}
                     {secondaryNav.map((item) => {
                         const active = isCurrent(item.href);
+
                         return (
                             <Link
                                 key={item.name}
                                 href={item.href}
                                 style={active ? {
-                                    background: sidebarActiveBgGradient || sidebarActiveBg,
-                                    color: sidebarActiveText,
-                                } : (sidebarTextColor ? { color: sidebarTextColor } : undefined)}
-                                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all group ${active
-                                    ? 'shadow-xs text-white'
-                                    : 'hover:bg-white/10'
+                                    background: sidebarActiveBgGradient || (sidebarActiveBg ? `${sidebarActiveBg}cc` : 'rgba(255, 255, 255, 0.12)'),
+                                    color: sidebarActiveText || '#FFFFFF',
+                                } : (sidebarTextColor ? { color: sidebarTextColor } : { color: '#FDA4AF' })}
+                                className={`flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all group relative overflow-hidden ${active
+                                    ? 'shadow-md shadow-black/25 text-white font-bold border border-white/20 bg-white/10'
+                                    : 'hover:bg-white/10 hover:text-white'
                                     }`}
                             >
+                                {active && (
+                                    <span className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-[#F4EBE4] shadow-xs" />
+                                )}
                                 <item.icon
-                                    className="w-4 h-4 shrink-0"
-                                    style={{ color: active ? sidebarActiveText : (sidebarTextColor || undefined) }}
+                                    className="w-4 h-4 shrink-0 transition-transform group-hover:scale-105"
+                                    style={{ color: active ? (sidebarActiveText || '#FFFFFF') : (sidebarTextColor || '#FDA4AF') }}
                                 />
                                 <span>{item.name}</span>
                             </Link>
@@ -354,21 +354,21 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
                         <div className="pt-0.5">
                             <button
                                 type="button"
-                                onClick={() => setSettingsOpen(!settingsOpen)}
+                                onClick={() => setManualSettingsOpen(!settingsOpen)}
                                 style={!isSettingSection && sidebarTextColor ? { color: sidebarTextColor } : undefined}
-                                className={`flex items-center justify-between w-full px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${isSettingSection
-                                    ? 'text-white font-bold bg-white/5'
-                                    : 'hover:bg-white/10'
+                                className={`flex items-center justify-between w-full px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer group ${isSettingSection
+                                    ? 'text-white font-bold bg-white/10 border border-white/15 shadow-xs'
+                                    : 'hover:bg-white/10 hover:text-white'
                                     }`}
                             >
                                 <div className="flex items-center gap-3">
                                     <Settings
-                                        className="w-4 h-4 shrink-0"
-                                        style={{ color: isSettingSection ? (sidebarActiveBg || '#F05322') : (sidebarTextColor || undefined) }}
+                                        className="w-4 h-4 shrink-0 transition-transform group-hover:scale-105"
+                                        style={{ color: isSettingSection ? '#F4EBE4' : (sidebarTextColor || '#FDA4AF') }}
                                     />
                                     <span>Setting</span>
                                 </div>
-                                <div style={{ color: sidebarTextColor || undefined }}>
+                                <div style={{ color: isSettingSection ? '#F4EBE4' : (sidebarTextColor || '#FDA4AF') }}>
                                     {settingsOpen ? (
                                         <ChevronDown className="w-3.5 h-3.5" />
                                     ) : (
@@ -379,24 +379,24 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
 
                             {/* Setting Submenu */}
                             {settingsOpen && (
-                                <div className="mt-1 ml-4 pl-3 border-l border-white/10 space-y-0.5 py-0.5 animate-in slide-in-from-top-1 duration-150">
+                                <div className="mt-1 ml-4 pl-3 border-l border-white/15 space-y-0.5 py-0.5 animate-in slide-in-from-top-1 duration-150">
                                     {settingNav.map((sub) => {
                                         return (
                                             <Link
                                                 key={sub.name}
                                                 href={sub.href}
                                                 style={sub.active ? {
-                                                    background: sidebarActiveBgGradient || sidebarActiveBg,
-                                                    color: sidebarActiveText,
-                                                } : (sidebarTextColor ? { color: sidebarTextColor } : undefined)}
+                                                    background: sidebarActiveBgGradient || (sidebarActiveBg ? `${sidebarActiveBg}cc` : 'rgba(255, 255, 255, 0.15)'),
+                                                    color: sidebarActiveText || '#FFFFFF',
+                                                } : (sidebarTextColor ? { color: sidebarTextColor } : { color: '#FDA4AF' })}
                                                 className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors ${sub.active
-                                                    ? 'font-bold shadow-xs'
-                                                    : 'hover:bg-white/10 font-medium'
+                                                    ? 'font-bold shadow-xs border border-white/15 bg-white/15 text-white'
+                                                    : 'hover:bg-white/10 hover:text-white font-medium text-rose-200/80'
                                                     }`}
                                             >
                                                 <span>{sub.name}</span>
                                                 {sub.active && (
-                                                    <Circle className="w-1.5 h-1.5 fill-current" />
+                                                    <Circle className="w-1.5 h-1.5 fill-current text-[#F4EBE4]" />
                                                 )}
                                             </Link>
                                         );

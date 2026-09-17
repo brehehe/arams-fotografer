@@ -355,7 +355,7 @@ export default function ClientIntakeForm({
                     setRegionProvinces(data);
                 }
             })
-            .catch(() => {}); // fallback stays as DEFAULT_INDONESIA_PROVINCES
+            .catch(() => { }); // fallback stays as DEFAULT_INDONESIA_PROVINCES
     }, []);
 
     // Fetch cities when province_code changes
@@ -369,7 +369,7 @@ export default function ClientIntakeForm({
                 .then((data) => {
                     if (Array.isArray(data)) setRegionCities(data);
                 })
-                .catch(() => {});
+                .catch(() => { });
         }
     }, [formData.province_code]);
 
@@ -383,7 +383,7 @@ export default function ClientIntakeForm({
                 .then((data) => {
                     if (Array.isArray(data)) setRegionDistricts(data);
                 })
-                .catch(() => {});
+                .catch(() => { });
         }
     }, [formData.city_code]);
 
@@ -396,7 +396,7 @@ export default function ClientIntakeForm({
                 .then((data) => {
                     if (Array.isArray(data)) setRegionVillages(data);
                 })
-                .catch(() => {});
+                .catch(() => { });
         }
     }, [formData.district_code]);
 
@@ -562,8 +562,8 @@ export default function ClientIntakeForm({
             const name = choice === 'mother'
                 ? (categoryData.mother_name || '-')
                 : choice === 'family'
-                ? (categoryData.family_name || '-')
-                : (categoryData.father_name || categoryData.family_name || '-');
+                    ? (categoryData.family_name || '-')
+                    : (categoryData.father_name || categoryData.family_name || '-');
             const role = choice === 'mother' ? 'Ibu' : choice === 'family' ? 'Keluarga' : 'Ayah';
             return {
                 name,
@@ -1425,25 +1425,23 @@ export default function ClientIntakeForm({
                                                         borderColor: isDone || isCurrent ? primaryColor : undefined,
                                                         boxShadow: isCurrent ? `0 0 0 5px ${primaryColor}25` : undefined,
                                                     }}
-                                                    className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all relative z-10 ${
-                                                        isDone
-                                                            ? 'text-white cursor-pointer hover:opacity-90 shadow-md'
-                                                            : isCurrent
+                                                    className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all relative z-10 ${isDone
+                                                        ? 'text-white cursor-pointer hover:opacity-90 shadow-md'
+                                                        : isCurrent
                                                             ? 'text-white shadow-md'
                                                             : 'bg-white border-2 border-slate-300 text-slate-400 cursor-not-allowed'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     {isDone ? <Check className="w-4 h-4 stroke-[3]" /> : s.number}
                                                 </button>
                                             </div>
                                             <span
-                                                className={`text-[11px] sm:text-xs max-w-[140px] line-clamp-2 leading-tight ${
-                                                    isCurrent
-                                                        ? 'font-bold'
-                                                        : isDone
+                                                className={`text-[11px] sm:text-xs max-w-[140px] line-clamp-2 leading-tight ${isCurrent
+                                                    ? 'font-bold'
+                                                    : isDone
                                                         ? 'text-slate-700 font-semibold'
                                                         : 'text-slate-400'
-                                                }`}
+                                                    }`}
                                                 style={isCurrent ? { color: primaryColor } : undefined}
                                             >
                                                 {s.title}
@@ -1481,8 +1479,8 @@ export default function ClientIntakeForm({
                                         {formType === 'wedding'
                                             ? 'Informasi Awal & Calon Pengantin (CPP/CPW)'
                                             : formType === 'newborn'
-                                            ? 'Informasi Awal & Data Bayi (Newborn)'
-                                            : 'Informasi Awal & Identitas Klien'}
+                                                ? 'Informasi Awal & Data Bayi (Newborn)'
+                                                : 'Informasi Awal & Identitas Klien'}
                                     </h2>
                                     <p className="text-xs text-slate-500 mt-1">
                                         Pilih kategori project terlebih dahulu, formulir akan otomatis menyesuaikan data yang diperlukan.
@@ -1905,7 +1903,7 @@ export default function ClientIntakeForm({
                                     </div>
 
                                     {/* Row 1: Kategori, Jenis Acara, Paket */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 gap-4">
                                         <div>
                                             <label className="block text-[11px] font-bold text-slate-700 mb-1">
                                                 Kategori Project
@@ -1960,8 +1958,8 @@ export default function ClientIntakeForm({
                                                         subtitle: p.description
                                                             ? p.description
                                                             : p.base_price
-                                                            ? `Rp ${Number(p.base_price).toLocaleString('id-ID')}`
-                                                            : undefined,
+                                                                ? `Rp ${Number(p.base_price).toLocaleString('id-ID')}`
+                                                                : undefined,
                                                     })),
                                                 ]}
                                                 value={formData.package_id}
@@ -2218,7 +2216,7 @@ export default function ClientIntakeForm({
                                     </span>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 gap-4">
                                     {/* Card 1: Informasi Khusus Kategori */}
                                     <div className="md:col-span-2 space-y-2">
                                         <div className="flex items-center justify-between pb-1">
@@ -2343,7 +2341,7 @@ export default function ClientIntakeForm({
                                             </button>
                                         </div>
 
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-[11px]">
+                                        <div className="grid grid-cols-1 gap-4 text-[11px]">
                                             <div className="space-y-2 p-3 rounded-xl bg-slate-50/70 border border-slate-100">
                                                 <div>
                                                     <span className="text-slate-400 block text-[10px]">Kategori Project</span>
@@ -2503,11 +2501,10 @@ export default function ClientIntakeForm({
                                             disabled={isSubmitting || form_status === 'closed'}
                                             onClick={form_status === 'closed' ? undefined : handleSubmit}
                                             style={form_status === 'closed' ? undefined : { backgroundColor: primaryColor }}
-                                            className={`px-6 py-2.5 rounded-xl text-white text-xs font-bold flex items-center gap-2 transition-all shadow-md disabled:cursor-not-allowed ${
-                                                form_status === 'closed'
-                                                    ? 'bg-slate-500 opacity-60 shadow-slate-500/20'
-                                                    : 'hover:opacity-90 cursor-pointer shadow-md disabled:opacity-50'
-                                            }`}
+                                            className={`px-6 py-2.5 rounded-xl text-white text-xs font-bold flex items-center gap-2 transition-all shadow-md disabled:cursor-not-allowed ${form_status === 'closed'
+                                                ? 'bg-slate-500 opacity-60 shadow-slate-500/20'
+                                                : 'hover:opacity-90 cursor-pointer shadow-md disabled:opacity-50'
+                                                }`}
                                         >
                                             {isSubmitting ? (
                                                 <>
@@ -2526,7 +2523,7 @@ export default function ClientIntakeForm({
                                                 </>
                                             )}
                                         </button>
-                                        {form_status === 'closed' ? (
+                                        {/* {form_status === 'closed' ? (
                                             <span className="text-[10px] text-amber-400 mt-1 font-semibold">
                                                 ⚠️ {intake_closed_message}
                                             </span>
@@ -2534,7 +2531,7 @@ export default function ClientIntakeForm({
                                             <span className="text-[10px] text-slate-400 mt-1">
                                                 Form akan dikirim ke tim kami untuk diproses.
                                             </span>
-                                        )}
+                                        )} */}
                                     </div>
                                 </>
                             ) : (

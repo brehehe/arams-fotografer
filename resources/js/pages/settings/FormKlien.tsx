@@ -229,17 +229,16 @@ export default function FormKlienPage({ settings = {}, settingsMap = {} }: FormK
                 <button
                     type="button"
                     onClick={() => setActiveTab('theme')}
-                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                        activeTab === 'theme'
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'theme'
                             ? 'bg-[#4F46E5] text-white shadow-xs'
                             : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-                    }`}
+                        }`}
                 >
                     <Palette className="w-3.5 h-3.5" />
                     <span>Kustomisasi Warna &amp; Tema Form</span>
                     <span className="w-2 h-2 rounded-full bg-emerald-400" />
                 </button>
-                <button
+                {/* <button
                     type="button"
                     onClick={() => setActiveTab('portal_colors')}
                     className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
@@ -250,15 +249,14 @@ export default function FormKlienPage({ settings = {}, settingsMap = {} }: FormK
                 >
                     <Globe className="w-3.5 h-3.5" />
                     <span>Warna Footer &amp; Portal Klien</span>
-                </button>
+                </button> */}
                 <button
                     type="button"
                     onClick={() => setActiveTab('content')}
-                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                        activeTab === 'content'
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${activeTab === 'content'
                             ? 'bg-[#4F46E5] text-white shadow-xs'
                             : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-                    }`}
+                        }`}
                 >
                     <FileText className="w-3.5 h-3.5" />
                     <span>Konten, Teks &amp; Status Form</span>
@@ -308,11 +306,10 @@ export default function FormKlienPage({ settings = {}, settingsMap = {} }: FormK
                                                 key={preset.id}
                                                 type="button"
                                                 onClick={() => applyPreset(preset)}
-                                                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                                                    isSelected
+                                                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${isSelected
                                                         ? 'border-[#4F46E5] ring-2 ring-indigo-100 bg-indigo-50/30'
                                                         : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50/60'
-                                                }`}
+                                                    }`}
                                             >
                                                 <div className="flex items-center justify-between gap-2 mb-2">
                                                     <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
@@ -774,11 +771,10 @@ export default function FormKlienPage({ settings = {}, settingsMap = {} }: FormK
                                     <h3 className="text-base font-bold text-slate-900">Konfigurasi Konten &amp; Status</h3>
                                     <p className="text-xs text-slate-500 mt-0.5">Sesuaikan judul, status penerimaan, nomor WhatsApp, dan pesan konfirmasi.</p>
                                 </div>
-                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                                    formKlien.intake_form_status === 'open'
+                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${formKlien.intake_form_status === 'open'
                                         ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                         : 'bg-rose-50 text-rose-700 border border-rose-200'
-                                }`}>
+                                    }`}>
                                     <span className={`w-2 h-2 rounded-full ${formKlien.intake_form_status === 'open' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
                                     {formKlien.intake_form_status === 'open' ? 'Menerima Booking' : 'Pendaftaran Ditutup'}
                                 </span>
@@ -791,11 +787,10 @@ export default function FormKlienPage({ settings = {}, settingsMap = {} }: FormK
                                     <button
                                         type="button"
                                         onClick={() => setFormKlien({ ...formKlien, intake_form_status: 'open' })}
-                                        className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                                            formKlien.intake_form_status === 'open'
+                                        className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${formKlien.intake_form_status === 'open'
                                                 ? 'bg-emerald-50 border-emerald-500 text-emerald-800 shadow-xs'
                                                 : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                                        }`}
+                                            }`}
                                     >
                                         <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                                         <span>Buka (Menerima Klien)</span>
@@ -803,11 +798,10 @@ export default function FormKlienPage({ settings = {}, settingsMap = {} }: FormK
                                     <button
                                         type="button"
                                         onClick={() => setFormKlien({ ...formKlien, intake_form_status: 'closed' })}
-                                        className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                                            formKlien.intake_form_status === 'closed'
+                                        className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${formKlien.intake_form_status === 'closed'
                                                 ? 'bg-rose-50 border-rose-500 text-rose-800 shadow-xs'
                                                 : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                                        }`}
+                                            }`}
                                     >
                                         <X className="w-4 h-4 text-rose-600" />
                                         <span>Tutup Sementara (Fully Booked)</span>

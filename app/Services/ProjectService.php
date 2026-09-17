@@ -909,6 +909,7 @@ class ProjectService
             'director_name' => \App\Models\Setting::get('invoice_director_name', \App\Models\Setting::get('company_director_name', 'Aditya Pratama')),
             'director_title' => \App\Models\Setting::get('invoice_director_title', 'Direktur Utama / Finance Studio'),
             'signature_city' => \App\Models\Setting::get('invoice_signature_city', \App\Models\Setting::get('company_city', 'Jakarta Selatan')),
+            'signature_image' => \App\Models\Setting::get('invoice_signature_image', \App\Models\Setting::get('company_signature', '')),
         ];
 
         return [

@@ -70,6 +70,8 @@ class HandleInertiaRequests extends Middleware
                 'invoice_director_name' => \App\Models\Setting::get('invoice_director_name', \App\Models\Setting::get('company_director_name', 'Aditya Pratama')),
                 'invoice_director_title' => \App\Models\Setting::get('invoice_director_title', 'Direktur Utama / Finance Studio'),
                 'invoice_signature_city' => \App\Models\Setting::get('invoice_signature_city', \App\Models\Setting::get('company_city', 'Jakarta Selatan')),
+                'invoice_signature_image' => \App\Models\Setting::get('invoice_signature_image', \App\Models\Setting::get('company_signature', '')),
+                'company_signature' => \App\Models\Setting::get('invoice_signature_image', \App\Models\Setting::get('company_signature', '')),
                 'theme_preset' => \App\Models\Setting::get('theme_preset', 'arams_maroon_luxury'),
                 'sidebar_bg_color' => \App\Models\Setting::get('sidebar_bg_color', '#3C0E0E'),
                 'sidebar_bg_gradient' => \App\Models\Setting::get('sidebar_bg_gradient', 'linear-gradient(180deg, #3C0E0E 0%, #2A0909 100%)'),

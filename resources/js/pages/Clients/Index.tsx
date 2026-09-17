@@ -412,7 +412,7 @@ export default function ClientsIndex({
         email: '',
         instagram: '',
         other_social_media: '',
-        phone: '',  
+        phone: '',
         secondary_phone: '',
         preferred_contact: 'WhatsApp',
         contact_person: '',
@@ -1818,8 +1818,8 @@ export default function ClientsIndex({
                                                             <span className={`text-[11px] font-semibold block mt-0.5 ${isPaidOff
                                                                 ? 'text-emerald-600'
                                                                 : paidVal > 0
-                                                                ? 'text-indigo-600'
-                                                                : 'text-amber-600'
+                                                                    ? 'text-indigo-600'
+                                                                    : 'text-amber-600'
                                                                 }`}>
                                                                 {isPaidOff ? 'Lunas' : paidVal > 0 ? 'Sebagian' : 'Belum Lunas'}
                                                             </span>
@@ -1876,8 +1876,8 @@ export default function ClientsIndex({
                                                             aria-checked={c.status !== 'blocked'}
                                                             onClick={() => setConfirmToggleBlock({ isOpen: true, client: c })}
                                                             className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-2 shrink-0 ${c.status === 'blocked'
-                                                                    ? 'bg-rose-100 hover:bg-rose-200 border border-rose-200 focus-visible:ring-rose-400'
-                                                                    : 'bg-emerald-500 hover:bg-emerald-600 border border-emerald-600 focus-visible:ring-emerald-500'
+                                                                ? 'bg-rose-100 hover:bg-rose-200 border border-rose-200 focus-visible:ring-rose-400'
+                                                                : 'bg-emerald-500 hover:bg-emerald-600 border border-emerald-600 focus-visible:ring-emerald-500'
                                                                 }`}
                                                             title={c.status === 'blocked' ? 'Status: Diblokir (Klik untuk Buka Blokir)' : 'Status: Aktif (Klik untuk Blokir)'}
                                                         >
@@ -2021,8 +2021,8 @@ export default function ClientsIndex({
                                                     aria-checked={c.status !== 'blocked'}
                                                     onClick={() => setConfirmToggleBlock({ isOpen: true, client: c })}
                                                     className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer shrink-0 ${c.status === 'blocked'
-                                                            ? 'bg-rose-100 border border-rose-200'
-                                                            : 'bg-emerald-500 border border-emerald-600'
+                                                        ? 'bg-rose-100 border border-rose-200'
+                                                        : 'bg-emerald-500 border border-emerald-600'
                                                         }`}
                                                     title={c.status === 'blocked' ? 'Buka Blokir' : 'Blokir'}
                                                 >
@@ -2133,8 +2133,7 @@ export default function ClientsIndex({
                     onClose={() => setCreateModalOpen(false)}
                     title="Tambah Client Baru"
                     subtitle="Lengkapi data profil, kontak, alamat, acara, dan preferensi klien sesuai formulir intake."
-                    maxWidth="4xl"
-                    className="max-h-[92vh]"
+                    fullPage
                     footer={
                         <div className="flex items-center justify-between w-full gap-3">
                             <button
@@ -2213,25 +2212,23 @@ export default function ClientsIndex({
                                                     type="button"
                                                     onClick={() => (isDone ? setCreateCurrentStep(s.number) : null)}
                                                     disabled={!isDone}
-                                                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all relative z-10 ${
-                                                        isDone
+                                                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all relative z-10 ${isDone
                                                             ? 'bg-[#C89445] text-white cursor-pointer hover:opacity-90 shadow-md'
                                                             : isCurrent
-                                                            ? 'bg-[#C89445] text-white ring-4 ring-[#C89445]/20 shadow-md font-extrabold'
-                                                            : 'bg-white border-2 border-slate-300 text-slate-400 cursor-not-allowed'
-                                                    }`}
+                                                                ? 'bg-[#C89445] text-white ring-4 ring-[#C89445]/20 shadow-md font-extrabold'
+                                                                : 'bg-white border-2 border-slate-300 text-slate-400 cursor-not-allowed'
+                                                        }`}
                                                 >
                                                     {isDone ? <Check className="w-4 h-4 stroke-[3]" /> : s.number}
                                                 </button>
                                             </div>
                                             <span
-                                                className={`text-[11px] sm:text-xs max-w-[130px] line-clamp-2 leading-tight ${
-                                                    isCurrent
+                                                className={`text-[11px] sm:text-xs max-w-[130px] line-clamp-2 leading-tight ${isCurrent
                                                         ? 'font-bold text-[#C89445]'
                                                         : isDone
-                                                        ? 'text-slate-700 font-semibold'
-                                                        : 'text-slate-400'
-                                                }`}
+                                                            ? 'text-slate-700 font-semibold'
+                                                            : 'text-slate-400'
+                                                    }`}
                                             >
                                                 {s.title}
                                             </span>
@@ -2283,8 +2280,8 @@ export default function ClientsIndex({
                                         {activeCategoryKey === 'wedding'
                                             ? 'Informasi Awal & Calon Pengantin (CPP/CPW)'
                                             : activeCategoryKey === 'newborn'
-                                            ? 'Informasi Awal & Data Bayi (Newborn)'
-                                            : 'Informasi Awal & Identitas Klien'}
+                                                ? 'Informasi Awal & Data Bayi (Newborn)'
+                                                : 'Informasi Awal & Identitas Klien'}
                                     </h3>
                                     <p className="text-xs text-slate-500 mt-0.5">
                                         Pilih kategori project terlebih dahulu, formulir akan otomatis menyesuaikan data yang diperlukan.
@@ -2670,7 +2667,7 @@ export default function ClientsIndex({
                                         </h4>
                                     </div>
 
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                                    <div className="grid grid-cols-1 gap-3.5">
                                         <div>
                                             <label className="block text-[11px] font-bold text-slate-700 mb-1">
                                                 Kategori Project
@@ -2725,8 +2722,8 @@ export default function ClientsIndex({
                                                         subtitle: p.description
                                                             ? p.description
                                                             : p.base_price
-                                                            ? `Rp ${Number(p.base_price).toLocaleString('id-ID')}`
-                                                            : undefined,
+                                                                ? `Rp ${Number(p.base_price).toLocaleString('id-ID')}`
+                                                                : undefined,
                                                     })),
                                                 ]}
                                                 value={formData.package_id}
@@ -2980,11 +2977,10 @@ export default function ClientsIndex({
                                                             key={tag}
                                                             type="button"
                                                             onClick={() => toggleTag(tag)}
-                                                            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                                                                isSelected
+                                                            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${isSelected
                                                                     ? 'bg-amber-100 text-amber-800 border border-amber-300'
                                                                     : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
-                                                            }`}
+                                                                }`}
                                                         >
                                                             #{tag}
                                                         </button>

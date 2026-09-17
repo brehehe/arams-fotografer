@@ -22,10 +22,24 @@ class NotificationController extends Controller
         $now = Carbon::now();
         $notifications = [];
 
-        // Check if the request is from client context or authenticated client
-        $isClientContext = ($request->query('portal') === 'client')
-            || str_contains($request->header('referer', ''), '/client')
-            || ($user && ($user->hasRole('Client') || $user->hasRole('client') || !empty($user->client_id)));
+        // Check whether the request is from client context or admin context
+        $portal = $request->query('portal');
+        $referer = (string) $request->header('referer', '');
+        // Match client portal paths (/client/... or /portal/...), strictly excluding admin paths (/clients)
+        $isClientPortalReferer = (bool) (preg_match('~/(client|portal)(/|\?|#|$)~i', $referer) && !preg_match('~/clients(/|\?|#|$)~i', $referer));
+
+        $isClientContext = false;
+        if ($portal === 'admin') {
+            $isClientContext = false;
+        } elseif ($portal === 'client') {
+            $isClientContext = true;
+        } elseif ($isClientPortalReferer) {
+            $isClientContext = true;
+        } elseif ($user && ($user->hasRole('Client') || $user->hasRole('client')) && !$user->hasAnyRole(['Super Admin', 'Owner', 'Admin', 'Supervisor', 'Photographer', 'Editor'])) {
+            $isClientContext = true;
+        } else {
+            $isClientContext = false;
+        }
 
         if ($isClientContext) {
             // ── CLIENT NOTIFICATIONS (STRICTLY CLIENT-ONLY) ───────────────────
@@ -100,7 +114,9 @@ class NotificationController extends Controller
                     ->get();
 
                 foreach ($expiringClientFiles as $file) {
-                    $daysLeft = $file->expires_at ? max(0, $now->diffInDays($file->expires_at, false)) : 0;
+                    $targetDate = Carbon::parse($file->expires_at)->startOfDay();
+                    $today = $now->copy()->startOfDay();
+                    $daysLeft = max(0, (int) $today->diffInDays($targetDate, false));
                     $targetUrl = "/client/projects/{$file->project_id}#files";
                     $notifications[] = [
                         'id' => "client_file_expiring_{$file->id}",
@@ -127,8 +143,10 @@ class NotificationController extends Controller
                     });
 
                 foreach ($upcomingShoots as $proj) {
-                    $diffDays = $now->diffInDays($proj->event_date, false);
-                    $dayLabel = $diffDays == 0 ? 'Hari Ini' : ($diffDays == 1 ? 'Besok' : "H-{$diffDays}");
+                    $targetDate = Carbon::parse($proj->event_date)->startOfDay();
+                    $today = $now->copy()->startOfDay();
+                    $diffDays = (int) $today->diffInDays($targetDate, false);
+                    $dayLabel = $diffDays <= 0 ? 'Hari Ini' : ($diffDays == 1 ? 'Besok' : "H-{$diffDays}");
                     $targetUrl = "/client/projects/{$proj->id}";
                     $notifications[] = [
                         'id' => "client_shoot_{$proj->id}",
@@ -211,6 +229,7 @@ class NotificationController extends Controller
             }
         } else {
             // ── ADMIN & STUDIO STAFF NOTIFICATIONS ──────────────────────────────
+            // Semua notifikasi project diarahkan ke detail project admin (/projects/{id})
             // 1. Files Expired (Hidden from client portal)
             $expiredFiles = FileLink::with('project')
                 ->expired()
@@ -219,7 +238,7 @@ class NotificationController extends Controller
                 ->get();
 
             foreach ($expiredFiles as $file) {
-                $targetUrl = $file->project_id ? "/projects/{$file->project_id}" : "/files";
+                $targetUrl = $file->project_id ? "/projects/{$file->project_id}" : "/dashboard";
                 $notifications[] = [
                     'id' => "file_expired_{$file->id}",
                     'type' => 'file_expired',
@@ -245,8 +264,10 @@ class NotificationController extends Controller
                 ->get();
 
             foreach ($expiringFiles as $file) {
-                $daysLeft = $file->expires_at ? max(0, $now->diffInDays($file->expires_at, false)) : 0;
-                $targetUrl = $file->project_id ? "/projects/{$file->project_id}" : "/files";
+                $targetDate = Carbon::parse($file->expires_at)->startOfDay();
+                $today = $now->copy()->startOfDay();
+                $daysLeft = max(0, (int) $today->diffInDays($targetDate, false));
+                $targetUrl = $file->project_id ? "/projects/{$file->project_id}" : "/dashboard";
                 $notifications[] = [
                     'id' => "file_expiring_{$file->id}",
                     'type' => 'file_expiring',
@@ -275,8 +296,10 @@ class NotificationController extends Controller
                 ->get();
 
             foreach ($upcomingShoots as $proj) {
-                $diffDays = $now->diffInDays($proj->event_date, false);
-                $dayLabel = $diffDays == 0 ? 'Hari Ini' : ($diffDays == 1 ? 'Besok' : "H-{$diffDays}");
+                $targetDate = Carbon::parse($proj->event_date)->startOfDay();
+                $today = $now->copy()->startOfDay();
+                $diffDays = (int) $today->diffInDays($targetDate, false);
+                $dayLabel = $diffDays <= 0 ? 'Hari Ini' : ($diffDays == 1 ? 'Besok' : "H-{$diffDays}");
                 $targetUrl = "/projects/{$proj->id}";
                 $notifications[] = [
                     'id' => "event_upcoming_{$proj->id}",
@@ -305,10 +328,12 @@ class NotificationController extends Controller
                 ->get();
 
             foreach ($upcomingSchedules as $sched) {
-                $diffDays = $now->diffInDays(Carbon::parse($sched->date), false);
-                $dayLabel = $diffDays == 0 ? 'Hari Ini' : ($diffDays == 1 ? 'Besok' : "H-{$diffDays}");
+                $targetDate = Carbon::parse($sched->date)->startOfDay();
+                $today = $now->copy()->startOfDay();
+                $diffDays = (int) $today->diffInDays($targetDate, false);
+                $dayLabel = $diffDays <= 0 ? 'Hari Ini' : ($diffDays == 1 ? 'Besok' : "H-{$diffDays}");
                 $timeStr = $sched->start_time ? " (" . substr($sched->start_time, 0, 5) . ")" : '';
-                $targetUrl = "/calendar";
+                $targetUrl = $sched->project_id ? "/projects/{$sched->project_id}" : "/dashboard";
                 $notifications[] = [
                     'id' => "schedule_upcoming_{$sched->id}",
                     'type' => 'upcoming_schedule',
@@ -336,8 +361,10 @@ class NotificationController extends Controller
                 ->get();
 
             foreach ($upcomingDeadlines as $dl) {
-                $diffDays = $now->diffInDays($dl->deadline, false);
-                $dayLabel = $diffDays == 0 ? 'Hari Ini' : ($diffDays == 1 ? 'Besok' : "H-{$diffDays}");
+                $targetDate = Carbon::parse($dl->deadline)->startOfDay();
+                $today = $now->copy()->startOfDay();
+                $diffDays = (int) $today->diffInDays($targetDate, false);
+                $dayLabel = $diffDays <= 0 ? 'Hari Ini' : ($diffDays == 1 ? 'Besok' : "H-{$diffDays}");
                 $targetUrl = "/projects/{$dl->id}";
                 $notifications[] = [
                     'id' => "deadline_upcoming_{$dl->id}",
@@ -366,7 +393,7 @@ class NotificationController extends Controller
 
             foreach ($pendingInvoices as $inv) {
                 $isOverdue = $inv->due_date && $inv->due_date->isPast();
-                $targetUrl = $inv->project_id ? "/projects/{$inv->project_id}" : "/finance";
+                $targetUrl = $inv->project_id ? "/projects/{$inv->project_id}" : "/dashboard";
                 $notifications[] = [
                     'id' => "invoice_pending_{$inv->id}",
                     'type' => 'invoice_pending',

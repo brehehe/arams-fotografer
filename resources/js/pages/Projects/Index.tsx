@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     Briefcase,
     Calendar,
@@ -134,6 +134,11 @@ export default function ProjectsIndex({
     recent_activities = [],
     stats = { total: 24, draft: 0, berlangsung: 12, selesai: 8, menunggu: 2, dibatalkan: 2, avg_progress: 58 },
 }: ProjectsIndexProps) {
+    const { auth } = usePage().props as any;
+    const user = auth?.user;
+    const userRoles: string[] = user?.roles ?? [];
+    const isSupervisor = Boolean(user?.is_supervisor || userRoles.includes('Supervisor'));
+
     const activeTab = filters?.tab || 'all';
     const [search, setSearch] = useState(filters?.search || '');
     const [selectedCategory, setSelectedCategory] = useState(filters?.category_id || 'all');
@@ -207,6 +212,7 @@ export default function ProjectsIndex({
 
     const handleCreateProject = (e: React.FormEvent) => {
         e.preventDefault();
+        if (isSupervisor) return;
         router.post('/projects', formData, {
             onSuccess: () => {
                 setCreateModalOpen(false);
@@ -228,7 +234,7 @@ export default function ProjectsIndex({
     };
 
     const handleDeleteProject = () => {
-        if (!confirmDelete.id) return;
+        if (isSupervisor || !confirmDelete.id) return;
         router.delete(`/projects/${confirmDelete.id}`, {
             onSuccess: () => {
                 setConfirmDelete({ isOpen: false });
@@ -398,22 +404,26 @@ export default function ProjectsIndex({
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2.5">
-                    <Link
-                        href="/projects/create"
-                        className="btn-primary-action inline-flex items-center gap-2 px-4 py-2 text-white rounded-xl text-xs font-bold shadow-sm shadow-black/10 transition-all cursor-pointer"
-                    >
-                        <Plus className="w-4 h-4 text-white stroke-[2.5]" />
-                        <span>Buat Project Baru</span>
-                    </Link>
+                    {!isSupervisor && (
+                        <>
+                            <Link
+                                href="/projects/create"
+                                className="btn-primary-action inline-flex items-center gap-2 px-4 py-2 text-white rounded-xl text-xs font-bold shadow-sm shadow-black/10 transition-all cursor-pointer"
+                            >
+                                <Plus className="w-4 h-4 text-white stroke-[2.5]" />
+                                <span>Buat Project Baru</span>
+                            </Link>
 
-                    <button
-                        type="button"
-                        onClick={() => setImportModalOpen(true)}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 rounded-xl text-xs font-semibold shadow-2xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    >
-                        <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Import Excel</span>
-                    </button>
+                            <button
+                                type="button"
+                                onClick={() => setImportModalOpen(true)}
+                                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 rounded-xl text-xs font-semibold shadow-2xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            >
+                                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Import Excel</span>
+                            </button>
+                        </>
+                    )}
 
                     <button
                         type="button"
@@ -797,37 +807,43 @@ export default function ProjectsIndex({
                                                                         <span>Lihat Detail</span>
                                                                     </Link>
                                                                 </DropdownMenuItem>
-                                                                <DropdownMenuItem asChild>
-                                                                    <Link
-                                                                        href={`/projects/${p.id}/invoice`}
-                                                                        className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-[#3B46F1] hover:bg-indigo-50 font-medium rounded-lg cursor-pointer"
-                                                                    >
-                                                                        <FileText className="w-3.5 h-3.5 text-[#3B46F1]" />
-                                                                        <span>Lihat Invoice</span>
-                                                                    </Link>
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem asChild>
-                                                                    <Link
-                                                                        href={`/projects/${p.id}/edit`}
-                                                                        className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50 font-medium rounded-lg cursor-pointer"
-                                                                    >
-                                                                        <Edit3 className="w-3.5 h-3.5 text-slate-400" />
-                                                                        <span>Edit Project</span>
-                                                                    </Link>
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem
-                                                                    onClick={() => {
-                                                                        setConfirmDelete({
-                                                                            isOpen: true,
-                                                                            id: p.id,
-                                                                            name: p.name,
-                                                                        });
-                                                                    }}
-                                                                    className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-rose-600 hover:bg-rose-50 font-medium rounded-lg cursor-pointer focus:bg-rose-50 focus:text-rose-600"
-                                                                >
-                                                                    <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                                                                    <span>Hapus</span>
-                                                                </DropdownMenuItem>
+                                                                {!isSupervisor && (
+                                                                    <DropdownMenuItem asChild>
+                                                                        <Link
+                                                                            href={`/projects/${p.id}/invoice`}
+                                                                            className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-[#3B46F1] hover:bg-indigo-50 font-medium rounded-lg cursor-pointer"
+                                                                        >
+                                                                            <FileText className="w-3.5 h-3.5 text-[#3B46F1]" />
+                                                                            <span>Lihat Invoice</span>
+                                                                        </Link>
+                                                                    </DropdownMenuItem>
+                                                                )}
+                                                                {!isSupervisor && (
+                                                                    <>
+                                                                        <DropdownMenuItem asChild>
+                                                                            <Link
+                                                                                href={`/projects/${p.id}/edit`}
+                                                                                className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-50 font-medium rounded-lg cursor-pointer"
+                                                                            >
+                                                                                <Edit3 className="w-3.5 h-3.5 text-slate-400" />
+                                                                                <span>Edit Project</span>
+                                                                            </Link>
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuItem
+                                                                            onClick={() => {
+                                                                                setConfirmDelete({
+                                                                                    isOpen: true,
+                                                                                    id: p.id,
+                                                                                    name: p.name,
+                                                                                });
+                                                                            }}
+                                                                            className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-rose-600 hover:bg-rose-50 font-medium rounded-lg cursor-pointer focus:bg-rose-50 focus:text-rose-600"
+                                                                        >
+                                                                            <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                                                                            <span>Hapus</span>
+                                                                        </DropdownMenuItem>
+                                                                    </>
+                                                                )}
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
                                                     </td>
@@ -1139,7 +1155,7 @@ export default function ProjectsIndex({
             </div>
 
             {/* ── MODAL: BUAT PROJECT BARU ────────────────────────────────────────── */}
-            {createModalOpen && (
+            {!isSupervisor && createModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
                     <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-150">
                         <div className="flex items-center justify-between pb-4 border-b border-slate-100">
@@ -1336,12 +1352,14 @@ export default function ProjectsIndex({
                 onClose={() => setConfirmDelete({ isOpen: false })}
             />
 
-            <ImportSpreadsheetModal
-                kind="projects"
-                isOpen={importModalOpen}
-                onClose={() => setImportModalOpen(false)}
-                categories={categories}
-            />
+            {!isSupervisor && (
+                <ImportSpreadsheetModal
+                    kind="projects"
+                    isOpen={importModalOpen}
+                    onClose={() => setImportModalOpen(false)}
+                    categories={categories}
+                />
+            )}
         </div>
     );
 }

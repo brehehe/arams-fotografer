@@ -18,7 +18,7 @@ import {
     Package,
 } from 'lucide-react';
 import React, { useState, useEffect, useMemo } from 'react';
-import { formatDate, formatRupiah } from '@/lib/formatters';
+import { formatDate } from '@/lib/formatters';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface CalendarItem {
@@ -52,6 +52,7 @@ interface ProjectOption {
     id: string | number;
     name: string;
     project_number?: string;
+    client_id?: string | number;
     client_name?: string;
     location?: string;
 }
@@ -157,10 +158,14 @@ export default function CalendarIndex({
         if (typeof window !== 'undefined') {
             const params = new URLSearchParams(window.location.search);
             const action = params.get('action');
+
             if (action === 'create' || action === 'add') {
-                setAddModalOpen(true);
                 const newUrl = window.location.pathname;
+
                 window.history.replaceState({}, '', newUrl);
+                requestAnimationFrame(() => {
+                    setAddModalOpen(true);
+                });
             }
         }
     }, []);
@@ -381,6 +386,7 @@ export default function CalendarIndex({
             title: addForm.title,
             type: addForm.type.toLowerCase(),
             project_id: addForm.project_id || undefined,
+            client_id: addForm.client_id || undefined,
             date: addForm.start_date,
             start_time: addForm.start_time,
             end_time: addForm.end_time,
@@ -1319,11 +1325,21 @@ export default function CalendarIndex({
                                         <label className="block font-bold text-slate-700 mb-1">Client / Klien</label>
                                         <select
                                             value={addForm.client_id}
-                                            onChange={(e) => setAddForm({ ...addForm, client_id: e.target.value })}
+                                            onChange={(e) => {
+                                                const selectedClientId = e.target.value;
+                                                const matchingProjects = selectedClientId
+                                                    ? projects_list.filter((p) => String(p.client_id) === String(selectedClientId))
+                                                    : [];
+                                                setAddForm({
+                                                    ...addForm,
+                                                    client_id: selectedClientId,
+                                                    project_id: matchingProjects.length === 1 ? String(matchingProjects[0].id) : '',
+                                                });
+                                            }}
                                             className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
                                         >
                                             <option value="">Pilih klien (opsional)</option>
-                                            {clients_list.map(c => (
+                                            {clients_list.map((c) => (
                                                 <option key={c.id} value={c.id}>{c.name}</option>
                                             ))}
                                         </select>
@@ -1332,12 +1348,26 @@ export default function CalendarIndex({
                                         <label className="block font-bold text-slate-700 mb-1">Project / Order</label>
                                         <select
                                             value={addForm.project_id}
-                                            onChange={(e) => setAddForm({ ...addForm, project_id: e.target.value })}
+                                            onChange={(e) => {
+                                                const selectedProjId = e.target.value;
+                                                const proj = projects_list.find((p) => String(p.id) === String(selectedProjId));
+                                                setAddForm({
+                                                    ...addForm,
+                                                    project_id: selectedProjId,
+                                                    client_id: proj?.client_id ? String(proj.client_id) : addForm.client_id,
+                                                    location: addForm.location || proj?.location || '',
+                                                });
+                                            }}
                                             className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
                                         >
                                             <option value="">Pilih project (opsional)</option>
-                                            {projects_list.map(p => (
-                                                <option key={p.id} value={p.id}>{p.name}</option>
+                                            {(addForm.client_id
+                                                ? projects_list.filter((p) => String(p.client_id) === String(addForm.client_id))
+                                                : projects_list
+                                            ).map((p) => (
+                                                <option key={p.id} value={p.id}>
+                                                    {p.name} {p.client_name && !addForm.client_id ? `(${p.client_name})` : ''}
+                                                </option>
                                             ))}
                                         </select>
                                     </div>

@@ -36,7 +36,11 @@ class CalendarController extends Controller
             'notes'      => 'nullable|string',
         ]);
 
-        $projectId = $validated['project_id'] ?? \App\Models\Project::first()?->id;
+        $projectId = !empty($validated['project_id']) ? $validated['project_id'] : null;
+
+        if (!$projectId && $request->filled('client_id')) {
+            $projectId = \App\Models\Project::where('client_id', $request->input('client_id'))->latest()->first()?->id;
+        }
 
         ProjectSchedule::create([
             'project_id' => $projectId,

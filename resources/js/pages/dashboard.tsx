@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     Folder,
     TrendingUp,
@@ -160,6 +160,118 @@ export default function Dashboard({
     const activeCategoryPeriod = filters?.category_period || 'all_time';
     const activePerformancePeriod = filters?.performance_period || 'all_time';
     const availableYears = filters?.available_years || [2024, 2025, 2026, 2027];
+
+    const { auth } = usePage<{
+        auth?: {
+            user?: {
+                id?: string | number;
+                roles?: string[];
+                is_admin?: boolean;
+                is_supervisor?: boolean;
+                is_photographer?: boolean;
+                is_editor?: boolean;
+                [key: string]: unknown;
+            };
+        };
+    }>().props;
+
+    const user = auth?.user;
+    const userRoles: string[] = user?.roles ?? [];
+    const isSuperAdmin = userRoles.includes('Super Admin');
+    const isOwner = userRoles.includes('Owner');
+    const isAdmin = userRoles.includes('Admin');
+    const isSupervisor = Boolean(user?.is_supervisor || userRoles.includes('Supervisor'));
+    const isPhotographer = Boolean(user?.is_photographer || userRoles.includes('Photographer'));
+    const isEditor = Boolean(user?.is_editor || userRoles.includes('Editor'));
+
+    const isOwnerOrAdmin = isSuperAdmin || isOwner || isAdmin;
+    const canAccessReports = isOwnerOrAdmin;
+    const canAccessFinance = isSuperAdmin || isOwner;
+    // Financial summary is visible to Super Admin, Owner, and Admin, but NOT to Supervisor, Photographer, or Editor
+    const showFinancialSummary = !isSupervisor && (isOwnerOrAdmin || (!isPhotographer && !isEditor));
+
+    const quickActions = [
+        {
+            title: '+ Tambah Klien',
+            subtitle: 'Wizard tambah klien baru',
+            href: '/clients?action=create',
+            icon: UserPlus,
+            colorClass: 'bg-orange-50 text-orange-500',
+            hoverClass: 'hover:bg-orange-50/50 hover:border-orange-200',
+            textHoverClass: 'group-hover:text-orange-600',
+            show: isOwnerOrAdmin,
+        },
+        {
+            title: '+ Buat Project',
+            subtitle: 'Formulir project baru',
+            href: '/projects/create',
+            icon: FolderPlus,
+            colorClass: 'bg-blue-50 text-blue-600',
+            hoverClass: 'hover:bg-blue-50/50 hover:border-blue-200',
+            textHoverClass: 'group-hover:text-blue-600',
+            show: isOwnerOrAdmin,
+        },
+        {
+            title: '+ Catat Kas / Biaya',
+            subtitle: 'Pengeluaran & kas masuk',
+            href: '/finance?action=transaction',
+            icon: CreditCard,
+            colorClass: 'bg-emerald-50 text-emerald-600',
+            hoverClass: 'hover:bg-emerald-50/50 hover:border-emerald-200',
+            textHoverClass: 'group-hover:text-emerald-600',
+            show: canAccessFinance,
+        },
+        {
+            title: '+ Jadwal & Sesi',
+            subtitle: 'Booking agenda photoshoot',
+            href: '/calendar?action=create',
+            icon: Calendar,
+            colorClass: 'bg-rose-50 text-rose-500',
+            hoverClass: 'hover:bg-rose-50/50 hover:border-rose-200',
+            textHoverClass: 'group-hover:text-rose-600',
+            show: true,
+        },
+        {
+            title: '+ Tambah Paket',
+            subtitle: 'Layanan & harga baru',
+            href: '/master-data/packages?action=create',
+            icon: Database,
+            colorClass: 'bg-indigo-50 text-indigo-600',
+            hoverClass: 'hover:bg-indigo-50/50 hover:border-indigo-200',
+            textHoverClass: 'group-hover:text-indigo-600',
+            show: isOwnerOrAdmin,
+        },
+        {
+            title: 'Form Booking',
+            subtitle: 'Formulir online klien',
+            href: '/form-klien',
+            icon: Sparkles,
+            colorClass: 'bg-purple-50 text-purple-600',
+            hoverClass: 'hover:bg-purple-50/50 hover:border-purple-200',
+            textHoverClass: 'group-hover:text-purple-600',
+            show: true,
+        },
+        {
+            title: 'Lihat Laporan',
+            subtitle: 'Buka laporan & analitik',
+            href: '/reports',
+            icon: BarChart3,
+            colorClass: 'bg-amber-50 text-amber-600',
+            hoverClass: 'hover:bg-amber-50/50 hover:border-amber-200',
+            textHoverClass: 'group-hover:text-amber-600',
+            show: canAccessReports,
+        },
+        {
+            title: 'Files',
+            subtitle: 'Link cloud drive klien',
+            href: '/files',
+            icon: HardDrive,
+            colorClass: 'bg-cyan-50 text-cyan-600',
+            hoverClass: 'hover:bg-cyan-50/50 hover:border-cyan-200',
+            textHoverClass: 'group-hover:text-cyan-600',
+            show: true,
+        },
+    ].filter((item) => item.show !== false);
 
     const handleFilterChange = (key: string, value: any) => {
         setPeriodDropdown(false);
@@ -369,9 +481,9 @@ export default function Dashboard({
             </div>
 
             {/* 3. Akses Cepat & Ringkasan Keuangan (Sejajar Rata 100%) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch">
-                {/* Akses Cepat (5 cols) */}
-                <div className="lg:col-span-5 bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full">
+            <div className={`grid grid-cols-1 ${showFinancialSummary ? 'lg:grid-cols-12' : ''} gap-3.5 items-stretch`}>
+                {/* Akses Cepat (5 cols jika ada Ringkasan Keuangan, 12 cols jika Keuangan disembunyikan untuk Supervisor) */}
+                <div className={`${showFinancialSummary ? 'lg:col-span-5' : 'lg:col-span-12'} bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full`}>
                     <div>
                         <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 mb-3">
                             <div>
@@ -380,205 +492,137 @@ export default function Dashboard({
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {/* + Project */}
-                            <Link href="/projects/create" className="bg-slate-50/70 hover:bg-blue-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-blue-200 shadow-2xs transition-all flex items-center gap-2.5 group">
-                                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                                    <FolderPlus className="w-4 h-4" />
-                                </div>
-                                <div className="min-w-0">
-                                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate">+ Buat Project</h4>
-                                    <p className="text-[10px] text-slate-500 truncate">Formulir project baru</p>
-                                </div>
-                            </Link>
-
-                            {/* + Klien */}
-                            <Link href="/clients?action=create" className="bg-slate-50/70 hover:bg-orange-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-orange-200 shadow-2xs transition-all flex items-center gap-2.5 group">
-                                <div className="w-8 h-8 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                                    <UserPlus className="w-4 h-4" />
-                                </div>
-                                <div className="min-w-0">
-                                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-orange-600 transition-colors truncate">+ Tambah Klien</h4>
-                                    <p className="text-[10px] text-slate-500 truncate">Wizard tambah klien baru</p>
-                                </div>
-                            </Link>
-
-                            {/* + Catat Kas / Biaya */}
-                            <Link href="/finance?action=transaction" className="bg-slate-50/70 hover:bg-emerald-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-emerald-200 shadow-2xs transition-all flex items-center gap-2.5 group">
-                                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                                    <CreditCard className="w-4 h-4" />
-                                </div>
-                                <div className="min-w-0">
-                                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-emerald-600 transition-colors truncate">+ Catat Kas / Biaya</h4>
-                                    <p className="text-[10px] text-slate-500 truncate">Pengeluaran &amp; kas masuk</p>
-                                </div>
-                            </Link>
-
-                            {/* + Jadwal & Sesi Foto */}
-                            <Link href="/calendar?action=create" className="bg-slate-50/70 hover:bg-rose-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-rose-200 shadow-2xs transition-all flex items-center gap-2.5 group">
-                                <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                                    <Calendar className="w-4 h-4" />
-                                </div>
-                                <div className="min-w-0">
-                                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-rose-600 transition-colors truncate">+ Jadwal &amp; Sesi</h4>
-                                    <p className="text-[10px] text-slate-500 truncate">Booking agenda photoshoot</p>
-                                </div>
-                            </Link>
-
-                            {/* + Master Paket & Layanan */}
-                            <Link href="/master-data/packages?action=create" className="bg-slate-50/70 hover:bg-indigo-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-indigo-200 shadow-2xs transition-all flex items-center gap-2.5 group">
-                                <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                                    <Database className="w-4 h-4" />
-                                </div>
-                                <div className="min-w-0">
-                                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">+ Tambah Paket</h4>
-                                    <p className="text-[10px] text-slate-500 truncate">Layanan &amp; harga baru</p>
-                                </div>
-                            </Link>
-
-                            {/* Form Booking Online */}
-                            <Link href="/form-klien" className="bg-slate-50/70 hover:bg-purple-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-purple-200 shadow-2xs transition-all flex items-center gap-2.5 group">
-                                <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                                    <Sparkles className="w-4 h-4" />
-                                </div>
-                                <div className="min-w-0">
-                                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-purple-600 transition-colors truncate">Form Booking</h4>
-                                    <p className="text-[10px] text-slate-500 truncate">Formulir online klien</p>
-                                </div>
-                            </Link>
-
-                            {/* Lihat Laporan */}
-                            <Link href="/reports" className="bg-slate-50/70 hover:bg-amber-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-amber-200 shadow-2xs transition-all flex items-center gap-2.5 group">
-                                <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                                    <BarChart3 className="w-4 h-4" />
-                                </div>
-                                <div className="min-w-0">
-                                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-amber-600 transition-colors truncate">Lihat Laporan</h4>
-                                    <p className="text-[10px] text-slate-500 truncate">Buka laporan &amp; analitik</p>
-                                </div>
-                            </Link>
-
-                            {/* Drive & File Links */}
-                            <Link href="/files" className="bg-slate-50/70 hover:bg-cyan-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-cyan-200 shadow-2xs transition-all flex items-center gap-2.5 group">
-                                <div className="w-8 h-8 rounded-lg bg-cyan-50 text-cyan-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                                    <HardDrive className="w-4 h-4" />
-                                </div>
-                                <div className="min-w-0">
-                                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-cyan-600 transition-colors truncate">Files</h4>
-                                    <p className="text-[10px] text-slate-500 truncate">Link cloud drive klien</p>
-                                </div>
-                            </Link>
+                        <div className={`grid grid-cols-1 sm:grid-cols-2 ${!showFinancialSummary ? 'md:grid-cols-4' : ''} gap-2`}>
+                            {quickActions.map((action, idx) => (
+                                <Link
+                                    key={idx}
+                                    href={action.href}
+                                    className={`bg-slate-50/70 p-2.5 rounded-lg border border-slate-200/70 shadow-2xs transition-all flex items-center gap-2.5 group ${action.hoverClass}`}
+                                >
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform ${action.colorClass}`}>
+                                        <action.icon className="w-4 h-4" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <h4 className={`text-xs font-bold text-slate-900 transition-colors truncate ${action.textHoverClass}`}>
+                                            {action.title}
+                                        </h4>
+                                        <p className="text-[10px] text-slate-500 truncate">{action.subtitle}</p>
+                                    </div>
+                                </Link>
+                            ))}
                         </div>
                     </div>
 
                     <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
                         <span>Pintasan cepat sistem Arams</span>
-                        <span className="text-[11px] font-semibold text-[#C89445]">8 Fitur Aktif</span>
+                        <span className="text-[11px] font-semibold text-[#C89445]">{quickActions.length} Fitur Aktif</span>
                     </div>
                 </div>
 
-                {/* Ringkasan Keuangan (7 cols) */}
-                <div className="lg:col-span-7 bg-white p-4 sm:p-5 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full">
-                    <div>
-                        {/* Header */}
-                        <div className="flex items-center justify-between mb-3">
-                            <div>
-                                <span className="text-[11px] font-bold text-slate-800 uppercase tracking-wider block">RINGKASAN KEUANGAN</span>
-                                <span className="text-[11px] text-slate-400 font-medium">Performa arus kas masuk tahun berjalan</span>
-                            </div>
-                            {/* Year Selector Dropdown */}
-                            <div className="relative">
-                                <button
-                                    type="button"
-                                    onClick={() => setYearDropdown(!yearDropdown)}
-                                    className="text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 cursor-pointer flex items-center gap-1.5 transition-colors shadow-2xs"
-                                >
-                                    <span>Tahun {activeChartYear}</span>
-                                    <ChevronDown className="w-3 h-3 text-slate-400" />
-                                </button>
+                {/* Ringkasan Keuangan (7 cols) - Disembunyikan untuk Supervisor */}
+                {showFinancialSummary && (
+                    <div className="lg:col-span-7 bg-white p-4 sm:p-5 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full">
+                        <div>
+                            {/* Header */}
+                            <div className="flex items-center justify-between mb-3">
+                                <div>
+                                    <span className="text-[11px] font-bold text-slate-800 uppercase tracking-wider block">RINGKASAN KEUANGAN</span>
+                                    <span className="text-[11px] text-slate-400 font-medium">Performa arus kas masuk tahun berjalan</span>
+                                </div>
+                                {/* Year Selector Dropdown */}
+                                <div className="relative">
+                                    <button
+                                        type="button"
+                                        onClick={() => setYearDropdown(!yearDropdown)}
+                                        className="text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 cursor-pointer flex items-center gap-1.5 transition-colors shadow-2xs"
+                                    >
+                                        <span>Tahun {activeChartYear}</span>
+                                        <ChevronDown className="w-3 h-3 text-slate-400" />
+                                    </button>
 
-                                {yearDropdown && (
-                                    <div className="absolute right-0 mt-2 w-36 bg-white rounded-xl shadow-xl border border-slate-100 p-1.5 z-40 animate-in fade-in zoom-in-95">
-                                        {availableYears.map((yr) => (
-                                            <button
-                                                key={yr}
-                                                type="button"
-                                                onClick={() => handleFilterChange('chart_year', yr)}
-                                                className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center justify-between ${activeChartYear === yr
+                                    {yearDropdown && (
+                                        <div className="absolute right-0 mt-2 w-36 bg-white rounded-xl shadow-xl border border-slate-100 p-1.5 z-40 animate-in fade-in zoom-in-95">
+                                            {availableYears.map((yr) => (
+                                                <button
+                                                    key={yr}
+                                                    type="button"
+                                                    onClick={() => handleFilterChange('chart_year', yr)}
+                                                    className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center justify-between ${activeChartYear === yr
                                                         ? 'bg-[#C89445]/10 text-[#C89445] font-bold'
                                                         : 'text-slate-700 hover:bg-slate-50'
-                                                    }`}
-                                            >
-                                                <span>Tahun {yr}</span>
-                                                {activeChartYear === yr && <Check className="w-3.5 h-3.5 text-[#C89445]" />}
-                                            </button>
-                                        ))}
+                                                        }`}
+                                                >
+                                                    <span>Tahun {yr}</span>
+                                                    {activeChartYear === yr && <Check className="w-3.5 h-3.5 text-[#C89445]" />}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Grid: Left Metrics + Right Full-Height Chart */}
+                            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-stretch min-h-[220px]">
+                                {/* Left (sm:col-span-4): Total Nilai Project + Sudah & Belum Badges */}
+                                <div className="sm:col-span-4 flex flex-col justify-between gap-2.5">
+                                    {/* Total Nilai Project */}
+                                    <div>
+                                        <span className="text-[11px] text-slate-400 font-medium block">Total Nilai Project</span>
+                                        <div
+                                            className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight mt-0.5 truncate"
+                                            title={formatRupiah(financial.total_value)}
+                                        >
+                                            {formatCurrencyShort(financial.total_value)}
+                                        </div>
                                     </div>
-                                )}
+
+                                    {/* Sudah Diterima */}
+                                    <div className="bg-emerald-50/80 border border-emerald-100 p-2.5 rounded-lg flex-1 flex flex-col justify-center">
+                                        <span className="text-[10px] font-semibold text-emerald-800 block">Sudah Diterima</span>
+                                        <p
+                                            className="text-xs sm:text-sm font-bold text-emerald-950 mt-0.5 truncate"
+                                            title={formatRupiah(financial.received)}
+                                        >
+                                            {formatCurrencyShort(financial.received)}
+                                        </p>
+                                        <span className="text-[11px] font-bold text-emerald-600 mt-0.5 inline-block">{financial.collection_rate}%</span>
+                                    </div>
+
+                                    {/* Belum Diterima */}
+                                    <div className="bg-amber-50/80 border border-amber-100 p-2.5 rounded-lg flex-1 flex flex-col justify-center">
+                                        <span className="text-[10px] font-semibold text-amber-800 block">Belum Diterima</span>
+                                        <p
+                                            className="text-xs sm:text-sm font-bold text-amber-950 mt-0.5 truncate"
+                                            title={formatRupiah(financial.outstanding)}
+                                        >
+                                            {formatCurrencyShort(financial.outstanding)}
+                                        </p>
+                                        <span className="text-[11px] font-bold text-amber-600 mt-0.5 inline-block">{(100 - financial.collection_rate).toFixed(1)}%</span>
+                                    </div>
+                                </div>
+
+                                {/* Right: Bar chart component filling full available vertical space */}
+                                <div className="sm:col-span-8 flex flex-col h-full min-h-[220px]">
+                                    <BarChart
+                                        data={financial.monthly_chart.map((bar) => ({
+                                            month: bar.month,
+                                            value: bar.amount,
+                                        }))}
+                                        height="100%"
+                                        barColor="#10B981"
+                                        barHoverColor="#059669"
+                                        showGridLines={true}
+                                        className="h-full flex-1"
+                                    />
+                                </div>
                             </div>
                         </div>
 
-                        {/* Grid: Left Metrics + Right Full-Height Chart */}
-                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-stretch min-h-[220px]">
-                            {/* Left (sm:col-span-4): Total Nilai Project + Sudah & Belum Badges */}
-                            <div className="sm:col-span-4 flex flex-col justify-between gap-2.5">
-                                {/* Total Nilai Project */}
-                                <div>
-                                    <span className="text-[11px] text-slate-400 font-medium block">Total Nilai Project</span>
-                                    <div
-                                        className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight mt-0.5 truncate"
-                                        title={formatRupiah(financial.total_value)}
-                                    >
-                                        {formatCurrencyShort(financial.total_value)}
-                                    </div>
-                                </div>
-
-                                {/* Sudah Diterima */}
-                                <div className="bg-emerald-50/80 border border-emerald-100 p-2.5 rounded-lg flex-1 flex flex-col justify-center">
-                                    <span className="text-[10px] font-semibold text-emerald-800 block">Sudah Diterima</span>
-                                    <p
-                                        className="text-xs sm:text-sm font-bold text-emerald-950 mt-0.5 truncate"
-                                        title={formatRupiah(financial.received)}
-                                    >
-                                        {formatCurrencyShort(financial.received)}
-                                    </p>
-                                    <span className="text-[11px] font-bold text-emerald-600 mt-0.5 inline-block">{financial.collection_rate}%</span>
-                                </div>
-
-                                {/* Belum Diterima */}
-                                <div className="bg-amber-50/80 border border-amber-100 p-2.5 rounded-lg flex-1 flex flex-col justify-center">
-                                    <span className="text-[10px] font-semibold text-amber-800 block">Belum Diterima</span>
-                                    <p
-                                        className="text-xs sm:text-sm font-bold text-amber-950 mt-0.5 truncate"
-                                        title={formatRupiah(financial.outstanding)}
-                                    >
-                                        {formatCurrencyShort(financial.outstanding)}
-                                    </p>
-                                    <span className="text-[11px] font-bold text-amber-600 mt-0.5 inline-block">{(100 - financial.collection_rate).toFixed(1)}%</span>
-                                </div>
-                            </div>
-
-                            {/* Right: Bar chart component filling full available vertical space */}
-                            <div className="sm:col-span-8 flex flex-col h-full min-h-[220px]">
-                                <BarChart
-                                    data={financial.monthly_chart.map((bar) => ({
-                                        month: bar.month,
-                                        value: bar.amount,
-                                    }))}
-                                    height="100%"
-                                    barColor="#10B981"
-                                    barHoverColor="#059669"
-                                    showGridLines={true}
-                                    className="h-full flex-1"
-                                />
-                            </div>
-                        </div>
+                        <p className="text-[10px] text-slate-400 mt-2.5 border-t border-slate-100 pt-2">
+                            Grafik menunjukkan total pembayaran yang benar-benar diterima.
+                        </p>
                     </div>
-
-                    <p className="text-[10px] text-slate-400 mt-2.5 border-t border-slate-100 pt-2">
-                        Grafik menunjukkan total pembayaran yang benar-benar diterima.
-                    </p>
-                </div>
+                )}
             </div>
 
             {/* 4. Project Terbaru + Donut Chart */}
@@ -671,8 +715,8 @@ export default function Dashboard({
                                                 <div className="w-16 bg-slate-100 rounded-full h-1.5 overflow-hidden">
                                                     <div
                                                         className={`h-full rounded-full transition-all duration-500 ${proj.progress === 100
-                                                                ? 'bg-emerald-500'
-                                                                : 'bg-primary-accent'
+                                                            ? 'bg-emerald-500'
+                                                            : 'bg-primary-accent'
                                                             }`}
                                                         style={{ width: `${proj.progress}%` }}
                                                     />
@@ -684,9 +728,9 @@ export default function Dashboard({
                                         <TableCell className="px-4 py-2">
                                             <span className="text-[10px] text-slate-600 block">{proj.deadline || '05 Juni 2026'}</span>
                                             <span className={`text-[10px] font-bold ${proj.deadline_status === 'completed' ? 'text-emerald-600'
-                                                    : proj.deadline_status === 'urgent' ? 'text-amber-600'
-                                                        : proj.deadline_status === 'overdue' ? 'text-red-600'
-                                                            : 'text-slate-400'
+                                                : proj.deadline_status === 'urgent' ? 'text-amber-600'
+                                                    : proj.deadline_status === 'overdue' ? 'text-red-600'
+                                                        : 'text-slate-400'
                                                 }`}>
                                                 {proj.deadline_text}
                                             </span>
@@ -746,9 +790,9 @@ export default function Dashboard({
                                     <div className="flex items-center justify-between text-[10px]">
                                         <span className="text-slate-400">Progres ({proj.progress}%)</span>
                                         <span className={`font-bold ${proj.deadline_status === 'completed' ? 'text-emerald-600'
-                                                : proj.deadline_status === 'urgent' ? 'text-amber-600'
-                                                    : proj.deadline_status === 'overdue' ? 'text-red-600'
-                                                        : 'text-slate-400'
+                                            : proj.deadline_status === 'urgent' ? 'text-amber-600'
+                                                : proj.deadline_status === 'overdue' ? 'text-red-600'
+                                                    : 'text-slate-400'
                                             }`}>
                                             {proj.deadline_text}
                                         </span>
@@ -794,8 +838,8 @@ export default function Dashboard({
                                             type="button"
                                             onClick={() => handleFilterChange('category_period', opt.id)}
                                             className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center justify-between ${activeCategoryPeriod === opt.id
-                                                    ? 'bg-[#C89445]/10 text-[#C89445] font-bold'
-                                                    : 'text-slate-700 hover:bg-slate-50'
+                                                ? 'bg-[#C89445]/10 text-[#C89445] font-bold'
+                                                : 'text-slate-700 hover:bg-slate-50'
                                                 }`}
                                         >
                                             <span>{opt.label}</span>
@@ -872,10 +916,10 @@ export default function Dashboard({
                                         </div>
 
                                         <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border whitespace-nowrap shrink-0 ${dl.urgency === 'urgent'
-                                                ? 'text-amber-700 bg-amber-50 border-amber-200'
-                                                : dl.urgency === 'overdue'
-                                                    ? 'text-red-700 bg-red-50 border-red-200'
-                                                    : 'text-blue-700 bg-blue-50 border-blue-200'
+                                            ? 'text-amber-700 bg-amber-50 border-amber-200'
+                                            : dl.urgency === 'overdue'
+                                                ? 'text-red-700 bg-red-50 border-red-200'
+                                                : 'text-blue-700 bg-blue-50 border-blue-200'
                                             }`}>
                                             {dl.urgency_text}
                                         </span>
@@ -1003,8 +1047,8 @@ export default function Dashboard({
                                                     type="button"
                                                     onClick={() => handleFilterChange('performance_period', opt.id)}
                                                     className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center justify-between ${activePerformancePeriod === opt.id
-                                                            ? 'bg-emerald-50 text-emerald-800 font-bold'
-                                                            : 'text-slate-700 hover:bg-slate-50'
+                                                        ? 'bg-emerald-50 text-emerald-800 font-bold'
+                                                        : 'text-slate-700 hover:bg-slate-50'
                                                         }`}
                                                 >
                                                     <span>{opt.label}</span>

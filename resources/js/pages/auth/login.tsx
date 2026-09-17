@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import { Head, useForm, Link, usePage } from '@inertiajs/react';
 import {
     Lock,
@@ -10,6 +9,7 @@ import {
     Headphones,
     Gift,
 } from 'lucide-react';
+import React, { useState } from 'react';
 import { Toaster } from 'sonner';
 import { Spinner } from '@/components/ui/spinner';
 import { isDarkColor } from '@/lib/utils';
@@ -76,16 +76,16 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
                 style={{ background: loginBgGradient || loginBg }}
                 className="hidden lg:flex w-1/2 flex-col justify-between p-10 xl:p-12 text-white shrink-0 relative overflow-hidden"
             >
-                {/* Background photo */}
+                {/* Background photo with subtle, low-opacity warm overlay */}
                 <div className="absolute inset-0 z-0">
                     <img
                         src={loginBgPhoto}
                         alt="Arams Couple"
-                        className="w-full h-full object-cover opacity-50 filter brightness-75 contrast-110"
+                        className="w-full h-full object-cover opacity-70 filter brightness-85 contrast-105"
                     />
                     <div
                         style={{
-                            background: `linear-gradient(to top, ${loginBg} 0%, ${loginBg}cc 55%, ${loginBg}99 100%)`,
+                            background: `linear-gradient(to top, rgba(30, 8, 12, 0.70) 0%, rgba(46, 15, 21, 0.45) 50%, rgba(32, 10, 14, 0.28) 100%)`,
                         }}
                         className="absolute inset-0"
                     />
@@ -100,20 +100,20 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
                         <h2 className="font-extrabold text-sm tracking-[0.18em] text-white uppercase">
                             {companyName}
                         </h2>
-                        <p className="text-[9px] tracking-[0.28em] text-rose-300 font-bold uppercase mt-0.5">
+                        <p className="text-[9px] tracking-[0.28em] text-rose-200/90 font-bold uppercase mt-0.5">
                             {appSettings.company_tagline || 'Photografer'}
                         </p>
                     </div>
                 </div>
 
-                {/* Center: Headline */}
-                <div className="relative z-10 space-y-3">
-                    <span className="text-[10px] tracking-[0.25em] font-extrabold text-rose-300 uppercase block">
+                {/* Center / Lower: Headline shifted downwards */}
+                <div className="relative z-10 space-y-3.5 mt-auto mb-8 pt-14">
+                    <span className="text-[10px] tracking-[0.25em] font-extrabold text-rose-200 uppercase block">
                         {loginTagline}
                     </span>
                     <h1
                         style={{ fontFamily: `'${fontHeading}', serif` }}
-                        className="text-3xl xl:text-4xl font-black text-white tracking-tight leading-tight"
+                        className="text-3xl xl:text-4xl font-black text-white tracking-tight leading-tight drop-shadow-sm"
                     >
                         {loginHeadline.split('\n').map((line: string, i: number, arr: string[]) => (
                             <React.Fragment key={i}>
@@ -126,13 +126,13 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
                         style={{ backgroundColor: `${loginAccent}80` }}
                         className="w-12 h-0.5 mt-2 mb-2"
                     />
-                    <p className="text-xs text-rose-100/70 leading-relaxed max-w-xs">
+                    <p className="text-xs text-rose-100/85 leading-relaxed max-w-sm drop-shadow-xs">
                         {loginDescription}
                     </p>
                 </div>
 
                 {/* Bottom: 3 Pillars */}
-                <div className="relative z-10 grid grid-cols-3 gap-3 pt-8 border-t border-white/10">
+                <div className="relative z-10 grid grid-cols-3 gap-3 pt-6 border-t border-white/15">
                     {[
                         { icon: Camera, title: pillar1Title, desc: pillar1Desc },
                         { icon: Shield, title: pillar2Title, desc: pillar2Desc },
@@ -258,21 +258,16 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
                             )}
                         </div>
 
-                        {/* Submit */}
+                        {/* Submit Button: Custom styled #F4EBE4 with #3C0E0E active */}
                         <button
                             id="login-submit"
                             type="submit"
                             disabled={processing}
-                            style={{
-                                backgroundColor: loginAccent,
-                                color: '#FFFFFF',
-                                boxShadow: `0 4px 14px 0 ${loginAccent}60`,
-                            }}
-                            className="w-full py-3.5 rounded-xl font-bold text-sm tracking-wide transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 hover:opacity-95 hover:shadow-lg active:scale-[0.99]"
+                            className="w-full py-3.5 px-4 rounded-xl font-bold text-sm tracking-wide transition-all duration-200 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 bg-[#F4EBE4] hover:bg-[#3C0E0E] active:bg-[#3C0E0E] focus:bg-[#3C0E0E] text-[#3C0E0E] hover:text-[#F4EBE4] active:text-[#F4EBE4] focus:text-[#F4EBE4] border border-[#3C0E0E]/20 hover:border-[#3C0E0E] shadow-sm hover:shadow-md hover:shadow-[#3C0E0E]/25 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-[#3C0E0E]/30 group"
                         >
                             {processing ? (
                                 <>
-                                    <Spinner className="w-4 h-4 text-white" />
+                                    <Spinner className="w-4 h-4 text-current" />
                                     <span>Memproses...</span>
                                 </>
                             ) : (

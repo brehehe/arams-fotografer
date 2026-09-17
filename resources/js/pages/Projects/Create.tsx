@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { toast } from 'sonner';
 import {
     Calendar,
@@ -251,11 +251,42 @@ export default function ProjectsCreate({
     initial_category_id = '',
     initial_package_id = '',
 }: ProjectsCreateProps) {
+    const { auth } = usePage().props as any;
+    const user = auth?.user;
+    const userRoles: string[] = user?.roles ?? [];
+    const isSupervisor = Boolean(user?.is_supervisor || userRoles.includes('Supervisor'));
+
+    if (isSupervisor) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+                <Head title="Akses Dibatasi - Buat Project" />
+                <div className="max-w-md w-full bg-white p-6 rounded-2xl border border-slate-200 shadow-xl text-center space-y-4">
+                    <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto">
+                        <Briefcase className="w-6 h-6" />
+                    </div>
+                    <h2 className="text-base font-bold text-slate-900">Akses Dibatasi</h2>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                        Role Supervisor tidak memiliki wewenang untuk membuat project baru. Silakan hubungi Administrator atau Owner.
+                    </p>
+                    <Link
+                        href="/projects"
+                        className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-[#3C0E0E] hover:bg-[#2A0909] text-white rounded-xl text-xs font-bold transition-colors"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        <span>Kembali ke Daftar Project</span>
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
     const [submitting, setSubmitting] = useState(false);
     const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
 
     // Initial Defaults from Master Data
-    const defaultClient = clients.find((c) => String(c.id) === String(initial_client_id)) || clients[0] || null;
+    const defaultClient = initial_client_id
+        ? (clients.find((c) => String(c.id) === String(initial_client_id)) || null)
+        : null;
     const defaultCategory = categories.find((c) => String(c.id) === String(initial_category_id)) || categories[0] || null;
     const defaultSupervisor =
         supervisors.find((u: UserItem) => u.name.toLowerCase().includes('aditya') || u.name.toLowerCase().includes('pratama')) ||
@@ -294,9 +325,9 @@ export default function ProjectsCreate({
             : (defaultClient?.child_name ? [{ name: defaultClient.child_name, age: '' }] : []),
     }));
     const [projectName, setProjectName] = useState<string>(
-        generateSuggestedProjectTitle(defaultCategory, defaultClient)
+        defaultClient ? generateSuggestedProjectTitle(defaultCategory, defaultClient) : ''
     );
-    const [clientId, setClientId] = useState<string>(initial_client_id || defaultClient?.id || '');
+    const [clientId, setClientId] = useState<string>(initial_client_id || '');
     const [categoryId, setCategoryId] = useState<string>(initial_category_id || defaultCategory?.id || '');
     const [packageId, setPackageId] = useState<string>(initial_package_id || '');
     const [projectLocation, setProjectLocation] = useState<string>('');
@@ -620,8 +651,8 @@ export default function ProjectsCreate({
 
     // Selected Entities
     const selectedClient = useMemo(() => {
-        return clients.find((c) => String(c.id) === String(clientId)) || defaultClient;
-    }, [clients, clientId, defaultClient]);
+        return clients.find((c) => String(c.id) === String(clientId)) || null;
+    }, [clients, clientId]);
 
 
     const selectedCategory = useMemo(() => {
@@ -893,6 +924,9 @@ export default function ProjectsCreate({
     // Auto update project name when client or category changes
     const handleClientChange = (newClientId: string) => {
         setClientId(newClientId);
+        if (!newClientId) {
+            return;
+        }
         const cl = clients.find((c) => String(c.id) === String(newClientId));
         const cat = categories.find((c) => String(c.id) === String(categoryId)) || selectedCategory;
         if (cl) {
@@ -1507,7 +1541,7 @@ export default function ProjectsCreate({
                         disabled={submitting}
                         className="btn-primary-action inline-flex items-center gap-2 px-4 py-2 bg-[#4F46E5] hover:bg-[#4338CA] text-white rounded-xl text-xs font-bold shadow-sm shadow-black/10 transition-all cursor-pointer"
                     >
-                        <span>Simpan &amp; Buat Invoice DP</span>
+                        <span>{isSupervisor ? 'Simpan Project' : 'Simpan & Buat Invoice DP'}</span>
                         <ChevronDown className="w-3.5 h-3.5 opacity-80" />
                     </button>
                 </div>
@@ -1681,7 +1715,7 @@ export default function ProjectsCreate({
                                     onChange={handleClientChange}
                                     placeholder="Cari atau pilih Client..."
                                     searchPlaceholder="Ketik nama klien atau telepon..."
-                                    clearable={false}
+                                    clearable={true}
                                 />
                                 {selectedClient && (
                                     <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80 text-xs flex flex-wrap items-center gap-x-4 gap-y-1 text-slate-600">
@@ -2662,7 +2696,7 @@ export default function ProjectsCreate({
             {currentStep === 4 && (
                 <div className="space-y-6">
                     {/* Row 1: 4 KPI Summary Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-slate-900">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-slate-900">
                         {/* Card 1: Informasi Project */}
                         <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs space-y-2 text-xs flex flex-col justify-between">
                             <h4 className="font-bold text-sm text-slate-900 border-b border-slate-100 pb-2 flex items-center justify-between">
@@ -3150,7 +3184,7 @@ export default function ProjectsCreate({
                         <div className="space-y-1">
                             <h3 className="text-lg font-bold text-slate-900">Project Berhasil Dibuat!</h3>
                             <p className="text-xs text-slate-500">
-                                Project <span className="font-bold text-slate-800">{createdResult.projectNumber}</span> dan Invoice DP telah tersimpan di sistem.
+                                Project <span className="font-bold text-slate-800">{createdResult.projectNumber}</span> {isSupervisor ? 'telah tersimpan di sistem.' : 'dan Invoice DP telah tersimpan di sistem.'}
                             </p>
                         </div>
 
@@ -3176,17 +3210,27 @@ export default function ProjectsCreate({
                             >
                                 Ke Daftar Project
                             </Link>
-                            <Link
-                                href={
-                                    createdResult.invoiceId
-                                        ? `/projects/${createdResult.projectId}/invoice?invoice_id=${createdResult.invoiceId}`
-                                        : `/projects/${createdResult.projectId}/invoice`
-                                }
-                                className="flex-1 py-3 px-4 rounded-xl bg-[#4F46E5] hover:bg-[#4338CA] text-xs font-bold text-white transition-colors text-center inline-flex items-center justify-center gap-1.5 shadow-md"
-                            >
-                                <span>Lihat Invoice</span>
-                                <ChevronRight className="w-4 h-4" />
-                            </Link>
+                            {isSupervisor ? (
+                                <Link
+                                    href={`/projects/${createdResult.projectId}`}
+                                    className="flex-1 py-3 px-4 rounded-xl bg-[#4F46E5] hover:bg-[#4338CA] text-xs font-bold text-white transition-colors text-center inline-flex items-center justify-center gap-1.5 shadow-md"
+                                >
+                                    <span>Lihat Detail Project</span>
+                                    <ChevronRight className="w-4 h-4" />
+                                </Link>
+                            ) : (
+                                <Link
+                                    href={
+                                        createdResult.invoiceId
+                                            ? `/projects/${createdResult.projectId}/invoice?invoice_id=${createdResult.invoiceId}`
+                                            : `/projects/${createdResult.projectId}/invoice`
+                                    }
+                                    className="flex-1 py-3 px-4 rounded-xl bg-[#4F46E5] hover:bg-[#4338CA] text-xs font-bold text-white transition-colors text-center inline-flex items-center justify-center gap-1.5 shadow-md"
+                                >
+                                    <span>Lihat Invoice</span>
+                                    <ChevronRight className="w-4 h-4" />
+                                </Link>
+                            )}
                         </div>
                     </div>
                 </div>
