@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Pagination } from '@/components/ui/pagination';
 import { SelectSearch } from '@/components/ui/select-search';
 import { StatCard } from '@/components/ui';
+import { Modal } from '@/components/ui/modal';
 
 import {
     Folder,
@@ -617,183 +618,177 @@ export default function CategoriesIndex({
             </div>
 
             {/* ── 4. MODAL: TAMBAH / EDIT KATEGORI ── */}
-            {createModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
-                    <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-slate-100 space-y-4">
-                        <div className="flex items-center justify-between pb-3 border-b border-slate-100 sticky top-0 bg-white z-10">
-                            <h3 className="text-base font-black text-slate-900">
-                                {editItem ? 'Edit Kategori Project' : 'Tambah Kategori Project'}
-                            </h3>
-                            <button type="button" onClick={() => setCreateModalOpen(false)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer">
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
+            <Modal
+                isOpen={createModalOpen}
+                onClose={() => setCreateModalOpen(false)}
+                title={editItem ? 'Edit Kategori Project' : 'Tambah Kategori Project'}
+                maxWidth="lg"
+                onSubmit={handleSubmit}
+                footer={
+                    <>
+                        <button
+                            type="button"
+                            onClick={() => setCreateModalOpen(false)}
+                            className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                        >
+                            Batal
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={isSubmitting}
+                            className="px-5 py-2 text-xs font-bold text-white bg-[#4F46E5] hover:bg-[#4338CA] rounded-xl shadow-xs cursor-pointer disabled:opacity-50"
+                        >
+                            {isSubmitting ? 'Menyimpan...' : 'Simpan Kategori'}
+                        </button>
+                    </>
+                }
+            >
+                <div className="space-y-4 text-xs">
+                    <div>
+                        <label className="block font-bold text-slate-700 mb-1">
+                            Nama Kategori <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            required
+                            value={form.name}
+                            onChange={(e) => setForm({ ...form, name: e.target.value })}
+                            placeholder="Contoh: Wedding, Prewedding, Event, dll"
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                        />
+                    </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-                            <div>
-                                <label className="block font-bold text-slate-700 mb-1">
-                                    Nama Kategori <span className="text-rose-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={form.name}
-                                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                    placeholder="Contoh: Wedding, Prewedding, Event, dll"
-                                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                                />
-                            </div>
-
-                            {/* Foto Cover Kategori */}
-                            <div>
-                                <label className="block font-bold text-slate-700 mb-1.5">
-                                    Foto / Cover Kategori (Sinkron ke Form Klien)
-                                </label>
-                                <div className="border border-dashed border-slate-200 rounded-2xl p-3.5 bg-slate-50/60 transition-colors">
-                                    {imagePreview ? (
-                                        <div className="relative aspect-16/9 w-full rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shadow-xs max-h-44 mx-auto">
-                                            <img
-                                                src={imagePreview}
-                                                alt="Preview Kategori"
-                                                className="w-full h-full object-cover object-center"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setImagePreview('');
-                                                    setForm({ ...form, image_file: null, image_url: '', image: '' });
-                                                }}
-                                                className="absolute top-2 right-2 p-1.5 bg-rose-600/90 hover:bg-rose-700 text-white rounded-lg shadow-md transition-colors cursor-pointer"
-                                                title="Hapus gambar"
-                                            >
-                                                <X className="w-3.5 h-3.5" />
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <label className="flex flex-col items-center justify-center cursor-pointer py-4 hover:bg-slate-100/70 rounded-xl transition-colors">
-                                            <div className="w-9 h-9 rounded-xl bg-white shadow-2xs border border-slate-200 flex items-center justify-center text-slate-500 mb-2">
-                                                <Upload className="w-4 h-4 text-indigo-600" />
-                                            </div>
-                                            <span className="text-xs font-bold text-slate-700">
-                                                Klik untuk unggah foto (JPG, PNG, WebP)
-                                            </span>
-                                            <span className="text-[10px] text-slate-400 mt-0.5">
-                                                Maks 10MB • Kompresi otomatis WebP
-                                            </span>
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                onChange={handleFileChange}
-                                                className="hidden"
-                                            />
-                                        </label>
-                                    )}
-
-                                    <div className="mt-2.5 pt-2.5 border-t border-slate-200/60 flex items-center gap-2">
-                                        <span className="text-[11px] font-semibold text-slate-500 shrink-0">atau URL:</span>
-                                        <input
-                                            type="url"
-                                            value={form.image_url}
-                                            onChange={(e) => {
-                                                const val = e.target.value;
-                                                setForm({ ...form, image_url: val, image: val, image_file: null });
-                                                if (val.trim()) {
-                                                    setImagePreview(val);
-                                                } else {
-                                                    setImagePreview('');
-                                                }
-                                            }}
-                                            placeholder="https://images.unsplash.com/..."
-                                            className="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg font-normal text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                                        />
-                                    </div>
+                    {/* Foto Cover Kategori */}
+                    <div>
+                        <label className="block font-bold text-slate-700 mb-1.5">
+                            Foto / Cover Kategori (Sinkron ke Form Klien)
+                        </label>
+                        <div className="border border-dashed border-slate-200 rounded-2xl p-3.5 bg-slate-50/60 transition-colors">
+                            {imagePreview ? (
+                                <div className="relative aspect-16/9 w-full rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shadow-xs max-h-44 mx-auto">
+                                    <img
+                                        src={imagePreview}
+                                        alt="Preview Kategori"
+                                        className="w-full h-full object-cover object-center"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setImagePreview('');
+                                            setForm({ ...form, image_file: null, image_url: '', image: '' });
+                                        }}
+                                        className="absolute top-2 right-2 p-1.5 bg-rose-600/90 hover:bg-rose-700 text-white rounded-lg shadow-md transition-colors cursor-pointer"
+                                        title="Hapus gambar"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
                                 </div>
-                                <p className="text-[10px] text-slate-400 mt-1">
-                                    Foto ini akan langsung tampil di sidebar kiri halaman <code>/form-klien</code> ketika calon klien memilih kategori ini.
-                                </p>
-                            </div>
-
-                            <div>
-                                <label className="block font-bold text-slate-700 mb-1.5">
-                                    Tipe Penginputan Form Klien &amp; Project <span className="text-rose-500">*</span>
+                            ) : (
+                                <label className="flex flex-col items-center justify-center cursor-pointer py-4 hover:bg-slate-100/70 rounded-xl transition-colors">
+                                    <div className="w-9 h-9 rounded-xl bg-white shadow-2xs border border-slate-200 flex items-center justify-center text-slate-500 mb-2">
+                                        <Upload className="w-4 h-4 text-indigo-600" />
+                                    </div>
+                                    <span className="text-xs font-bold text-slate-700">
+                                        Klik untuk unggah foto (JPG, PNG, WebP)
+                                    </span>
+                                    <span className="text-[10px] text-slate-400 mt-0.5">
+                                        Maks 10MB • Kompresi otomatis WebP
+                                    </span>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleFileChange}
+                                        className="hidden"
+                                    />
                                 </label>
-                                <SelectSearch
-                                    options={[
-                                        { value: 'wedding', label: '👰🤵 Pernikahan — CPP & CPW (Calon Pengantin)' },
-                                        { value: 'newborn', label: '👶 Newborn — Nama anak/kembar, ayah & ibu' },
-                                        { value: 'standard', label: '👤 Umum / Standar — Data normal (nama klien saja)' },
-                                    ]}
-                                    value={form.form_type}
-                                    onChange={(val) => setForm({ ...form, form_type: val })}
-                                    placeholder="Pilih tipe form..."
-                                    clearable={false}
-                                />
-                                <p className="text-[10px] text-slate-400 mt-1.5">
-                                    Menentukan skema isian formulir di Form Klien publik, Tambah/Edit Klien, serta Tambah/Edit Project.
-                                </p>
-                            </div>
+                            )}
 
-                            <div>
-                                <label className="block font-bold text-slate-700 mb-1">
-                                    Alur Workflow Utama <span className="text-rose-500">*</span>
-                                </label>
-                                <select
-                                    value={form.workflow_type}
-                                    onChange={(e) => setForm({ ...form, workflow_type: e.target.value })}
-                                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
-                                >
-                                    <option value="wedding">Workflow Wedding (8 Tahapan - Akad/Resepsi)</option>
-                                    <option value="non_wedding">Workflow Non-Wedding (5 Tahapan - Prewed/Portrait/Event)</option>
-                                    <option value="custom">Workflow Custom / Bundling (6 Tahapan - Multi Sesi)</option>
-                                </select>
-                                <p className="text-[10px] text-slate-400 mt-1">
-                                    Menentukan template alur kerja dan deadline deliverables otomatis di proyek.
-                                </p>
-                            </div>
-
-                            <div>
-                                <label className="block font-bold text-slate-700 mb-1">Deskripsi</label>
-                                <textarea
-                                    rows={2}
-                                    value={form.description}
-                                    onChange={(e) => setForm({ ...form, description: e.target.value })}
-                                    placeholder="Deskripsi singkat mengenai kategori project ini..."
-                                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none"
+                            <div className="mt-2.5 pt-2.5 border-t border-slate-200/60 flex items-center gap-2">
+                                <span className="text-[11px] font-semibold text-slate-500 shrink-0">atau URL:</span>
+                                <input
+                                    type="url"
+                                    value={form.image_url}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setForm({ ...form, image_url: val, image: val, image_file: null });
+                                        if (val.trim()) {
+                                            setImagePreview(val);
+                                        } else {
+                                            setImagePreview('');
+                                        }
+                                    }}
+                                    placeholder="https://images.unsplash.com/..."
+                                    className="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg font-normal text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                                 />
                             </div>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-1">
+                            Foto ini akan langsung tampil di sidebar kiri halaman <code>/form-klien</code> ketika calon klien memilih kategori ini.
+                        </p>
+                    </div>
 
-                            <div>
-                                <label className="block font-bold text-slate-700 mb-1">Status</label>
-                                <select
-                                    value={form.status}
-                                    onChange={(e) => setForm({ ...form, status: e.target.value })}
-                                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
-                                >
-                                    <option value="active">Aktif</option>
-                                    <option value="inactive">Nonaktif</option>
-                                </select>
-                            </div>
+                    <div>
+                        <label className="block font-bold text-slate-700 mb-1.5">
+                            Tipe Penginputan Form Klien &amp; Project <span className="text-rose-500">*</span>
+                        </label>
+                        <SelectSearch
+                            options={[
+                                { value: 'wedding', label: '👰🤵 Pernikahan — CPP & CPW (Calon Pengantin)' },
+                                { value: 'newborn', label: '👶 Newborn — Nama anak/kembar, ayah & ibu' },
+                                { value: 'standard', label: '👤 Umum / Standar — Data normal (nama klien saja)' },
+                            ]}
+                            value={form.form_type}
+                            onChange={(val) => setForm({ ...form, form_type: val })}
+                            placeholder="Pilih tipe form..."
+                            clearable={false}
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1.5">
+                            Menentukan skema isian formulir di Form Klien publik, Tambah/Edit Klien, serta Tambah/Edit Project.
+                        </p>
+                    </div>
 
-                            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-                                <button
-                                    type="button"
-                                    onClick={() => setCreateModalOpen(false)}
-                                    className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={isSubmitting}
-                                    className="px-5 py-2 text-xs font-bold text-white bg-[#4F46E5] hover:bg-[#4338CA] rounded-xl shadow-xs cursor-pointer disabled:opacity-50"
-                                >
-                                    {isSubmitting ? 'Menyimpan...' : 'Simpan Kategori'}
-                                </button>
-                            </div>
-                        </form>
+                    <div>
+                        <label className="block font-bold text-slate-700 mb-1">
+                            Alur Workflow Utama <span className="text-rose-500">*</span>
+                        </label>
+                        <select
+                            value={form.workflow_type}
+                            onChange={(e) => setForm({ ...form, workflow_type: e.target.value })}
+                            className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
+                        >
+                            <option value="wedding">Workflow Wedding (8 Tahapan - Akad/Resepsi)</option>
+                            <option value="non_wedding">Workflow Non-Wedding (5 Tahapan - Prewed/Portrait/Event)</option>
+                            <option value="custom">Workflow Custom / Bundling (6 Tahapan - Multi Sesi)</option>
+                        </select>
+                        <p className="text-[10px] text-slate-400 mt-1">
+                            Menentukan template alur kerja dan deadline deliverables otomatis di proyek.
+                        </p>
+                    </div>
+
+                    <div>
+                        <label className="block font-bold text-slate-700 mb-1">Deskripsi</label>
+                        <textarea
+                            rows={2}
+                            value={form.description}
+                            onChange={(e) => setForm({ ...form, description: e.target.value })}
+                            placeholder="Deskripsi singkat mengenai kategori project ini..."
+                            className="w-full px-3.5 py-2 rounded-xl border border-slate-200 font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block font-bold text-slate-700 mb-1">Status</label>
+                        <select
+                            value={form.status}
+                            onChange={(e) => setForm({ ...form, status: e.target.value })}
+                            className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
+                        >
+                            <option value="active">Aktif</option>
+                            <option value="inactive">Nonaktif</option>
+                        </select>
                     </div>
                 </div>
-            )}
+            </Modal>
         </div>
     );
 }

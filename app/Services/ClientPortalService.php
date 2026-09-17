@@ -113,7 +113,9 @@ class ClientPortalService
             $rawRecommendedIds = Setting::get('portal_recommended_packages');
             $recommendedIds = [];
             if ($rawRecommendedIds) {
-                if (str_starts_with($rawRecommendedIds, '[')) {
+                if (is_array($rawRecommendedIds)) {
+                    $recommendedIds = $rawRecommendedIds;
+                } elseif (str_starts_with($rawRecommendedIds, '[')) {
                     $recommendedIds = json_decode($rawRecommendedIds, true) ?: [];
                 } else {
                     $recommendedIds = array_filter(array_map('trim', explode(',', $rawRecommendedIds)));
@@ -137,12 +139,13 @@ class ClientPortalService
                             'name' => $pkg->name,
                             'title' => $pkg->name,
                             'category_name' => $pkg->category?->name ?? 'Layanan Foto',
+                            'category_color' => $pkg->category?->color ?? '#3C0E0E',
                             'base_price' => (float) $pkg->base_price,
                             'price' => 'Rp ' . number_format($pkg->base_price, 0, ',', '.'),
                             'duration_hours' => $pkg->duration_hours,
                             'description' => $pkg->description,
                             'desc' => $pkg->description ?: ($pkg->category?->name ?? 'Dokumentasi Terbaik'),
-                            'image' => $this->getPackageSampleImage($pkg->name),
+                            'image' => $pkg->category?->image ? asset($pkg->category->image) : $this->getPackageSampleImage($pkg->name),
                         ];
                     });
             } else {
@@ -157,12 +160,13 @@ class ClientPortalService
                             'name' => $pkg->name,
                             'title' => $pkg->name,
                             'category_name' => $pkg->category?->name ?? 'Layanan Foto',
+                            'category_color' => $pkg->category?->color ?? '#3C0E0E',
                             'base_price' => (float) $pkg->base_price,
                             'price' => 'Rp ' . number_format($pkg->base_price, 0, ',', '.'),
                             'duration_hours' => $pkg->duration_hours,
                             'description' => $pkg->description,
                             'desc' => $pkg->description ?: ($pkg->category?->name ?? 'Dokumentasi Terbaik'),
-                            'image' => $this->getPackageSampleImage($pkg->name),
+                            'image' => $pkg->category?->image ? asset($pkg->category->image) : $this->getPackageSampleImage($pkg->name),
                         ];
                     });
             }
@@ -533,12 +537,23 @@ class ClientPortalService
                     $dateDay = $parsedTime ? date('d', $parsedTime) : now()->isoFormat('D');
                     $dateMonthYear = $parsedTime ? date('M Y', $parsedTime) : now()->isoFormat('MMM YYYY');
 
+                    $role = 'Klien';
+                    $authorDisplay = $nAuthor ?: 'Klien';
+
+                    if (str_contains($nAuthor, ' - ')) {
+                        [$aName, $aRole] = explode(' - ', $nAuthor, 2);
+                        $authorDisplay = trim($aName);
+                        $role = trim($aRole);
+                    } elseif ($nAuthor === $supervisorName || str_contains(strtolower($nAuthor), 'admin') || str_contains(strtolower($nAuthor), 'studio') || str_contains(strtolower($nAuthor), 'operasional')) {
+                        $role = 'Tim Studio';
+                    }
+
                     $notesList[] = [
                         'id' => 'note-added-' . ($idx + 1),
                         'title' => $nTitle ?: 'Catatan Tambahan',
                         'content' => $nContent,
-                        'author' => $nAuthor ?: 'Klien',
-                        'role' => ($nAuthor === $supervisorName) ? 'Operasional' : 'Klien',
+                        'author' => $authorDisplay,
+                        'role' => $role,
                         'date' => $dateDay,
                         'monthYear' => $dateMonthYear,
                     ];

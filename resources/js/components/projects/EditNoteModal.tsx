@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
-import { X, FileText, CheckCircle2, Loader2, Tag, Sparkles } from 'lucide-react';
+import { X, Edit3, CheckCircle2, Loader2, Tag, Sparkles } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 
-export interface AddNoteModalProps {
+export interface EditNoteModalProps {
     isOpen: boolean;
     onClose: () => void;
     projectId?: string | number;
-    onSave?: (note: string) => void;
+    noteIndex: number | null;
+    initialTitle?: string;
+    initialContent?: string;
     onSuccess?: () => void;
 }
 
@@ -20,34 +22,33 @@ const PRESET_TITLES = [
     'Catatan Penting',
 ];
 
-export default function AddNoteModal({
+export default function EditNoteModal({
     isOpen,
     onClose,
     projectId,
-    onSave,
+    noteIndex,
+    initialTitle = '',
+    initialContent = '',
     onSuccess,
-}: AddNoteModalProps) {
-    const [title, setTitle] = useState('');
-    const [noteText, setNoteText] = useState('');
+}: EditNoteModalProps) {
+    const [title, setTitle] = useState(initialTitle);
+    const [content, setContent] = useState(initialContent);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    if (!isOpen) return null;
+    useEffect(() => {
+        if (isOpen) {
+            setTitle(initialTitle || 'Catatan Project');
+            setContent(initialContent || '');
+        }
+    }, [isOpen, initialTitle, initialContent]);
+
+    if (!isOpen || noteIndex === null) return null;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const trimmedContent = noteText.trim();
+        const trimmedContent = content.trim();
         if (!trimmedContent) {
             toast.error('Isi catatan tidak boleh kosong.');
-            return;
-        }
-
-        // If onSave callback is provided without projectId
-        if (onSave && !projectId) {
-            onSave(trimmedContent);
-            toast.success('Catatan berhasil disimpan!');
-            setTitle('');
-            setNoteText('');
-            onClose();
             return;
         }
 
@@ -57,8 +58,8 @@ export default function AddNoteModal({
         }
 
         setIsSubmitting(true);
-        router.post(
-            `/projects/${projectId}/note`,
+        router.put(
+            `/projects/${projectId}/notes/${noteIndex}`,
             {
                 title: title.trim() || 'Catatan Project',
                 content: trimmedContent,
@@ -66,16 +67,14 @@ export default function AddNoteModal({
             {
                 preserveScroll: true,
                 onSuccess: () => {
-                    toast.success('Catatan baru berhasil ditambahkan ke project!');
-                    setTitle('');
-                    setNoteText('');
+                    toast.success('Catatan berhasil diperbarui!');
                     setIsSubmitting(false);
                     onClose();
                     onSuccess?.();
                 },
                 onError: (errors) => {
                     setIsSubmitting(false);
-                    const firstErr = (Object.values(errors)[0] as string) || 'Gagal menyimpan catatan.';
+                    const firstErr = (Object.values(errors)[0] as string) || 'Gagal memperbarui catatan.';
                     toast.error(firstErr);
                 },
             }
@@ -87,7 +86,7 @@ export default function AddNoteModal({
             className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200"
             role="dialog"
             aria-modal="true"
-            aria-labelledby="modal-add-note-title"
+            aria-labelledby="modal-edit-note-title"
         >
             <div
                 className="bg-white rounded-3xl p-5 sm:p-6 max-w-lg w-full shadow-2xl border border-slate-200/80 space-y-4 my-auto animate-in zoom-in-95 duration-200"
@@ -96,15 +95,15 @@ export default function AddNoteModal({
                 {/* Header */}
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                     <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0">
-                            <FileText className="w-4.5 h-4.5" />
+                        <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+                            <Edit3 className="w-4.5 h-4.5" />
                         </div>
                         <div>
-                            <h3 id="modal-add-note-title" className="font-bold text-sm text-slate-900">
-                                Tambah Catatan &amp; Memo Project
+                            <h3 id="modal-edit-note-title" className="font-bold text-sm text-slate-900">
+                                Edit Catatan &amp; Memo Project
                             </h3>
                             <p className="text-[11px] text-slate-500">
-                                Catatan internal, preferensi brief, atau instruksi khusus tim
+                                Perbarui isi briefing, instruksi teknis, atau koreksi catatan
                             </p>
                         </div>
                     </div>
@@ -150,7 +149,7 @@ export default function AddNoteModal({
                                     onClick={() => setTitle(preset)}
                                     className={`px-2 py-0.5 rounded-md text-[10.5px] font-medium border transition-all cursor-pointer ${
                                         title === preset
-                                            ? 'bg-amber-100 text-amber-800 border-amber-300 font-bold'
+                                            ? 'bg-indigo-100 text-indigo-800 border-indigo-300 font-bold'
                                             : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                                     }`}
                                 >
@@ -167,12 +166,12 @@ export default function AddNoteModal({
                                 Isi Catatan / Instruksi <span className="text-rose-500">*</span>
                             </label>
                             <span className="text-[10px] text-slate-400 font-mono">
-                                {noteText.length} / 5000
+                                {content.length} / 5000
                             </span>
                         </div>
                         <textarea
-                            value={noteText}
-                            onChange={(e) => setNoteText(e.target.value)}
+                            value={content}
+                            onChange={(e) => setContent(e.target.value)}
                             placeholder="Tuliskan rincian brief, kesepakatan klien, arahan teknis lapangan, referensi foto, atau catatan koreksi..."
                             rows={5}
                             maxLength={5000}
@@ -182,10 +181,10 @@ export default function AddNoteModal({
                     </div>
 
                     {/* Hint / info */}
-                    <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl flex items-start gap-2 text-[11px] text-amber-900 leading-relaxed">
-                        <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="p-3 bg-indigo-50/70 border border-indigo-200/80 rounded-xl flex items-start gap-2 text-[11px] text-indigo-900 leading-relaxed">
+                        <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0 mt-0.5" />
                         <span>
-                            Catatan akan otomatis dicatat dengan stempel waktu dan nama staf pembuat, serta langsung dapat ditinjau oleh tim operasional project.
+                            Perubahan akan otomatis disimpan dan status catatan akan ditandai dengan keterangan <em>(diedit)</em>.
                         </span>
                     </div>
 
@@ -201,7 +200,7 @@ export default function AddNoteModal({
                         </button>
                         <button
                             type="submit"
-                            disabled={isSubmitting || !noteText.trim()}
+                            disabled={isSubmitting || !content.trim()}
                             className="inline-flex items-center gap-1.5 px-4.5 py-2 bg-[#3B46F1] hover:bg-[#323BD8] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold transition-all cursor-pointer shadow-sm shadow-indigo-500/20"
                         >
                             {isSubmitting ? (
@@ -212,7 +211,7 @@ export default function AddNoteModal({
                             ) : (
                                 <>
                                     <CheckCircle2 className="w-3.5 h-3.5" />
-                                    <span>Simpan Catatan</span>
+                                    <span>Simpan Perubahan</span>
                                 </>
                             )}
                         </button>

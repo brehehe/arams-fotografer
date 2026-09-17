@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, Link } from '@inertiajs/react';
 import {
     Globe,
     RotateCcw,
@@ -11,10 +11,12 @@ import {
     Star,
     CheckCircle2,
     SlidersHorizontal,
+    Package,
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { GradientBuilder, ColorSettingRow } from '@/components/settings/ThemeControls';
 import { toast } from '@/components/ui/sonner';
+import SettingsTabNav from '@/components/SettingsTabNav';
 
 interface PortalKlienProps {
     settings?: any;
@@ -484,6 +486,13 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
                 </div>
             </div>
 
+            {/* Top Horizontal Navigation (Admin, Form Klien, Portal Klien) */}
+            <SettingsTabNav
+                showMainTabs
+                activeMainTab="portal_klien"
+                accentColor={portalForm.portal_primary_accent || '#3C0E0E'}
+            />
+
             {/* Header Banner & Quick Actions */}
             <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
@@ -500,6 +509,13 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
                     </p>
                 </div>
                 <div className="flex items-center gap-2.5 flex-wrap">
+                    <Link
+                        href="/setting/admin?sub=recommended_packages"
+                        className="px-3.5 py-2 rounded-xl text-xs font-bold border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800 transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                    >
+                        <Package className="w-3.5 h-3.5 text-amber-700" />
+                        <span>Atur Rekomendasi Paket</span>
+                    </Link>
                     <button
                         type="button"
                         onClick={handleReset}

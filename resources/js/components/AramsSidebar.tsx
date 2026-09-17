@@ -126,8 +126,12 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
     const isPortalKlienActive = currentPath.startsWith('/setting/portal-klien') ||
         currentPath.startsWith('/settings/portal-klien') ||
         (currentPath.startsWith('/settings') && (url || '').includes('tab=portal_klien'));
+    const isRecommendedPackagesActive =
+        (currentPath.startsWith('/setting/admin') || currentPath.startsWith('/settings/admin')) &&
+        (url || '').includes('sub=recommended_packages');
+
     const isAdminActive =
-        currentPath.startsWith('/setting/admin') ||
+        (currentPath.startsWith('/setting/admin') ||
         currentPath.startsWith('/settings/admin') ||
         (currentPath.startsWith('/settings') && !isFormKlienActive && !isPortalKlienActive) ||
         (currentPath === '/setting') ||
@@ -135,10 +139,11 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
         currentPath.startsWith('/master-data/testimonials') ||
         currentPath.startsWith('/master-data/instagram-posts') ||
         currentPath.startsWith('/master-data/portfolio-categories') ||
-        currentPath.startsWith('/master-data/portfolios');
+        currentPath.startsWith('/master-data/portfolios')) && !isRecommendedPackagesActive;
 
     const settingNav = [
         { name: 'Admin', href: '/setting/admin', active: isAdminActive },
+        { name: 'Rekomendasi Paket', href: '/setting/admin?sub=recommended_packages', active: isRecommendedPackagesActive },
         { name: 'Form Klien', href: '/setting/form-klien', active: isFormKlienActive },
         { name: 'Portal Klien', href: '/setting/portal-klien', active: isPortalKlienActive },
     ];

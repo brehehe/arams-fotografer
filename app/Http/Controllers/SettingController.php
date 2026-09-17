@@ -79,6 +79,7 @@ class SettingController extends Controller
             'settingsMap' => $data['settingsMap'],
             'backups' => $this->backupService->getBackupsList(),
             'packages' => $packages,
+            'sub' => $sub ?: 'company',
         ]);
     }
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Head, router, Link } from '@inertiajs/react';
 import {
     Building2,
@@ -83,6 +83,7 @@ interface SettingsAdminProps {
         status: string;
         sort_order: number;
     }>;
+    sub?: SettingAdminSubTab;
 }
 
 export default function AdminSettingsPage({
@@ -90,16 +91,23 @@ export default function AdminSettingsPage({
     settingsMap = {},
     backups = [],
     packages = [],
+    sub,
 }: SettingsAdminProps) {
     const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
     const subParam = searchParams?.get('sub');
 
     const initialAdminSubTab: SettingAdminSubTab =
-        (['company', 'general', 'appearance', 'login_theme', 'recommended_packages', 'backup'].includes(subParam || '')
-            ? (subParam as SettingAdminSubTab)
+        (['company', 'general', 'appearance', 'login_theme', 'recommended_packages', 'backup'].includes(sub || subParam || '')
+            ? ((sub || subParam) as SettingAdminSubTab)
             : 'company');
 
     const [adminSubTab, setAdminSubTab] = useState<SettingAdminSubTab>(initialAdminSubTab);
+
+    useEffect(() => {
+        if (sub && ['company', 'general', 'appearance', 'login_theme', 'recommended_packages', 'backup'].includes(sub)) {
+            setAdminSubTab(sub);
+        }
+    }, [sub]);
     const [activeModal, setActiveModal] = useState<string | null>(null);
 
     // Spatie Backup State
@@ -249,9 +257,13 @@ export default function AdminSettingsPage({
     let initialSelectedPackageIds: string[] = [];
     try {
         if (rawRecommendedIds) {
-            initialSelectedPackageIds = rawRecommendedIds.startsWith('[')
-                ? JSON.parse(rawRecommendedIds)
-                : rawRecommendedIds.split(',').map((id: string) => id.trim()).filter(Boolean);
+            if (Array.isArray(rawRecommendedIds)) {
+                initialSelectedPackageIds = rawRecommendedIds;
+            } else if (typeof rawRecommendedIds === 'string') {
+                initialSelectedPackageIds = rawRecommendedIds.startsWith('[')
+                    ? JSON.parse(rawRecommendedIds)
+                    : rawRecommendedIds.split(',').map((id: string) => id.trim()).filter(Boolean);
+            }
         }
     } catch {
         initialSelectedPackageIds = [];
@@ -266,7 +278,42 @@ export default function AdminSettingsPage({
 
     const [selectedPackageIds, setSelectedPackageIds] = useState<string[]>(initialSelectedPackageIds);
     const [packageSearchTerm, setPackageSearchTerm] = useState('');
+    const [packageCategoryFilter, setPackageCategoryFilter] = useState<string>('all');
     const [savingRecommended, setSavingRecommended] = useState(false);
+
+    const availableCategories = useMemo(() => {
+        const catMap = new Map<string, string>();
+        packages.forEach((p: any) => {
+            if (p.category?.id && p.category?.name) {
+                catMap.set(p.category.id, p.category.name);
+            }
+        });
+        return Array.from(catMap.entries()).map(([id, name]) => ({ id, name }));
+    }, [packages]);
+
+    useEffect(() => {
+        const raw = getVal('portal_recommended_packages', '');
+        try {
+            if (raw) {
+                if (Array.isArray(raw)) {
+                    setSelectedPackageIds(raw);
+                } else if (typeof raw === 'string') {
+                    const parsed = raw.startsWith('[')
+                        ? JSON.parse(raw)
+                        : raw.split(',').map((id: string) => id.trim()).filter(Boolean);
+                    setSelectedPackageIds(parsed);
+                }
+            }
+        } catch {
+            // ignore
+        }
+        setRecommendedForm({
+            portal_show_recommended_packages: getVal('portal_show_recommended_packages', '1') !== '0',
+            portal_recommended_packages_title: getVal('portal_recommended_packages_title', 'Rekomendasi Paket Untuk Anda'),
+            portal_recommended_packages_subtitle: getVal('portal_recommended_packages_subtitle', 'Pilihan paket menarik lainnya yang mungkin Anda sukai.'),
+            portal_show_testimonials: getVal('portal_show_testimonials', '1') !== '0',
+        });
+    }, [settingsMap]);
 
     const handleSaveRecommendedPackages = () => {
         setSavingRecommended(true);
@@ -812,6 +859,7 @@ export default function AdminSettingsPage({
 
             {/* Top Horizontal Navigation (Admin, Form Klien, Portal Klien) */}
             <SettingsTabNav
+                showMainTabs
                 activeMainTab="admin"
                 activeAdminSubTab={adminSubTab}
                 accentColor={themeForm.primary_accent_color || '#F05322'}
@@ -3025,50 +3073,64 @@ export default function AdminSettingsPage({
             {adminSubTab === 'recommended_packages' && (
                 <div className="space-y-6 animate-in fade-in duration-200">
                     {/* Header Banner */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900/60 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
-                        <div>
-                            <div className="flex items-center gap-2.5">
-                                <div
-                                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                                    style={{
-                                        backgroundColor: `${themeForm.primary_accent_color || '#3C0E0E'}18`,
-                                        color: themeForm.primary_accent_color || '#3C0E0E',
-                                    }}
-                                >
-                                    <Package className="w-5 h-5" />
-                                </div>
-                                <div>
+                    <div className="bg-white dark:bg-slate-900/60 p-5 sm:p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs space-y-4">
+                        <div className="flex items-start gap-3.5">
+                            <div
+                                className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-2xs"
+                                style={{
+                                    backgroundColor: `${themeForm.primary_accent_color || '#3C0E0E'}18`,
+                                    color: themeForm.primary_accent_color || '#3C0E0E',
+                                }}
+                            >
+                                <Package className="w-5.5 h-5.5" />
+                            </div>
+                            <div className="space-y-1 flex-1 min-w-0">
+                                <div className="flex items-center gap-2.5 flex-wrap">
                                     <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                                         Pengaturan Rekomendasi Paket Portal Klien
                                     </h2>
-                                    <span className="text-xs text-slate-400 font-mono">http://localhost:8000/client/dashboard</span>
+                                    <span className="inline-flex items-center gap-1 text-[10.5px] font-bold text-amber-700 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300 px-2.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-800/60">
+                                        Portal Klien
+                                    </span>
                                 </div>
+                                <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm leading-relaxed">
+                                    Pilih paket-paket unggulan studio dan atur urutan prioritas yang tampil pada seksi <strong>"Rekomendasi Paket Untuk Anda"</strong> di portal klien (<code className="text-amber-700 bg-amber-50 dark:bg-slate-800 dark:text-amber-300 px-1.5 py-0.5 rounded text-[11px] font-mono">/client/dashboard</code>).
+                                </p>
                             </div>
-                            <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1 sm:ml-12.5">
-                                Pilih paket-paket unggulan studio dan atur urutan prioritas yang tampil pada seksi <strong>"Rekomendasi Paket Untuk Anda"</strong> di portal klien.
-                            </p>
                         </div>
 
-                        <div className="flex items-center gap-2.5 flex-wrap sm:ml-auto">
-                            <Link
-                                href="/client/dashboard"
-                                target="_blank"
-                                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer"
-                            >
-                                <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
-                                <span>Preview di Portal</span>
-                            </Link>
+                        {/* Actions Row di Bawah Header */}
+                        <div className="pt-3.5 border-t border-slate-100 dark:border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex items-center gap-2 text-xs text-slate-500">
+                                <span className="inline-flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+                                    {selectedPackageIds.length} Paket Rekomendasi Terpilih
+                                </span>
+                                <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">•</span>
+                                <span className="text-slate-400 hidden sm:inline">Urutan tampil otomatis disinkronkan ke portal klien</span>
+                            </div>
 
-                            <button
-                                type="button"
-                                onClick={handleSaveRecommendedPackages}
-                                disabled={savingRecommended}
-                                style={{ backgroundColor: themeForm.primary_accent_color || '#3C0E0E' }}
-                                className="inline-flex items-center gap-2 px-4 py-2.5 hover:brightness-110 text-white rounded-xl text-xs font-bold shadow-xs transition-all hover:scale-[1.02] cursor-pointer shrink-0 disabled:opacity-50"
-                            >
-                                {savingRecommended ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                <span>Simpan Pengaturan</span>
-                            </button>
+                            <div className="flex items-center gap-2.5 self-end sm:self-auto shrink-0">
+                                <Link
+                                    href="/client/dashboard"
+                                    target="_blank"
+                                    className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer"
+                                >
+                                    <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                                    <span>Preview di Portal</span>
+                                </Link>
+
+                                <button
+                                    type="button"
+                                    onClick={handleSaveRecommendedPackages}
+                                    disabled={savingRecommended}
+                                    style={{ backgroundColor: themeForm.primary_accent_color || '#3C0E0E' }}
+                                    className="inline-flex items-center gap-2 px-4 py-2.5 hover:brightness-110 text-white rounded-xl text-xs font-bold shadow-xs transition-all hover:scale-[1.02] cursor-pointer shrink-0 disabled:opacity-50"
+                                >
+                                    {savingRecommended ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                    <span>Simpan Pengaturan</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -3325,9 +3387,52 @@ export default function AdminSettingsPage({
                             </div>
                         </div>
 
+                        {/* Category Filter Pills */}
+                        {availableCategories.length > 0 && (
+                            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setPackageCategoryFilter('all')}
+                                    className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                                        packageCategoryFilter === 'all'
+                                            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
+                                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                                    }`}
+                                >
+                                    Semua ({packages.length})
+                                </button>
+                                {availableCategories.map((cat) => {
+                                    const count = packages.filter((p: any) => p.category?.id === cat.id).length;
+                                    const isActive = packageCategoryFilter === cat.id;
+                                    return (
+                                        <button
+                                            key={cat.id}
+                                            type="button"
+                                            onClick={() => setPackageCategoryFilter(cat.id)}
+                                            className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                                                isActive
+                                                    ? 'bg-[#3C0E0E] text-white shadow-xs'
+                                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                                            }`}
+                                        >
+                                            <span>{cat.name}</span>
+                                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                                                isActive ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                                            }`}>
+                                                {count}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
                             {packages
                                 .filter((pkg: any) => {
+                                    if (packageCategoryFilter !== 'all' && pkg.category?.id !== packageCategoryFilter) {
+                                        return false;
+                                    }
                                     if (!packageSearchTerm.trim()) return true;
                                     const term = packageSearchTerm.toLowerCase();
                                     const pkgName = (pkg.name || '').toLowerCase();
@@ -3473,6 +3578,51 @@ export default function AdminSettingsPage({
                                 <p>Seksi ini tidak akan ditampilkan pada dashboard klien.</p>
                             </div>
                         )}
+                    </div>
+
+                    {/* Bottom Action Bar */}
+                    <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <div
+                                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-2xs"
+                                style={{
+                                    backgroundColor: `${themeForm.primary_accent_color || '#3C0E0E'}18`,
+                                    color: themeForm.primary_accent_color || '#3C0E0E',
+                                }}
+                            >
+                                <Save className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                                    Simpan Perubahan Rekomendasi Paket
+                                </h4>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    {selectedPackageIds.length} paket terpilih akan diperbarui pada dashboard portal klien saat tombol ditekan.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-2.5 sm:ml-auto">
+                            <Link
+                                href="/client/dashboard"
+                                target="_blank"
+                                className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer"
+                            >
+                                <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                                <span>Preview di Portal</span>
+                            </Link>
+
+                            <button
+                                type="button"
+                                onClick={handleSaveRecommendedPackages}
+                                disabled={savingRecommended}
+                                style={{ backgroundColor: themeForm.primary_accent_color || '#3C0E0E' }}
+                                className="inline-flex items-center gap-2 px-5 py-2.5 hover:brightness-110 text-white rounded-xl text-xs font-bold shadow-md transition-all hover:scale-[1.02] cursor-pointer shrink-0 disabled:opacity-50"
+                            >
+                                {savingRecommended ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                <span>Simpan Pengaturan</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import { Pagination } from '@/components/ui/pagination';
 import { StatCard } from '@/components/ui';
+import { Modal } from '@/components/ui/modal';
 import {
     Wallet,
     CheckCircle2,

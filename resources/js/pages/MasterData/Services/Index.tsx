@@ -3,6 +3,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { toast } from 'sonner';
 import { Pagination } from '@/components/ui/pagination';
 import { StatCard } from '@/components/ui';
+import { Modal } from '@/components/ui/modal';
 import {
     Box,
     CheckCircle2,
@@ -481,95 +482,89 @@ export default function ServicesIndex({
             </div>
 
             {/* ── 4. MODAL: TAMBAH / EDIT LAYANAN ── */}
-            {modalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
-                    <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
-                        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                            <h3 className="text-base font-black text-slate-900">
-                                {editItem ? 'Edit Jenis Layanan' : 'Tambah Jenis Layanan'}
-                            </h3>
-                            <button type="button" onClick={() => setModalOpen(false)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer">
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
+            <Modal
+                isOpen={modalOpen}
+                onClose={() => setModalOpen(false)}
+                title={editItem ? 'Edit Jenis Layanan' : 'Tambah Jenis Layanan'}
+                maxWidth="md"
+                onSubmit={handleSubmit}
+                footer={
+                    <>
+                        <button
+                            type="button"
+                            onClick={() => setModalOpen(false)}
+                            className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                        >
+                            Batal
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={isSubmitting}
+                            className="px-5 py-2 text-xs font-bold text-white bg-[#4F46E5] hover:bg-[#4338CA] rounded-xl shadow-xs cursor-pointer disabled:opacity-50"
+                        >
+                            {isSubmitting ? 'Menyimpan...' : 'Simpan Layanan'}
+                        </button>
+                    </>
+                }
+            >
+                <div className="space-y-3.5 text-xs">
+                    <div>
+                        <label className="block font-bold text-slate-700 mb-1">
+                            Kategori Project <span className="text-rose-500">*</span>
+                        </label>
+                        <select
+                            required
+                            value={form.category_id}
+                            onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+                            className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
+                        >
+                            <option value="" disabled>Pilih Kategori</option>
+                            {categories.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                    {c.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
-                            <div>
-                                <label className="block font-bold text-slate-700 mb-1">
-                                    Kategori Project <span className="text-rose-500">*</span>
-                                </label>
-                                <select
-                                    required
-                                    value={form.category_id}
-                                    onChange={(e) => setForm({ ...form, category_id: e.target.value })}
-                                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
-                                >
-                                    <option value="" disabled>Pilih Kategori</option>
-                                    {categories.map((c) => (
-                                        <option key={c.id} value={c.id}>
-                                            {c.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
+                    <div>
+                        <label className="block font-bold text-slate-700 mb-1">
+                            Nama Layanan <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            required
+                            value={form.name}
+                            onChange={(e) => setForm({ ...form, name: e.target.value })}
+                            placeholder="Contoh: Fotografi, Videografi, Album Cetak, Drone"
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                        />
+                    </div>
 
-                            <div>
-                                <label className="block font-bold text-slate-700 mb-1">
-                                    Nama Layanan <span className="text-rose-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={form.name}
-                                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                    placeholder="Contoh: Fotografi, Videografi, Album Cetak, Drone"
-                                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                                />
-                            </div>
+                    <div>
+                        <label className="block font-bold text-slate-700 mb-1">Deskripsi</label>
+                        <textarea
+                            rows={3}
+                            value={form.description}
+                            onChange={(e) => setForm({ ...form, description: e.target.value })}
+                            placeholder="Deskripsi singkat mengenai layanan ini..."
+                            className="w-full px-3.5 py-2 rounded-xl border border-slate-200 font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none"
+                        />
+                    </div>
 
-                            <div>
-                                <label className="block font-bold text-slate-700 mb-1">Deskripsi</label>
-                                <textarea
-                                    rows={3}
-                                    value={form.description}
-                                    onChange={(e) => setForm({ ...form, description: e.target.value })}
-                                    placeholder="Deskripsi singkat mengenai layanan ini..."
-                                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block font-bold text-slate-700 mb-1">Status</label>
-                                <select
-                                    value={form.status}
-                                    onChange={(e) => setForm({ ...form, status: e.target.value })}
-                                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
-                                >
-                                    <option value="active">Aktif</option>
-                                    <option value="inactive">Nonaktif</option>
-                                </select>
-                            </div>
-
-                            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-                                <button
-                                    type="button"
-                                    onClick={() => setModalOpen(false)}
-                                    className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={isSubmitting}
-                                    className="px-5 py-2 text-xs font-bold text-white bg-[#4F46E5] hover:bg-[#4338CA] rounded-xl shadow-xs cursor-pointer disabled:opacity-50"
-                                >
-                                    {isSubmitting ? 'Menyimpan...' : 'Simpan Layanan'}
-                                </button>
-                            </div>
-                        </form>
+                    <div>
+                        <label className="block font-bold text-slate-700 mb-1">Status</label>
+                        <select
+                            value={form.status}
+                            onChange={(e) => setForm({ ...form, status: e.target.value })}
+                            className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
+                        >
+                            <option value="active">Aktif</option>
+                            <option value="inactive">Nonaktif</option>
+                        </select>
                     </div>
                 </div>
-            )}
+            </Modal>
         </div>
     );
 }

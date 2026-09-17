@@ -62,6 +62,7 @@ import {
     Clock3,
     Baby,
     RotateCcw,
+    Loader2,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Modal, AlertConfirmation } from '@/components/ui';
@@ -71,6 +72,7 @@ import {
     ProofViewerModal,
     AddDriveLinkModal,
     AddNoteModal,
+    EditNoteModal,
     AddHighlightModal,
     ProjectSlideModal,
     CategorySpecificView,
@@ -133,6 +135,69 @@ export default function ProjectDetail({
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
     const [isHighlightModalOpen, setIsHighlightModalOpen] = useState(false);
+    const [isEditAllNotesOpen, setIsEditAllNotesOpen] = useState(false);
+    const [editAllNotesContent, setEditAllNotesContent] = useState('');
+    const [isUpdatingNotes, setIsUpdatingNotes] = useState(false);
+
+    // Specific note editing state
+    const [editingNoteData, setEditingNoteData] = useState<{
+        isOpen: boolean;
+        index: number | null;
+        title: string;
+        content: string;
+    }>({
+        isOpen: false,
+        index: null,
+        title: '',
+        content: '',
+    });
+
+    const openEditNoteModal = (index: number, title: string, content: string) => {
+        setEditingNoteData({
+            isOpen: true,
+            index,
+            title,
+            content,
+        });
+    };
+
+    const handleDeleteNoteEntry = (index: number, noteTitle: string) => {
+        if (!project?.id) return;
+        if (!confirm(`Apakah Anda yakin ingin menghapus catatan "${noteTitle}"?`)) return;
+
+        router.delete(`/projects/${project.id}/notes/${index}`, {
+            preserveScroll: true,
+            onSuccess: () => toast.success('Catatan berhasil dihapus dari project.'),
+            onError: (errs) => {
+                const first = (Object.values(errs)[0] as string) || 'Gagal menghapus catatan.';
+                toast.error(first);
+            },
+        });
+    };
+
+    const handleUpdateAllNotes = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!project?.id) return;
+
+        setIsUpdatingNotes(true);
+        router.put(
+            `/projects/${project.id}/note`,
+            { notes: editAllNotesContent },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success('Catatan project berhasil diperbarui.');
+                    setIsEditAllNotesOpen(false);
+                    setIsUpdatingNotes(false);
+                },
+                onError: (errs) => {
+                    setIsUpdatingNotes(false);
+                    const first = (Object.values(errs)[0] as string) || 'Gagal memperbarui catatan.';
+                    toast.error(first);
+                },
+            }
+        );
+    };
 
     const handleSetCover = (highlightId: string) => {
         router.post(`/projects/${project?.id}/highlights/${highlightId}/cover`, {}, {
@@ -222,6 +287,12 @@ export default function ProjectDetail({
     const clientInstagram = project?.client?.instagram || '-';
     const clientAddress = project?.client?.address || project?.location || '-';
     const clientCity = project?.client?.city || '';
+    const clientProvince = project?.client?.province || (project?.client?.category_data as any)?.province || '-';
+    const clientDistrict = project?.client?.district || (project?.client?.category_data as any)?.district || '-';
+    const clientVillage = project?.client?.village || (project?.client?.category_data as any)?.village || '-';
+    const clientPostalCode = project?.client?.postal_code || (project?.client?.category_data as any)?.postal_code || '-';
+    const clientContactPreference = project?.client?.contact_preference || project?.client?.preferred_contact || 'WhatsApp';
+    const clientOtherSocial = project?.client?.other_social_media || (project?.client?.category_data as any)?.other_social_media || '-';
     const clientChildName = project?.client?.child_name || null;
     const clientChildBirthDate = project?.client?.child_birth_date || null;
     const clientChildGender = project?.client?.child_gender || null;
@@ -1189,8 +1260,8 @@ export default function ProjectDetail({
                     {/* ── ROW 2A: INFORMASI SPESIFIK KATEGORI PROJECT ─── */}
                     <CategorySpecificView project={project} />
 
-                    {/* ── ROW 2B: INFORMASI KONTAK KLIEN & ALAMAT ─── */}
-                    <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all w-full">
+                    {/* ── ROW 2B: INFORMASI KONTAK KLIEN & ALAMAT (1 KOLOM PENUH KE BAWAH) ─── */}
+                    <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all w-full space-y-4">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
                             <div className="flex items-center gap-3">
                                 <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200/60 flex items-center justify-center shrink-0">
@@ -1203,75 +1274,214 @@ export default function ProjectDetail({
                                             {clientName}
                                         </span>
                                     </div>
-                                    <p className="text-xs text-slate-500 mt-0.5">Kontak utama pemesan, alamat pelaksanaan, dan catatan referensi</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">Kontak utama pemesan, rincian alamat wilayah lengkap, dan catatan referensi</p>
                                 </div>
                             </div>
                             {project?.client?.id && (
                                 <Link
-                                    href={`/clients/${project.client.id}/edit`}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-indigo-600 bg-slate-50 hover:bg-indigo-50/50 border border-slate-200/80 hover:border-indigo-200 transition-all self-start sm:self-auto shrink-0"
+                                    href={`/clients/${project.client.id}`}
+                                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-indigo-600 bg-slate-50 hover:bg-indigo-50/50 border border-slate-200/80 hover:border-indigo-200 transition-all self-start sm:self-auto shrink-0 shadow-2xs"
                                 >
-                                    <Edit3 className="w-3.5 h-3.5" />
-                                    <span>Edit Profil Klien</span>
-                                    <ExternalLink className="w-3 h-3 text-slate-400" />
+                                    <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                                    <span>Lihat Detail Klien</span>
                                 </Link>
                             )}
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-4">
-                            <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/70 space-y-2 min-w-0">
-                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                                    <User className="w-3.5 h-3.5 text-slate-400" /> Identitas Pemesan
-                                </span>
-                                <div className="text-xs space-y-1">
-                                    <div className="font-bold text-slate-900">{clientName}</div>
-                                    {clientCity && <div className="text-slate-500">Kota: {clientCity}</div>}
-                                    <div className="text-[11px] text-slate-500">Ref: {formattedReferral}</div>
-                                </div>
-                            </div>
-
-                            <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/70 space-y-2">
-                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                                    <Phone className="w-3.5 h-3.5 text-slate-400" /> Kontak Utama
-                                </span>
-                                <div className="space-y-1.5 text-xs">
-                                    <div className="flex items-center gap-2 text-slate-800">
-                                        <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                        <span className="font-mono font-medium">{clientPhone}</span>
+                        {/* SUBSECTION A: WILAYAH & ALAMAT LENGKAP (1 - 6) */}
+                        <div className="space-y-2">
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block px-1">
+                                Wilayah &amp; Alamat Lengkap
+                            </span>
+                            <div className="bg-slate-50/70 rounded-xl border border-slate-200/70 divide-y divide-slate-100/90 text-xs overflow-hidden">
+                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-white/60 transition-colors">
+                                    <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                        <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">1</span>
+                                        <span className="text-[11.5px] font-medium text-slate-600">Provinsi</span>
                                     </div>
-                                    {clientEmail && clientEmail !== '-' && (
-                                        <div className="flex items-center gap-2 text-slate-700 truncate">
-                                            <Mail className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                                            <span className="truncate">{clientEmail}</span>
-                                        </div>
-                                    )}
-                                    {clientInstagram && clientInstagram !== '-' && (
-                                        <div className="flex items-center gap-2 text-slate-700">
-                                            <Instagram className="w-3.5 h-3.5 text-pink-500 shrink-0" />
-                                            <span>@{clientInstagram.replace('@', '')}</span>
-                                        </div>
-                                    )}
+                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                        <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">{clientProvince}</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-white/60 transition-colors">
+                                    <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                        <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">2</span>
+                                        <span className="text-[11.5px] font-medium text-slate-600">Kota/Kabupaten</span>
+                                    </div>
+                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                        <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">{clientCity || '-'}</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-white/60 transition-colors">
+                                    <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                        <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">3</span>
+                                        <span className="text-[11.5px] font-medium text-slate-600">Kecamatan</span>
+                                    </div>
+                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                        <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">{clientDistrict}</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-white/60 transition-colors">
+                                    <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                        <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">4</span>
+                                        <span className="text-[11.5px] font-medium text-slate-600">Kelurahan</span>
+                                    </div>
+                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                        <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">{clientVillage}</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-white/60 transition-colors">
+                                    <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                        <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">5</span>
+                                        <span className="text-[11.5px] font-medium text-slate-600">Kode Pos</span>
+                                    </div>
+                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                        <span className="font-mono font-bold text-slate-900 leading-snug flex-1 min-w-0">{clientPostalCode}</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-white/60 transition-colors">
+                                    <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                        <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">6</span>
+                                        <span className="text-[11.5px] font-medium text-slate-600">Alamat Lengkap</span>
+                                    </div>
+                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                        <span className="font-semibold text-slate-900 leading-relaxed flex-1 min-w-0 break-words">{clientAddress}</span>
+                                    </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/70 space-y-2 sm:col-span-2 lg:col-span-1 min-w-0">
-                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                                    <MapPin className="w-3.5 h-3.5 text-slate-400" /> Alamat / Lokasi
-                                </span>
-                                <div className="text-xs text-slate-600 leading-relaxed">
-                                    {clientAddress && clientAddress !== '-' ? (
-                                        <div className="flex items-start gap-2">
-                                            <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0 mt-0.5" />
-                                            <span className="line-clamp-3">{clientAddress}</span>
-                                        </div>
-                                    ) : (
-                                        <span className="text-slate-400 italic">Alamat belum dicatat</span>
-                                    )}
+                        {/* SUBSECTION B: KONTAK & KOMUNIKASI (7 - 12) */}
+                        <div className="space-y-2 pt-1">
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block px-1">
+                                Kontak &amp; Media Sosial
+                            </span>
+                            <div className="bg-slate-50/70 rounded-xl border border-slate-200/70 divide-y divide-slate-100/90 text-xs overflow-hidden">
+                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-white/60 transition-colors">
+                                    <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                        <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">7</span>
+                                        <span className="text-[11.5px] font-medium text-slate-600">No. WhatsApp</span>
+                                    </div>
+                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 font-mono">
+                                            {clientPhone && clientPhone !== '-' ? (
+                                                <a
+                                                    href={`https://wa.me/${String(clientPhone).replace(/[^0-9]/g, '').replace(/^0/, '62')}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-emerald-700 hover:text-emerald-800 hover:underline inline-flex items-center gap-1.5 font-bold"
+                                                >
+                                                    <span>{clientPhone}</span>
+                                                    <ExternalLink className="w-3 h-3 text-emerald-600 shrink-0" />
+                                                </a>
+                                            ) : '-'}
+                                        </span>
+                                    </div>
                                 </div>
+
+                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-white/60 transition-colors">
+                                    <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                        <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">8</span>
+                                        <span className="text-[11.5px] font-medium text-slate-600">No. Alternatif</span>
+                                    </div>
+                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 font-mono">
+                                            {clientSecondaryPhone || '-'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-white/60 transition-colors">
+                                    <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                        <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">9</span>
+                                        <span className="text-[11.5px] font-medium text-slate-600">Preferensi Kontak</span>
+                                    </div>
+                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                        <span className="font-semibold text-slate-900 leading-snug capitalize flex-1 min-w-0">
+                                            {clientContactPreference}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-white/60 transition-colors">
+                                    <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                        <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">10</span>
+                                        <span className="text-[11.5px] font-medium text-slate-600">Email Aktif</span>
+                                    </div>
+                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 break-all" title={clientEmail || '-'}>
+                                            {clientEmail && clientEmail !== '-' ? (
+                                                <a href={`mailto:${clientEmail}`} className="text-indigo-600 hover:underline">
+                                                    {clientEmail}
+                                                </a>
+                                            ) : '-'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-white/60 transition-colors">
+                                    <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                        <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">11</span>
+                                        <span className="text-[11.5px] font-medium text-slate-600">Instagram</span>
+                                    </div>
+                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                            {clientInstagram && clientInstagram !== '-' ? (
+                                                <a
+                                                    href={`https://instagram.com/${clientInstagram.replace(/^@/, '')}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-pink-600 hover:underline inline-flex items-center gap-1 break-all font-medium"
+                                                >
+                                                    <span>{clientInstagram.startsWith('@') ? clientInstagram : `@${clientInstagram}`}</span>
+                                                    <ExternalLink className="w-3 h-3 shrink-0" />
+                                                </a>
+                                            ) : '-'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-white/60 transition-colors">
+                                    <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                        <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">12</span>
+                                        <span className="text-[11.5px] font-medium text-slate-600">Media Sosial Lain</span>
+                                    </div>
+                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 break-words whitespace-pre-line">
+                                            {clientOtherSocial || '-'}
+                                        </span>
+                                    </div>
+                                </div>
+
                                 {woName && (
-                                    <div className="pt-2 border-t border-slate-200/60 flex items-center gap-2 text-purple-600 text-xs">
-                                        <span>🎀</span>
-                                        <span className="font-semibold">Mitra WO: {woName}</span>
+                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 bg-purple-50/40">
+                                        <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-purple-700 font-bold">
+                                            <span>🎀</span>
+                                            <span className="text-[11.5px]">Mitra WO / EO</span>
+                                        </div>
+                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                            <span className="font-bold text-purple-900 leading-snug flex-1 min-w-0 break-words">
+                                                {woName} {woPic ? `(PIC: ${woPic})` : ''} {woPhone ? `• ${woPhone}` : ''}
+                                            </span>
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -2049,34 +2259,210 @@ export default function ProjectDetail({
             {/* ── TAB: CATATAN VIEW ────────────────────────────────────────────── */}
             {activeTab === 'catatan' && (
                 <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-2xs space-y-6">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
                         <div>
-                            <h2 className="text-base font-bold text-slate-900">Catatan Khusus &amp; Brief Project</h2>
-                            <p className="text-xs text-slate-500">Instruksi internal, preferensi konsep, dan referensi klien.</p>
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 border border-amber-200/60 flex items-center justify-center shrink-0">
+                                    <StickyNote className="w-4.5 h-4.5" />
+                                </div>
+                                <h2 className="text-base font-bold text-slate-900">Catatan Khusus &amp; Brief Project</h2>
+                                {project?.notes && (
+                                    <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-amber-50 text-amber-700 border border-amber-200/80">
+                                        Aktif
+                                    </span>
+                                )}
+                            </div>
+                            <p className="text-xs text-slate-500 mt-1">
+                                Instruksi internal kru, preferensi brief acara, dan catatan referensi teknis klien.
+                            </p>
                         </div>
-                        <button
-                            type="button"
-                            onClick={() => setIsNoteModalOpen(true)}
-                            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#3B46F1] text-white rounded-xl text-xs font-bold shadow-xs hover:bg-[#323BD8] cursor-pointer"
-                        >
-                            <Plus className="w-3.5 h-3.5" />
-                            <span>Tambah Catatan Baru</span>
-                        </button>
+                        <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+                            {project?.notes && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setEditAllNotesContent(project.notes || '');
+                                        setIsEditAllNotesOpen(true);
+                                    }}
+                                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200/60 transition-colors cursor-pointer"
+                                >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                    <span>Edit Seluruh Catatan</span>
+                                </button>
+                            )}
+                            <button
+                                type="button"
+                                onClick={() => setIsNoteModalOpen(true)}
+                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#3B46F1] text-white rounded-xl text-xs font-bold shadow-xs hover:bg-[#323BD8] transition-all cursor-pointer shadow-indigo-500/10"
+                            >
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>Tambah Catatan Baru</span>
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="p-5 rounded-xl bg-amber-50/70 border border-amber-200 space-y-3">
-                        <div className="flex items-center justify-between border-b border-amber-200/60 pb-2">
-                            <div className="text-xs font-bold text-amber-900">
-                                Catatan &amp; Preferensi Brief Project
+                    {/* Notes List / Timeline */}
+                    {(() => {
+                        const raw = project?.notes || '';
+                        if (!raw.trim()) {
+                            return (
+                                <div className="p-8 rounded-2xl border border-dashed border-slate-300/90 text-center py-12 space-y-3 bg-slate-50/50">
+                                    <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center mx-auto shadow-2xs">
+                                        <FileText className="w-6 h-6" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <h4 className="text-sm font-bold text-slate-800">Belum Ada Catatan Khusus</h4>
+                                        <p className="text-xs text-slate-500 max-w-md mx-auto">
+                                            Tambahkan memo briefing, arahan lokasi, instruksi tim fotografer/editor, atau kesepakatan khusus klien agar pengerjaan proyek terdokumentasi rapi.
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsNoteModalOpen(true)}
+                                        className="inline-flex items-center gap-1.5 px-4.5 py-2.5 bg-[#3B46F1] text-white rounded-xl text-xs font-bold shadow-sm hover:bg-[#323BD8] transition-all cursor-pointer mt-2"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                        <span>Tambah Catatan Pertama</span>
+                                    </button>
+                                </div>
+                            );
+                        }
+
+                        // Parse entries formatted as: --- [timestamp] title (Oleh: author) --- \n content
+                        const pattern = /---\s*\[(.*?)\]\s*(.*?)\s*\(Oleh:\s*(.*?)\)\s*---\n?(.*?)(?=(?:---\s*\[|$))/gs;
+                        const matches = [...raw.matchAll(pattern)];
+
+                        const entries: Array<{
+                            id: string;
+                            index: number;
+                            title: string;
+                            content: string;
+                            author?: string;
+                            timestamp?: string;
+                            isInitial?: boolean;
+                        }> = [];
+
+                        const firstDelim = raw.indexOf('--- [');
+                        const hasInitial = firstDelim > 0 && Boolean(raw.substring(0, firstDelim).trim());
+
+                        if (matches.length > 0) {
+                            if (hasInitial) {
+                                entries.push({
+                                    id: 'note-initial',
+                                    index: 0,
+                                    title: 'Briefing & Catatan Awal Project',
+                                    content: raw.substring(0, firstDelim).trim(),
+                                    author: project?.client?.name || 'Input Awal',
+                                    timestamp: formatDateIndo(project?.created_at),
+                                    isInitial: true,
+                                });
+                            }
+
+                            matches.forEach((m, idx) => {
+                                entries.push({
+                                    id: `note-${idx + 1}`,
+                                    index: hasInitial ? idx + 1 : idx,
+                                    timestamp: m[1]?.trim() || '',
+                                    title: m[2]?.trim() || 'Catatan Project',
+                                    author: m[3]?.trim() || 'Tim Operasional',
+                                    content: m[4]?.trim() || '',
+                                    isInitial: false,
+                                });
+                            });
+                        } else {
+                            entries.push({
+                                id: 'note-initial',
+                                index: 0,
+                                title: 'Catatan & Preferensi Brief Project',
+                                content: raw.trim(),
+                                author: project?.client?.name || 'Tim Project',
+                                timestamp: formatDateIndo(project?.updated_at || project?.created_at),
+                                isInitial: true,
+                            });
+                        }
+
+                        return (
+                            <div className="space-y-3.5">
+                                {entries.map((note) => (
+                                    <div
+                                        key={note.id}
+                                        className={`rounded-2xl border p-4.5 sm:p-5 transition-all space-y-3 shadow-2xs hover:shadow-xs group/card ${
+                                            note.isInitial
+                                                ? 'bg-amber-50/50 border-amber-200/80'
+                                                : 'bg-white border-slate-200/90'
+                                        }`}
+                                    >
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100/90 pb-2.5">
+                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                <div
+                                                    className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
+                                                        note.isInitial
+                                                            ? 'bg-amber-100 text-amber-800'
+                                                            : 'bg-indigo-100 text-indigo-700'
+                                                    }`}
+                                                >
+                                                    {note.isInitial ? (
+                                                        <StickyNote className="w-3.5 h-3.5" />
+                                                    ) : (
+                                                        <FileText className="w-3.5 h-3.5" />
+                                                    )}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <h4 className="font-bold text-xs sm:text-sm text-slate-900 truncate">
+                                                        {note.title}
+                                                    </h4>
+                                                    <div className="flex items-center gap-2 text-[10.5px] text-slate-500 mt-0.5 flex-wrap">
+                                                        <span className="font-semibold text-slate-700">
+                                                            {note.author}
+                                                        </span>
+                                                        {note.timestamp && (
+                                                            <>
+                                                                <span className="text-slate-300">•</span>
+                                                                <span className="flex items-center gap-1 font-mono text-slate-400">
+                                                                    <Clock className="w-3 h-3 text-slate-400" />
+                                                                    {note.timestamp}
+                                                                </span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Actions & Badge */}
+                                            <div className="flex items-center gap-1.5 self-start sm:self-auto shrink-0 pt-1 sm:pt-0">
+                                                {note.isInitial && (
+                                                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200/80">
+                                                        Briefing Utama
+                                                    </span>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openEditNoteModal(note.index, note.title, note.content)}
+                                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-slate-600 hover:text-[#3B46F1] bg-slate-50 hover:bg-indigo-50/70 border border-slate-200/70 hover:border-indigo-200 transition-colors cursor-pointer shadow-2xs"
+                                                    title="Edit catatan ini"
+                                                >
+                                                    <Edit3 className="w-3 h-3 text-slate-400" />
+                                                    <span>Edit</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDeleteNoteEntry(note.index, note.title)}
+                                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-slate-500 hover:text-rose-600 bg-slate-50 hover:bg-rose-50/70 border border-slate-200/70 hover:border-rose-200 transition-colors cursor-pointer shadow-2xs"
+                                                    title="Hapus catatan ini"
+                                                >
+                                                    <Trash2 className="w-3 h-3 text-slate-400" />
+                                                    <span>Hapus</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="text-xs text-slate-800 leading-relaxed whitespace-pre-line break-words pl-0.5 font-normal">
+                                            {note.content}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                            <span className="text-[10px] text-amber-700 font-mono">
-                                Diperbarui: {formatDateIndo(project?.updated_at || project?.created_at)}
-                            </span>
-                        </div>
-                        <div className="text-xs text-amber-950 leading-relaxed whitespace-pre-line">
-                            {project?.notes || 'Belum ada catatan khusus yang ditambahkan pada project ini.'}
-                        </div>
-                    </div>
+                        );
+                    })()}
                 </div>
             )}
 
@@ -2524,7 +2910,66 @@ export default function ProjectDetail({
             <AddNoteModal
                 isOpen={isNoteModalOpen}
                 onClose={() => setIsNoteModalOpen(false)}
+                projectId={project?.id}
             />
+
+            <EditNoteModal
+                isOpen={editingNoteData.isOpen}
+                onClose={() => setEditingNoteData((prev) => ({ ...prev, isOpen: false }))}
+                projectId={project?.id}
+                noteIndex={editingNoteData.index}
+                initialTitle={editingNoteData.title}
+                initialContent={editingNoteData.content}
+            />
+
+            {/* Modal: Edit Seluruh Catatan Project */}
+            <Modal
+                isOpen={isEditAllNotesOpen}
+                onClose={() => !isUpdatingNotes && setIsEditAllNotesOpen(false)}
+                title="Edit Seluruh Catatan Project"
+                maxWidth="lg"
+            >
+                <form onSubmit={handleUpdateAllNotes} className="space-y-4 pt-1 text-xs">
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                        Anda dapat mengoreksi, merapikan, atau menghapus catatan project secara langsung di bawah ini.
+                    </p>
+                    <textarea
+                        value={editAllNotesContent}
+                        onChange={(e) => setEditAllNotesContent(e.target.value)}
+                        rows={10}
+                        maxLength={10000}
+                        className="w-full p-3.5 rounded-2xl border border-slate-200 focus:border-[#3B46F1] focus:ring-2 focus:ring-[#3B46F1]/20 outline-hidden font-mono text-xs leading-relaxed text-slate-800 bg-white"
+                        placeholder="Tuliskan catatan lengkap..."
+                    />
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                        <button
+                            type="button"
+                            onClick={() => setIsEditAllNotesOpen(false)}
+                            disabled={isUpdatingNotes}
+                            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                            Batal
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={isUpdatingNotes}
+                            className="inline-flex items-center gap-1.5 px-4.5 py-2 bg-[#3B46F1] hover:bg-[#323BD8] text-white rounded-xl font-bold transition-all cursor-pointer shadow-sm shadow-indigo-500/20 disabled:opacity-50"
+                        >
+                            {isUpdatingNotes ? (
+                                <>
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    <span>Menyimpan...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                    <span>Simpan Perubahan</span>
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </form>
+            </Modal>
 
             <AddHighlightModal
                 isOpen={isHighlightModalOpen}

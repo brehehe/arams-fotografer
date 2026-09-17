@@ -381,69 +381,80 @@ export default function Dashboard({
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {/* + Klien */}
-                            <Link href="/clients" className="bg-slate-50/70 hover:bg-orange-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-orange-200 shadow-2xs transition-all flex items-center gap-2.5 group">
-                                <div className="w-8 h-8 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                                    <UserPlus className="w-4 h-4" />
-                                </div>
-                                <div className="min-w-0">
-                                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-orange-600 transition-colors truncate">+ Klien</h4>
-                                    <p className="text-[10px] text-slate-500 truncate">Tambah data klien baru</p>
-                                </div>
-                            </Link>
-
                             {/* + Project */}
-                            <Link href="/projects" className="bg-slate-50/70 hover:bg-blue-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-blue-200 shadow-2xs transition-all flex items-center gap-2.5 group">
+                            <Link href="/projects/create" className="bg-slate-50/70 hover:bg-blue-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-blue-200 shadow-2xs transition-all flex items-center gap-2.5 group">
                                 <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                                     <FolderPlus className="w-4 h-4" />
                                 </div>
                                 <div className="min-w-0">
-                                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate">+ Project</h4>
-                                    <p className="text-[10px] text-slate-500 truncate">Buat project baru</p>
+                                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate">+ Buat Project</h4>
+                                    <p className="text-[10px] text-slate-500 truncate">Formulir project baru</p>
                                 </div>
                             </Link>
 
-                            {/* + Pembayaran */}
-                            <Link href="/finance" className="bg-slate-50/70 hover:bg-emerald-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-emerald-200 shadow-2xs transition-all flex items-center gap-2.5 group">
+                            {/* + Klien */}
+                            <Link href="/clients?action=create" className="bg-slate-50/70 hover:bg-orange-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-orange-200 shadow-2xs transition-all flex items-center gap-2.5 group">
+                                <div className="w-8 h-8 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                    <UserPlus className="w-4 h-4" />
+                                </div>
+                                <div className="min-w-0">
+                                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-orange-600 transition-colors truncate">+ Tambah Klien</h4>
+                                    <p className="text-[10px] text-slate-500 truncate">Wizard tambah klien baru</p>
+                                </div>
+                            </Link>
+
+                            {/* + Catat Kas / Biaya */}
+                            <Link href="/finance?action=transaction" className="bg-slate-50/70 hover:bg-emerald-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-emerald-200 shadow-2xs transition-all flex items-center gap-2.5 group">
                                 <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                                     <CreditCard className="w-4 h-4" />
                                 </div>
                                 <div className="min-w-0">
-                                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-emerald-600 transition-colors truncate">+ Pembayaran</h4>
-                                    <p className="text-[10px] text-slate-500 truncate">Catat pembayaran klien</p>
+                                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-emerald-600 transition-colors truncate">+ Catat Kas / Biaya</h4>
+                                    <p className="text-[10px] text-slate-500 truncate">Pengeluaran &amp; kas masuk</p>
                                 </div>
                             </Link>
 
-                            {/* Lihat Laporan */}
-                            <Link href="/reports" className="bg-slate-50/70 hover:bg-purple-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-purple-200 shadow-2xs transition-all flex items-center gap-2.5 group">
-                                <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                                    <BarChart3 className="w-4 h-4" />
-                                </div>
-                                <div className="min-w-0">
-                                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-purple-600 transition-colors truncate">Lihat Laporan</h4>
-                                    <p className="text-[10px] text-slate-500 truncate">Buka laporan &amp; analitik</p>
-                                </div>
-                            </Link>
-
-                            {/* Jadwal & Sesi Foto */}
-                            <Link href="/calendar" className="bg-slate-50/70 hover:bg-rose-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-rose-200 shadow-2xs transition-all flex items-center gap-2.5 group">
+                            {/* + Jadwal & Sesi Foto */}
+                            <Link href="/calendar?action=create" className="bg-slate-50/70 hover:bg-rose-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-rose-200 shadow-2xs transition-all flex items-center gap-2.5 group">
                                 <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                                     <Calendar className="w-4 h-4" />
                                 </div>
                                 <div className="min-w-0">
-                                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-rose-600 transition-colors truncate">Jadwal &amp; Sesi</h4>
-                                    <p className="text-[10px] text-slate-500 truncate">Kalender agenda photoshoot</p>
+                                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-rose-600 transition-colors truncate">+ Jadwal &amp; Sesi</h4>
+                                    <p className="text-[10px] text-slate-500 truncate">Booking agenda photoshoot</p>
                                 </div>
                             </Link>
 
-                            {/* Master Paket & Layanan */}
-                            <Link href="/master-data/packages" className="bg-slate-50/70 hover:bg-indigo-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-indigo-200 shadow-2xs transition-all flex items-center gap-2.5 group">
+                            {/* + Master Paket & Layanan */}
+                            <Link href="/master-data/packages?action=create" className="bg-slate-50/70 hover:bg-indigo-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-indigo-200 shadow-2xs transition-all flex items-center gap-2.5 group">
                                 <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                                     <Database className="w-4 h-4" />
                                 </div>
                                 <div className="min-w-0">
-                                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">Master Paket</h4>
-                                    <p className="text-[10px] text-slate-500 truncate">Paket, layanan &amp; harga</p>
+                                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-indigo-600 transition-colors truncate">+ Tambah Paket</h4>
+                                    <p className="text-[10px] text-slate-500 truncate">Layanan &amp; harga baru</p>
+                                </div>
+                            </Link>
+
+                            {/* Form Booking Online */}
+                            <Link href="/form-klien" className="bg-slate-50/70 hover:bg-purple-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-purple-200 shadow-2xs transition-all flex items-center gap-2.5 group">
+                                <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                    <Sparkles className="w-4 h-4" />
+                                </div>
+                                <div className="min-w-0">
+                                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-purple-600 transition-colors truncate">Form Booking</h4>
+                                    <p className="text-[10px] text-slate-500 truncate">Formulir online klien</p>
+                                </div>
+                            </Link>
+
+                            {/* Lihat Laporan */}
+                            <Link href="/reports" className="bg-slate-50/70 hover:bg-amber-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-amber-200 shadow-2xs transition-all flex items-center gap-2.5 group">
+                                <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                    <BarChart3 className="w-4 h-4" />
+                                </div>
+                                <div className="min-w-0">
+                                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-amber-600 transition-colors truncate">Lihat Laporan</h4>
+                                    <p className="text-[10px] text-slate-500 truncate">Buka laporan &amp; analitik</p>
                                 </div>
                             </Link>
 
@@ -455,17 +466,6 @@ export default function Dashboard({
                                 <div className="min-w-0">
                                     <h4 className="text-xs font-bold text-slate-900 group-hover:text-cyan-600 transition-colors truncate">Files</h4>
                                     <p className="text-[10px] text-slate-500 truncate">Link cloud drive klien</p>
-                                </div>
-                            </Link>
-
-                            {/* Pengaturan Sistem */}
-                            <Link href="/settings" className="bg-slate-50/70 hover:bg-teal-50/50 p-2.5 rounded-lg border border-slate-200/70 hover:border-teal-200 shadow-2xs transition-all flex items-center gap-2.5 group">
-                                <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                                    <Settings className="w-4 h-4" />
-                                </div>
-                                <div className="min-w-0">
-                                    <h4 className="text-xs font-bold text-slate-900 group-hover:text-teal-600 transition-colors truncate">Pengaturan</h4>
-                                    <p className="text-[10px] text-slate-500 truncate">Branding &amp; konfigurasi</p>
                                 </div>
                             </Link>
                         </div>

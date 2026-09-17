@@ -3349,164 +3349,221 @@ export default function ClientDetail({
                                         {/* SECTION 1: Dynamic Category Specific Details */}
                                         <CategorySpecificView project={activeProjectForView} />
 
-                                        {/* SECTION 3: Informasi Alamat & Kontak (Numbered 1-12 Badges) */}
-                                        <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5">
-                                            <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
-                                                <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
-                                                    <MapPin className="w-3.5 h-3.5" />
+                                        {/* SECTION 3: Informasi Alamat & Kontak (Numbered 1-12 Badges in 1 Column) */}
+                                        <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 sm:p-5 space-y-4">
+                                            <div className="flex items-center justify-between pb-2 border-b border-slate-100/80">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
+                                                        <MapPin className="w-3.5 h-3.5" />
+                                                    </div>
+                                                    <h4 className="text-xs font-bold text-slate-900">
+                                                        Informasi Alamat &amp; Kontak
+                                                    </h4>
                                                 </div>
-                                                <h4 className="text-xs font-bold text-slate-900">
-                                                    Informasi Alamat
-                                                </h4>
+                                                <span className="text-[10.5px] font-semibold text-slate-500 bg-white px-2.5 py-0.5 rounded-full border border-slate-200/60 shadow-2xs">
+                                                    12 Poin Informasi Lengkap
+                                                </span>
                                             </div>
 
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 sm:gap-x-8 gap-y-3 text-xs">
-                                                {/* Column 1: Items 1 to 6 */}
-                                                <div className="space-y-2.5">
-                                                    <div className="flex items-start">
-                                                        <div className="w-28 sm:w-32 shrink-0 flex items-center gap-1.5 text-slate-500">
-                                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">1</span>
-                                                            <span className="text-[11px]">Provinsi</span>
+                                            {/* SUBSECTION A: WILAYAH & ALAMAT DOMISILI (1 - 6) */}
+                                            <div className="space-y-2">
+                                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block px-1">
+                                                    Wilayah &amp; Alamat Lengkap
+                                                </span>
+                                                <div className="bg-white rounded-xl border border-slate-200/70 divide-y divide-slate-100/90 text-xs overflow-hidden shadow-2xs">
+                                                    {/* 1. Provinsi */}
+                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                        <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                                            <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">1</span>
+                                                            <span className="text-[11.5px] font-medium text-slate-600">Provinsi</span>
                                                         </div>
-                                                        <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 break-words">{effectiveProvince}</span>
+                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                            <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">{effectiveProvince}</span>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex items-start">
-                                                        <div className="w-28 sm:w-32 shrink-0 flex items-center gap-1.5 text-slate-500">
-                                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">2</span>
-                                                            <span className="text-[11px]">Kota/Kabupaten</span>
+
+                                                    {/* 2. Kota/Kabupaten */}
+                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                        <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                                            <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">2</span>
+                                                            <span className="text-[11.5px] font-medium text-slate-600">Kota/Kabupaten</span>
                                                         </div>
-                                                        <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 break-words">{effectiveCity}</span>
+                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                            <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">{effectiveCity}</span>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex items-start">
-                                                        <div className="w-28 sm:w-32 shrink-0 flex items-center gap-1.5 text-slate-500">
-                                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">3</span>
-                                                            <span className="text-[11px]">Kecamatan</span>
+
+                                                    {/* 3. Kecamatan */}
+                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                        <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                                            <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">3</span>
+                                                            <span className="text-[11.5px] font-medium text-slate-600">Kecamatan</span>
                                                         </div>
-                                                        <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 break-words">{effectiveDistrict}</span>
+                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                            <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">{effectiveDistrict}</span>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex items-start">
-                                                        <div className="w-28 sm:w-32 shrink-0 flex items-center gap-1.5 text-slate-500">
-                                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">4</span>
-                                                            <span className="text-[11px]">Kelurahan</span>
+
+                                                    {/* 4. Kelurahan */}
+                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                        <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                                            <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">4</span>
+                                                            <span className="text-[11.5px] font-medium text-slate-600">Kelurahan</span>
                                                         </div>
-                                                        <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 break-words">{effectiveVillage}</span>
+                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                            <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">{effectiveVillage}</span>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex items-start">
-                                                        <div className="w-28 sm:w-32 shrink-0 flex items-center gap-1.5 text-slate-500">
-                                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">5</span>
-                                                            <span className="text-[11px]">Kode Pos</span>
+
+                                                    {/* 5. Kode Pos */}
+                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                        <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                                            <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">5</span>
+                                                            <span className="text-[11.5px] font-medium text-slate-600">Kode Pos</span>
                                                         </div>
-                                                        <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                        <span className="font-mono font-semibold text-slate-900 leading-snug flex-1 min-w-0">{effectivePostalCode}</span>
+                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                            <span className="font-mono font-bold text-slate-900 leading-snug flex-1 min-w-0">{effectivePostalCode}</span>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex items-start">
-                                                        <div className="w-28 sm:w-32 shrink-0 flex items-center gap-1.5 text-slate-500 pt-0.5">
-                                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">6</span>
-                                                            <span className="text-[11px]">Alamat Lengkap</span>
+
+                                                    {/* 6. Alamat Lengkap */}
+                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                        <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                                            <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">6</span>
+                                                            <span className="text-[11.5px] font-medium text-slate-600">Alamat Lengkap</span>
                                                         </div>
-                                                        <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-relaxed flex-1 min-w-0 break-words">
-                                                            {effectiveAddress}
-                                                        </span>
+                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                            <span className="font-semibold text-slate-900 leading-relaxed flex-1 min-w-0 break-words">{effectiveAddress}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
+                                            </div>
 
-                                                {/* Column 2: Items 7 to 12 */}
-                                                <div className="space-y-2.5">
-                                                    <div className="flex items-start">
-                                                        <div className="w-28 sm:w-32 shrink-0 flex items-center gap-1.5 text-slate-500">
-                                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">7</span>
-                                                            <span className="text-[11px]">No. WhatsApp</span>
+                                            {/* SUBSECTION B: KONTAK & MEDIA SOSIAL (7 - 12) */}
+                                            <div className="space-y-2 pt-1">
+                                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block px-1">
+                                                    Kontak &amp; Media Sosial
+                                                </span>
+                                                <div className="bg-white rounded-xl border border-slate-200/70 divide-y divide-slate-100/90 text-xs overflow-hidden shadow-2xs">
+                                                    {/* 7. No. WhatsApp */}
+                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                        <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                                            <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">7</span>
+                                                            <span className="text-[11.5px] font-medium text-slate-600">No. WhatsApp</span>
                                                         </div>
-                                                        <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 font-mono break-all">
-                                                            {effectivePhone ? (
-                                                                <a
-                                                                    href={`https://wa.me/${String(effectivePhone).replace(/[^0-9]/g, '').replace(/^0/, '62')}`}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="text-emerald-700 hover:text-emerald-800 hover:underline inline-flex items-center gap-1 font-bold"
-                                                                >
-                                                                    <span>{effectivePhone}</span>
-                                                                    <ExternalLink className="w-3 h-3 text-emerald-600 shrink-0" />
-                                                                </a>
-                                                            ) : '-'}
-                                                        </span>
+                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                            <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 font-mono">
+                                                                {effectivePhone ? (
+                                                                    <a
+                                                                        href={`https://wa.me/${String(effectivePhone).replace(/[^0-9]/g, '').replace(/^0/, '62')}`}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="text-emerald-700 hover:text-emerald-800 hover:underline inline-flex items-center gap-1.5 font-bold"
+                                                                    >
+                                                                        <span>{effectivePhone}</span>
+                                                                        <ExternalLink className="w-3 h-3 text-emerald-600 shrink-0" />
+                                                                    </a>
+                                                                ) : '-'}
+                                                            </span>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex items-start">
-                                                        <div className="w-28 sm:w-32 shrink-0 flex items-center gap-1.5 text-slate-500">
-                                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">8</span>
-                                                            <span className="text-[11px]">No. Alternatif</span>
+
+                                                    {/* 8. No. Alternatif */}
+                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                        <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                                            <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">8</span>
+                                                            <span className="text-[11.5px] font-medium text-slate-600">No. Alternatif</span>
                                                         </div>
-                                                        <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 font-mono break-all">
-                                                            {effectiveSecondaryPhone || '-'}
-                                                        </span>
+                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                            <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 font-mono">
+                                                                {effectiveSecondaryPhone || '-'}
+                                                            </span>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex items-start">
-                                                        <div className="w-28 sm:w-32 shrink-0 flex items-center gap-1.5 text-slate-500">
-                                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">9</span>
-                                                            <span className="text-[11px]">Preferensi Kontak</span>
+
+                                                    {/* 9. Preferensi Kontak */}
+                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                        <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                                            <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">9</span>
+                                                            <span className="text-[11.5px] font-medium text-slate-600">Preferensi Kontak</span>
                                                         </div>
-                                                        <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug capitalize flex-1 min-w-0">
-                                                            {client.preferred_contact === 'email' ? 'Email' : client.preferred_contact === 'phone' ? 'Telepon' : 'WhatsApp'}
-                                                        </span>
+                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                            <span className="font-semibold text-slate-900 leading-snug capitalize flex-1 min-w-0">
+                                                                {client.preferred_contact === 'email' ? 'Email' : client.preferred_contact === 'phone' ? 'Telepon' : 'WhatsApp'}
+                                                            </span>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex items-start">
-                                                        <div className="w-28 sm:w-32 shrink-0 flex items-center gap-1.5 text-slate-500">
-                                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">10</span>
-                                                            <span className="text-[11px]">Email Aktif</span>
+
+                                                    {/* 10. Email Aktif */}
+                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                        <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                                            <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">10</span>
+                                                            <span className="text-[11.5px] font-medium text-slate-600">Email Aktif</span>
                                                         </div>
-                                                        <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 break-all" title={effectiveEmail || '-'}>
-                                                            {effectiveEmail ? (
-                                                                <a href={`mailto:${effectiveEmail}`} className="text-indigo-600 hover:underline">
-                                                                    {effectiveEmail}
-                                                                </a>
-                                                            ) : '-'}
-                                                        </span>
+                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                            <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 break-all" title={effectiveEmail || '-'}>
+                                                                {effectiveEmail ? (
+                                                                    <a href={`mailto:${effectiveEmail}`} className="text-indigo-600 hover:underline">
+                                                                        {effectiveEmail}
+                                                                    </a>
+                                                                ) : '-'}
+                                                            </span>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex items-start">
-                                                        <div className="w-28 sm:w-32 shrink-0 flex items-center gap-1.5 text-slate-500">
-                                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">11</span>
-                                                            <span className="text-[11px]">Instagram</span>
+
+                                                    {/* 11. Instagram */}
+                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                        <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                                            <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">11</span>
+                                                            <span className="text-[11.5px] font-medium text-slate-600">Instagram</span>
                                                         </div>
-                                                        <span className="text-slate-400 mr-2 shrink-0">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                            {effectiveInstagram ? (
-                                                                <a
-                                                                    href={`https://instagram.com/${effectiveInstagram.replace(/^@/, '')}`}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="text-pink-600 hover:underline inline-flex items-center gap-1 break-all"
-                                                                >
-                                                                    <span>{effectiveInstagram.startsWith('@') ? effectiveInstagram : `@${effectiveInstagram}`}</span>
-                                                                    <ExternalLink className="w-3 h-3 shrink-0" />
-                                                                </a>
-                                                            ) : '-'}
-                                                        </span>
+                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                            <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                                {effectiveInstagram ? (
+                                                                    <a
+                                                                        href={`https://instagram.com/${effectiveInstagram.replace(/^@/, '')}`}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="text-pink-600 hover:underline inline-flex items-center gap-1 break-all font-medium"
+                                                                    >
+                                                                        <span>{effectiveInstagram.startsWith('@') ? effectiveInstagram : `@${effectiveInstagram}`}</span>
+                                                                        <ExternalLink className="w-3 h-3 shrink-0" />
+                                                                    </a>
+                                                                ) : '-'}
+                                                            </span>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex items-start">
-                                                        <div className="w-28 sm:w-32 shrink-0 flex items-center gap-1.5 text-slate-500 pt-0.5">
-                                                            <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">12</span>
-                                                            <span className="text-[11px]">Media Sosial Lain</span>
+
+                                                    {/* 12. Media Sosial Lain */}
+                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                        <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                                            <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">12</span>
+                                                            <span className="text-[11.5px] font-medium text-slate-600">Media Sosial Lain</span>
                                                         </div>
-                                                        <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 break-words whitespace-pre-line">
-                                                            {effectiveOtherSocial || '-'}
-                                                        </span>
+                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                            <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 break-words whitespace-pre-line">
+                                                                {effectiveOtherSocial || '-'}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
 
                                         {/* SECTION 4: Informasi Acara / Project & Paket */}
-                                        <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5">
+                                        <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 sm:p-5 space-y-3.5">
                                             <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
                                                 <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
                                                     <Calendar className="w-3.5 h-3.5" />
@@ -3516,64 +3573,75 @@ export default function ClientDetail({
                                                 </h4>
                                             </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 sm:gap-x-8 gap-y-2.5 text-xs">
-                                                <div className="space-y-2.5">
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 sm:w-36 shrink-0 text-[11px] pt-0.5">Jenis Acara</span>
-                                                        <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 break-words">
+                                            <div className="bg-white rounded-xl border border-slate-200/70 divide-y divide-slate-100/90 text-xs overflow-hidden shadow-2xs">
+                                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                    <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Jenis Acara</span>
+                                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                        <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">
                                                             {rawProjectCandidate?.category?.name || client.client_type || '-'}
                                                         </span>
                                                     </div>
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 sm:w-36 shrink-0 text-[11px] pt-0.5">Tanggal Pelaksanaan</span>
-                                                        <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 break-words">
+                                                </div>
+                                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                    <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Tanggal Pelaksanaan</span>
+                                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                        <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">
                                                             {rawProjectCandidate?.event_date ? formatDate(rawProjectCandidate.event_date) : '-'}
                                                         </span>
                                                     </div>
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 sm:w-36 shrink-0 text-[11px] pt-0.5">Waktu Pelaksanaan</span>
-                                                        <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 break-words">
+                                                </div>
+                                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                    <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Waktu Pelaksanaan</span>
+                                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                        <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">
                                                             {effectiveEventTime}
                                                         </span>
                                                     </div>
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 sm:w-36 shrink-0 text-[11px] pt-0.5">Tempat / Lokasi Acara</span>
-                                                        <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 break-words">
+                                                </div>
+                                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                    <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Tempat / Lokasi Acara</span>
+                                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                        <span className="font-bold text-slate-900 leading-relaxed flex-1 min-w-0 break-words">
                                                             {effectiveLocation}
                                                         </span>
                                                     </div>
                                                 </div>
-
-                                                <div className="space-y-2.5">
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 sm:w-36 shrink-0 text-[11px] pt-0.5">Paket Dipilih</span>
-                                                        <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 break-words">
+                                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                    <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Paket Dipilih</span>
+                                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                        <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">
                                                             {effectivePackageName}
                                                         </span>
                                                     </div>
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 sm:w-36 shrink-0 text-[11px] pt-0.5">Kategori Layanan</span>
-                                                        <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 break-words">
+                                                </div>
+                                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                    <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Kategori Layanan</span>
+                                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                        <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">
                                                             {rawProjectCandidate?.category?.name || '-'}
                                                         </span>
                                                     </div>
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 sm:w-36 shrink-0 text-[11px] pt-0.5">Total Nilai Project</span>
-                                                        <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-emerald-700 leading-snug flex-1 min-w-0 font-mono break-words">
+                                                </div>
+                                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                    <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Total Nilai Project</span>
+                                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                        <span className="font-bold text-emerald-700 leading-snug flex-1 min-w-0 font-mono break-words">
                                                             {rawProjectCandidate?.total_amount ? formatRupiah(rawProjectCandidate.total_amount) : '-'}
                                                         </span>
                                                     </div>
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 sm:w-36 shrink-0 text-[11px] pt-0.5">Status Pembayaran</span>
-                                                        <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                        <span className="font-semibold text-slate-900 leading-snug capitalize flex-1 min-w-0">
+                                                </div>
+                                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                    <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Status Pembayaran</span>
+                                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                        <span className="font-bold text-slate-900 leading-snug capitalize flex-1 min-w-0">
                                                             {rawProjectCandidate?.payment_status === 'paid' ? 'Lunas' : rawProjectCandidate?.payment_status === 'partial' ? 'DP / Sebagian' : 'Belum Dibayar'}
                                                         </span>
                                                     </div>
@@ -3582,7 +3650,7 @@ export default function ClientDetail({
                                         </div>
 
                                         {/* SECTION 5: Sumber Lead & Partner Referral */}
-                                        <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3.5">
+                                        <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 sm:p-5 space-y-3.5">
                                             <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
                                                 <div className="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100/80">
                                                     <Users className="w-3.5 h-3.5" />
@@ -3592,12 +3660,12 @@ export default function ClientDetail({
                                                 </h4>
                                             </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 sm:gap-x-8 gap-y-2.5 text-xs">
-                                                <div className="space-y-2.5">
-                                                    <div className="flex items-start">
-                                                        <span className="text-slate-500 w-28 sm:w-36 shrink-0 text-[11px] pt-0.5">Sumber Pendaftaran</span>
-                                                        <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                        <div className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+                                            <div className="bg-white rounded-xl border border-slate-200/70 divide-y divide-slate-100/90 text-xs overflow-hidden shadow-2xs">
+                                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                    <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Sumber Pendaftaran</span>
+                                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                        <div className="font-bold text-slate-900 leading-snug flex-1 min-w-0 flex items-center gap-2 flex-wrap">
                                                             <span>{client.source || 'Formulir Online (Client Intake)'}</span>
                                                             {client.client_source && (
                                                                 <Link
@@ -3609,68 +3677,81 @@ export default function ClientDetail({
                                                             )}
                                                         </div>
                                                     </div>
-                                                    {client.wedding_organizer && (
-                                                        <>
-                                                            <div className="flex items-start">
-                                                                <span className="text-slate-500 w-28 sm:w-36 shrink-0 text-[11px] pt-0.5">Partner WO / EO</span>
-                                                                <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                                <span className="font-semibold text-indigo-700 leading-snug flex-1 min-w-0 break-words">
+                                                </div>
+
+                                                {client.wedding_organizer && (
+                                                    <>
+                                                        <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                            <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Partner WO / EO</span>
+                                                            <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                                <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                                <span className="font-bold text-indigo-700 leading-snug flex-1 min-w-0 break-words">
                                                                     {client.wedding_organizer.name} ({client.wedding_organizer.tier || 'Partner'})
                                                                 </span>
                                                             </div>
-                                                            {client.wedding_organizer.pic_name && (
-                                                                <div className="flex items-start">
-                                                                    <span className="text-slate-500 w-28 sm:w-36 shrink-0 text-[11px] pt-0.5">PIC Wedding Organizer</span>
-                                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 break-words">
+                                                        </div>
+                                                        {client.wedding_organizer.pic_name && (
+                                                            <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                                <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">PIC Wedding Organizer</span>
+                                                                <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                                    <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                                    <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">
                                                                         {client.wedding_organizer.pic_name} {client.wedding_organizer.phone ? `(${client.wedding_organizer.phone})` : ''}
                                                                     </span>
                                                                 </div>
-                                                            )}
-                                                        </>
-                                                    )}
-                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                )}
 
-                                                <div className="space-y-2.5">
-                                                    {client.referred_by_client && (
-                                                        <>
-                                                            <div className="flex items-start">
-                                                                <span className="text-slate-500 w-28 sm:w-36 shrink-0 text-[11px] pt-0.5">Direferensikan Klien</span>
-                                                                <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                                <span className="font-semibold text-indigo-700 leading-snug flex-1 min-w-0 break-words">
+                                                {client.referred_by_client && (
+                                                    <>
+                                                        <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                            <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Direferensikan Klien</span>
+                                                            <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                                <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                                <span className="font-bold text-indigo-700 leading-snug flex-1 min-w-0 break-words">
                                                                     {client.referred_by_client.name}
                                                                 </span>
                                                             </div>
-                                                            {client.referred_by_client.phone && (
-                                                                <div className="flex items-start">
-                                                                    <span className="text-slate-500 w-28 sm:w-36 shrink-0 text-[11px] pt-0.5">Kontak Referrer</span>
-                                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                                    <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 font-mono break-all">
+                                                        </div>
+                                                        {client.referred_by_client.phone && (
+                                                            <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                                <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Kontak Referrer</span>
+                                                                <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                                    <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                                    <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 font-mono break-all">
                                                                         {client.referred_by_client.phone}
                                                                     </span>
                                                                 </div>
-                                                            )}
-                                                        </>
-                                                    )}
-                                                    {client.referral_name && (
-                                                        <div className="flex items-start">
-                                                            <span className="text-slate-500 w-28 sm:w-36 shrink-0 text-[11px] pt-0.5">Nama Kerabat / Rekan</span>
-                                                            <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                            <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 break-words">
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                )}
+
+                                                {client.referral_name && (
+                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                        <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Nama Kerabat / Rekan</span>
+                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                            <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">
                                                                 {client.referral_name}
                                                             </span>
                                                         </div>
-                                                    )}
-                                                    {!client.wedding_organizer && !client.referred_by_client && !client.referral_name && (
-                                                        <div className="flex items-start">
-                                                            <span className="text-slate-500 w-28 sm:w-36 shrink-0 text-[11px] pt-0.5">Jenis Referral</span>
-                                                            <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
+                                                    </div>
+                                                )}
+
+                                                {!client.wedding_organizer && !client.referred_by_client && !client.referral_name && (
+                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                        <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Jenis Referral</span>
+                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
                                                             <span className="font-medium text-slate-600 leading-snug flex-1 min-w-0">
                                                                 Organik / Pendaftaran Langsung
                                                             </span>
                                                         </div>
-                                                    )}
-                                                </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 

@@ -116,6 +116,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/invoices/{invoice}', [ProjectController::class, 'showInvoiceById'])->name('invoices.show');
     Route::resource('projects', ProjectController::class);
     Route::patch('/projects/{project}/status', [ProjectController::class, 'updateStatus'])->name('projects.status');
+    Route::post('/projects/{project}/note', [ProjectController::class, 'addNote'])->name('projects.note');
+    Route::put('/projects/{project}/note', [ProjectController::class, 'updateNote'])->name('projects.note.update');
+    Route::put('/projects/{project}/notes/{index}', [ProjectController::class, 'updateNoteEntry'])->name('projects.notes.entry.update');
+    Route::delete('/projects/{project}/notes/{index}', [ProjectController::class, 'deleteNoteEntry'])->name('projects.notes.entry.destroy');
     Route::post('/projects/{project}/file-links', [FileLinkController::class, 'storeForProject'])->name('projects.file-links.store');
     Route::post('/projects/{project}/highlights', [ProjectHighlightController::class, 'store'])->name('projects.highlights.store');
     Route::patch('/projects/{project}/highlights/{highlight}', [ProjectHighlightController::class, 'update'])->name('projects.highlights.update');

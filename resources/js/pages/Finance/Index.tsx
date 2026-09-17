@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import { toast } from 'sonner';
 import { Modal, StatCard } from '@/components/ui';
@@ -177,6 +177,22 @@ export default function FinanceIndex({
     const [transactionPaymentMethodId, setTransactionPaymentMethodId] = useState('');
     const [transactionReference, setTransactionReference] = useState('');
     const [transactionNotes, setTransactionNotes] = useState('');
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const action = params.get('action');
+            if (action === 'transaction' || action === 'expense' || action === 'create') {
+                setTransactionModalOpen(true);
+                const newUrl = window.location.pathname;
+                window.history.replaceState({}, '', newUrl);
+            } else if (action === 'invoices') {
+                setAllInvoicesModalOpen(true);
+                const newUrl = window.location.pathname;
+                window.history.replaceState({}, '', newUrl);
+            }
+        }
+    }, []);
 
     // State Filter & Search Transaksi Lain-lain
     const [miscTypeFilter, setMiscTypeFilter] = useState<'all' | 'income' | 'expense'>('all');

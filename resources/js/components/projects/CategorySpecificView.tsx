@@ -101,7 +101,7 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
 
         return (
             <div className="space-y-1 min-w-0">
-                <span className="text-[11px] font-semibold text-slate-400 block truncate" title={label}>{label}</span>
+                <span className="text-[11px] font-semibold text-slate-400 block break-words leading-tight" title={label}>{label}</span>
                 <div className={`text-xs flex items-start gap-1.5 min-w-0 ${hasVal ? 'font-bold text-slate-800' : 'font-normal text-slate-400'}`}>
                     {icon && <span className={`${hasVal ? 'text-slate-500' : 'text-slate-300'} shrink-0 mt-0.5`}>{icon}</span>}
                     <span className="break-words min-w-0 flex-1 leading-snug">{hasVal ? String(value) : fallback}</span>

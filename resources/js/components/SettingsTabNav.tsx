@@ -62,13 +62,12 @@ export default function SettingsTabNav({
         { id: 'general' as const, label: 'Pengaturan Umum', icon: Settings, href: '/setting/admin?sub=general' },
         { id: 'appearance' as const, label: 'Tampilan Admin', icon: Palette, href: '/setting/admin?sub=appearance' },
         { id: 'login_theme' as const, label: 'Tampilan Login', icon: Lock, href: '/setting/admin?sub=login_theme' },
+        { id: 'recommended_packages' as const, label: 'Rekomendasi Paket', icon: Package, href: '/setting/admin?sub=recommended_packages', tag: 'Portal Klien' },
+        { id: 'backup' as const, label: 'Backup & Data', icon: Database, href: '/setting/admin?sub=backup' },
         { id: 'promo_slides' as const, label: 'Promo Slide', icon: Sparkles, href: '/master-data/promo-slides', isExternalPage: true },
         { id: 'testimonials' as const, label: 'Ulasan Klien', icon: MessageSquareQuote, href: '/master-data/testimonials', isExternalPage: true },
-        { id: 'recommended_packages' as const, label: 'Rekomendasi Paket', icon: Package, href: '/setting/admin?sub=recommended_packages' },
-        // { id: 'instagram_posts' as const, label: 'Feed Instagram', icon: Instagram, href: '/master-data/instagram-posts', isExternalPage: true },
         { id: 'portfolio_categories' as const, label: 'Kategori Portofolio', icon: FolderKanban, href: '/master-data/portfolio-categories', isExternalPage: true },
         { id: 'portfolios' as const, label: 'Portofolio', icon: Camera, href: '/master-data/portfolios', isExternalPage: true },
-        { id: 'backup' as const, label: 'Backup & Data', icon: Database, href: '/setting/admin?sub=backup' },
     ];
 
     return (
@@ -138,6 +137,15 @@ export default function SettingsTabNav({
                                 >
                                     <Icon className="w-3.5 h-3.5 shrink-0" />
                                     <span>{sub.label}</span>
+                                    {(sub as any).tag && (
+                                        <span className={`text-[9.5px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                                            isSubActive
+                                                ? 'bg-white/20 text-white'
+                                                : 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300'
+                                        }`}>
+                                            {(sub as any).tag}
+                                        </span>
+                                    )}
                                 </button>
                             );
                         }
@@ -155,6 +163,15 @@ export default function SettingsTabNav({
                             >
                                 <Icon className="w-3.5 h-3.5 shrink-0" />
                                 <span>{sub.label}</span>
+                                {(sub as any).tag && (
+                                    <span className={`text-[9.5px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                                        isSubActive
+                                            ? 'bg-white/20 text-white'
+                                            : 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300'
+                                    }`}>
+                                        {(sub as any).tag}
+                                    </span>
+                                )}
                             </Link>
                         );
                     })}

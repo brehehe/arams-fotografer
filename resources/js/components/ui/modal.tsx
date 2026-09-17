@@ -12,7 +12,9 @@ export interface ModalProps {
   footer?: React.ReactNode
   maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "6xl" | "full"
   className?: string
+  bodyClassName?: string
   closeOnOverlayClick?: boolean
+  onSubmit?: (e: React.FormEvent<HTMLFormElement>) => void
 }
 
 const maxWidthMap = {
@@ -38,7 +40,9 @@ export function Modal({
   footer,
   maxWidth = "xl",
   className,
+  bodyClassName,
   closeOnOverlayClick = true,
+  onSubmit,
 }: ModalProps) {
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -52,8 +56,24 @@ export function Modal({
 
   if (!isOpen) return null
 
+  const mainBodyAndFooter = (
+    <>
+      {/* Scrollable Body */}
+      <div className={cn("p-5 sm:p-6 overflow-y-auto flex-1 text-xs space-y-4 overscroll-contain", bodyClassName)}>
+        {children}
+      </div>
+
+      {/* Fixed Footer */}
+      {footer && (
+        <div className="flex items-center justify-end gap-2.5 sm:gap-3 px-5 sm:px-6 py-3.5 border-t border-slate-100 bg-slate-50/80 shrink-0">
+          {footer}
+        </div>
+      )}
+    </>
+  )
+
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 md:p-6 animate-in fade-in duration-150 overflow-y-auto">
       {/* Backdrop click */}
       <div
         className="fixed inset-0"
@@ -63,7 +83,7 @@ export function Modal({
       {/* Modal Dialog Card */}
       <div
         className={cn(
-          "relative bg-white w-full max-h-[85vh] flex flex-col rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-150 z-10",
+          "relative bg-white w-full max-h-[90vh] sm:max-h-[88vh] flex flex-col rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-150 z-10 my-auto",
           maxWidthMap[maxWidth] || maxWidthMap.xl,
           className
         )}
@@ -72,21 +92,21 @@ export function Modal({
       >
         {/* Fixed Header */}
         {(title || subtitle || icon) && (
-          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80 shrink-0">
-            <div className="flex items-center gap-3">
+          <div className="px-5 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80 shrink-0">
+            <div className="flex items-center gap-3 min-w-0">
               {icon && (
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-2xs shrink-0">
                   {icon}
                 </div>
               )}
-              <div>
+              <div className="min-w-0">
                 {title && (
-                  <h3 className="text-sm font-bold text-slate-900 leading-snug">
+                  <h3 className="text-sm font-bold text-slate-900 leading-snug truncate">
                     {title}
                   </h3>
                 )}
                 {subtitle && (
-                  <p className="text-[11px] text-slate-500 mt-0.5 leading-tight">
+                  <p className="text-[11px] text-slate-500 mt-0.5 leading-tight truncate">
                     {subtitle}
                   </p>
                 )}
@@ -96,23 +116,20 @@ export function Modal({
             <button
               type="button"
               onClick={onClose}
-              className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer"
+              className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors cursor-pointer shrink-0 ml-2"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
         )}
 
-        {/* Scrollable Body */}
-        <div className="p-6 overflow-y-auto flex-1 text-xs space-y-4">
-          {children}
-        </div>
-
-        {/* Fixed Footer */}
-        {footer && (
-          <div className="flex items-center justify-end gap-3 px-6 py-3.5 border-t border-slate-100 bg-slate-50/70 shrink-0">
-            {footer}
-          </div>
+        {/* Form Wrap if onSubmit is provided, otherwise direct body */}
+        {onSubmit ? (
+          <form onSubmit={onSubmit} className="flex flex-col flex-1 overflow-hidden min-h-0">
+            {mainBodyAndFooter}
+          </form>
+        ) : (
+          mainBodyAndFooter
         )}
       </div>
     </div>

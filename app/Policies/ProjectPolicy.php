@@ -62,6 +62,14 @@ class ProjectPolicy
     }
 
     /**
+     * Determine whether the user can add notes to the project.
+     */
+    public function addNote(User $user, Project $project): bool
+    {
+        return $this->view($user, $project);
+    }
+
+    /**
      * Determine whether the user can delete the project.
      */
     public function delete(User $user, Project $project): bool

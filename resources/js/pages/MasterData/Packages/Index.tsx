@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import { toast } from 'sonner';
 import { Pagination } from '@/components/ui/pagination';
-import { StatCard } from '@/components/ui';
+import { Modal, StatCard } from '@/components/ui';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -114,6 +114,18 @@ export default function PackagesIndex({
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [editItem, setEditItem] = useState<PackageItem | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const action = params.get('action');
+            if (action === 'create' || action === 'add') {
+                setIsCreateModalOpen(true);
+                const newUrl = window.location.pathname;
+                window.history.replaceState({}, '', newUrl);
+            }
+        }
+    }, []);
 
     // Form state
     const [form, setForm] = useState<{
@@ -622,233 +634,225 @@ export default function PackagesIndex({
             </div>
 
             {/* ── 5. MODAL: TAMBAH / EDIT PAKET ── */}
-            {isCreateModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150">
-                    <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-4">
-                        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                            <h3 className="text-base font-black text-slate-900">
-                                {editItem ? 'Edit Paket' : 'Tambah Paket Baru'}
-                            </h3>
+            <Modal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                title={editItem ? 'Edit Paket' : 'Tambah Paket Baru'}
+                subtitle="Konfigurasi cakupan paket, harga dasar, dan fasilitas kru"
+                icon={<Box className="w-4 h-4 text-indigo-600" />}
+                maxWidth="2xl"
+                onSubmit={handleSavePackage}
+                footer={
+                    <>
+                        <button
+                            type="button"
+                            onClick={() => setIsCreateModalOpen(false)}
+                            className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                        >
+                            Batal
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={isSubmitting}
+                            className="px-5 py-2 text-xs font-bold text-white bg-[#4F46E5] hover:bg-[#4338CA] rounded-xl shadow-xs cursor-pointer disabled:opacity-50"
+                        >
+                            {isSubmitting ? 'Menyimpan...' : 'Simpan Paket'}
+                        </button>
+                    </>
+                }
+            >
+                <div className="space-y-3.5 text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label className="block font-bold text-slate-700 mb-1">
+                                Kategori Project <span className="text-rose-500">*</span>
+                            </label>
+                            <select
+                                required
+                                value={form.category_id}
+                                onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+                                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
+                            >
+                                <option value="" disabled>Pilih Kategori</option>
+                                {categories.map((c) => (
+                                    <option key={c.id} value={c.id}>
+                                        {c.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block font-bold text-slate-700 mb-1">
+                                Nama Paket <span className="text-rose-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                required
+                                value={form.name}
+                                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                                placeholder="Contoh: Wedding Diamond, Prewedding Gold"
+                                className="w-full px-3 py-2 rounded-xl border border-slate-200 font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label className="block font-bold text-slate-700 mb-1">
+                                Harga Paket (Rp) <span className="text-rose-500">*</span>
+                            </label>
+                            <FormattedNumberInput
+                                value={form.base_price}
+                                onChange={(val) => setForm({ ...form, base_price: val })}
+                                prefix="Rp "
+                                className="h-10 text-xs font-bold"
+                                placeholder="0"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block font-bold text-slate-700 mb-1">
+                                Durasi Kerja (Jam) <span className="text-rose-500">*</span>
+                            </label>
+                            <input
+                                type="number"
+                                required
+                                min="1"
+                                value={form.duration_hours}
+                                onChange={(e) => setForm({ ...form, duration_hours: Number(e.target.value) })}
+                                className="w-full px-3 py-2 rounded-xl border border-slate-200 font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block font-bold text-slate-700 mb-1">Deskripsi Singkat</label>
+                        <textarea
+                            rows={2}
+                            value={form.description}
+                            onChange={(e) => setForm({ ...form, description: e.target.value })}
+                            placeholder="Keterangan mengenai cakupan paket ini..."
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none"
+                        />
+                    </div>
+
+                    {/* Layanan Termasuk (Included Services) */}
+                    <div className="space-y-2 p-3 bg-slate-50/80 rounded-xl border border-slate-200">
+                        <div className="flex items-center justify-between">
+                            <label className="block font-bold text-slate-800">
+                                Layanan Termasuk (Included Services)
+                            </label>
+                            <span className="text-[10px] text-slate-400 font-medium">
+                                {form.included_services.length} Layanan Ditambahkan
+                            </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 leading-tight">
+                            Daftar kru dan fasilitas tim yang disertakan dalam paket ini (misal: Studio Photographer, 2 Main Photographers, 1 Videographer, MUA &amp; Hairdo).
+                        </p>
+
+                        {/* Input + Add Button */}
+                        <div className="flex items-center gap-1.5 pt-1">
+                            <input
+                                type="text"
+                                value={newServiceInput}
+                                onChange={(e) => setNewServiceInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        handleAddService();
+                                    }
+                                }}
+                                placeholder="Ketik layanan (contoh: Studio Photographer)..."
+                                className="flex-1 px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                            />
                             <button
                                 type="button"
-                                onClick={() => setIsCreateModalOpen(false)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+                                onClick={handleAddService}
+                                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-xs flex items-center gap-1 cursor-pointer"
                             >
-                                <X className="w-4 h-4" />
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>Tambah</span>
                             </button>
                         </div>
 
-                        <form onSubmit={handleSavePackage} className="space-y-3.5 text-xs">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block font-bold text-slate-700 mb-1">
-                                        Kategori Project <span className="text-rose-500">*</span>
-                                    </label>
-                                    <select
-                                        required
-                                        value={form.category_id}
-                                        onChange={(e) => setForm({ ...form, category_id: e.target.value })}
-                                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
-                                    >
-                                        <option value="" disabled>Pilih Kategori</option>
-                                        {categories.map((c) => (
-                                            <option key={c.id} value={c.id}>
-                                                {c.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block font-bold text-slate-700 mb-1">
-                                        Nama Paket <span className="text-rose-500">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={form.name}
-                                        onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                        placeholder="Contoh: Wedding Diamond, Prewedding Gold"
-                                        className="w-full px-3 py-2 rounded-xl border border-slate-200 font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block font-bold text-slate-700 mb-1">
-                                        Harga Paket (Rp) <span className="text-rose-500">*</span>
-                                    </label>
-                                    <FormattedNumberInput
-                                        value={form.base_price}
-                                        onChange={(val) => setForm({ ...form, base_price: val })}
-                                        prefix="Rp "
-                                        className="h-10 text-xs font-bold"
-                                        placeholder="0"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block font-bold text-slate-700 mb-1">
-                                        Durasi Kerja (Jam) <span className="text-rose-500">*</span>
-                                    </label>
-                                    <input
-                                        type="number"
-                                        required
-                                        min="1"
-                                        value={form.duration_hours}
-                                        onChange={(e) => setForm({ ...form, duration_hours: Number(e.target.value) })}
-                                        className="w-full px-3 py-2 rounded-xl border border-slate-200 font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block font-bold text-slate-700 mb-1">Deskripsi Singkat</label>
-                                <textarea
-                                    rows={2}
-                                    value={form.description}
-                                    onChange={(e) => setForm({ ...form, description: e.target.value })}
-                                    placeholder="Keterangan mengenai cakupan paket ini..."
-                                    className="w-full px-3 py-2 rounded-xl border border-slate-200 font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none"
-                                />
-                            </div>
-
-                            {/* Layanan Termasuk (Included Services) */}
-                            <div className="space-y-2 p-3 bg-slate-50/80 rounded-xl border border-slate-200">
-                                <div className="flex items-center justify-between">
-                                    <label className="block font-bold text-slate-800">
-                                        Layanan Termasuk (Included Services)
-                                    </label>
-                                    <span className="text-[10px] text-slate-400 font-medium">
-                                        {form.included_services.length} Layanan Ditambahkan
-                                    </span>
-                                </div>
-                                <p className="text-[11px] text-slate-500 leading-tight">
-                                    Daftar kru dan fasilitas tim yang disertakan dalam paket ini (misal: Studio Photographer, 2 Main Photographers, 1 Videographer, MUA &amp; Hairdo).
-                                </p>
-
-                                {/* Input + Add Button */}
-                                <div className="flex items-center gap-1.5 pt-1">
-                                    <input
-                                        type="text"
-                                        value={newServiceInput}
-                                        onChange={(e) => setNewServiceInput(e.target.value)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                                e.preventDefault();
-                                                handleAddService();
-                                            }
-                                        }}
-                                        placeholder="Ketik layanan (contoh: Studio Photographer)..."
-                                        className="flex-1 px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={handleAddService}
-                                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-xs flex items-center gap-1 cursor-pointer"
-                                    >
-                                        <Plus className="w-3.5 h-3.5" />
-                                        <span>Tambah</span>
-                                    </button>
-                                </div>
-
-                                {/* Quick Presets */}
-                                <div className="flex flex-wrap gap-1 pt-1">
-                                    {[
-                                        'Studio Photographer',
-                                        '1 Main Photographer',
-                                        '2 Main Photographers',
-                                        '1 Videographer',
-                                        '2 Videographers',
-                                        'Drone Pilot',
-                                        'MUA & Hairdo',
-                                        'Lighting Specialist',
-                                        'Baby Handler Assistant',
-                                        'Live Photo Booth Stream',
-                                    ].map((preset) => (
-                                        <button
-                                            key={preset}
-                                            type="button"
-                                            onClick={() => {
-                                                if (!form.included_services.includes(preset)) {
-                                                    setForm({
-                                                        ...form,
-                                                        included_services: [...form.included_services, preset],
-                                                    });
-                                                }
-                                            }}
-                                            className={`text-[9px] font-medium px-2 py-0.5 rounded border transition-colors cursor-pointer ${
-                                                form.included_services.includes(preset)
-                                                    ? 'bg-indigo-50 text-indigo-700 border-indigo-200 font-bold'
-                                                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
-                                            }`}
-                                        >
-                                            + {preset}
-                                        </button>
-                                    ))}
-                                </div>
-
-                                {/* Active Selected Services Chips */}
-                                <div className="flex flex-wrap gap-1.5 pt-1.5 border-t border-slate-200/60">
-                                    {form.included_services.length === 0 ? (
-                                        <span className="text-[11px] text-slate-400 italic">
-                                            Belum ada layanan yang ditambahkan.
-                                        </span>
-                                    ) : (
-                                        form.included_services.map((service, sIdx) => (
-                                            <span
-                                                key={sIdx}
-                                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs"
-                                            >
-                                                <Check className="w-3 h-3 text-emerald-600 stroke-[3]" />
-                                                <span>{service}</span>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleRemoveService(service)}
-                                                    className="p-0.5 rounded hover:bg-emerald-200/60 text-emerald-700 hover:text-emerald-900 cursor-pointer"
-                                                    title="Hapus Layanan"
-                                                >
-                                                    <X className="w-3 h-3" />
-                                                </button>
-                                            </span>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block font-bold text-slate-700 mb-1">Status</label>
-                                <select
-                                    value={form.status}
-                                    onChange={(e) => setForm({ ...form, status: e.target.value })}
-                                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
-                                >
-                                    <option value="active">Aktif</option>
-                                    <option value="inactive">Nonaktif</option>
-                                </select>
-                            </div>
-
-                            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                        {/* Quick Presets */}
+                        <div className="flex flex-wrap gap-1 pt-1">
+                            {[
+                                'Studio Photographer',
+                                '1 Main Photographer',
+                                '2 Main Photographers',
+                                '1 Videographer',
+                                '2 Videographers',
+                                'Drone Pilot',
+                                'MUA & Hairdo',
+                                'Lighting Specialist',
+                                'Baby Handler Assistant',
+                                'Live Photo Booth Stream',
+                            ].map((preset) => (
                                 <button
+                                    key={preset}
                                     type="button"
-                                    onClick={() => setIsCreateModalOpen(false)}
-                                    className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                                    onClick={() => {
+                                        if (!form.included_services.includes(preset)) {
+                                            setForm({
+                                                ...form,
+                                                included_services: [...form.included_services, preset],
+                                            });
+                                        }
+                                    }}
+                                    className={`text-[9px] font-medium px-2 py-0.5 rounded border transition-colors cursor-pointer ${
+                                        form.included_services.includes(preset)
+                                            ? 'bg-indigo-50 text-indigo-700 border-indigo-200 font-bold'
+                                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                                    }`}
                                 >
-                                    Batal
+                                    + {preset}
                                 </button>
-                                <button
-                                    type="submit"
-                                    disabled={isSubmitting}
-                                    className="px-5 py-2 text-xs font-bold text-white bg-[#4F46E5] hover:bg-[#4338CA] rounded-xl shadow-xs cursor-pointer disabled:opacity-50"
-                                >
-                                    {isSubmitting ? 'Menyimpan...' : 'Simpan Paket'}
-                                </button>
-                            </div>
-                        </form>
+                            ))}
+                        </div>
+
+                        {/* Active Selected Services Chips */}
+                        <div className="flex flex-wrap gap-1.5 pt-1.5 border-t border-slate-200/60">
+                            {form.included_services.length === 0 ? (
+                                <span className="text-[11px] text-slate-400 italic">
+                                    Belum ada layanan yang ditambahkan.
+                                </span>
+                            ) : (
+                                form.included_services.map((service, sIdx) => (
+                                    <span
+                                        key={sIdx}
+                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-2xs"
+                                    >
+                                        <Check className="w-3 h-3 text-emerald-600 stroke-[3]" />
+                                        <span>{service}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemoveService(service)}
+                                            className="p-0.5 rounded hover:bg-emerald-200/60 text-emerald-700 hover:text-emerald-900 cursor-pointer"
+                                            title="Hapus Layanan"
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    </span>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block font-bold text-slate-700 mb-1">Status</label>
+                        <select
+                            value={form.status}
+                            onChange={(e) => setForm({ ...form, status: e.target.value })}
+                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
+                        >
+                            <option value="active">Aktif</option>
+                            <option value="inactive">Nonaktif</option>
+                        </select>
                     </div>
                 </div>
-            )}
+            </Modal>
         </div>
     );
 }

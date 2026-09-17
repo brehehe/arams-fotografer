@@ -104,6 +104,7 @@ interface RecommendedItem {
     base_price?: number;
     image?: string;
     category_name?: string;
+    category_color?: string;
 }
 
 interface ClientDashboardProps {
@@ -1026,50 +1027,67 @@ export default function ClientDashboard({
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
-                            {packageRecommendations.map((pkg, idx) => (
-                                <div
-                                    key={pkg.id || idx}
-                                    className="rounded-xl border border-slate-200/80 overflow-hidden flex flex-col justify-between bg-white shadow-2xs hover:shadow-lg hover:shadow-[#3C0E0E]/10 hover:-translate-y-1.5 hover:border-[#3C0E0E]/30 transition-all duration-300 group"
-                                >
-                                    <div className="aspect-[4/3] bg-slate-100 overflow-hidden">
-                                        <img
-                                            src={pkg.image}
-                                            alt={pkg.title || pkg.name}
-                                            className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
-                                        />
-                                    </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5 sm:gap-4">
+                            {packageRecommendations.map((pkg, idx) => {
+                                const packageTitle = pkg.title || pkg.name;
+                                const packageWaUrl = packageTitle
+                                    ? `https://wa.me/${waPhone}?text=${encodeURIComponent(
+                                        `Halo Admin Arams Pictures, saya tertarik dan ingin konsultasi/booking untuk paket "${packageTitle}".`
+                                    )}`
+                                    : generalWhatsAppUrl;
 
-                                    <div className="p-3 space-y-2 flex flex-col flex-1 justify-between">
-                                        <div className="space-y-1">
-                                            <h4 className="font-bold text-xs text-slate-900 leading-snug group-hover:text-[#3C0E0E] transition-colors">
-                                                {pkg.title || pkg.name}
-                                            </h4>
-                                            <p className="text-[10px] text-slate-500 leading-tight line-clamp-2">
-                                                {pkg.desc || pkg.description}
-                                            </p>
+                                return (
+                                    <div
+                                        key={pkg.id || idx}
+                                        className="rounded-xl border border-slate-200/80 overflow-hidden flex flex-col justify-between bg-white shadow-2xs hover:shadow-lg hover:shadow-[#3C0E0E]/10 hover:-translate-y-1.5 hover:border-[#3C0E0E]/30 transition-all duration-300 group"
+                                    >
+                                        <div className="aspect-[4/3] bg-slate-100 overflow-hidden relative">
+                                            <img
+                                                src={pkg.image}
+                                                alt={packageTitle}
+                                                className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
+                                            />
+                                            {pkg.category_name && (
+                                                <span
+                                                    style={{ backgroundColor: 'rgba(15, 23, 42, 0.75)' }}
+                                                    className="absolute top-2 left-2 px-2 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-wider text-white backdrop-blur-xs shadow-xs"
+                                                >
+                                                    {pkg.category_name}
+                                                </span>
+                                            )}
                                         </div>
 
-                                        <div className="pt-2 space-y-2">
-                                            <p
-                                                style={{ color: COLOR_BURGUNDY }}
-                                                className="text-xs font-black"
-                                            >
-                                                {pkg.price || (pkg.base_price ? formatRupiah(pkg.base_price) : '')}
-                                            </p>
-                                            <a
-                                                href={generalWhatsAppUrl}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="w-full py-1.5 rounded-lg border border-[#E8DDD5] bg-[#F4EBE4] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-[10.5px] font-bold text-[#3C0E0E] shadow-2xs transition-all duration-300 flex items-center justify-center gap-1 cursor-pointer group/btn"
-                                            >
-                                                <MessageCircle className="w-3 h-3 text-[#3C0E0E] group-hover/btn:text-white transition-colors" />
-                                                <span>Hubungi Admin</span>
-                                            </a>
+                                        <div className="p-3 sm:p-3.5 space-y-2 flex flex-col flex-1 justify-between">
+                                            <div className="space-y-1">
+                                                <h4 className="font-bold text-xs sm:text-sm text-slate-900 leading-snug group-hover:text-[#3C0E0E] transition-colors line-clamp-1">
+                                                    {packageTitle}
+                                                </h4>
+                                                <p className="text-[10.5px] text-slate-500 leading-relaxed line-clamp-2">
+                                                    {pkg.desc || pkg.description}
+                                                </p>
+                                            </div>
+
+                                            <div className="pt-2.5 border-t border-slate-100 space-y-2">
+                                                <p
+                                                    style={{ color: COLOR_BURGUNDY }}
+                                                    className="text-xs sm:text-sm font-black"
+                                                >
+                                                    {pkg.price || (pkg.base_price ? formatRupiah(pkg.base_price) : '')}
+                                                </p>
+                                                <a
+                                                    href={packageWaUrl}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="w-full py-1.5 px-2 rounded-lg border border-[#E8DDD5] bg-[#F4EBE4] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-[10.5px] font-bold text-[#3C0E0E] shadow-2xs transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer group/btn"
+                                                >
+                                                    <MessageCircle className="w-3 h-3 text-[#3C0E0E] group-hover/btn:text-white transition-colors" />
+                                                    <span>Hubungi Admin</span>
+                                                </a>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </section>
                 )}

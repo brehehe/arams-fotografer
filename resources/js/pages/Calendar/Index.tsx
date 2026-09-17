@@ -17,7 +17,7 @@ import {
     Phone,
     Package,
 } from 'lucide-react';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { formatDate, formatRupiah } from '@/lib/formatters';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -152,6 +152,18 @@ export default function CalendarIndex({
         location: '',
         color: '#6366F1',
     });
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const action = params.get('action');
+            if (action === 'create' || action === 'add') {
+                setAddModalOpen(true);
+                const newUrl = window.location.pathname;
+                window.history.replaceState({}, '', newUrl);
+            }
+        }
+    }, []);
 
     // 1. Compute Days for the active Week
     const weekDays = useMemo(() => {

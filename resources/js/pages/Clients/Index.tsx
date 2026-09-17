@@ -920,6 +920,17 @@ export default function ClientsIndex({
         setCreateModalOpen(true);
     };
 
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('action') === 'create' || params.get('create') === 'true') {
+                handleOpenCreateModal();
+                const newUrl = window.location.pathname;
+                window.history.replaceState({}, '', newUrl);
+            }
+        }
+    }, []);
+
     const validateCreateStep = (stepNum: number) => {
         const clientNameVal =
             (formData.name && formData.name.trim() !== '-' ? formData.name.trim() : '') ||
