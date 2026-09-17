@@ -57,9 +57,9 @@ class ProjectsShowcaseSeeder extends Seeder
         $cats = [];
         foreach ($categoriesData as $key => $cd) {
             $cats[$key] = Category::firstOrCreate(
-                ['name' => $cd['name']],
+                ['slug' => $key],
                 [
-                    'slug' => $key,
+                    'name' => $cd['name'],
                     'color' => $cd['color'],
                     'icon' => $cd['icon'],
                     'status' => 'active',

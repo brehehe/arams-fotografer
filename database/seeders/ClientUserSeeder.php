@@ -56,7 +56,8 @@ class ClientUserSeeder extends Seeder
 
         // 4. Ensure Category & Package exist
         $category = Category::where('name', 'ilike', '%Wedding%')->first()
-            ?? Category::firstOrCreate(['name' => 'Wedding', 'color' => '#3B82F6', 'status' => 'active']);
+            ?? Category::where('slug', 'wedding')->first()
+            ?? Category::firstOrCreate(['slug' => 'wedding'], ['name' => 'Wedding', 'color' => '#3B82F6', 'status' => 'active']);
 
         $package = Package::where('category_id', $category->id)->first()
             ?? Package::firstOrCreate(
