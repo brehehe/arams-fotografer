@@ -17,8 +17,15 @@ class ClientPortalController extends Controller
     /**
      * Display the Client Portal Home / Dashboard.
      */
-    public function dashboard(Request $request): Response
+    public function dashboard(Request $request): Response|\Illuminate\Http\RedirectResponse
     {
+        if ($request->routeIs('portal') && ($projectId = ($request->input('project') ?? $request->input('project_id')))) {
+            $proj = Project::find($projectId);
+            if ($proj) {
+                return redirect()->route('client.projects.show', ['project' => $proj->id]);
+            }
+        }
+
         $data = $this->clientPortalService->getDashboardData($request);
 
         return Inertia::render('Client/Dashboard', $data);

@@ -381,16 +381,28 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                 <div className="w-full max-w-full px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-2 sm:gap-4">
                     {/* Brand Logo Monogram */}
                     <Link href="/client/dashboard" className="flex items-center gap-2 sm:gap-3.5 group shrink-0">
-                        <div
-                            style={{
-                                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                borderColor: 'rgba(255, 255, 255, 0.2)',
-                                color: portalNavText,
-                            }}
-                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0"
-                        >
-                            <span className="font-serif italic font-bold text-sm tracking-tighter">ap</span>
-                        </div>
+                        {companyLogo ? (
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white p-1 flex items-center justify-center shadow-xs border border-white/20 group-hover:scale-105 transition-transform shrink-0 overflow-hidden">
+                                <img
+                                    src={companyLogo}
+                                    alt={companyName}
+                                    className="w-full h-full object-contain"
+                                />
+                            </div>
+                        ) : (
+                            <div
+                                style={{
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                                    color: portalNavText,
+                                }}
+                                className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl border flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0"
+                            >
+                                <span className="font-serif italic font-bold text-sm tracking-tighter">
+                                    {companyName ? companyName.substring(0, 2).toLowerCase() : 'ap'}
+                                </span>
+                            </div>
+                        )}
                         <div className="hidden min-[480px]:flex flex-col">
                             <span
                                 style={{
@@ -399,7 +411,7 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                                 }}
                                 className="font-black text-xs sm:text-base tracking-[0.15em] sm:tracking-[0.2em] uppercase whitespace-nowrap"
                             >
-                                Arams Pictures
+                                {companyName}
                             </span>
                             <span
                                 style={{
@@ -762,11 +774,13 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                         <div className="md:col-span-5 lg:col-span-4 space-y-3">
                             <div className="flex items-center gap-3">
                                 {companyLogo ? (
-                                    <img
-                                        src={companyLogo}
-                                        alt={companyName}
-                                        className="h-10 w-auto max-w-[150px] object-contain"
-                                    />
+                                    <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-white p-1 flex items-center justify-center shadow-2xs border border-stone-200/60 shrink-0 overflow-hidden">
+                                        <img
+                                            src={companyLogo}
+                                            alt={companyName}
+                                            className="max-h-full max-w-full object-contain"
+                                        />
+                                    </div>
                                 ) : (
                                     <div
                                         className="w-10 h-10 rounded-xl border flex items-center justify-center font-serif italic font-black text-sm shadow-2xs shrink-0"

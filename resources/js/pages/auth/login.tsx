@@ -24,6 +24,7 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
     const appSettings = pageProps?.appSettings || {};
 
     const companyName = appSettings.company_name || 'Arams Photography';
+    const companyLogo = appSettings.company_logo || '';
     const loginBg = appSettings.login_bg_color || '#2E0F15';
     const loginBgGradient = appSettings.login_bg_gradient || 'linear-gradient(180deg, #2E0F15 0%, #200A0E 100%)';
     const loginCardBg = appSettings.login_card_bg || '#FFFFFF';
@@ -93,9 +94,19 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
 
                 {/* Top: Brand */}
                 <div className="relative z-10 flex items-center gap-3.5">
-                    <div className="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white flex items-center justify-center font-black text-lg tracking-tight shadow-md">
-                        {initials}
-                    </div>
+                    {companyLogo ? (
+                        <div className="w-11 h-11 rounded-2xl bg-white p-1 flex items-center justify-center shadow-md border border-white/20 shrink-0 overflow-hidden">
+                            <img
+                                src={companyLogo}
+                                alt={companyName}
+                                className="w-full h-full object-contain"
+                            />
+                        </div>
+                    ) : (
+                        <div className="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white flex items-center justify-center font-black text-lg tracking-tight shadow-md">
+                            {initials}
+                        </div>
+                    )}
                     <div>
                         <h2 className="font-extrabold text-sm tracking-[0.18em] text-white uppercase">
                             {companyName}
@@ -159,12 +170,22 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
             >
                 {/* Mobile logo (only on small screens) */}
                 <div className="flex items-center gap-3 mb-8 lg:hidden">
-                    <div
-                        style={{ backgroundColor: loginAccent }}
-                        className="w-10 h-10 rounded-xl text-white flex items-center justify-center font-black text-base tracking-tight shadow-sm"
-                    >
-                        {initials}
-                    </div>
+                    {companyLogo ? (
+                        <div className="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center shadow-sm border border-slate-200 shrink-0 overflow-hidden">
+                            <img
+                                src={companyLogo}
+                                alt={companyName}
+                                className="w-full h-full object-contain"
+                            />
+                        </div>
+                    ) : (
+                        <div
+                            style={{ backgroundColor: loginAccent }}
+                            className="w-10 h-10 rounded-xl text-white flex items-center justify-center font-black text-base tracking-tight shadow-sm"
+                        >
+                            {initials}
+                        </div>
+                    )}
                     <span className={`font-extrabold text-sm tracking-widest uppercase ${isDarkCard ? 'text-white' : 'text-slate-800'}`}>
                         {companyName}
                     </span>

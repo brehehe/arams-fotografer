@@ -137,6 +137,10 @@ export default function ProjectDetail({
     };
 
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+    const [linkModalInitialData, setLinkModalInitialData] = useState<{ name?: string; drive_url?: string }>({
+        name: 'Master Dokumentasi Google Drive',
+        drive_url: '',
+    });
     const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
     const [isHighlightModalOpen, setIsHighlightModalOpen] = useState(false);
     const [isEditAllNotesOpen, setIsEditAllNotesOpen] = useState(false);
@@ -144,6 +148,10 @@ export default function ProjectDetail({
     const [isUpdatingNotes, setIsUpdatingNotes] = useState(false);
     const [confirmDeleteProject, setConfirmDeleteProject] = useState(false);
     const [isDeletingProject, setIsDeletingProject] = useState(false);
+    const [confirmCancelProject, setConfirmCancelProject] = useState(false);
+    const [isCancellingProject, setIsCancellingProject] = useState(false);
+    const [confirmRestoreProject, setConfirmRestoreProject] = useState(false);
+    const [isRestoringProject, setIsRestoringProject] = useState(false);
 
     // Specific note editing state
     const [editingNoteData, setEditingNoteData] = useState<{
@@ -532,6 +540,9 @@ export default function ProjectDetail({
 
     const timelineSteps = useMemo(() => {
         const totalSteps = activeWorkflow.steps_count;
+        const allFiles: any[] = (project?.file_links && project.file_links.length > 0)
+            ? project.file_links
+            : (project?.fileLinks || []);
 
         return activeWorkflow.steps.map((step, idx) => {
             const stepNum = idx + 1;
@@ -550,6 +561,19 @@ export default function ProjectDetail({
 
             const targetDeadline = step.duration || step.dur || step.dl || 'Hari H';
 
+            // Find matching file links for this step
+            const lowerStep = step.name.trim().toLowerCase();
+            const stepFiles = allFiles.filter((f: any) => {
+                if (!f?.name) return false;
+                const lowerName = f.name.toLowerCase();
+                return (
+                    lowerName.includes(`[tahap: ${lowerStep}]`) ||
+                    lowerName.includes(`[tahap:${lowerStep}]`) ||
+                    lowerName.includes(`[tahap: tahap ${stepNum}`) ||
+                    lowerName.includes(lowerStep)
+                );
+            });
+
             return {
                 id: step.num || stepNum,
                 name: step.name,
@@ -565,9 +589,10 @@ export default function ProjectDetail({
                         : `Target: ${targetDeadline}`,
                 done: isDone,
                 current: isCurrent,
+                files: stepFiles,
             };
         });
-    }, [activeWorkflow, currentStepIndex, project?.status]);
+    }, [activeWorkflow, currentStepIndex, project?.status, project?.file_links, project?.fileLinks]);
 
     // ── STATUS BADGE HELPER ──────────────────────────────────────────────────
     const getProjectStatusBadge = (status?: string) => {
@@ -637,14 +662,19 @@ export default function ProjectDetail({
     });
 
     const openCompleteStepModal = (step: any, nextStep: any, targetIndex: number) => {
+        // Pre-fill existing file link if this step already had one saved
+        const existingFile = step.files && step.files.length > 0 ? step.files[0] : null;
+
         setWorkflowModal({
             isOpen: true,
             stepToComplete: step,
             nextStep: nextStep || null,
             targetStepIndex: targetIndex,
-            linkName: `Hasil ${step.name}`,
-            driveUrl: '',
-            fileType: 'gdrive',
+            linkName: existingFile
+                ? existingFile.name.replace(/^\[Tahap:[^\]]+\]\s*/i, '')
+                : `Hasil ${step.name}`,
+            driveUrl: existingFile ? existingFile.drive_url : '',
+            fileType: existingFile?.file_type || 'gdrive',
             isSubmitting: false,
         });
     };
@@ -853,6 +883,64 @@ export default function ProjectDetail({
         });
     };
 
+    const handleCancelProject = () => {
+        if (isSupervisor || !project?.id) {
+            return;
+        }
+
+        setIsCancellingProject(true);
+        router.patch(
+            `/projects/${project.id}/status`,
+            {
+                status: 'cancelled',
+                progress: project.progress,
+                workflow_step: project.workflow_step,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setConfirmCancelProject(false);
+                    setIsCancellingProject(false);
+                    toast.success('Project berhasil dibatalkan. Anda dapat mengaktifkannya kembali kapan saja.');
+                },
+                onError: () => {
+                    setIsCancellingProject(false);
+                    toast.error('Gagal membatalkan project.');
+                },
+            }
+        );
+    };
+
+    const handleRestoreProject = () => {
+        if (isSupervisor || !project?.id) {
+            return;
+        }
+
+        setIsRestoringProject(true);
+        const restoredStatus = (project.progress && project.progress > 0) ? 'in_progress' : 'draft';
+
+        router.patch(
+            `/projects/${project.id}/status`,
+            {
+                status: restoredStatus,
+                progress: project.progress || 0,
+                workflow_step: project.workflow_step || activeWorkflow.steps[0]?.name || 'Booking',
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setConfirmRestoreProject(false);
+                    setIsRestoringProject(false);
+                    toast.success('Project berhasil diaktifkan kembali!');
+                },
+                onError: () => {
+                    setIsRestoringProject(false);
+                    toast.error('Gagal mengaktifkan kembali project.');
+                },
+            }
+        );
+    };
+
     return (
         <div className="w-full max-w-full space-y-4 pb-2">
             <Head title={`${project?.name || 'Project'} - Detail Project`} />
@@ -873,6 +961,38 @@ export default function ProjectDetail({
                         {project?.project_number || 'Detail Project'}
                     </span>
                 </div>
+
+                {/* Banner Status Dibatalkan */}
+                {project?.status === 'cancelled' && (
+                    <div className="bg-rose-50/90 border border-rose-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs animate-in fade-in duration-200">
+                        <div className="flex items-start sm:items-center gap-3.5">
+                            <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0 shadow-2xs">
+                                <AlertCircle className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-bold text-rose-950 flex items-center gap-2">
+                                    <span>Project Dibatalkan</span>
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-rose-200/80 text-rose-800 tracking-wide">
+                                        Nonaktif
+                                    </span>
+                                </h4>
+                                <p className="text-xs text-rose-800 mt-0.5 leading-relaxed">
+                                    Aktivitas pengerjaan project ini saat ini dihentikan. Seluruh berkas, log riwayat, dan data pembayaran tetap tersimpan aman dan project dapat diaktifkan kembali sewaktu-waktu.
+                                </p>
+                            </div>
+                        </div>
+                        {!isSupervisor && (
+                            <button
+                                type="button"
+                                onClick={() => setConfirmRestoreProject(true)}
+                                className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs hover:shadow-sm transition-all cursor-pointer shrink-0"
+                            >
+                                <RotateCcw className="w-4 h-4" />
+                                <span>Aktifkan Kembali Project</span>
+                            </button>
+                        )}
+                    </div>
+                )}
 
                 {/* Main Header with Title & Action Buttons */}
                 <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-2xs">
@@ -976,7 +1096,7 @@ export default function ProjectDetail({
                                         <span>Upload File / Drive</span>
                                     </button>
                                     <a
-                                        href={`/portal?project=${project?.id}`}
+                                        href={project?.id ? `/client/projects/${project.id}` : '/client/projects'}
                                         target="_blank"
                                         rel="noreferrer"
                                         className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 whitespace-nowrap"
@@ -987,17 +1107,31 @@ export default function ProjectDetail({
                                     {!isSupervisor && (
                                         <>
                                             <div className="border-t border-slate-100 my-1" />
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setActionDropdownOpen(false);
-                                                    handleQuickStatusChange('cancelled');
-                                                }}
-                                                className="w-full px-3.5 py-2 text-left text-xs font-semibold text-amber-700 hover:bg-amber-50 flex items-center gap-2.5 cursor-pointer whitespace-nowrap"
-                                            >
-                                                <X className="w-4 h-4 text-amber-600" />
-                                                <span>Batalkan Project</span>
-                                            </button>
+                                            {project?.status === 'cancelled' ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setActionDropdownOpen(false);
+                                                        setConfirmRestoreProject(true);
+                                                    }}
+                                                    className="w-full px-3.5 py-2 text-left text-xs font-semibold text-emerald-700 hover:bg-emerald-50 flex items-center gap-2.5 cursor-pointer whitespace-nowrap"
+                                                >
+                                                    <RotateCcw className="w-4 h-4 text-emerald-600" />
+                                                    <span>Aktifkan Kembali Project</span>
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setActionDropdownOpen(false);
+                                                        setConfirmCancelProject(true);
+                                                    }}
+                                                    className="w-full px-3.5 py-2 text-left text-xs font-semibold text-amber-700 hover:bg-amber-50 flex items-center gap-2.5 cursor-pointer whitespace-nowrap"
+                                                >
+                                                    <X className="w-4 h-4 text-amber-600" />
+                                                    <span>Batalkan Project</span>
+                                                </button>
+                                            )}
                                             <button
                                                 type="button"
                                                 onClick={() => {
@@ -1195,7 +1329,13 @@ export default function ProjectDetail({
                                         <div className="relative">
                                             <select
                                                 value={project?.status || 'draft'}
-                                                onChange={(e) => handleQuickStatusChange(e.target.value)}
+                                                onChange={(e) => {
+                                                    if (e.target.value === 'cancelled') {
+                                                        setConfirmCancelProject(true);
+                                                    } else {
+                                                        handleQuickStatusChange(e.target.value);
+                                                    }
+                                                }}
                                                 className={`pl-2.5 pr-6 py-1 rounded-lg text-[10px] font-bold border cursor-pointer outline-hidden bg-white shadow-2xs hover:ring-2 hover:ring-indigo-200 transition-all appearance-none ${statusBadge.bg}`}
                                                 title="Klik untuk mengubah status project langsung ke database"
                                             >
@@ -2083,6 +2223,29 @@ export default function ProjectDetail({
                                                                 {step.activity}
                                                             </p>
                                                         )}
+                                                        {/* Tautan Berkas Ringkas */}
+                                                        {step.files && step.files.length > 0 && (
+                                                            <div className="pt-1.5 flex flex-wrap items-center gap-1.5">
+                                                                {step.files.map((file: any) => {
+                                                                    const cleanName = file.name ? file.name.replace(/^\[Tahap:[^\]]+\]\s*/i, '') : 'Hasil Pengerjaan';
+                                                                    return (
+                                                                        <a
+                                                                            key={file.id}
+                                                                            href={file.drive_url}
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            onClick={(e) => e.stopPropagation()}
+                                                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200/80 text-[10px] font-semibold transition-all group"
+                                                                            title={`Buka tautan Google Drive: ${cleanName}`}
+                                                                        >
+                                                                            <HardDrive className="w-2.5 h-2.5 text-indigo-600 shrink-0" />
+                                                                            <span className="truncate max-w-[130px] sm:max-w-[180px]">{cleanName}</span>
+                                                                            <ExternalLink className="w-2.5 h-2.5 text-indigo-500 group-hover:text-indigo-700 shrink-0" />
+                                                                        </a>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
 
@@ -2208,6 +2371,92 @@ export default function ProjectDetail({
                                         <div className="text-[10px] text-indigo-700 font-mono font-semibold pt-0.5">
                                             Target Deadline / Durasi: {step.duration}
                                         </div>
+
+                                        {/* Tautan Berkas / File Hasil Tahap */}
+                                        {step.files && step.files.length > 0 && (
+                                            <div className="pt-2 flex flex-wrap items-center gap-2">
+                                                <span className="text-[10.5px] font-semibold text-slate-500 flex items-center gap-1 shrink-0">
+                                                    <Folder className="w-3 h-3 text-indigo-500" />
+                                                    Tautan Hasil:
+                                                </span>
+                                                {step.files.map((file: any) => {
+                                                    const cleanName = file.name ? file.name.replace(/^\[Tahap:[^\]]+\]\s*/i, '') : 'Hasil Pengerjaan';
+                                                    return (
+                                                        <div
+                                                            key={file.id}
+                                                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50/90 hover:bg-indigo-100 text-indigo-950 border border-indigo-200/90 text-xs font-medium transition-all shadow-2xs group"
+                                                        >
+                                                            {/* Google Drive Triangle Icon */}
+                                                            <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
+                                                                <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da" />
+                                                                <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47" />
+                                                                <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.15z" fill="#ea4335" />
+                                                                <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d" />
+                                                                <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc" />
+                                                                <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00" />
+                                                            </svg>
+                                                            <span className="font-semibold text-[11px] truncate max-w-[200px] sm:max-w-[260px]" title={cleanName}>
+                                                                {cleanName}
+                                                            </span>
+                                                            <a
+                                                                href={file.drive_url}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="inline-flex items-center gap-1 text-[11px] text-[#3B46F1] hover:text-[#323BD8] font-bold ml-1 hover:underline cursor-pointer"
+                                                                title="Buka di Google Drive"
+                                                            >
+                                                                <span>Buka</span>
+                                                                <ExternalLink className="w-3 h-3" />
+                                                            </a>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    navigator.clipboard.writeText(file.drive_url);
+                                                                    toast.success('Link Google Drive berhasil disalin!');
+                                                                }}
+                                                                className="p-0.5 text-slate-400 hover:text-indigo-600 rounded transition-colors cursor-pointer"
+                                                                title="Salin Link URL"
+                                                            >
+                                                                <Copy className="w-3 h-3" />
+                                                            </button>
+                                                        </div>
+                                                    );
+                                                })}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setLinkModalInitialData({
+                                                            name: `[Tahap: ${step.name}] Hasil ${step.name}`,
+                                                            drive_url: '',
+                                                        });
+                                                        setIsLinkModalOpen(true);
+                                                    }}
+                                                    className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-slate-500 hover:text-indigo-600 px-1.5 py-0.5 rounded hover:bg-indigo-50 transition-colors cursor-pointer"
+                                                    title="Tambah link berkas tambahan untuk tahap ini"
+                                                >
+                                                    <Plus className="w-3 h-3" />
+                                                    <span>Tambah Link</span>
+                                                </button>
+                                            </div>
+                                        )}
+                                        {(!step.files || step.files.length === 0) && (step.done || step.current) && (
+                                            <div className="pt-1.5">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setLinkModalInitialData({
+                                                            name: `[Tahap: ${step.name}] Hasil ${step.name}`,
+                                                            drive_url: '',
+                                                        });
+                                                        setIsLinkModalOpen(true);
+                                                    }}
+                                                    className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer"
+                                                >
+                                                    <Plus className="w-3 h-3" />
+                                                    <span>Tautkan File / GDrive Tahap Ini</span>
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
@@ -2271,34 +2520,80 @@ export default function ProjectDetail({
                         </button>
                     </div>
 
-                    {project?.file_links && project.file_links.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {project.file_links.map((link: any, lIdx: number) => (
-                                <div key={link.id || lIdx} className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <span className="font-bold text-xs text-slate-900">{link.name}</span>
-                                        <Folder className="w-4 h-4 text-indigo-600" />
-                                    </div>
-                                    <p className="text-[11px] text-slate-400 font-mono truncate">{link.drive_url}</p>
-                                    <a
-                                        href={link.drive_url}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:underline pt-1"
-                                    >
-                                        <span>Buka di Google Drive</span>
-                                        <ExternalLink className="w-3 h-3" />
-                                    </a>
+                    {(() => {
+                        const projectFiles = (project?.file_links && project.file_links.length > 0)
+                            ? project.file_links
+                            : (project?.fileLinks || []);
+
+                        if (projectFiles.length === 0) {
+                            return (
+                                <div className="p-4 rounded-xl border border-dashed border-slate-300 text-center py-10 space-y-2">
+                                    <Folder className="w-10 h-10 text-slate-400 mx-auto" />
+                                    <p className="text-xs font-bold text-slate-700">Belum ada link Google Drive yang disematkan</p>
+                                    <p className="text-[11px] text-slate-400">Klik tombol di atas atau selesaikan tahapan alur kerja untuk menambahkan tautan berkas dokumentasi.</p>
                                 </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="p-4 rounded-xl border border-dashed border-slate-300 text-center py-10 space-y-2">
-                            <Folder className="w-10 h-10 text-slate-400 mx-auto" />
-                            <p className="text-xs font-bold text-slate-700">Belum ada link Google Drive yang disematkan</p>
-                            <p className="text-[11px] text-slate-400">Klik tombol di atas untuk menambahkan link master foto/video serah terima.</p>
-                        </div>
-                    )}
+                            );
+                        }
+
+                        return (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {projectFiles.map((link: any, lIdx: number) => {
+                                    const hasStepTag = link.name?.match(/^\[Tahap:\s*([^\]]+)\]/i);
+                                    const stepName = hasStepTag ? hasStepTag[1] : null;
+                                    const displayName = link.name ? link.name.replace(/^\[Tahap:[^\]]+\]\s*/i, '') : 'Berkas Dokumentasi';
+
+                                    return (
+                                        <div key={link.id || lIdx} className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-white hover:border-indigo-300 hover:shadow-xs transition-all space-y-2.5 flex flex-col justify-between">
+                                            <div className="space-y-1.5">
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <div className="min-w-0">
+                                                        <h4 className="font-bold text-xs text-slate-900 line-clamp-1" title={link.name}>
+                                                            {displayName}
+                                                        </h4>
+                                                        {stepName && (
+                                                            <span className="inline-flex items-center gap-1 mt-0.5 px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                                                Tahap: {stepName}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
+                                                        <Folder className="w-3.5 h-3.5 text-[#3B46F1]" />
+                                                    </div>
+                                                </div>
+                                                <p className="text-[11px] text-slate-400 font-mono truncate bg-white px-2 py-1 rounded border border-slate-100" title={link.drive_url}>
+                                                    {link.drive_url}
+                                                </p>
+                                            </div>
+
+                                            <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                                                <a
+                                                    href={link.drive_url}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#3B46F1] hover:text-[#323BD8] hover:underline"
+                                                >
+                                                    <span>Buka di Google Drive</span>
+                                                    <ExternalLink className="w-3 h-3" />
+                                                </a>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        navigator.clipboard.writeText(link.drive_url);
+                                                        toast.success('Link berhasil disalin ke clipboard!');
+                                                    }}
+                                                    className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold text-slate-600 hover:text-indigo-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                                                    title="Salin tautan"
+                                                >
+                                                    <Copy className="w-3 h-3" />
+                                                    <span>Salin</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        );
+                    })()}
                 </div>
             )}
 
@@ -2659,15 +2954,16 @@ export default function ProjectDetail({
                             </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                            <Link
-                                href="/client/dashboard"
+                            <a
+                                href={project?.id ? `/client/projects/${project.id}` : '/client/projects'}
                                 target="_blank"
+                                rel="noreferrer"
                                 className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-                                title="Lihat tampilan Portal Klien"
+                                title="Lihat tampilan detail project di Portal Klien"
                             >
                                 <ExternalLink className="w-3.5 h-3.5" />
                                 <span>Buka Portal Klien</span>
-                            </Link>
+                            </a>
                             <button
                                 type="button"
                                 onClick={openCreateSlideModal}
@@ -2946,6 +3242,7 @@ export default function ProjectDetail({
                 isOpen={isLinkModalOpen}
                 onClose={() => setIsLinkModalOpen(false)}
                 projectId={project?.id}
+                initialData={linkModalInitialData}
             />
 
             <AddNoteModal
@@ -3147,6 +3444,32 @@ export default function ProjectDetail({
                 confirmText={revertModal.isSubmitting ? 'Memproses...' : 'Ya, Kembalikan Status'}
                 variant="danger"
             />
+
+            {/* Modal Konfirmasi Batalkan Project */}
+            {!isSupervisor && (
+                <AlertConfirmation
+                    isOpen={confirmCancelProject}
+                    onClose={() => !isCancellingProject && setConfirmCancelProject(false)}
+                    onConfirm={handleCancelProject}
+                    title="Batalkan Project?"
+                    description={`Apakah Anda yakin ingin membatalkan project "${project?.name}"? Status project akan diubah menjadi dibatalkan, namun seluruh data tersimpan aman dan project dapat diaktifkan kembali sewaktu-waktu.`}
+                    confirmText={isCancellingProject ? 'Membatalkan...' : 'Ya, Batalkan Project'}
+                    variant="warning"
+                />
+            )}
+
+            {/* Modal Konfirmasi Aktifkan Kembali Project */}
+            {!isSupervisor && (
+                <AlertConfirmation
+                    isOpen={confirmRestoreProject}
+                    onClose={() => !isRestoringProject && setConfirmRestoreProject(false)}
+                    onConfirm={handleRestoreProject}
+                    title="Aktifkan Kembali Project?"
+                    description={`Project "${project?.name}" akan diaktifkan kembali ke alur kerja aktif (${project?.progress && project.progress > 0 ? 'Dalam Proses' : 'Draft'}). Apakah Anda ingin melanjutkan?`}
+                    confirmText={isRestoringProject ? 'Mengaktifkan...' : 'Ya, Aktifkan Project'}
+                    variant="success"
+                />
+            )}
 
             {/* Modal Konfirmasi Hapus Project */}
             {!isSupervisor && (

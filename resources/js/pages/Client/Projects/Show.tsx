@@ -781,13 +781,13 @@ export default function ClientProjectDetail({
                                             <div
                                                 className="h-full bg-[#3E1015] transition-all duration-700"
                                                 style={{
-                                                    width: `${Math.min(100, Math.max(0, (((timeline.current_step || 7) - 1) / Math.max(1, displaySteps.length - 1)) * 100))}%`,
+                                                    width: `${Math.min(100, Math.max(0, ((((timeline?.current_step || 1) - 1) / Math.max(1, displaySteps.length - 1)) * 100)))}%`,
                                                 }}
                                             />
                                         </div>
                                         {displaySteps.map((step) => {
-                                            const isDone = step.status === 'completed';
-                                            const isActive = step.status === 'active';
+                                            const isDone = step.status === 'completed' || (!!timeline?.current_step && step.step < timeline.current_step);
+                                            const isActive = !isDone && (step.status === 'active' || (!!timeline?.current_step && step.step === timeline.current_step));
 
                                             return (
                                                 <div key={step.step} className="flex flex-col items-center text-center relative z-10 flex-1 px-1">

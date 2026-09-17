@@ -319,8 +319,7 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                         </div>
                     ) : (
                         paginatedProjects.map((p) => {
-                            const isWedding = (p.total_steps || 5) === 8 || p.category_name.toLowerCase().includes('wedding');
-                            const totalSteps = p.total_steps || (isWedding ? 8 : 5);
+                            const totalSteps = p.total_steps || (p.timeline_steps && p.timeline_steps.length > 0 ? p.timeline_steps.length : 5);
                             const isCompleted = p.status === 'completed' || p.workflow_step === 'selesai' || p.status === 'delivered';
                             const activeStep = p.current_step || (isCompleted ? totalSteps : 1);
                             const sisaTagihan = Math.max(0, (p.total_amount || 0) - (p.paid_amount || 0));
@@ -328,20 +327,20 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                             const stepsList: TimelineStepItem[] = (p.timeline_steps && p.timeline_steps.length > 0)
                                 ? p.timeline_steps
                                 : (totalSteps === 8 ? [
-                                    { step: 1, name: 'Booking & DP', desc: 'Tanda jadi & kunci jadwal acara' },
-                                    { step: 2, name: 'Briefing', desc: 'Konsep, rundown & moodboard' },
-                                    { step: 3, name: 'Hari Pemotretan', desc: 'Liputan sesi foto & video Hari-H' },
-                                    { step: 4, name: 'Preview Foto', desc: 'Seleksi foto online' },
-                                    { step: 5, name: 'Editing Seleksi', desc: 'Color grading & retouching' },
-                                    { step: 6, name: 'Review Revisi', desc: 'Pengecekan hasil karya klien' },
-                                    { step: 7, name: 'Cetak Album', desc: 'Produksi cetak lab album kolase' },
-                                    { step: 8, name: 'Selesai & Kirim', desc: 'Serah terima album & cloud drive' },
+                                    { step: 1, name: 'Booking & DP', desc: 'Verifikasi pembayaran DP & jadwal tim' },
+                                    { step: 2, name: 'TM Wedding', desc: 'Technical Meeting & finalisasi rundown' },
+                                    { step: 3, name: 'Hari H', desc: 'Dokumentasi hari H & backup master data' },
+                                    { step: 4, name: 'Sneak Peak Photo Editing', desc: 'Color grading kilat & preview teaser foto' },
+                                    { step: 5, name: 'Flashdrive + Box Delivery', desc: 'Pengisian flashdisk & box kemasan' },
+                                    { step: 6, name: 'Full Version Photo & Video Editing', desc: 'Editing menyeluruh foto & video cinematic' },
+                                    { step: 7, name: 'Layouting & Printing Photobook', desc: 'Desain layout album & approval klien' },
+                                    { step: 8, name: 'Final Delivery', desc: 'Penyerahan seluruh produk fisik & arsip cloud' },
                                 ] : [
-                                    { step: 1, name: 'Booking & DP', desc: 'Tanda jadi & kunci jadwal pemotretan' },
-                                    { step: 2, name: 'Briefing Konsep', desc: 'Penentuan tema, kostum & properti' },
-                                    { step: 3, name: 'Hari Sesi Foto', desc: 'Sesi pemotretan studio / outdoor' },
-                                    { step: 4, name: 'Editing & Retouch', desc: 'Color grading & retouching' },
-                                    { step: 5, name: 'Selesai & Kirim', desc: 'Pengiriman file resolusi tinggi' },
+                                    { step: 1, name: 'Booking & Briefing Sesi', desc: 'Briefing konsep & persiapan teknis' },
+                                    { step: 2, name: 'Hari H Sesi Foto & Video', desc: 'Sesi pemotretan & backup raw files' },
+                                    { step: 3, name: 'Culling & Editing Color Grade', desc: 'Retouch foto & video editing' },
+                                    { step: 4, name: 'Review Klien & Revisi', desc: 'Preview klien & revisi' },
+                                    { step: 5, name: 'Penyerahan Final', desc: 'Handover final link & produk' },
                                 ]);
 
                             return (

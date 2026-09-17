@@ -708,7 +708,7 @@ class ClientPortalService
         if (!$project) {
             return [
                 'current_step' => 1,
-                'total_steps' => 8,
+                'total_steps' => 5,
                 'current_step_name' => 'Mulai Perjalanan',
                 'active_step_title' => 'Mulai Perjalanan',
                 'active_step_desc' => 'Proyek Anda sedang kami persiapkan.',
@@ -716,8 +716,6 @@ class ClientPortalService
                 'steps' => [],
             ];
         }
-
-        $workflowType = $project->category?->workflow_type ?? 'wedding';
 
         if (!$supervisorName) {
             $isClientUser = ($project->supervisor_id && $project->supervisor_id === $project->client_id)
@@ -743,46 +741,142 @@ class ClientPortalService
             $editorName = $editorName ?: 'Tim Editor Arams';
         }
 
-        $weddingSteps = [
-            ['step' => 1, 'key' => 'booking', 'name' => 'Booking & DP', 'desc' => 'Tanda jadi & penguncian jadwal tanggal acara'],
-            ['step' => 2, 'key' => 'briefing', 'name' => 'Briefing & Moodboard', 'desc' => 'Diskusi konsep, rundown, moodboard visual & teknis liputan'],
-            ['step' => 3, 'key' => 'shooting', 'name' => 'Hari Pemotretan', 'desc' => 'Liputan sesi foto & video pada Hari-H acara'],
-            ['step' => 4, 'key' => 'preview_foto', 'name' => 'Preview Foto', 'desc' => 'Galeri online untuk seleksi foto terbaik bersama klien'],
-            ['step' => 5, 'key' => 'editing_seleksi', 'name' => 'Editing Seleksi', 'desc' => 'Proses color grading eksklusif & retouching foto pilihan'],
-            ['step' => 6, 'key' => 'revisi', 'name' => 'Review & Revisi', 'desc' => 'Pengecekan hasil karya oleh klien & penyesuaian minor'],
-            ['step' => 7, 'key' => 'cetak_album', 'name' => 'Cetak Album', 'desc' => 'Produksi cetak lab premium, cetak kanvas & album kolase'],
-            ['step' => 8, 'key' => 'selesai_kirim', 'name' => 'Selesai & Pengiriman', 'desc' => 'Serah terima paket fisik & pengiriman link arsip cloud drive'],
-        ];
+        // 1. Resolve master workflow definitions
+        $workflowDefs = \App\Http\Controllers\MasterData\WorkflowController::getWorkflowDefinitions();
 
-        $photoshootSteps = [
-            ['step' => 1, 'key' => 'booking', 'name' => 'Booking & DP', 'desc' => 'Tanda jadi & kunci jadwal pemotretan studio'],
-            ['step' => 2, 'key' => 'briefing', 'name' => 'Briefing Konsep', 'desc' => 'Penentuan tema, kostum, wardrobe & properti'],
-            ['step' => 3, 'key' => 'shooting', 'name' => 'Hari Sesi Foto', 'desc' => 'Sesi pemotretan di studio/lokasi outdoor pilihan'],
-            ['step' => 4, 'key' => 'editing_seleksi', 'name' => 'Editing & Retouch', 'desc' => 'Color grading & retouching foto pilihan klien'],
-            ['step' => 5, 'key' => 'selesai_kirim', 'name' => 'Selesai & Kirim File', 'desc' => 'Pengiriman file resolusi tinggi & tautan Google Drive'],
-        ];
+        // 2. Resolve matching workflow for this project
+        $category = $project->category;
+        $wfType = strtolower($category?->workflow_type ?? '');
+        $catName = strtolower($category?->name ?? '');
+        $pkgName = strtolower($project->package?->name ?? '');
+        $projName = strtolower($project->name ?? '');
+        $combined = "{$catName} {$pkgName} {$projName}";
 
-        $isPhotoshoot = in_array($workflowType, ['photoshoot', 'non_wedding', 'studio', 'portrait']);
-        $stepDefinitions = $isPhotoshoot ? $photoshootSteps : $weddingSteps;
+        if (!empty($project->custom_timeline) && is_array($project->custom_timeline) && count($project->custom_timeline) > 0) {
+            $stepDefinitions = array_map(function ($s, $idx) {
+                return [
+                    'step' => $s['step'] ?? $s['num'] ?? ($idx + 1),
+                    'key' => strtolower(str_replace(' ', '_', $s['name'] ?? "step_{$idx}")),
+                    'name' => $s['name'] ?? "Tahap " . ($idx + 1),
+                    'desc' => $s['desc'] ?? $s['activity'] ?? $s['description'] ?? 'Tahapan alur kerja project.',
+                ];
+            }, $project->custom_timeline, array_keys($project->custom_timeline));
+        } else {
+            $selectedWorkflow = null;
+            if ($wfType === 'non_wedding' || $wfType === 'photoshoot') {
+                $selectedWorkflow = collect($workflowDefs)->firstWhere('type', 'non_wedding');
+            } elseif ($wfType === 'custom' || $wfType === 'bundling') {
+                $selectedWorkflow = collect($workflowDefs)->firstWhere('type', 'custom');
+            } elseif ($wfType === 'wedding') {
+                $selectedWorkflow = collect($workflowDefs)->firstWhere('type', 'wedding');
+            }
+
+            if (!$selectedWorkflow) {
+                if (
+                    str_contains($combined, 'bundle') || str_contains($combined, 'bundling') ||
+                    str_contains($combined, 'custom') || str_contains($combined, 'journey') ||
+                    str_contains($combined, 'all-in') || str_contains($combined, 'all in')
+                ) {
+                    $selectedWorkflow = collect($workflowDefs)->firstWhere('type', 'custom');
+                } elseif (
+                    str_contains($combined, 'prewed') || str_contains($combined, 'engagement') || str_contains($combined, 'lamaran') ||
+                    str_contains($combined, 'event') || str_contains($combined, 'komunitas') || str_contains($combined, 'portrait') ||
+                    str_contains($combined, 'graduation') || str_contains($combined, 'wisuda') || str_contains($combined, 'photo only') ||
+                    str_contains($combined, 'video only') || str_contains($combined, 'photoshoot') || str_contains($combined, 'studio') ||
+                    str_contains($combined, 'maternity') || str_contains($combined, 'aqiqah') || str_contains($combined, 'dokumentasi')
+                ) {
+                    $selectedWorkflow = collect($workflowDefs)->firstWhere('type', 'non_wedding');
+                } else {
+                    $selectedWorkflow = collect($workflowDefs)->firstWhere('type', 'wedding') ?? ($workflowDefs[0] ?? null);
+                }
+            }
+
+            $rawSteps = $selectedWorkflow['steps'] ?? [];
+            if (empty($rawSteps)) {
+                $rawSteps = ($workflowDefs[0]['steps'] ?? []);
+            }
+
+            $stepDefinitions = array_map(function ($s, $idx) {
+                return [
+                    'step' => $s['num'] ?? ($idx + 1),
+                    'key' => strtolower(str_replace(' ', '_', $s['name'] ?? "step_{$idx}")),
+                    'name' => $s['name'] ?? "Tahap " . ($idx + 1),
+                    'desc' => $s['activity'] ?? $s['description'] ?? 'Tahapan alur kerja project.',
+                ];
+            }, $rawSteps, array_keys($rawSteps));
+        }
+
         $totalSteps = count($stepDefinitions);
+        if ($totalSteps === 0) {
+            $totalSteps = 5;
+        }
 
-        // Normalize current step key
-        $rawStep = strtolower(trim($project->workflow_step ?? 'booking'));
-        $isCompletedProject = ($project->status === 'completed' || $rawStep === 'selesai' || $rawStep === 'final_delivery' || $rawStep === 'final delivery' || $rawStep === 'selesai & pengiriman');
+        // 3. Determine current step index
+        $rawStep = strtolower(trim($project->workflow_step ?? ''));
+        $isCompletedProject = (
+            $project->status === 'completed' ||
+            str_contains($rawStep, 'selesai') ||
+            str_contains($rawStep, 'final') ||
+            (int) ($project->progress ?? 0) >= 100
+        );
 
-        $currentStepIndex = 0;
+        $currentStepIndex = -1;
         if ($isCompletedProject) {
             $currentStepIndex = $totalSteps - 1;
-        } else {
+        } elseif ($rawStep !== '') {
+            // A. Exact or contains match
             foreach ($stepDefinitions as $idx => $step) {
                 $stepNameLower = strtolower($step['name']);
-                $stepKeyLower = strtolower($step['key']);
-                if ($rawStep === $stepKeyLower || str_contains($rawStep, $stepKeyLower) || str_contains($stepNameLower, $rawStep)) {
+                if ($stepNameLower === $rawStep || str_contains($stepNameLower, $rawStep) || str_contains($rawStep, $stepNameLower)) {
                     $currentStepIndex = $idx;
                     break;
                 }
             }
+
+            // B. Keyword semantic mapping
+            if ($currentStepIndex === -1) {
+                foreach ($stepDefinitions as $idx => $step) {
+                    $sName = strtolower($step['name']);
+                    if (
+                        (str_contains($rawStep, 'cull') && (str_contains($sName, 'cull') || str_contains($sName, 'edit'))) ||
+                        (str_contains($rawStep, 'edit') && (str_contains($sName, 'edit') || str_contains($sName, 'cull') || str_contains($sName, 'retouch'))) ||
+                        (str_contains($rawStep, 'sneak') && (str_contains($sName, 'sneak') || str_contains($sName, 'preview'))) ||
+                        (str_contains($rawStep, 'preview') && (str_contains($sName, 'preview') || str_contains($sName, 'sneak'))) ||
+                        (str_contains($rawStep, 'shoot') && (str_contains($sName, 'shoot') || str_contains($sName, 'hari'))) ||
+                        (str_contains($rawStep, 'hari h') && (str_contains($sName, 'hari') || str_contains($sName, 'shoot'))) ||
+                        (str_contains($rawStep, 'brief') && str_contains($sName, 'brief')) ||
+                        (str_contains($rawStep, 'tm') && (str_contains($sName, 'tm') || str_contains($sName, 'meeting'))) ||
+                        (str_contains($rawStep, 'book') && str_contains($sName, 'book')) ||
+                        (str_contains($rawStep, 'revis') && (str_contains($sName, 'revis') || str_contains($sName, 'review'))) ||
+                        (str_contains($rawStep, 'review') && (str_contains($sName, 'review') || str_contains($sName, 'revis'))) ||
+                        (str_contains($rawStep, 'cetak') && (str_contains($sName, 'cetak') || str_contains($sName, 'album') || str_contains($sName, 'book'))) ||
+                        (str_contains($rawStep, 'album') && (str_contains($sName, 'album') || str_contains($sName, 'cetak'))) ||
+                        (str_contains($rawStep, 'kirim') && (str_contains($sName, 'kirim') || str_contains($sName, 'deliver'))) ||
+                        (str_contains($rawStep, 'deliver') && (str_contains($sName, 'deliver') || str_contains($sName, 'kirim')))
+                    ) {
+                        $currentStepIndex = $idx;
+                        break;
+                    }
+                }
+            }
         }
+
+        // C. Fallback based on project status and progress
+        if ($currentStepIndex === -1) {
+            if ($project->status === 'editing') {
+                $editIdx = collect($stepDefinitions)->search(fn ($s) => str_contains(strtolower($s['name']), 'edit') || str_contains(strtolower($s['name']), 'cull'));
+                $currentStepIndex = ($editIdx !== false) ? $editIdx : min(2, $totalSteps - 1);
+            } elseif ($project->status === 'in_progress') {
+                $shootIdx = collect($stepDefinitions)->search(fn ($s) => str_contains(strtolower($s['name']), 'hari') || str_contains(strtolower($s['name']), 'shoot'));
+                $currentStepIndex = ($shootIdx !== false) ? $shootIdx : min(1, $totalSteps - 1);
+            } elseif ($project->progress && $project->progress > 0) {
+                $currentStepIndex = max(0, min($totalSteps - 1, (int) round(($project->progress / 100) * ($totalSteps - 1))));
+            } else {
+                $currentStepIndex = 0;
+            }
+        }
+
+        $isPhotoshoot = in_array($wfType, ['photoshoot', 'non_wedding', 'studio', 'portrait']);
 
         $steps = [];
         foreach ($stepDefinitions as $idx => $def) {
@@ -801,11 +895,29 @@ class ClientPortalService
                 default => 'Menunggu',
             };
 
-            $dateFormatted = $this->getStepDate($project, $def['key'], $idx);
+            $stepKey = $def['key'] ?? "step_{$idx}";
+            $dateFormatted = $this->getStepDate($project, $stepKey, $idx, $totalSteps);
+            $icon = $this->getStepIcon($stepKey, $def['name']);
+            $pic = $this->getStepPic($stepKey, $project, $supervisorName, $photographerName, $editorName, $def['name']);
+            $tasks = $this->getStepTasks($stepKey, $status, $isPhotoshoot, $def['name'], $def['desc']);
+
+            $lowerDefName = strtolower($def['name']);
+            $stepFiles = ($project && $project->fileLinks) ? $project->fileLinks->filter(function ($f) use ($lowerDefName) {
+                if ($f->is_hidden) return false;
+                $lowerName = strtolower($f->name ?? '');
+                return str_contains($lowerName, "[tahap: {$lowerDefName}]") ||
+                       str_contains($lowerName, "[tahap:{$lowerDefName}]") ||
+                       str_contains($lowerName, $lowerDefName);
+            })->map(fn($f) => [
+                'id' => $f->id,
+                'name' => preg_replace('/^\[Tahap:[^\]]+\]\s*/i', '', $f->name ?? 'File Dokumentasi'),
+                'drive_url' => $f->drive_url,
+                'file_type' => $f->file_type,
+            ])->values()->all() : [];
 
             $steps[] = [
                 'step' => $def['step'],
-                'key' => $def['key'],
+                'key' => $stepKey,
                 'name' => $def['name'],
                 'title' => $def['name'],
                 'desc' => $def['desc'],
@@ -813,16 +925,17 @@ class ClientPortalService
                 'status' => $status,
                 'status_label' => $statusLabel,
                 'date' => $dateFormatted,
-                'icon' => $this->getStepIcon($def['key']),
-                'pic' => $this->getStepPic($def['key'], $project, $supervisorName, $photographerName, $editorName),
-                'tasks' => $this->getStepTasks($def['key'], $status, $isPhotoshoot),
+                'icon' => $icon,
+                'pic' => $pic,
+                'tasks' => $tasks,
+                'files' => $stepFiles,
             ];
         }
 
-        $activeDef = $stepDefinitions[$currentStepIndex] ?? $stepDefinitions[0];
+        $activeDef = $stepDefinitions[$currentStepIndex] ?? ($stepDefinitions[0] ?? ['name' => 'Dalam Proses', 'desc' => '']);
         $progressPct = $isCompletedProject
             ? 100
-            : (int) round((($currentStepIndex + 1) / $totalSteps) * 100);
+            : ($project->progress !== null ? (int) $project->progress : (int) round((($currentStepIndex + 1) / $totalSteps) * 100));
 
         return [
             'current_step' => $currentStepIndex + 1,
@@ -872,144 +985,141 @@ class ClientPortalService
         ];
     }
 
-    protected function getStepDate(Project $project, string $stepKey, int $idx = 0): ?string
+    protected function getStepDate(Project $project, string $stepKey, int $idx = 0, int $totalSteps = 5): ?string
     {
         $created = $project->created_at ?: now()->subDays(7);
         $event = $project->event_date ?: now()->addDays(30);
         $deadline = $project->deadline ?: ($event ? $event->copy()->addDays(30) : now()->addDays(60));
 
-        return match ($stepKey) {
-            'booking' => $created->isoFormat('D MMM YYYY'),
-            'briefing' => $created->copy()->addDays(3)->isoFormat('D MMM YYYY'),
-            'shooting' => $event->isoFormat('D MMM YYYY'),
-            'preview_foto' => $event->copy()->addDays(3)->isoFormat('D MMM YYYY'),
-            'editing_seleksi' => $event->copy()->addDays(14)->isoFormat('D MMM YYYY'),
-            'revisi' => $event->copy()->addDays(21)->isoFormat('D MMM YYYY'),
-            'cetak_album' => $deadline->copy()->subDays(7)->isoFormat('D MMM YYYY'),
-            'selesai_kirim' => $deadline->isoFormat('D MMM YYYY'),
-            default => $created->copy()->addDays($idx * 5)->isoFormat('D MMM YYYY'),
-        };
+        if ($idx === 0) {
+            return $created->isoFormat('D MMM YYYY');
+        }
+        if ($idx === $totalSteps - 1) {
+            return $deadline->isoFormat('D MMM YYYY');
+        }
+        if ($idx === 1) {
+            return $created->copy()->addDays(3)->isoFormat('D MMM YYYY');
+        }
+        if ($idx === 2) {
+            return $event->isoFormat('D MMM YYYY');
+        }
+
+        $daysAfterEvent = ($idx - 2) * 7;
+        return $event->copy()->addDays($daysAfterEvent)->isoFormat('D MMM YYYY');
     }
 
-    protected function getStepIcon(string $stepKey): string
+    protected function getStepIcon(string $stepKey, string $stepName = ''): string
     {
-        return match ($stepKey) {
-            'booking' => 'CalendarCheck',
-            'briefing' => 'MessageSquare',
-            'shooting' => 'Camera',
-            'preview_foto' => 'Eye',
-            'editing_seleksi' => 'Sliders',
-            'revisi' => 'RefreshCw',
-            'cetak_album' => 'BookOpen',
-            'selesai_kirim' => 'CheckCircle2',
-            default => 'Circle',
-        };
+        $name = strtolower($stepName . ' ' . $stepKey);
+        if (str_contains($name, 'book') || str_contains($name, 'dp')) {
+            return 'CalendarCheck';
+        }
+        if (str_contains($name, 'brief') || str_contains($name, 'tm') || str_contains($name, 'konsep')) {
+            return 'MessageSquare';
+        }
+        if (str_contains($name, 'hari') || str_contains($name, 'shoot') || str_contains($name, 'foto')) {
+            return 'Camera';
+        }
+        if (str_contains($name, 'sneak') || str_contains($name, 'preview')) {
+            return 'Eye';
+        }
+        if (str_contains($name, 'edit') || str_contains($name, 'cull') || str_contains($name, 'color') || str_contains($name, 'retouch')) {
+            return 'Sliders';
+        }
+        if (str_contains($name, 'revis') || str_contains($name, 'review')) {
+            return 'RefreshCw';
+        }
+        if (str_contains($name, 'cetak') || str_contains($name, 'album') || str_contains($name, 'box')) {
+            return 'BookOpen';
+        }
+        if (str_contains($name, 'selesai') || str_contains($name, 'final') || str_contains($name, 'kirim') || str_contains($name, 'deliver')) {
+            return 'CheckCircle2';
+        }
+        return 'Circle';
     }
 
-    protected function getStepPic(string $stepKey, Project $project, ?string $supervisorName = null, ?string $photographerName = null, ?string $editorName = null): string
+    protected function getStepPic(string $stepKey, Project $project, ?string $supervisorName = null, ?string $photographerName = null, ?string $editorName = null, string $stepName = ''): string
     {
         $supervisor = $supervisorName ?: ($project->supervisor?->name ?? 'Bima Arams');
         $photographer = $photographerName ?: ($project->photographer?->name ?? 'Tim Fotografer Arams');
         $editor = $editorName ?: ($project->editor?->name ?? 'Tim Editor Arams');
 
-        return match ($stepKey) {
-            'booking' => "Client Relations & Supervisor ($supervisor)",
-            'briefing' => "Creative Director & Supervisor ($supervisor)",
-            'shooting' => "Lead Photographer ($photographer)",
-            'preview_foto' => "Studio Data Officer & PIC ($supervisor)",
-            'editing_seleksi' => "Lead Editor ($editor)",
-            'revisi' => "Quality Control & Editor ($editor)",
-            'cetak_album' => 'Divisi Percetakan & Lab Foto Arams',
-            'selesai_kirim' => "Logistik & Dispatch ($supervisor)",
-            default => 'Tim Operasional Arams',
-        };
+        $name = strtolower($stepName . ' ' . $stepKey);
+        if (str_contains($name, 'edit') || str_contains($name, 'cull') || str_contains($name, 'color') || str_contains($name, 'retouch')) {
+            return "Lead Editor ($editor)";
+        }
+        if (str_contains($name, 'shoot') || str_contains($name, 'foto') || str_contains($name, 'hari')) {
+            return "Lead Photographer ($photographer)";
+        }
+        if (str_contains($name, 'cetak') || str_contains($name, 'album') || str_contains($name, 'box')) {
+            return 'Divisi Percetakan & Lab Foto Arams';
+        }
+        if (str_contains($name, 'kirim') || str_contains($name, 'final') || str_contains($name, 'selesai')) {
+            return "Logistik & Dispatch ($supervisor)";
+        }
+        return "Client Relations & Supervisor ($supervisor)";
     }
 
-    protected function getStepTasks(string $stepKey, string $status, bool $isPhotoshoot = false): array
+    protected function getStepTasks(string $stepKey, string $status, bool $isPhotoshoot = false, string $stepName = '', string $stepDesc = ''): array
     {
         $isDone = ($status === 'completed');
         $isActive = ($status === 'active');
+        $name = strtolower($stepName . ' ' . $stepKey);
 
-        if ($isPhotoshoot) {
-            return match ($stepKey) {
-                'booking' => [
-                    ['title' => 'Formulir data sesi foto & preferensi gaya pemotretan terverifikasi', 'completed' => true],
-                    ['title' => 'Pembayaran Uang Muka (DP) / Pelunasan terkonfirmasi', 'completed' => true],
-                    ['title' => 'Penjadwalan studio, fotografer & waktu pemotretan terkunci', 'completed' => true],
-                ],
-                'briefing' => [
-                    ['title' => 'Diskusi tema visual, wardrobe, kostum & properti khusus', 'completed' => $isDone || $isActive],
-                    ['title' => 'Panduan persiapan sesi & arahan kenyamanan subjek / bayi', 'completed' => $isDone],
-                    ['title' => 'Finalisasi jadwal kedatangan tim / waktu pemotretan', 'completed' => $isDone],
-                ],
-                'shooting' => [
-                    ['title' => 'Kehadiran tim fotografer spesialis & asisten di lokasi / studio', 'completed' => $isDone || $isActive],
-                    ['title' => 'Pelaksanaan sesi pemotretan sesuai tema & moodboard terpilih', 'completed' => $isDone],
-                    ['title' => 'Pencadangan (backup) seluruh file RAW foto ke cloud server', 'completed' => $isDone],
-                ],
-                'editing_seleksi' => [
-                    ['title' => 'Kurasi foto terbaik & seleksi foto bersama klien', 'completed' => $isDone || $isActive],
-                    ['title' => 'Color grading tone sinematik & fine art retouching khas Arams', 'completed' => $isDone],
-                    ['title' => 'Penyusunan hasil editing resolusi tinggi siap cetak', 'completed' => $isDone],
-                ],
-                'selesai_kirim' => [
-                    ['title' => 'Quality check (QC) final hasil foto & dokumen pendukung', 'completed' => $isDone || $isActive],
-                    ['title' => 'Pemberian tautan Google Drive / Cloud Album resolusi tinggi (HD)', 'completed' => $isDone],
-                    ['title' => 'Serah terima hasil karya & penutupan project', 'completed' => $isDone],
-                ],
-                default => [
-                    ['title' => 'Persiapan tahapan pengerjaan', 'completed' => $isDone || $isActive],
-                    ['title' => 'Pelaksanaan & koordinasi tim', 'completed' => $isDone],
-                ],
-            };
+        if (str_contains($name, 'book') || str_contains($name, 'dp')) {
+            return [
+                ['title' => 'Formulir data sesi & preferensi pemotretan terverifikasi', 'completed' => true],
+                ['title' => 'Pembayaran Uang Muka (DP) / Pelunasan terkonfirmasi', 'completed' => true],
+                ['title' => 'Penjadwalan kru fotografer & tanggal pemotretan terkunci', 'completed' => true],
+            ];
+        }
+        if (str_contains($name, 'brief') || str_contains($name, 'tm') || str_contains($name, 'konsep')) {
+            return [
+                ['title' => 'Diskusi tema visual, wardrobe, rundown & moodboard konsep', 'completed' => $isDone || $isActive],
+                ['title' => 'Panduan persiapan sesi & briefing teknis bersama tim', 'completed' => $isDone],
+                ['title' => 'Konfirmasi lokasi shooting dan perizinan terkait', 'completed' => $isDone],
+            ];
+        }
+        if (str_contains($name, 'hari') || str_contains($name, 'shoot') || str_contains($name, 'foto')) {
+            return [
+                ['title' => 'Kehadiran tim fotografer & videografer di lokasi acara / studio', 'completed' => $isDone || $isActive],
+                ['title' => 'Pelaksanaan sesi pemotretan sesuai durasi paket & shot list', 'completed' => $isDone],
+                ['title' => 'Pencadangan (backup) ganda seluruh file RAW foto & video', 'completed' => $isDone],
+            ];
+        }
+        if (str_contains($name, 'cull') || str_contains($name, 'edit') || str_contains($name, 'retouch') || str_contains($name, 'sneak')) {
+            return [
+                ['title' => 'Sortir (culling) foto terbaik dari seluruh hasil liputan', 'completed' => $isDone || $isActive],
+                ['title' => 'Color grading tone sinematik khas Arams & fine retouching', 'completed' => $isDone || $isActive],
+                ['title' => 'Penyusunan berkas master hasil olah digital resolusi tinggi', 'completed' => $isDone],
+            ];
+        }
+        if (str_contains($name, 'revis') || str_contains($name, 'review') || str_contains($name, 'layout')) {
+            return [
+                ['title' => 'Pemberian draft preview online untuk ditinjau oleh klien', 'completed' => $isDone || $isActive],
+                ['title' => 'Penyesuaian minor / revisi sesuai catatan masukan klien', 'completed' => $isDone],
+                ['title' => 'Konfirmasi approval final hasil karya sebelum penyerahan', 'completed' => $isDone],
+            ];
+        }
+        if (str_contains($name, 'cetak') || str_contains($name, 'album') || str_contains($name, 'box')) {
+            return [
+                ['title' => 'Layouting halaman photobook & konfirmasi cetak lab foto', 'completed' => $isDone || $isActive],
+                ['title' => 'Pencetakan album kolase premium, cetak kanvas & frame foto', 'completed' => $isDone],
+                ['title' => 'Quality control (QC) fisik cetakan dan packaging eksklusif', 'completed' => $isDone],
+            ];
+        }
+        if (str_contains($name, 'selesai') || str_contains($name, 'final') || str_contains($name, 'kirim') || str_contains($name, 'deliver')) {
+            return [
+                ['title' => 'Quality check (QC) final berkas resolusi tinggi & packaging', 'completed' => $isDone || $isActive],
+                ['title' => 'Pengiriman tautan Google Drive / Cloud Album resolusi tinggi', 'completed' => $isDone],
+                ['title' => 'Serah terima paket fisik & penutupan project selesai', 'completed' => $isDone],
+            ];
         }
 
-        return match ($stepKey) {
-            'booking' => [
-                ['title' => 'Formulir data klien & detail acara terverifikasi', 'completed' => true],
-                ['title' => 'Pembayaran Uang Muka (DP) / Pelunasan terkonfirmasi', 'completed' => true],
-                ['title' => 'Penjadwalan kru fotografer & tanggal acara terkunci', 'completed' => true],
-            ],
-            'briefing' => [
-                ['title' => 'Diskusi konsep visual & moodboard gaya pemotretan', 'completed' => $isDone || $isActive],
-                ['title' => 'Penyusunan rundown & jadwal liputan detail Hari-H', 'completed' => $isDone],
-                ['title' => 'Koordinasi attire, busana, lokasi & dekorasi', 'completed' => $isDone],
-            ],
-            'shooting' => [
-                ['title' => 'Kehadiran tim fotografer & videografer di lokasi', 'completed' => $isDone || $isActive],
-                ['title' => 'Sesi pemotretan prosesi akad / pemberkatan & resepsi', 'completed' => $isDone],
-                ['title' => 'Pencadangan (backup) seluruh file RAW foto ke cloud server', 'completed' => $isDone],
-            ],
-            'preview_foto' => [
-                ['title' => 'Kurasi & penyortiran awal foto mentah oleh studio', 'completed' => $isDone || $isActive],
-                ['title' => 'Upload galeri online preview untuk dipilih oleh klien', 'completed' => $isDone],
-                ['title' => 'Klien memilih foto-foto favorit untuk diproses edit', 'completed' => $isDone],
-            ],
-            'editing_seleksi' => [
-                ['title' => 'Color grading tone sinematik khas Arams Pictures', 'completed' => $isDone || $isActive],
-                ['title' => 'Retouching kulit & keindahan estetika foto pilihan', 'completed' => $isDone],
-                ['title' => 'Penyuntingan video teaser 1 menit & video sinematik', 'completed' => $isDone],
-            ],
-            'revisi' => [
-                ['title' => 'Klien meninjau hasil editing foto & teaser video', 'completed' => $isDone || $isActive],
-                ['title' => 'Pemberian masukan atau permintaan revisi minor', 'completed' => $isDone],
-                ['title' => 'Persetujuan akhir (final approval) dari klien', 'completed' => $isDone],
-            ],
-            'cetak_album' => [
-                ['title' => 'Penyusunan tata letak (layouting) album kolase premium', 'completed' => $isDone || $isActive],
-                ['title' => 'Proses cetak lab profesional & pembingkaian kanvas', 'completed' => $isDone],
-                ['title' => 'Pemeriksaan kualitas cetak (QC) & pengemasan box eksklusif', 'completed' => $isDone],
-            ],
-            'selesai_kirim' => [
-                ['title' => 'Pengemasan album fisik & flashdisk cetak custom', 'completed' => $isDone || $isActive],
-                ['title' => 'Pemberian link arsip Google Drive kualitas tinggi (HD)', 'completed' => $isDone],
-                ['title' => 'Serah terima paket fisik ke alamat klien & penyelesaian', 'completed' => $isDone],
-            ],
-            default => [
-                ['title' => 'Persiapan tahapan pengerjaan', 'completed' => $isDone || $isActive],
-                ['title' => 'Pelaksanaan & koordinasi tim', 'completed' => $isDone],
-            ],
-        };
+        return [
+            ['title' => $stepDesc ?: "Pelaksanaan tahapan {$stepName}", 'completed' => $isDone || $isActive],
+            ['title' => 'Koordinasi dan quality review bersama tim terkait', 'completed' => $isDone],
+        ];
     }
 
     protected function getPackageSampleImage(string $packageName): string

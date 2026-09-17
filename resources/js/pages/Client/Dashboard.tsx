@@ -400,16 +400,24 @@ export default function ClientDashboard({
                         <div className="flex items-start justify-between relative">
                             {/* Connecting Line behind circles */}
                             <div
-                                className="absolute top-4 sm:top-5 h-0.5 bg-slate-200 -z-0"
+                                className="absolute top-4 sm:top-5 h-0.5 bg-slate-200 -z-0 overflow-hidden"
                                 style={{
-                                    left: `calc(100% / (${timelineSteps.length} * 2))`,
-                                    right: `calc(100% / (${timelineSteps.length} * 2))`,
+                                    left: `calc(100% / (${Math.max(1, timelineSteps.length)} * 2))`,
+                                    right: `calc(100% / (${Math.max(1, timelineSteps.length)} * 2))`,
                                 }}
-                            />
+                            >
+                                <div
+                                    style={{
+                                        backgroundColor: COLOR_BURGUNDY,
+                                        width: `${Math.min(100, Math.max(0, (((currentStepNum - 1) / Math.max(1, timelineSteps.length - 1)) * 100)))}%`,
+                                    }}
+                                    className="h-full transition-all duration-700"
+                                />
+                            </div>
 
                             {timelineSteps.map((step, idx) => {
-                                const isCompleted = step.status === 'completed';
-                                const isActive = step.status === 'active' || (!isCompleted && step.step === currentStepNum);
+                                const isCompleted = step.status === 'completed' || (!!currentStepNum && step.step < currentStepNum);
+                                const isActive = !isCompleted && (step.status === 'active' || (!!currentStepNum && step.step === currentStepNum));
 
                                 return (
                                     <div

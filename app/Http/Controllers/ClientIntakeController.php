@@ -86,6 +86,12 @@ class ClientIntakeController extends Controller
      */
     public function store(StoreClientIntakeRequest $request): RedirectResponse
     {
+        $status = Setting::get('intake_form_status', 'open');
+        if ($status === 'closed') {
+            $msg = Setting::get('intake_closed_message', 'Mohon maaf, saat ini pendaftaran booking baru sedang ditutup sementara.');
+            return redirect()->back()->withErrors(['form' => $msg])->with('error', $msg);
+        }
+
         $this->processClientIntake->execute($request->validated());
 
         return redirect()->back()

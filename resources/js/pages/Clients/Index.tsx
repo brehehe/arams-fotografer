@@ -307,6 +307,24 @@ const getTimeAgoIndonesian = (dateStr?: string) => {
     }
 };
 
+const isNewClient = (dateStr?: string) => {
+    if (!dateStr) {
+        return false;
+    }
+
+    try {
+        const d = new Date(dateStr);
+        const now = new Date();
+        const diffMs = now.getTime() - d.getTime();
+        const diffHours = diffMs / (1000 * 60 * 60);
+
+        // Klien baru: terdaftar dalam 24 jam terakhir
+        return diffHours >= 0 && diffHours <= 24;
+    } catch {
+        return false;
+    }
+};
+
 export default function ClientsIndex({
     clients = { data: [], current_page: 1, last_page: 1, total: 0, from: 0, to: 0, per_page: 10 },
     filters = {},
@@ -1748,11 +1766,17 @@ export default function ClientsIndex({
                                         const paidVal = Number(c.total_paid || 0);
                                         const projectsCount = Number(c.projects_count ?? 0);
                                         const isPaidOff = projectsCount > 0 && paidVal >= totalVal && totalVal > 0;
+                                        const isNew = isNewClient(c.created_at);
 
                                         return (
                                             <TableRow
                                                 key={c.id}
-                                                className={`transition-colors hover:bg-slate-50/60 border-b border-slate-100/80 ${c.status === 'blocked' ? 'bg-rose-50/20' : ''}`}
+                                                className={`transition-colors border-b border-slate-100/80 ${c.status === 'blocked'
+                                                    ? 'bg-rose-50/20 hover:bg-rose-50/40'
+                                                    : isNew
+                                                        ? 'bg-blue-50/40 hover:bg-blue-50/70'
+                                                        : 'hover:bg-slate-50/60'
+                                                    }`}
                                             >
                                                 {/* Client Avatar / Initials + Name + Type Badge */}
                                                 <TableCell className="py-4">
@@ -1769,12 +1793,20 @@ export default function ClientsIndex({
                                                             </div>
                                                         )}
                                                         <div>
-                                                            <Link
-                                                                href={`/clients/${c.id}`}
-                                                                className="font-bold text-slate-900 hover:text-[#C89445] transition-colors block text-xs"
-                                                            >
-                                                                {getClientName(c)}
-                                                            </Link>
+                                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                                <Link
+                                                                    href={`/clients/${c.id}`}
+                                                                    className="font-bold text-slate-900 hover:text-[#C89445] transition-colors block text-xs"
+                                                                >
+                                                                    {getClientName(c)}
+                                                                </Link>
+                                                                {isNew && (
+                                                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-blue-100/90 text-blue-700 border border-blue-200/80 shadow-2xs">
+                                                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+                                                                        <span>Baru</span>
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                             <span className="text-[10px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100/80 mt-0.5 inline-block">
                                                                 {getClientTypeLabel(c)}
                                                             </span>
@@ -1851,7 +1883,7 @@ export default function ClientsIndex({
                                                         <span className="text-xs font-medium text-slate-800 block">
                                                             {formatDateIndonesian(c.created_at)}
                                                         </span>
-                                                        <span className="text-[11px] text-slate-400 block mt-0.5">
+                                                        <span className={`text-[11px] block mt-0.5 ${isNew ? 'text-blue-600 font-bold' : 'text-slate-400'}`}>
                                                             {getTimeAgoIndonesian(c.created_at)}
                                                         </span>
                                                     </div>
@@ -1932,11 +1964,17 @@ export default function ClientsIndex({
                                 const paidVal = Number(c.total_paid || 0);
                                 const projectsCount = Number(c.projects_count ?? 0);
                                 const isPaidOff = projectsCount > 0 && paidVal >= totalVal && totalVal > 0;
+                                const isNew = isNewClient(c.created_at);
 
                                 return (
                                     <div
                                         key={c.id}
-                                        className="p-4 transition-colors space-y-3 bg-white"
+                                        className={`p-4 transition-colors space-y-3 ${c.status === 'blocked'
+                                            ? 'bg-rose-50/20'
+                                            : isNew
+                                                ? 'bg-blue-50/40 border-l-4 border-l-blue-500'
+                                                : 'bg-white'
+                                            }`}
                                     >
                                         {/* Top Row: Avatar + Name + Type Badge + Dropdown */}
                                         <div className="flex items-start justify-between gap-2.5">
@@ -1953,12 +1991,20 @@ export default function ClientsIndex({
                                                     </div>
                                                 )}
                                                 <div>
-                                                    <Link
-                                                        href={`/clients/${c.id}`}
-                                                        className="font-bold text-slate-900 text-sm hover:text-[#C89445] transition-colors line-clamp-1"
-                                                    >
-                                                        {getClientName(c)}
-                                                    </Link>
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                        <Link
+                                                            href={`/clients/${c.id}`}
+                                                            className="font-bold text-slate-900 text-sm hover:text-[#C89445] transition-colors line-clamp-1"
+                                                        >
+                                                            {getClientName(c)}
+                                                        </Link>
+                                                        {isNew && (
+                                                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-blue-100/90 text-blue-700 border border-blue-200/80 shadow-2xs">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+                                                                <span>Baru</span>
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <span className="text-[10px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100/80 mt-0.5 inline-block">
                                                         {getClientTypeLabel(c)}
                                                     </span>

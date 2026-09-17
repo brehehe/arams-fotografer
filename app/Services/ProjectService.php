@@ -691,16 +691,31 @@ class ProjectService
             if (!preg_match('~^(?:f|ht)tps?://~i', $url)) {
                 $url = 'https://' . $url;
             }
-            $stepTag = !empty($data['completed_step_name']) ? "[Tahap: {$data['completed_step_name']}] " : '';
-            $linkName = $stepTag . (!empty($data['drive_link']['name']) ? $data['drive_link']['name'] : 'Hasil Pengerjaan');
+            $stepName = !empty($data['completed_step_name']) ? trim($data['completed_step_name']) : '';
+            $rawName = !empty($data['drive_link']['name']) ? trim($data['drive_link']['name']) : ($stepName ? "Hasil {$stepName}" : 'Hasil Pengerjaan');
 
-            FileLink::create([
+            if ($stepName && !str_starts_with($rawName, '[Tahap:')) {
+                $linkName = "[Tahap: {$stepName}] {$rawName}";
+            } else {
+                $linkName = $rawName;
+            }
+
+            // Remove any existing file link for this same step to prevent duplicates
+            if ($stepName) {
+                FileLink::where('project_id', $project->id)
+                    ->where(function ($q) use ($stepName) {
+                        $q->where('name', 'like', "[Tahap: {$stepName}]%")
+                          ->orWhere('name', 'like', "%{$stepName}%");
+                    })
+                    ->delete();
+            }
+
+            app(\App\Services\FileLinkService::class)->createFileLink([
                 'project_id' => $project->id,
                 'name' => $linkName,
                 'drive_url' => $url,
                 'file_type' => $data['drive_link']['file_type'] ?? 'gdrive',
-                'created_by' => ($causer ?? auth()->user())?->id,
-            ]);
+            ], $causer ?? auth()->user());
         }
 
         // Handle deleting linked files if workflow step is reverted

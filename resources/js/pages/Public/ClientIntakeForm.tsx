@@ -24,6 +24,8 @@ import {
     Plus,
     Trash2,
     Users,
+    Lock,
+    AlertCircle,
 } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import { SelectSearch, type SelectSearchOption } from '@/components/ui/select-search';
@@ -190,6 +192,12 @@ export default function ClientIntakeForm({
     const { flash } = pageProps;
     const intakeSuccess = flash?.intake_success || flash?.success;
 
+    const appSettings = pageProps?.appSettings || {};
+    const dynamicCompanyName = company?.name || appSettings?.company_name || 'Arams Pictures';
+    const dynamicCompanyLogo = appSettings?.company_logo || '';
+    const dynamicCompanyTagline = appSettings?.company_tagline || appSettings?.company_subtitle || 'CAPTURE YOUR MOMENTS';
+
+    const isClosed = form_status === 'closed';
     const [currentStep, setCurrentStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -1206,6 +1214,10 @@ export default function ClientIntakeForm({
 
     const handleNext = (e: React.FormEvent) => {
         e.preventDefault();
+        if (isClosed) {
+            toast.error(intake_closed_message || 'Mohon maaf, saat ini pendaftaran booking baru sedang ditutup sementara.');
+            return;
+        }
         // Validation per step
         if (currentStep === 1) {
             if (!validateStep1()) return;
@@ -1305,14 +1317,33 @@ export default function ClientIntakeForm({
             <Toaster position="top-right" richColors />
 
             {/* ── BANNER: Form Ditutup Sementara ── */}
-            {form_status === 'closed' && (
-                <div className="max-w-full mx-auto mb-4">
-                    <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl px-5 py-4">
-                        <span className="text-amber-400 text-xl leading-none mt-0.5 shrink-0">⚠️</span>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-amber-300">Pendaftaran Ditutup Sementara</p>
-                            <p className="text-xs text-amber-200/70 mt-0.5 leading-relaxed">{intake_closed_message}</p>
+            {isClosed && (
+                <div className="max-w-full mb-5 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-amber-500/15 border-2 border-amber-500/40 rounded-2xl p-4 sm:p-5 shadow-lg backdrop-blur-md">
+                        <div className="flex items-start sm:items-center gap-3.5">
+                            <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300 shrink-0">
+                                <Lock className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h3 className="text-sm sm:text-base font-bold text-amber-200">
+                                    Pendaftaran Ditutup Sementara
+                                </h3>
+                                <p className="text-xs text-amber-100/80 mt-0.5 leading-relaxed max-w-2xl">
+                                    {intake_closed_message}
+                                </p>
+                            </div>
                         </div>
+                        {/* {company?.phone && (
+                            <a
+                                href={`https://wa.me/${company.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Halo Admin Arams Pictures, saya ingin menanyakan perihal booking...')}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md shrink-0 cursor-pointer"
+                            >
+                                <Phone className="w-3.5 h-3.5" />
+                                <span>Hubungi via WhatsApp</span>
+                            </a>
+                        )} */}
                     </div>
                 </div>
             )}
@@ -1328,15 +1359,25 @@ export default function ClientIntakeForm({
                     <div className="flex-1 flex flex-col min-h-0">
                         {/* Logo & Brand */}
                         <div className="flex items-center gap-3 shrink-0">
-                            <div className="w-10 h-10 rounded-xl bg-white text-slate-950 font-black text-lg flex items-center justify-center shadow-md shrink-0">
-                                ap
-                            </div>
+                            {dynamicCompanyLogo ? (
+                                <div className="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center shadow-md shrink-0 overflow-hidden">
+                                    <img
+                                        src={dynamicCompanyLogo}
+                                        alt={dynamicCompanyName}
+                                        className="w-full h-full object-contain"
+                                    />
+                                </div>
+                            ) : (
+                                <div className="w-10 h-10 rounded-xl bg-white text-slate-950 font-black text-lg flex items-center justify-center shadow-md shrink-0">
+                                    {dynamicCompanyName ? dynamicCompanyName.substring(0, 2).toLowerCase() : 'ap'}
+                                </div>
+                            )}
                             <div className="leading-tight">
                                 <h2 className="text-sm font-black text-white tracking-tight uppercase">
-                                    ARAMS PICTURES
+                                    {dynamicCompanyName}
                                 </h2>
                                 <p className="text-[9px] font-bold text-slate-400 tracking-widest uppercase mt-0.5">
-                                    CAPTURE YOUR MOMENTS
+                                    {dynamicCompanyTagline}
                                 </p>
                             </div>
                         </div>
@@ -1373,7 +1414,7 @@ export default function ClientIntakeForm({
 
                     {/* Copyright Footer */}
                     <div className="pt-4 border-t border-white/5 text-[11px] text-slate-500 shrink-0 mt-auto">
-                        <p>© 2026 Arams Pictures.</p>
+                        <p>© 2026 {dynamicCompanyName}.</p>
                         <p>All rights reserved.</p>
                     </div>
                 </div>
@@ -1418,18 +1459,23 @@ export default function ClientIntakeForm({
                                                 {/* Step Circle Badge */}
                                                 <button
                                                     type="button"
-                                                    onClick={() => (isDone ? setCurrentStep(s.number) : null)}
-                                                    disabled={!isDone}
+                                                    onClick={() => (!isClosed && isDone ? setCurrentStep(s.number) : null)}
+                                                    disabled={isClosed || !isDone}
                                                     style={{
-                                                        backgroundColor: isDone || isCurrent ? primaryColor : '#ffffff',
-                                                        borderColor: isDone || isCurrent ? primaryColor : undefined,
-                                                        boxShadow: isCurrent ? `0 0 0 5px ${primaryColor}25` : undefined,
+                                                        backgroundColor: !isClosed && (isDone || isCurrent) ? primaryColor : isClosed && isCurrent ? '#64748b' : '#ffffff',
+                                                        borderColor: !isClosed && (isDone || isCurrent) ? primaryColor : isClosed && isCurrent ? '#64748b' : undefined,
+                                                        boxShadow: !isClosed && isCurrent ? `0 0 0 5px ${primaryColor}25` : undefined,
                                                     }}
-                                                    className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all relative z-10 ${isDone
-                                                        ? 'text-white cursor-pointer hover:opacity-90 shadow-md'
-                                                        : isCurrent
-                                                            ? 'text-white shadow-md'
-                                                            : 'bg-white border-2 border-slate-300 text-slate-400 cursor-not-allowed'
+                                                    className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all relative z-10 ${
+                                                        isClosed
+                                                            ? isCurrent
+                                                                ? 'text-white cursor-not-allowed opacity-80'
+                                                                : 'bg-white border-2 border-slate-200 text-slate-300 cursor-not-allowed'
+                                                            : isDone
+                                                                ? 'text-white cursor-pointer hover:opacity-90 shadow-md'
+                                                                : isCurrent
+                                                                    ? 'text-white shadow-md'
+                                                                    : 'bg-white border-2 border-slate-300 text-slate-400 cursor-not-allowed'
                                                         }`}
                                                 >
                                                     {isDone ? <Check className="w-4 h-4 stroke-[3]" /> : s.number}
@@ -1455,6 +1501,7 @@ export default function ClientIntakeForm({
                         {/* ================================================================= */}
                         {/* STEP 1: INFORMASI AWAL & DETAIL KLIEN */}
                         {/* ================================================================= */}
+                        <fieldset disabled={isClosed} className={isClosed ? 'opacity-75 cursor-not-allowed select-none' : ''}>
                         {currentStep === 1 && (
                             <div className="space-y-6 animate-in fade-in duration-200">
                                 {intake_notes && (
@@ -2463,88 +2510,118 @@ export default function ClientIntakeForm({
                                 </div>
                             </div>
                         )}
+                        </fieldset>
                     </div>
 
                     {/* ===================================================================== */}
                     {/* BOTTOM ACTION BUTTONS */}
                     {/* ===================================================================== */}
-                    <div className="pt-6 mt-8 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <div>
-                            {currentStep > 1 ? (
-                                <button
-                                    type="button"
-                                    onClick={handleBack}
-                                    className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
-                                >
-                                    <ArrowLeft className="w-3.5 h-3.5" />
-                                    <span>Kembali</span>
-                                </button>
-                            ) : (
-                                <div className="hidden sm:block" />
-                            )}
-                        </div>
+                    <div className="pt-6 mt-8 border-t border-slate-100 flex flex-col items-stretch gap-4">
+                        {isClosed && (
+                            <div className="w-full px-4 py-3 rounded-2xl bg-amber-50 border border-amber-200/90 text-amber-900 text-xs flex items-center gap-3 animate-in fade-in">
+                                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                    <strong className="font-bold block text-amber-900">Pendaftaran Ditutup Sementara</strong>
+                                    <span className="text-[11px] text-amber-700">Tombol navigasi dan seluruh pengiriman formulir dinonaktifkan sementara.</span>
+                                </div>
+                            </div>
+                        )}
 
-                        <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-                            {currentStep === 4 ? (
-                                <>
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 w-full">
+                            <div>
+                                {currentStep > 1 ? (
                                     <button
                                         type="button"
-                                        onClick={handleSaveDraft}
-                                        className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
+                                        onClick={handleBack}
+                                        disabled={isClosed}
+                                        className={`px-5 py-2.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs ${
+                                            isClosed
+                                                ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-60'
+                                                : 'border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer'
+                                        }`}
                                     >
-                                        <Bookmark className="w-3.5 h-3.5" />
-                                        <span>Simpan Draft</span>
+                                        <ArrowLeft className="w-3.5 h-3.5" />
+                                        <span>Kembali</span>
                                     </button>
-                                    <div className="flex flex-col items-end">
+                                ) : (
+                                    <div className="hidden sm:block" />
+                                )}
+                            </div>
+
+                            <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                                {currentStep === 4 ? (
+                                    <>
                                         <button
                                             type="button"
-                                            disabled={isSubmitting || form_status === 'closed'}
-                                            onClick={form_status === 'closed' ? undefined : handleSubmit}
-                                            style={form_status === 'closed' ? undefined : { backgroundColor: primaryColor }}
-                                            className={`px-6 py-2.5 rounded-xl text-white text-xs font-bold flex items-center gap-2 transition-all shadow-md disabled:cursor-not-allowed ${form_status === 'closed'
-                                                ? 'bg-slate-500 opacity-60 shadow-slate-500/20'
-                                                : 'hover:opacity-90 cursor-pointer shadow-md disabled:opacity-50'
-                                                }`}
+                                            disabled={isClosed}
+                                            onClick={isClosed ? undefined : handleSaveDraft}
+                                            className={`px-5 py-2.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs ${
+                                                isClosed
+                                                    ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-60'
+                                                    : 'border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer'
+                                            }`}
                                         >
-                                            {isSubmitting ? (
-                                                <>
-                                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                    <span>Memproses...</span>
-                                                </>
-                                            ) : form_status === 'closed' ? (
-                                                <>
-                                                    <span>🔒</span>
-                                                    <span>Pendaftaran Ditutup</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <span>Kirim Form Pemesanan</span>
-                                                    <Send className="w-3.5 h-3.5" />
-                                                </>
-                                            )}
+                                            <Bookmark className="w-3.5 h-3.5" />
+                                            <span>Simpan Draft</span>
                                         </button>
-                                        {/* {form_status === 'closed' ? (
-                                            <span className="text-[10px] text-amber-400 mt-1 font-semibold">
-                                                ⚠️ {intake_closed_message}
-                                            </span>
+                                        <div className="flex flex-col items-end">
+                                            <button
+                                                type="button"
+                                                disabled={isSubmitting || isClosed}
+                                                onClick={isClosed ? undefined : handleSubmit}
+                                                style={isClosed ? undefined : { backgroundColor: primaryColor }}
+                                                className={`px-6 py-2.5 rounded-xl text-white text-xs font-bold flex items-center gap-2 transition-all shadow-md disabled:cursor-not-allowed ${
+                                                    isClosed
+                                                        ? 'bg-slate-400 opacity-60 shadow-slate-500/20'
+                                                        : 'hover:opacity-90 cursor-pointer shadow-md disabled:opacity-50'
+                                                }`}
+                                            >
+                                                {isSubmitting ? (
+                                                    <>
+                                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                        <span>Memproses...</span>
+                                                    </>
+                                                ) : isClosed ? (
+                                                    <>
+                                                        <Lock className="w-3.5 h-3.5" />
+                                                        <span>Pendaftaran Ditutup</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <span>Kirim Form Pemesanan</span>
+                                                        <Send className="w-3.5 h-3.5" />
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        disabled={isClosed}
+                                        onClick={isClosed ? undefined : handleNext}
+                                        style={isClosed ? undefined : { backgroundColor: primaryColor }}
+                                        className={`px-6 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${
+                                            isClosed
+                                                ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none opacity-60 border border-slate-300'
+                                                : 'text-white cursor-pointer shadow-md hover:opacity-90'
+                                        }`}
+                                        title={isClosed ? 'Pendaftaran ditutup sementara' : undefined}
+                                    >
+                                        {isClosed ? (
+                                            <>
+                                                <Lock className="w-3.5 h-3.5" />
+                                                <span>Pendaftaran Ditutup</span>
+                                            </>
                                         ) : (
-                                            <span className="text-[10px] text-slate-400 mt-1">
-                                                Form akan dikirim ke tim kami untuk diproses.
-                                            </span>
-                                        )} */}
-                                    </div>
-                                </>
-                            ) : (
-                                <button
-                                    type="button"
-                                    onClick={handleNext}
-                                    style={{ backgroundColor: primaryColor }}
-                                    className="px-6 py-2.5 rounded-xl text-white text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-md hover:opacity-90"
-                                >
-                                    <span>Selanjutnya</span>
-                                    <ArrowRight className="w-3.5 h-3.5" />
-                                </button>
-                            )}
+                                            <>
+                                                <span>Selanjutnya</span>
+                                                <ArrowRight className="w-3.5 h-3.5" />
+                                            </>
+                                        )}
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>

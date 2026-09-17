@@ -2807,7 +2807,7 @@ export default function ProjectInvoice({
                                         />
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-[11px] font-semibold text-slate-600">Kota Tanda Tangan</label>
+                                        <label className="text-[11px] font-semibold text-slate-600">Kota</label>
                                         <input
                                             type="text"
                                             value={customTexts.signatureCity}

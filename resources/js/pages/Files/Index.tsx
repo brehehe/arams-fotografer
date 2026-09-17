@@ -669,10 +669,22 @@ export default function FilesIndex({
 
                                             {/* Baris 2 (Diturunkan): Info Project & Klien */}
                                             <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-slate-500">
-                                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border ${getCategoryBadgeColor(projectName)}`}>
-                                                    <Folder className="w-2.5 h-2.5" />
-                                                    <span>{projectName}</span>
-                                                </span>
+                                                {file.project?.id ? (
+                                                    <Link
+                                                        href={`/projects/${file.project.id}`}
+                                                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border hover:underline transition-all ${getCategoryBadgeColor(projectName)}`}
+                                                        title="Buka Detail Project"
+                                                    >
+                                                        <Folder className="w-2.5 h-2.5" />
+                                                        <span>{projectName}</span>
+                                                        <ExternalLink className="w-2.5 h-2.5 opacity-70 ml-0.5" />
+                                                    </Link>
+                                                ) : (
+                                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border ${getCategoryBadgeColor(projectName)}`}>
+                                                        <Folder className="w-2.5 h-2.5" />
+                                                        <span>{projectName}</span>
+                                                    </span>
+                                                )}
                                                 <span className="inline-flex items-center gap-1 font-medium text-slate-600">
                                                     <span className="text-slate-300">•</span>
                                                     <User className="w-3 h-3 text-slate-400" />
