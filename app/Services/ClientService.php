@@ -87,8 +87,7 @@ class ClientService
             ->get();
         $clientSources = \App\Models\ClientSource::where('status', 'active')
             ->select('id', 'name', 'type', 'avatar', 'is_primary')
-            ->orderByDesc('is_primary')
-            ->orderBy('name')
+            ->orderByDesc('created_at')
             ->get();
 
         return [

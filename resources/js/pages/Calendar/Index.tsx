@@ -16,8 +16,11 @@ import {
     ExternalLink,
     Phone,
     Package,
+    Trash2,
 } from 'lucide-react';
 import React, { useState, useEffect, useMemo } from 'react';
+import { toast } from 'sonner';
+import { AlertConfirmation } from '@/components/ui/alert-confirmation';
 import { formatDate } from '@/lib/formatters';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -131,6 +134,8 @@ export default function CalendarIndex({
     const [selectedDate, setSelectedDate] = useState<string>(todayStr);
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<CalendarItem | null>(null);
+    const [itemToDelete, setItemToDelete] = useState<CalendarItem | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // List view filters
     const [listSearch, setListSearch] = useState('');
@@ -394,6 +399,7 @@ export default function CalendarIndex({
             notes: addForm.description,
         }, {
             onSuccess: () => {
+                toast.success('Jadwal berhasil ditambahkan!');
                 setAddModalOpen(false);
                 setAddForm({
                     title: '',
@@ -408,7 +414,35 @@ export default function CalendarIndex({
                     location: '',
                     color: '#6366F1',
                 });
-            }
+            },
+            onError: (errs) => {
+                toast.error((Object.values(errs)[0] as string) || 'Gagal menambahkan jadwal');
+            },
+        });
+    };
+
+    // Handle Delete Schedule
+    const handleConfirmDelete = () => {
+        if (!itemToDelete) {
+            return;
+        }
+
+        const deleteId = itemToDelete.schedule_id || itemToDelete.id;
+
+        setIsDeleting(true);
+        router.delete(`/calendar/schedules/${deleteId}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success('Jadwal berhasil dihapus!');
+                setItemToDelete(null);
+                setSelectedItem(null);
+                setIsDeleting(false);
+            },
+            onError: (err) => {
+                const errMsg = (Object.values(err)[0] as string) || 'Gagal menghapus jadwal';
+                toast.error(errMsg);
+                setIsDeleting(false);
+            },
         });
     };
 
@@ -933,7 +967,7 @@ export default function CalendarIndex({
                                                                 color: colorStyle.text,
                                                             }}
                                                         >
-                                                            <div className="space-y-1">
+                                                            <div className="space-y-1 min-w-0 flex-1">
                                                                 <div className="flex items-center gap-2">
                                                                     <span className="font-black text-sm text-slate-900">{evt.title}</span>
                                                                     <span
@@ -949,6 +983,17 @@ export default function CalendarIndex({
                                                                     {evt.location && <span>📍 {evt.location}</span>}
                                                                 </div>
                                                             </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setItemToDelete(evt);
+                                                                }}
+                                                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-white/80 rounded-lg transition-colors cursor-pointer shrink-0"
+                                                                title="Hapus Jadwal"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
                                                         </div>
                                                     );
                                                 })
@@ -1036,35 +1081,48 @@ export default function CalendarIndex({
                                             onClick={() => setSelectedItem(evt)}
                                             className="py-3.5 px-3 rounded-xl hover:bg-slate-50 transition-all flex items-center justify-between gap-4 cursor-pointer"
                                         >
-                                            <div className="flex items-center gap-3.5">
+                                            <div className="flex items-center gap-3.5 min-w-0 flex-1">
                                                 <div
                                                     className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-bold shadow-2xs"
                                                     style={{ backgroundColor: colorStyle.bg, color: colorStyle.dot }}
                                                 >
                                                     <CalendarIcon className="w-5 h-5" />
                                                 </div>
-                                                <div>
-                                                    <div className="flex items-center gap-2">
-                                                        <h4 className="font-bold text-slate-900 text-sm">{evt.title}</h4>
+                                                <div className="min-w-0">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <h4 className="font-bold text-slate-900 text-sm truncate">{evt.title}</h4>
                                                         <span
-                                                            className="px-2 py-0.5 rounded text-[10px] font-bold border"
+                                                            className="px-2 py-0.5 rounded text-[10px] font-bold border shrink-0"
                                                             style={{ backgroundColor: colorStyle.bg, color: colorStyle.dot, borderColor: colorStyle.border }}
                                                         >
                                                             {evt.type}
                                                         </span>
                                                     </div>
-                                                    <p className="text-xs text-slate-500 font-medium mt-0.5">
+                                                    <p className="text-xs text-slate-500 font-medium mt-0.5 truncate">
                                                         {evt.client_name} · 📍 {evt.location || 'Studio'}
                                                     </p>
                                                 </div>
                                             </div>
-                                            <div className="text-right shrink-0">
-                                                <span className="text-xs font-bold text-slate-800 block font-sans">
-                                                    {formatDate(evt.date)}
-                                                </span>
-                                                <span className="text-[11px] text-slate-500 font-medium">
-                                                    {evt.start_time} - {evt.end_time}
-                                                </span>
+                                            <div className="flex items-center gap-3 shrink-0">
+                                                <div className="text-right">
+                                                    <span className="text-xs font-bold text-slate-800 block font-sans">
+                                                        {formatDate(evt.date)}
+                                                    </span>
+                                                    <span className="text-[11px] text-slate-500 font-medium">
+                                                        {evt.start_time} - {evt.end_time}
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setItemToDelete(evt);
+                                                    }}
+                                                    className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                                    title="Hapus Jadwal"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
                                             </div>
                                         </div>
                                     );
@@ -1546,13 +1604,23 @@ export default function CalendarIndex({
                                     </p>
                                 )}
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => setSelectedItem(null)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer shrink-0"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={() => setItemToDelete(selectedItem)}
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                                    title="Hapus Jadwal"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedItem(null)}
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
                         </div>
 
                         {/* Project Details Grid */}
@@ -1664,6 +1732,15 @@ export default function CalendarIndex({
 
                         {/* Actions */}
                         <div className="flex items-center gap-2 pt-1">
+                            <button
+                                type="button"
+                                onClick={() => setItemToDelete(selectedItem)}
+                                className="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                                title="Hapus Jadwal"
+                            >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Hapus Jadwal</span>
+                            </button>
                             {selectedItem.project_id ? (
                                 <Link
                                     href={`/projects/${String(selectedItem.project_id).replace('p-', '')}`}
@@ -1684,6 +1761,35 @@ export default function CalendarIndex({
                     </div>
                 </div>
             )}
+
+            {/* Confirmation Dialog for Delete */}
+            <AlertConfirmation
+                isOpen={!!itemToDelete}
+                onClose={() => !isDeleting && setItemToDelete(null)}
+                onConfirm={handleConfirmDelete}
+                title="Hapus Jadwal"
+                description={
+                    itemToDelete ? (
+                        <div className="space-y-2 mt-1">
+                            <p className="text-slate-600 text-xs">
+                                Apakah Anda yakin ingin menghapus jadwal <strong className="text-slate-900 font-bold">"{itemToDelete.title}"</strong>?
+                            </p>
+                            <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs text-slate-600 space-y-1">
+                                <div>📅 Tanggal: <span className="font-semibold text-slate-800">{formatDate(itemToDelete.date)}</span></div>
+                                {itemToDelete.client_name && <div>👤 Klien: <span className="font-semibold text-slate-800">{itemToDelete.client_name}</span></div>}
+                                {itemToDelete.location && <div>📍 Lokasi: <span className="font-semibold text-slate-800">{itemToDelete.location}</span></div>}
+                            </div>
+                            <p className="text-[11px] text-rose-500 font-medium">
+                                Tindakan ini akan menghapus jadwal dari kalender.
+                            </p>
+                        </div>
+                    ) : undefined
+                }
+                confirmText="Ya, Hapus Jadwal"
+                cancelText="Batal"
+                variant="danger"
+                isLoading={isDeleting}
+            />
         </div>
     );
 }

@@ -780,7 +780,7 @@ class ProjectService
         $packages = Package::where('status', 'active')->select('id', 'name', 'category_id', 'base_price', 'duration_hours', 'description', 'included_services', 'included_deliverables')->get();
         $weddingOrganizers = \App\Models\WeddingOrganizer::whereIn('status', ['partner', 'active'])->select('id', 'name', 'pic_name', 'phone', 'city', 'tier')->orderBy('name')->get();
         $addons = \App\Models\Addon::where('status', 'active')->with('category:id,name')->select('id', 'name', 'type', 'category_id', 'price', 'unit', 'description')->orderBy('name')->get();
-        $clientSources = \App\Models\ClientSource::where('status', 'active')->select('id', 'name', 'type', 'phone', 'email')->orderBy('name')->get();
+        $clientSources = \App\Models\ClientSource::where('status', 'active')->select('id', 'name', 'type', 'phone', 'email')->orderByDesc('created_at')->get();
         $services = \App\Models\Service::where('status', 'active')->select('id', 'name', 'category_id', 'description')->get();
         $teamMembers = User::where('status', 'active')
             ->with('roles:id,name')

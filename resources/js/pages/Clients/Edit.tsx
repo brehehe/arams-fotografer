@@ -1,6 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { toast } from 'sonner';
 import {
     ArrowLeft,
     User,
@@ -28,15 +26,20 @@ import {
     AlertCircle,
     X,
 } from 'lucide-react';
-import { SelectSearch, type SelectSearchOption } from '@/components/ui/select-search';
-import { NativeSelect } from '@/components/ui/native-select';
-import { formatRupiah } from '@/lib/formatters';
+import React, { useState, useEffect, useMemo } from 'react';
+import { toast } from 'sonner';
 import { CategorySpecificForm } from '@/components/projects/CategorySpecificForm';
 import { CategorySpecificView } from '@/components/projects/CategorySpecificView';
-import {
+import { NativeSelect } from '@/components/ui/native-select';
+import { SelectSearch  } from '@/components/ui/select-search';
+import type {SelectSearchOption} from '@/components/ui/select-search';
+import { formatRupiah } from '@/lib/formatters';
+import type {
     CategoryFormKey,
+    AnyCategorySpecificData} from '@/types/category-forms';
+import {
     resolveCategoryKey,
-    AnyCategorySpecificData,
+    getFamilyMemberCount,
     FIELD_LABELS,
     formatValidationErrors,
 } from '@/types/category-forms';
@@ -207,7 +210,7 @@ export default function ClientEdit({
 
     const steps = [
         { number: 1, title: 'Informasi Awal & Detail Klien', subtitle: 'Kategori & Data Khusus' },
-        { number: 2, title: 'Informasi Alamat', subtitle: 'Alamat & WhatsApp' },
+        { number: 2, title: 'Informasi Pemesan', subtitle: 'Alamat & WhatsApp' },
         { number: 3, title: 'Paket & Detail Acara', subtitle: 'Paket, Lokasi & Jadwal' },
         { number: 4, title: 'Ringkasan', subtitle: 'Review & Simpan' },
     ];
@@ -216,14 +219,19 @@ export default function ClientEdit({
     const [newTagInput, setNewTagInput] = useState('');
 
     const handleAddCustomTag = () => {
-        if (!newTagInput.trim()) return;
+        if (!newTagInput.trim()) {
+return;
+}
+
         const tag = newTagInput.trim();
+
         if (!formData.tags.includes(tag)) {
             setFormData((prev) => ({
                 ...prev,
                 tags: [...prev.tags, tag],
             }));
         }
+
         setNewTagInput('');
     };
 
@@ -356,45 +364,63 @@ export default function ClientEdit({
     }, [categories]);
 
     const filteredPackages = useMemo(() => {
-        if (!formData.category_id) return packages;
+        if (!formData.category_id) {
+return packages;
+}
+
         return packages.filter((pkg) => String(pkg.category_id) === String(formData.category_id));
     }, [packages, formData.category_id]);
 
     const handleCategoryDataChange = (field: string, value: any) => {
         setCategoryData((prev) => {
             const next = { ...prev, [field]: value };
+
             if (['client_name', 'name', 'pic_name', 'contact_person'].includes(field)) {
                 if (value && typeof value === 'string' && value.trim()) {
                     setFormData((f) => ({ ...f, name: value.trim() }));
                 }
             }
+
             if (field === 'nickname' && value && typeof value === 'string') {
                 setFormData((f) => ({ ...f, nickname: value.trim() }));
             }
+
             if ((field === 'phone' || field === 'pic_phone') && value && typeof value === 'string') {
                 setFormData((f) => ({ ...f, phone: value.trim() }));
             }
+
             if ((field === 'email' || field === 'pic_email') && value && typeof value === 'string') {
                 setFormData((f) => ({ ...f, email: value.trim() }));
             }
+
             if ((field === 'instagram' || field === 'client_instagram') && value && typeof value === 'string') {
                 setFormData((f) => ({ ...f, instagram: value.trim() }));
             }
+
             if (field === 'session_date' || field === 'akad_date' || field === 'event_date' || field === 'departure_date') {
                 if (value) {
                     setFormData((f) => ({ ...f, event_date: value }));
                 }
             }
+            if (field === 'event_time_range') {
+                setFormData((f) => ({ ...f, event_time: value }));
+            }
+            if (field === 'event_type') {
+                setFormData((f) => ({ ...f, event_type: value }));
+            }
+
             if (field === 'session_location' || field === 'location' || field === 'akad_location' || field === 'event_location' || field === 'destination_city_country') {
                 if (value) {
                     setFormData((f) => ({ ...f, event_location: value, location: value }));
                 }
             }
+
             if (field === 'reception_location') {
                 if (value) {
                     setFormData((f) => ({ ...f, reception_location: value }));
                 }
             }
+
             return next;
         });
     };
@@ -412,7 +438,9 @@ export default function ClientEdit({
         fetch('/api/indonesia-regions')
             .then((res) => res.json())
             .then((data) => {
-                if (Array.isArray(data) && data.length > 0) setRegionProvinces(data);
+                if (Array.isArray(data) && data.length > 0) {
+setRegionProvinces(data);
+}
             })
             .catch(() => { });
     }, []);
@@ -423,7 +451,9 @@ export default function ClientEdit({
             fetch(`/api/indonesia-regions?parent_code=${formData.province_code}`)
                 .then((res) => res.json())
                 .then((data) => {
-                    if (Array.isArray(data)) setRegionCities(data);
+                    if (Array.isArray(data)) {
+setRegionCities(data);
+}
                 })
                 .catch(() => { })
                 .finally(() => setLoadingCities(false));
@@ -436,7 +466,9 @@ export default function ClientEdit({
             fetch(`/api/indonesia-regions?parent_code=${formData.city_code}`)
                 .then((res) => res.json())
                 .then((data) => {
-                    if (Array.isArray(data)) setRegionDistricts(data);
+                    if (Array.isArray(data)) {
+setRegionDistricts(data);
+}
                 })
                 .catch(() => { })
                 .finally(() => setLoadingDistricts(false));
@@ -449,7 +481,9 @@ export default function ClientEdit({
             fetch(`/api/indonesia-regions?parent_code=${formData.district_code}`)
                 .then((res) => res.json())
                 .then((data) => {
-                    if (Array.isArray(data)) setRegionVillages(data);
+                    if (Array.isArray(data)) {
+setRegionVillages(data);
+}
                 })
                 .catch(() => { })
                 .finally(() => setLoadingVillages(false));
@@ -480,7 +514,9 @@ export default function ClientEdit({
             fetch(`/api/indonesia-regions?parent_code=${provCode}`)
                 .then((res) => res.json())
                 .then((data) => {
-                    if (Array.isArray(data)) setRegionCities(data);
+                    if (Array.isArray(data)) {
+setRegionCities(data);
+}
                 })
                 .catch(() => { })
                 .finally(() => setLoadingCities(false));
@@ -508,7 +544,9 @@ export default function ClientEdit({
             fetch(`/api/indonesia-regions?parent_code=${cityCode}`)
                 .then((res) => res.json())
                 .then((data) => {
-                    if (Array.isArray(data)) setRegionDistricts(data);
+                    if (Array.isArray(data)) {
+setRegionDistricts(data);
+}
                 })
                 .catch(() => { })
                 .finally(() => setLoadingDistricts(false));
@@ -533,7 +571,9 @@ export default function ClientEdit({
             fetch(`/api/indonesia-regions?parent_code=${distCode}`)
                 .then((res) => res.json())
                 .then((data) => {
-                    if (Array.isArray(data)) setRegionVillages(data);
+                    if (Array.isArray(data)) {
+setRegionVillages(data);
+}
                 })
                 .catch(() => { })
                 .finally(() => setLoadingVillages(false));
@@ -589,6 +629,7 @@ export default function ClientEdit({
     const handleRemoveChild = (index: number) => {
         setFormData((prev) => {
             const nextChildren = prev.children.filter((_, idx) => idx !== index);
+
             return {
                 ...prev,
                 children: nextChildren,
@@ -602,6 +643,7 @@ export default function ClientEdit({
             nextChildren[index] = { ...nextChildren[index], [field]: value };
             const names = nextChildren.map((c) => c.name).filter(Boolean).join(' & ');
             const isTwin = nextChildren.length > 1;
+
             return {
                 ...prev,
                 children: nextChildren,
@@ -615,6 +657,7 @@ export default function ClientEdit({
     const toggleTag = (tag: string) => {
         setFormData((prev) => {
             const exists = prev.tags.includes(tag);
+
             return {
                 ...prev,
                 tags: exists ? prev.tags.filter((t) => t !== tag) : [...prev.tags, tag],
@@ -625,6 +668,7 @@ export default function ClientEdit({
     const primaryContactInfo = useMemo(() => {
         if (activeCategoryKey === 'wedding' || activeCategoryKey === 'engagement') {
             const isBride = formData.primary_contact === 'cpw' || !formData.primary_contact;
+
             return {
                 name: isBride ? ((categoryData as any).bride_name || formData.bride_name || '-') : ((categoryData as any).groom_name || formData.groom_name || '-'),
                 nickname: isBride ? ((categoryData as any).bride_nickname || formData.bride_nickname || '-') : ((categoryData as any).groom_nickname || formData.groom_nickname || '-'),
@@ -634,8 +678,10 @@ export default function ClientEdit({
                 role: isBride ? 'CPW' : 'CPP',
             };
         }
+
         if (activeCategoryKey === 'prewedding') {
             const isP1 = formData.primary_contact === 'cpw' || !formData.primary_contact;
+
             return {
                 name: isP1 ? ((categoryData as any).partner_1 || (categoryData as any).bride_name || '-') : ((categoryData as any).partner_2 || (categoryData as any).groom_name || '-'),
                 nickname: isP1 ? ((categoryData as any).partner_1_nickname || '-') : ((categoryData as any).partner_2_nickname || '-'),
@@ -645,8 +691,10 @@ export default function ClientEdit({
                 role: isP1 ? 'Pasangan 1' : 'Pasangan 2',
             };
         }
+
         if (activeCategoryKey === 'maternity') {
             const isMom = formData.primary_contact === 'cpw' || !formData.primary_contact;
+
             return {
                 name: isMom ? ((categoryData as any).mom_name || (categoryData as any).mother_name || '-') : ((categoryData as any).partner_name || (categoryData as any).father_name || '-'),
                 nickname: '-',
@@ -656,6 +704,7 @@ export default function ClientEdit({
                 role: isMom ? 'Ibu Hamil' : 'Pasangan',
             };
         }
+
         if (activeCategoryKey === 'corporate' || activeCategoryKey === 'komunitas') {
             return {
                 name: (categoryData as any).pic_name || (categoryData as any).contact_person || formData.name || '-',
@@ -666,8 +715,10 @@ export default function ClientEdit({
                 role: 'PIC / Koordinator',
             };
         }
+
         if (activeCategoryKey === 'newborn') {
             const isMother = formData.primary_contact === 'mother' || !formData.primary_contact;
+
             return {
                 name: isMother ? ((categoryData as any).mother_name || formData.mother_name || '-') : ((categoryData as any).father_name || formData.father_name || '-'),
                 nickname: '-',
@@ -677,6 +728,7 @@ export default function ClientEdit({
                 role: isMother ? 'Ibu' : 'Ayah',
             };
         }
+
         return {
             name: (categoryData as any).client_name || (categoryData as any).name || (categoryData as any).contact_person || formData.name || '-',
             nickname: (categoryData as any).nickname || '-',
@@ -698,423 +750,573 @@ export default function ClientEdit({
             (primaryContactInfo.name && primaryContactInfo.name.trim() !== '-' ? primaryContactInfo.name.trim() : '');
 
         if (stepNum === 1) {
+            if (!(categoryData as any).client_name?.trim() || (categoryData as any).client_name.trim() === '-') {
+                toast.error('Nama Pemesan wajib diisi');
+                return false;
+            }
             switch (activeCategoryKey) {
                 case 'maternity':
                     if (!categoryData.mom_name?.trim() && !categoryData.mother_name?.trim() && !formData.mother_name?.trim() && !clientNameVal) {
                         toast.error('Nama Ibu wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.partner_name?.trim() && !categoryData.father_name?.trim() && !formData.father_name?.trim()) {
                         toast.error('Nama Ayah / Pasangan wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.gestational_age_weeks) {
                         toast.error('Usia Kehamilan Saat Sesi wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.hpl_date) {
                         toast.error('HPL (Hari Perkiraan Lahir) wajib diisi');
+
                         return false;
                     }
+
                     return true;
 
                 case 'lainnya':
                     if (!clientNameVal && !(categoryData as any).client_name?.trim() && !(categoryData as any).name?.trim() && !(categoryData as any).pic_name?.trim()) {
                         toast.error('Nama Pemesan wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.event_date && !formData.event_date) {
                         toast.error('Tanggal Event wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.event_time_range?.trim() && !formData.event_time?.trim()) {
                         toast.error('Waktu Event wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.event_type?.trim()) {
                         toast.error('Jenis Event wajib dipilih');
+
                         return false;
                     }
+
                     if (!categoryData.needs_type?.trim()) {
                         toast.error('Jenis Kebutuhan wajib dipilih');
+
                         return false;
                     }
+
                     if (!categoryData.location?.trim() && !(categoryData as any).event_location?.trim() && !formData.event_location?.trim()) {
                         toast.error('Lokasi Event wajib diisi');
+
                         return false;
                     }
+
                     return true;
 
                 case 'perorangan':
-                    if (!clientNameVal) {
+                    if (!(categoryData as any).client_name?.trim()) {
                         toast.error('Nama Lengkap Pemesan wajib diisi');
+
                         return false;
                     }
+
                     return true;
 
                 case 'prewedding':
                     if ((!categoryData.groom_name?.trim() && !formData.groom_name?.trim()) || (!categoryData.bride_name?.trim() && !formData.bride_name?.trim())) {
                         if (!clientNameVal) {
                             toast.error('Nama Lengkap Kedua Pasangan wajib diisi');
+
                             return false;
                         }
                     }
+
+                    if (!categoryData.groom_nickname?.trim() || !categoryData.bride_nickname?.trim()) {
+                        toast.error('Nama panggilan CPP dan CPW wajib diisi.');
+                        return false;
+                    }
+
                     if (!categoryData.session_date && !formData.event_date) {
                         toast.error('Tanggal Sesi Foto Prewedding wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.concept_theme?.trim() && !formData.concept_theme?.trim()) {
                         toast.error('Konsep / Tema Foto wajib dipilih');
+
                         return false;
                     }
+
                     if (!categoryData.session_location?.trim() && !formData.event_location?.trim()) {
                         toast.error('Lokasi Sesi Foto wajib diisi');
+
                         return false;
                     }
+
                     return true;
 
                 case 'commercial':
                     if (!clientNameVal && !(categoryData as any).pic_name?.trim()) {
                         toast.error('Nama Contact Person / PIC wajib diisi');
+
                         return false;
                     }
-                    if (!categoryData.commercial_purpose?.trim()) {
-                        toast.error('Tujuan / Jenis Kebutuhan Foto wajib dipilih');
+
+                    if (!categoryData.brand_name?.trim()) {
+                        toast.error('Nama Brand / Bisnis wajib diisi');
+
                         return false;
                     }
-                    if (!categoryData.product_brand_type?.trim()) {
-                        toast.error('Jenis Produk / Brand wajib diisi');
+
+                    if (!categoryData.product_type?.trim()) {
+                        toast.error('Jenis Produk wajib diisi');
+
                         return false;
                     }
-                    if (!categoryData.products_count) {
-                        toast.error('Jumlah Produk wajib diisi');
-                        return false;
-                    }
+
                     if (!categoryData.background_type?.trim()) {
                         toast.error('Latar / Background Foto wajib dipilih');
+
                         return false;
                     }
-                    if (!categoryData.photo_style_mood?.trim()) {
-                        toast.error('Gaya Foto / Mood wajib dipilih');
+
+                    if (!categoryData.lighting_style?.trim()) {
+                        toast.error('Lighting Style wajib dipilih');
+
                         return false;
                     }
-                    if (!categoryData.photo_usage || !Array.isArray(categoryData.photo_usage) || categoryData.photo_usage.length === 0) {
-                        toast.error('Pilih minimal satu Penggunaan Foto');
+
+                    if (!Array.isArray(categoryData.mood_style) || categoryData.mood_style.length === 0) {
+                        toast.error('Pilih minimal satu Mood / Style Foto');
+
                         return false;
                     }
+
                     return true;
 
                 case 'traveling':
                     if (!clientNameVal) {
                         toast.error('Nama Pemesan / Kontak Utama wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.destination_city_country?.trim()) {
                         toast.error('Tujuan Destinasi (Negara / Kota) wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.travelers_count) {
                         toast.error('Jumlah Traveler wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.trip_type?.trim()) {
                         toast.error('Jenis Trip wajib dipilih');
+
                         return false;
                     }
+
                     if (!categoryData.trip_duration_days) {
                         toast.error('Durasi Trip wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.departure_date && !formData.event_date) {
                         toast.error('Tanggal Berangkat wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.return_date) {
                         toast.error('Tanggal Pulang wajib diisi');
+
                         return false;
                     }
+
                     return true;
 
                 case 'wedding':
                     if (!categoryData.groom_name?.trim() && !formData.groom_name?.trim()) {
                         toast.error('Nama Lengkap CPP (Mempelai Pria) wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.groom_nickname?.trim() && !formData.groom_nickname?.trim()) {
                         toast.error('Nama Panggilan CPP (Mempelai Pria) wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.bride_name?.trim() && !formData.bride_name?.trim()) {
                         toast.error('Nama Lengkap CPW (Mempelai Wanita) wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.bride_nickname?.trim() && !formData.bride_nickname?.trim()) {
                         toast.error('Nama Panggilan CPW (Mempelai Wanita) wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.akad_date && !formData.event_date) {
                         toast.error('Tanggal Akad wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.akad_time?.trim() && !formData.event_time?.trim()) {
                         toast.error('Waktu Akad wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.akad_location?.trim() && !formData.event_location?.trim()) {
                         toast.error('Lokasi Akad wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.reception_date) {
                         toast.error('Tanggal Resepsi wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.reception_time?.trim()) {
                         toast.error('Waktu Resepsi wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.reception_location?.trim() && !formData.reception_location?.trim()) {
                         toast.error('Lokasi Resepsi wajib diisi');
+
                         return false;
                     }
+
                     return true;
 
                 case 'birthday':
                     if (!categoryData.celebrant_name?.trim() && !clientNameVal) {
                         toast.error('Nama yang Berulang Tahun wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.celebrant_age) {
                         toast.error('Usia wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.birthday_theme?.trim()) {
                         toast.error('Tema Ulang Tahun wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.event_type?.trim() && !formData.event_type?.trim()) {
                         toast.error('Jenis Acara wajib dipilih');
+
                         return false;
                     }
+
                     if (!categoryData.estimated_guests && !formData.estimated_guests) {
                         toast.error('Jumlah Tamu wajib diisi');
+
                         return false;
                     }
+
                     return true;
 
                 case 'corporate':
                     if (!categoryData.company_name?.trim() && !formData.company_name?.trim()) {
                         toast.error('Nama Perusahaan wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.event_type?.trim() && !formData.event_type?.trim()) {
                         toast.error('Jenis Acara wajib dipilih');
+
                         return false;
                     }
-                    if (!categoryData.event_scale?.trim()) {
-                        toast.error('Skala Acara wajib dipilih');
-                        return false;
-                    }
-                    if (!categoryData.documentation_purpose?.trim()) {
+
+                    if (Array.isArray(categoryData.documentation_purpose) && categoryData.documentation_purpose.length === 0) {
                         toast.error('Tujuan Dokumentasi wajib dipilih');
+
                         return false;
                     }
-                    if (!categoryData.pic_name?.trim() && !clientNameVal) {
-                        toast.error('Nama PIC Acara wajib diisi');
-                        return false;
-                    }
-                    if (!categoryData.pic_phone?.trim() && !formData.phone?.trim()) {
-                        toast.error('Nomor Telepon / WA PIC wajib diisi');
-                        return false;
-                    }
+
                     return true;
 
                 case 'engagement':
                     if ((!categoryData.groom_name?.trim() && !formData.groom_name?.trim()) || (!categoryData.bride_name?.trim() && !formData.bride_name?.trim())) {
                         if (!clientNameVal) {
                             toast.error('Nama Calon Pria dan Wanita wajib diisi');
+
                             return false;
                         }
                     }
+
                     if (!categoryData.engagement_date && !formData.event_date) {
                         toast.error('Tanggal Lamaran wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.engagement_time?.trim() && !formData.event_time?.trim()) {
                         toast.error('Waktu Lamaran wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.engagement_location?.trim() && !formData.event_location?.trim()) {
                         toast.error('Lokasi Lamaran wajib diisi');
+
                         return false;
                     }
+
                     return true;
 
                 case 'event':
                     if (!clientNameVal && !(categoryData as any).pic_name?.trim() && !(categoryData as any).client_name?.trim()) {
                         toast.error('Nama Pemesan wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.event_date && !formData.event_date) {
                         toast.error('Tanggal Event wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.event_time_range?.trim() && !formData.event_time?.trim()) {
                         toast.error('Waktu Event wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.event_type?.trim() && !formData.event_type?.trim()) {
                         toast.error('Jenis Event wajib dipilih');
+
                         return false;
                     }
+
                     if (!categoryData.needs_type?.trim()) {
                         toast.error('Jenis Kebutuhan wajib dipilih');
+
                         return false;
                     }
+
                     if (!categoryData.event_location?.trim() && !formData.event_location?.trim()) {
                         toast.error('Lokasi Event wajib diisi');
+
                         return false;
                     }
+
                     return true;
 
                 case 'family':
+                    if (!(categoryData as any).client_name?.trim()) {
+                        toast.error('Nama Pemesan wajib diisi');
+                        return false;
+                    }
                     if (!categoryData.family_name?.trim()) {
                         toast.error('Nama Keluarga wajib diisi');
+
                         return false;
                     }
-                    if (!categoryData.father_name?.trim() && !formData.father_name?.trim()) {
-                        toast.error('Nama Ayah wajib diisi');
+
+                    if (!Number.isInteger(getFamilyMemberCount(categoryData)) || getFamilyMemberCount(categoryData) < 1) {
+                        toast.error('Jumlah Anggota Keluarga yang Difoto minimal 1 orang');
+
                         return false;
                     }
-                    if (!categoryData.mother_name?.trim() && !formData.mother_name?.trim()) {
-                        toast.error('Nama Ibu wajib diisi');
+
+                    if (!categoryData.concept_theme?.trim()) {
+                        toast.error('Konsep Sesi Foto Keluarga wajib dipilih');
+
                         return false;
                     }
-                    if (!categoryData.members_count) {
-                        toast.error('Jumlah Anggota Keluarga wajib diisi');
+
+                    if (!categoryData.session_location_type?.trim() || (categoryData.session_location_type === 'Lainnya' && !categoryData.session_location?.trim())) {
+                        toast.error('Lokasi Sesi Foto Keluarga wajib diisi');
+
                         return false;
                     }
-                    if (!categoryData.session_location?.trim() && !formData.event_location?.trim()) {
-                        toast.error('Lokasi Sesi Foto wajib diisi');
-                        return false;
-                    }
+
                     return true;
 
                 case 'komunitas':
+                    if (!(categoryData as any).client_name?.trim()) {
+                        toast.error('Nama Pemesan wajib diisi');
+                        return false;
+                    }
                     if (!categoryData.community_name?.trim()) {
                         toast.error('Nama Komunitas wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.community_type?.trim()) {
                         toast.error('Jenis Komunitas wajib dipilih');
+
                         return false;
                     }
+
                     if (!categoryData.pic_name?.trim() && !clientNameVal) {
                         toast.error('Nama PIC Komunitas wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.pic_phone?.trim() && !formData.phone?.trim()) {
                         toast.error('Nomor Telepon / WA PIC wajib diisi');
+
                         return false;
                     }
+
                     if (!categoryData.activity_type?.trim()) {
                         toast.error('Jenis Kegiatan Komunitas wajib dipilih');
+
                         return false;
                     }
+
                     return true;
 
                 case 'newborn': {
                     const firstBabyName = categoryData.babies?.[0]?.name?.trim() || categoryData.baby_name?.trim() || formData.child_name?.trim();
+
                     if (!firstBabyName && !clientNameVal && !categoryData.father_name && !categoryData.mother_name && !formData.father_name && !formData.mother_name) {
                         toast.error('Nama Lengkap Bayi wajib diisi');
+
                         return false;
                     }
+
                     return true;
                 }
 
                 default:
                     if (!clientNameVal) {
                         toast.error('Nama Lengkap Pemesan / Klien wajib diisi');
+
                         return false;
                     }
+
                     return true;
             }
         }
+
         if (stepNum === 2) {
             const phone = formData.phone?.trim() || (categoryData as any).pic_phone?.trim() || (categoryData as any).phone?.trim();
+
             if (!phone) {
                 toast.error('Nomor WhatsApp wajib diisi untuk konfirmasi.');
+
                 return false;
             }
-            if (formData.email?.trim()) {
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(formData.email.trim())) {
-                    toast.error('Format email tidak valid');
-                    return false;
-                }
+
+            if (phone.replace(/\D/g, '').length < 8) {
+                toast.error('Nomor WhatsApp minimal 8 digit angka.');
+
+                return false;
+            }
+
+            if (!formData.email?.trim()) {
+                toast.error('Email wajib diisi.');
+
+                return false;
+            }
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+            if (!emailRegex.test(formData.email.trim())) {
+                toast.error('Format email tidak valid (contoh: nama@gmail.com).');
+
+                return false;
             }
         }
+
+        if (stepNum === 3 && (!formData.package_id || !filteredPackages.some((pkg) => String(pkg.id) === String(formData.package_id)))) {
+            toast.error('Paket yang diminati wajib dipilih.');
+
+            return false;
+        }
+
         return true;
     };
 
     // Submit handler
     const handleSubmit = (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
+        if (e) {
+e.preventDefault();
+}
 
-        let clientName = (formData.name && formData.name.trim() !== '-' ? formData.name.trim() : '');
-        if (activeCategoryKey === 'wedding' || activeCategoryKey === 'engagement' || activeCategoryKey === 'prewedding') {
-            const bName = (categoryData as any).bride_name || (categoryData as any).partner_1 || formData.bride_name;
-            const gName = (categoryData as any).groom_name || (categoryData as any).partner_2 || formData.groom_name;
-            if (bName && gName) {
-                clientName = `${bName} & ${gName}`;
-            } else if (bName) {
-                clientName = bName;
-            } else if (gName) {
-                clientName = gName;
-            }
-        } else if (activeCategoryKey === 'corporate' || activeCategoryKey === 'commercial' || activeCategoryKey === 'komunitas') {
-            clientName = (categoryData as any).company_name || (categoryData as any).community_name || (categoryData as any).brand_name || (categoryData as any).contact_person || (categoryData as any).pic_name || formData.company_name || clientName;
-        } else if (activeCategoryKey === 'newborn') {
-            clientName = (categoryData as any).child_name || (categoryData as any).baby_name || formData.child_name || clientName;
-        } else if (activeCategoryKey === 'perorangan' || activeCategoryKey === 'lainnya') {
-            clientName = (categoryData as any).client_name || (categoryData as any).name || clientName;
-        } else if (activeCategoryKey === 'traveling' || activeCategoryKey === 'event') {
-            clientName = (categoryData as any).contact_person || (categoryData as any).client_name || (categoryData as any).organizer_name || (categoryData as any).pic_name || clientName;
+        if (!validateStep(3)) {
+            setCurrentStep(3);
+            return;
         }
 
-        const resolvedClientName = clientName || (categoryData as any).client_name || (categoryData as any).name || (formData.name && formData.name.trim() !== '-' ? formData.name.trim() : '');
+        const resolvedClientName = (categoryData as any).client_name?.trim() || formData.name?.trim() || '';
 
         if (!resolvedClientName) {
             toast.error('Nama klien wajib diisi');
+
             return;
         }
 
         if (!formData.phone.trim()) {
             toast.error('Nomor telepon / WhatsApp wajib diisi');
+
             return;
         }
 
         if (!formData.email.trim()) {
             toast.error('Email wajib diisi');
+
             return;
         }
+
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
         if (!emailRegex.test(formData.email.trim())) {
             toast.error('Format email tidak valid');
+
             return;
         }
 
         if (!formData.event_date) {
             toast.error('Tanggal acara / sesi wajib diisi');
+
             return;
         }
 
         if (!formData.event_time.trim()) {
             toast.error('Waktu / jam sesi wajib diisi');
+
             return;
         }
 
         if (!formData.event_location.trim()) {
             toast.error('Tempat / lokasi sesi wajib diisi');
+
             return;
         }
 
@@ -1294,6 +1496,7 @@ export default function ClientEdit({
                             {steps.map((s) => {
                                 const isDone = currentStep > s.number;
                                 const isCurrent = currentStep === s.number;
+
                                 return (
                                     <div key={s.number} className="flex-1 flex flex-col items-center text-center px-1">
                                         <div className="relative flex items-center justify-center mb-1.5">
@@ -1302,10 +1505,10 @@ export default function ClientEdit({
                                                 onClick={() => (isDone ? setCurrentStep(s.number) : null)}
                                                 disabled={!isDone}
                                                 className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all relative z-10 ${isDone
-                                                        ? 'bg-[#C89445] text-white cursor-pointer hover:opacity-90 shadow-md'
-                                                        : isCurrent
-                                                            ? 'bg-[#C89445] text-white ring-4 ring-[#C89445]/20 shadow-md font-extrabold'
-                                                            : 'bg-white border-2 border-slate-300 text-slate-400 cursor-not-allowed'
+                                                    ? 'bg-[#C89445] text-white cursor-pointer hover:opacity-90 shadow-md'
+                                                    : isCurrent
+                                                        ? 'bg-[#C89445] text-white ring-4 ring-[#C89445]/20 shadow-md font-extrabold'
+                                                        : 'bg-white border-2 border-slate-300 text-slate-400 cursor-not-allowed'
                                                     }`}
                                             >
                                                 {isDone ? <Check className="w-4 h-4 stroke-[3]" /> : s.number}
@@ -1313,10 +1516,10 @@ export default function ClientEdit({
                                         </div>
                                         <span
                                             className={`text-[11px] sm:text-xs max-w-[130px] line-clamp-2 leading-tight ${isCurrent
-                                                    ? 'font-bold text-[#C89445]'
-                                                    : isDone
-                                                        ? 'text-slate-700 font-semibold'
-                                                        : 'text-slate-400'
+                                                ? 'font-bold text-[#C89445]'
+                                                : isDone
+                                                    ? 'text-slate-700 font-semibold'
+                                                    : 'text-slate-400'
                                                 }`}
                                         >
                                             {s.title}
@@ -1350,6 +1553,7 @@ export default function ClientEdit({
                             <ul className="list-disc list-inside text-xs text-rose-700 space-y-1 ml-1 font-medium">
                                 {Object.entries(formErrors).map(([key, val]) => {
                                     const readableKey = FIELD_LABELS[key] || key.replace(/_/g, ' ');
+
                                     return (
                                         <li key={key}>
                                             <strong className="font-bold text-rose-900">{readableKey}:</strong> {Array.isArray(val) ? val.join(', ') : String(val)}
@@ -1501,15 +1705,15 @@ export default function ClientEdit({
                         </div>
                     )}
 
-                    {/* STEP 2: INFORMASI ALAMAT */}
+                    {/* STEP 2: INFORMASI PEMESAN */}
                     {currentStep === 2 && (
                         <div className="space-y-5 animate-in fade-in duration-200">
                             <div>
                                 <h3 className="text-base font-bold text-slate-900">
-                                    Informasi Alamat
+                                    Informasi Pemesan
                                 </h3>
                                 <p className="text-xs text-slate-500 mt-0.5">
-                                    Lengkapi informasi alamat wilayah dan pilih kontak utama untuk komunikasi.
+                                    Lengkapi informasi domisili pemesan dan pilih kontak utama untuk komunikasi.
                                 </p>
                             </div>
 
@@ -1529,7 +1733,7 @@ export default function ClientEdit({
                                     </div>
                                     <div>
                                         <h3 className="text-sm font-bold text-slate-900">
-                                            Informasi Alamat
+                                            Informasi Pemesan
                                         </h3>
                                         <p className="text-xs text-slate-500">
                                             Pilih Provinsi, Kota, Kecamatan, dan Kelurahan Indonesia secara bertingkat.
@@ -1758,24 +1962,24 @@ export default function ClientEdit({
                                                     {primaryContactInfo.name} ({primaryContactInfo.role})
                                                 </span>
                                             </div>
-                                            <div className="flex justify-between py-1 border-b border-slate-100">
+                                            {/* <div className="flex justify-between py-1 border-b border-slate-100">
                                                 <span className="text-slate-400">Pekerjaan</span>
                                                 <span className="font-semibold text-slate-800 text-right">
                                                     {primaryContactInfo.occupation}
                                                 </span>
-                                            </div>
+                                            </div> */}
                                             <div className="flex justify-between py-1 border-b border-slate-100">
                                                 <span className="text-slate-400">No. WhatsApp</span>
                                                 <span className="font-semibold text-slate-800 text-right">
                                                     {formData.phone || '-'}
                                                 </span>
                                             </div>
-                                            <div className="flex justify-between py-1 border-b border-slate-100">
+                                            {/* <div className="flex justify-between py-1 border-b border-slate-100">
                                                 <span className="text-slate-400">Akun Instagram</span>
                                                 <span className="font-semibold text-slate-800 text-right">
                                                     {primaryContactInfo.instagram}
                                                 </span>
-                                            </div>
+                                            </div> */}
                                             <div className="flex justify-between py-1 border-b border-slate-100">
                                                 <span className="text-slate-400">Email</span>
                                                 <span className="font-semibold text-slate-800 text-right">
@@ -1881,7 +2085,7 @@ export default function ClientEdit({
 
                                     <div>
                                         <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                                            Pilihan Paket (Opsional)
+                                            Paket yang Diminati <span className="text-rose-600">*</span>
                                         </label>
                                         <SelectSearch
                                             options={[
@@ -1897,11 +2101,12 @@ export default function ClientEdit({
                                             ]}
                                             value={formData.package_id}
                                             onChange={(val) => setFormData({ ...formData, package_id: val })}
-                                            placeholder="Pilih paket atau layanan"
+                                            placeholder={filteredPackages.length ? 'Pilih paket atau layanan' : 'Belum ada paket untuk kategori ini'}
                                             searchPlaceholder="Cari paket..."
-                                            clearable={true}
+                                            clearable={false}
                                             className="w-full bg-white"
                                         />
+                                        {filteredPackages.length === 0 && <p className="mt-2 text-xs text-amber-700" role="status">Tambahkan paket di admin untuk kategori ini sebelum menyimpan.</p>}
                                     </div>
                                 </div>
 
@@ -1964,7 +2169,7 @@ export default function ClientEdit({
                                         </div>
                                     )}
 
-                                    <div>
+                                    {['wedding', 'engagement', 'birthday', 'event'].includes(activeCategoryKey) && <div>
                                         <label className="block text-xs font-bold text-slate-700 mb-1.5">
                                             Estimasi Jumlah Tamu
                                         </label>
@@ -1975,9 +2180,9 @@ export default function ClientEdit({
                                             placeholder="Contoh: 300 - 500 Pax"
                                             className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
                                         />
-                                    </div>
+                                    </div>}
 
-                                    <div>
+                                    {activeCategoryKey === 'wedding' && <div>
                                         <label className="block text-xs font-bold text-slate-700 mb-1.5">
                                             Warna Tema / Konsep Acara
                                         </label>
@@ -1988,10 +2193,10 @@ export default function ClientEdit({
                                             placeholder="Contoh: Emerald Green & White"
                                             className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
                                         />
-                                    </div>
+                                    </div>}
                                 </div>
 
-                                <div>
+                                {['wedding', 'engagement', 'birthday', 'event'].includes(activeCategoryKey) && <div>
                                     <label className="block text-xs font-bold text-slate-700 mb-1.5">
                                         Vendor Lain yang Terlibat
                                     </label>
@@ -2002,7 +2207,7 @@ export default function ClientEdit({
                                         placeholder="Contoh: WO: Aruna Organizer, MUA: Bubah Alfian, Decor: Lotus"
                                         className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
                                     />
-                                </div>
+                                </div>}
                             </div>
 
                             {/* Informasi Tambahan, Manajemen & Status Card */}
@@ -2077,27 +2282,63 @@ export default function ClientEdit({
                                         const selectedCs = client_sources?.find((cs) => cs.id === formData.client_source_id);
                                         const isLainnya = (selectedCs && (
                                             selectedCs.type === 'other' ||
+                                            selectedCs.type === 'wedding_organizer' ||
+                                            selectedCs.type === 'individual' ||
                                             selectedCs.name.toLowerCase().includes('lainnya') ||
-                                            selectedCs.name.toLowerCase().includes('rekomendasi') ||
-                                            selectedCs.name.toLowerCase().includes('wo')
+                                            selectedCs.name.toLowerCase().includes('teman') ||
+                                            selectedCs.name.toLowerCase().includes('saudara') ||
+                                            selectedCs.name.toLowerCase().includes('wo') ||
+                                            selectedCs.name.toLowerCase().includes('rekomendasi')
                                         )) || formData.source === 'Lainnya' || formData.source?.toLowerCase().includes('lainnya');
 
-                                        if (!isLainnya) return null;
+                                        if (!isLainnya) {
+return null;
+}
+
+                                        let referralLabel = 'Nama WO / Orang yang Merekomendasikan';
+                                        let referralPlaceholder = 'Contoh: WO Harmoni, Rekan Fotografer, Teman (Siti)...';
+                                        let referralHelp = 'Masukkan nama Wedding Organizer atau kerabat/teman yang merekomendasikan klien ini.';
+
+                                        if (selectedCs) {
+                                            const lowerName = selectedCs.name.toLowerCase();
+
+                                            if (lowerName === 'wo' || selectedCs.type === 'wedding_organizer') {
+                                                referralLabel = 'Nama Wedding Organizer (WO) / PIC';
+                                                referralPlaceholder = 'Contoh: Harmony WO, Tiara Wedding Planner...';
+                                                referralHelp = 'Tuliskan nama Wedding Organizer atau PIC yang merekomendasikan klien ini.';
+                                            } else if (lowerName.includes('teman')) {
+                                                referralLabel = 'Nama Teman / Rekan yang Merekomendasikan';
+                                                referralPlaceholder = 'Contoh: Budi, Siti, Sarah...';
+                                                referralHelp = 'Tuliskan nama rekan atau teman yang mereferensikan klien ini.';
+                                            } else if (lowerName.includes('saudara') || lowerName.includes('keluarga')) {
+                                                referralLabel = 'Nama Saudara / Kerabat Keluarga';
+                                                referralPlaceholder = 'Contoh: Tante Linda, Mas Dimas...';
+                                                referralHelp = 'Tuliskan nama saudara atau kerabat yang mereferensikan klien ini.';
+                                            } else if (lowerName.includes('sosial media lainnya') || lowerName.includes('medsos lainnya')) {
+                                                referralLabel = 'Platform Media Sosial';
+                                                referralPlaceholder = 'Contoh: TikTok, YouTube, Threads, Facebook...';
+                                                referralHelp = 'Sebutkan media sosial tempat klien menemukan informasi Arams Pictures.';
+                                            } else if (lowerName.includes('lainnya') || selectedCs.type === 'other') {
+                                                referralLabel = 'Keterangan Sumber / Perekomendasi';
+                                                referralPlaceholder = 'Contoh: Event Wedding Expo, Pameran Bridal...';
+                                                referralHelp = 'Tuliskan keterangan asal sumber informasi klien.';
+                                            }
+                                        }
 
                                         return (
                                             <div className="sm:col-span-2 p-3.5 rounded-xl bg-purple-50/70 border border-purple-200/90 space-y-1.5 animate-in fade-in duration-200">
                                                 <label className="block text-xs font-bold text-purple-900">
-                                                    Nama WO / Orang yang Merekomendasikan <span className="text-purple-500 font-normal">(Opsional)</span>
+                                                    {referralLabel} <span className="text-purple-500 font-normal">(Opsional)</span>
                                                 </label>
                                                 <input
                                                     type="text"
                                                     value={formData.referral_name || ''}
                                                     onChange={(e) => setFormData({ ...formData, referral_name: e.target.value })}
-                                                    placeholder="Contoh: WO Harmoni, Rekan Fotografer, Teman (Siti)..."
+                                                    placeholder={referralPlaceholder}
                                                     className="w-full bg-white border border-purple-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 transition-all placeholder:text-slate-400"
                                                 />
                                                 <p className="text-[10px] text-purple-700/80">
-                                                    Masukkan nama Wedding Organizer atau kerabat/teman yang merekomendasikan klien ini.
+                                                    {referralHelp}
                                                 </p>
                                             </div>
                                         );
@@ -2150,14 +2391,15 @@ export default function ClientEdit({
                                         <div className="flex flex-wrap gap-1.5 mb-2">
                                             {presetTags.map((tag) => {
                                                 const isSelected = formData.tags.includes(tag);
+
                                                 return (
                                                     <button
                                                         key={tag}
                                                         type="button"
                                                         onClick={() => toggleTag(tag)}
                                                         className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${isSelected
-                                                                ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                                                                : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
+                                                            ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                                            : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
                                                             }`}
                                                     >
                                                         #{tag}
@@ -2292,7 +2534,7 @@ export default function ClientEdit({
                                             <MapPin className="w-4 h-4" />
                                         </div>
                                         <h4 className="text-sm font-bold text-slate-900">
-                                            Informasi Alamat
+                                            Informasi Pemesan
                                         </h4>
                                     </div>
                                     <button
@@ -2307,7 +2549,7 @@ export default function ClientEdit({
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                                     <div className="p-3.5 bg-slate-50/70 rounded-xl space-y-1">
                                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                                            Informasi Alamat
+                                            Informasi Pemesan & Domisili
                                         </span>
                                         <p className="font-semibold text-slate-800">
                                             {[formData.village, formData.district, formData.city, formData.province].filter(Boolean).join(', ') || '-'}
@@ -2322,7 +2564,7 @@ export default function ClientEdit({
                                             Kontak Utama ({primaryContactInfo.role})
                                         </span>
                                         <p className="font-semibold text-slate-800">
-                                            {primaryContactInfo.name} • {formData.phone || '-'}
+                                            {(categoryData as any).client_name || '-'} • {formData.phone || '-'}
                                         </p>
                                         {formData.email && (
                                             <p className="text-[11px] text-slate-500">Email: {formData.email}</p>
@@ -2360,13 +2602,13 @@ export default function ClientEdit({
                                     </button>
                                 </div>
 
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5 text-xs">
-                                    <div className="p-3 bg-slate-50/70 rounded-xl">
+                                <div className="grid grid-cols-1 gap-3.5 text-xs md:grid-cols-2">
+                                    {formData.event_type && formData.event_type !== activeCategory?.name && <div className="min-w-0 p-3 bg-slate-50/70 rounded-xl">
                                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                                             Jenis Acara
                                         </span>
                                         <span className="font-semibold text-slate-800">{formData.event_type}</span>
-                                    </div>
+                                    </div>}
                                     <div className="p-3 bg-slate-50/70 rounded-xl">
                                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                                             Tanggal &amp; Waktu
@@ -2379,7 +2621,7 @@ export default function ClientEdit({
                                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                                             Lokasi Acara
                                         </span>
-                                        <span className="font-semibold text-slate-800">{formData.event_location || '-'}</span>
+                                        <span className="font-semibold text-slate-800 [overflow-wrap:anywhere]">{formData.event_location || '-'}</span>
                                     </div>
                                     <div className="p-3 bg-slate-50/70 rounded-xl">
                                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">

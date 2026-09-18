@@ -146,7 +146,7 @@ class ProcessClientIntake
                 $childName = null;
                 $childBirthDate = null;
                 $childGender = null;
-                $clientName = trim($motherName . ($fatherName ? " & {$fatherName}" : ''));
+                $clientName = trim($catData['mom_name'] ?? ($motherName . ($fatherName ? " & {$fatherName}" : '')));
                 if (empty($clientName)) {
                     $clientName = $validated['name'] ?? 'Klien Maternity';
                 }
@@ -173,7 +173,7 @@ class ProcessClientIntake
                 $childName = null;
                 $childBirthDate = null;
                 $childGender = null;
-                $clientName = trim($catData['birthday_person_name'] ?? ($validated['name'] ?? 'Klien Ultah'));
+                $clientName = trim($catData['celebrant_name'] ?? ($catData['birthday_person_name'] ?? ($validated['name'] ?? 'Klien Ultah')));
                 $clientType = 'birthday';
             } elseif ($formType === 'engagement') {
                 $childName = null;
@@ -186,6 +186,18 @@ class ProcessClientIntake
                     $clientName = $validated['name'] ?? 'Klien Lamaran';
                 }
                 $clientType = 'engagement';
+            } elseif ($formType === 'commercial') {
+                $childName = null;
+                $childBirthDate = null;
+                $childGender = null;
+                $clientName = trim($catData['brand_name'] ?? ($catData['company_name'] ?? ($validated['name'] ?? 'Klien Brand')));
+                $clientType = 'commercial';
+            } elseif ($formType === 'event') {
+                $childName = null;
+                $childBirthDate = null;
+                $childGender = null;
+                $clientName = trim($catData['event_name'] ?? ($validated['name'] ?? 'Event'));
+                $clientType = 'event';
             } elseif ($formType === 'perorangan' || $formType === 'personal' || $formType === 'portrait') {
                 $childName = null;
                 $childBirthDate = null;

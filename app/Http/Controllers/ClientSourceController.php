@@ -53,13 +53,44 @@ class ClientSourceController extends Controller
 
         $sources = $query->latest('created_at')->paginate(10)->withQueryString();
 
+        // Dynamically compute real last_referral_date for each source
+        $sources->getCollection()->transform(function ($source) {
+            $latestProjectDate = Project::where('client_source_id', $source->id)
+                ->whereNotNull('event_date')
+                ->latest('event_date')
+                ->value('event_date')
+                ?? Project::where('client_source_id', $source->id)->latest('created_at')->value('created_at');
+
+            $latestClientDate = Client::where('client_source_id', $source->id)->latest('created_at')->value('created_at');
+
+            $dates = array_filter([$latestProjectDate, $latestClientDate]);
+            if (!empty($dates)) {
+                rsort($dates);
+                $source->last_referral_date = Carbon::parse($dates[0])->isoFormat('D MMM YYYY');
+            } else {
+                $source->last_referral_date = '-';
+            }
+
+            return $source;
+        });
+
         $totalSources = ClientSource::count();
+
+        // Dynamic stats from real project & client data
+        $sourceProjectsQuery = Project::query()->where(function ($q) {
+            $q->whereNotNull('client_source_id')
+                ->orWhereHas('client', fn($cq) => $cq->whereNotNull('client_source_id'));
+        });
+
+        $totalProjects = $sourceProjectsQuery->count();
+        $totalSales = (float) $sourceProjectsQuery->sum('total_amount');
+        $averageProjectValue = $totalProjects > 0 ? (int) round($totalSales / $totalProjects) : 0;
 
         $stats = [
             'total_sources' => $totalSources,
-            'total_projects' => 76,
-            'total_sales' => 185450000,
-            'average_project_value' => 2439474,
+            'total_projects' => $totalProjects,
+            'total_sales' => $totalSales,
+            'average_project_value' => $averageProjectValue,
         ];
 
         return Inertia::render('ClientSources/Index', [

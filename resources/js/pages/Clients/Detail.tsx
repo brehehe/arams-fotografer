@@ -1,6 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { toast } from 'sonner';
 import {
     ArrowLeft,
     Phone,
@@ -74,9 +72,10 @@ import {
     Upload,
     Loader2,
 } from 'lucide-react';
-import { formatRupiah, formatDate, formatCurrencyShort } from '@/lib/formatters';
-import { FormattedNumberInput } from '@/components/ui/formatted-number-input';
-import { ALL_WORKFLOWS, resolveWorkflow, type WorkflowDefinition } from '@/lib/workflows';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { toast } from 'sonner';
+import { CategorySpecificForm } from '@/components/projects/CategorySpecificForm';
+import { CategorySpecificView } from '@/components/projects/CategorySpecificView';
 import {
     Modal,
     Input,
@@ -98,13 +97,17 @@ import {
     DropdownMenuItem,
     DropdownMenuSeparator,
 } from '@/components/ui';
-import { SelectSearchOption } from '@/components/ui/select-search';
-import { CategorySpecificForm } from '@/components/projects/CategorySpecificForm';
-import { CategorySpecificView } from '@/components/projects/CategorySpecificView';
-import {
+import { FormattedNumberInput } from '@/components/ui/formatted-number-input';
+import type { SelectSearchOption } from '@/components/ui/select-search';
+import { formatRupiah, formatDate, formatCurrencyShort } from '@/lib/formatters';
+import { ALL_WORKFLOWS, resolveWorkflow  } from '@/lib/workflows';
+import type {WorkflowDefinition} from '@/lib/workflows';
+import type {
     CategoryFormKey,
+    AnyCategorySpecificData} from '@/types/category-forms';
+import {
     resolveCategoryKey,
-    AnyCategorySpecificData,
+    getFamilyMemberCount,
     FIELD_LABELS,
     formatValidationErrors,
 } from '@/types/category-forms';
@@ -283,10 +286,14 @@ export default function ClientDetail({
 
     const handleClientAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file) return;
+
+        if (!file) {
+return;
+}
 
         if (file.size > 5 * 1024 * 1024) {
             toast.error('Ukuran foto maksimal adalah 5MB');
+
             return;
         }
 
@@ -301,7 +308,10 @@ export default function ClientDetail({
             onSuccess: () => {
                 setIsUploadingClientAvatar(false);
                 toast.success('Foto avatar klien berhasil diperbarui');
-                if (clientAvatarInputRef.current) clientAvatarInputRef.current.value = '';
+
+                if (clientAvatarInputRef.current) {
+clientAvatarInputRef.current.value = '';
+}
             },
             onError: () => {
                 setIsUploadingClientAvatar(false);
@@ -311,7 +321,10 @@ export default function ClientDetail({
     };
 
     const handleRemoveClientAvatar = () => {
-        if (!confirm('Hapus foto avatar klien dan gunakan gambar default?')) return;
+        if (!confirm('Hapus foto avatar klien dan gunakan gambar default?')) {
+return;
+}
+
         setIsUploadingClientAvatar(true);
         const formData = new FormData();
         formData.append('_method', 'put');
@@ -323,7 +336,10 @@ export default function ClientDetail({
             onSuccess: () => {
                 setIsUploadingClientAvatar(false);
                 toast.success('Foto avatar klien direset ke default');
-                if (clientAvatarInputRef.current) clientAvatarInputRef.current.value = '';
+
+                if (clientAvatarInputRef.current) {
+clientAvatarInputRef.current.value = '';
+}
             },
             onError: () => {
                 setIsUploadingClientAvatar(false);
@@ -346,7 +362,7 @@ export default function ClientDetail({
 
     const editSteps = [
         { number: 1, title: 'Informasi Awal & Detail Klien', subtitle: 'Kategori & Data Khusus' },
-        { number: 2, title: 'Informasi Alamat', subtitle: 'Alamat & WhatsApp' },
+        { number: 2, title: 'Informasi Pemesan', subtitle: 'Alamat & WhatsApp' },
         { number: 3, title: 'Paket & Detail Acara', subtitle: 'Paket, Lokasi & Jadwal' },
         { number: 4, title: 'Ringkasan', subtitle: 'Review & Simpan' },
     ];
@@ -354,21 +370,31 @@ export default function ClientDetail({
     const handleEditCategoryDataChange = (field: string, value: any) => {
         setEditCategoryData((prev) => {
             const next = { ...prev, [field]: value };
+
             if (field === 'session_date' || field === 'akad_date' || field === 'event_date' || field === 'departure_date') {
                 if (value) {
                     setEditFormData((f) => ({ ...f, event_date: value }));
                 }
             }
+            if (field === 'event_time_range') {
+                setEditFormData((f) => ({ ...f, event_time: value }));
+            }
+            if (field === 'event_type') {
+                setEditFormData((f) => ({ ...f, event_type: value }));
+            }
+
             if (field === 'session_location' || field === 'location' || field === 'akad_location' || field === 'event_location' || field === 'destination_city_country') {
                 if (value) {
                     setEditFormData((f) => ({ ...f, event_location: value }));
                 }
             }
+
             if (field === 'reception_location') {
                 if (value) {
                     setEditFormData((f) => ({ ...f, reception_location: value }));
                 }
             }
+
             if (field === 'client_name' || field === 'name' || field === 'pic_name' || field === 'contact_person') {
                 if (value) {
                     setEditFormData((f) => ({ ...f, name: value }));
@@ -380,16 +406,19 @@ export default function ClientDetail({
                     setEditFormData((f) => ({ ...f, phone: value }));
                 }
             }
+
             if (field === 'email') {
                 if (value) {
                     setEditFormData((f) => ({ ...f, email: value }));
                 }
             }
+
             if (field === 'instagram') {
                 if (value) {
                     setEditFormData((f) => ({ ...f, instagram: value }));
                 }
             }
+
             return next;
         });
     };
@@ -398,6 +427,7 @@ export default function ClientDetail({
     const toggleEditTag = (tag: string) => {
         setEditFormData((prev) => {
             const exists = prev.tags.includes(tag);
+
             return {
                 ...prev,
                 tags: exists ? prev.tags.filter((t) => t !== tag) : [...prev.tags, tag],
@@ -454,7 +484,7 @@ export default function ClientDetail({
         concept_theme: (client.projects?.[0]?.category_data as any)?.concept || (client.projects?.[0]?.category_data as any)?.theme || '',
         other_vendors: '',
         reference_url: (client.projects?.[0]?.category_data as any)?.reference_url || '',
-        package_id: client.projects?.[0]?.package_id ? String(client.projects[0].package_id) : (packages[0]?.id || ''),
+        package_id: client.projects?.[0]?.package_id ? String(client.projects[0].package_id) : '',
         source: client.source || 'Instagram',
         client_source_id: client.client_source_id || '',
         referred_by_client_id: client.referred_by_client_id || '',
@@ -711,9 +741,9 @@ export default function ClientDetail({
 
     const editActiveCategory = useMemo(() => {
         return (categories || []).find((c) => String(c.id) === String(editFormData.category_id)) ||
-               (categories || []).find((c) => c.slug === editFormData.client_type || c.name.toLowerCase() === (editFormData.client_type || '').toLowerCase()) ||
-               categories[0] ||
-               { name: 'Kategori', form_type: 'standard' };
+            (categories || []).find((c) => c.slug === editFormData.client_type || c.name.toLowerCase() === (editFormData.client_type || '').toLowerCase()) ||
+            categories[0] ||
+            { name: 'Kategori', form_type: 'standard' };
     }, [categories, editFormData.category_id, editFormData.client_type]);
 
     const editActiveCategoryKey: CategoryFormKey = useMemo(() => {
@@ -721,7 +751,10 @@ export default function ClientDetail({
     }, [editActiveCategory]);
 
     const editFilteredPackages = useMemo(() => {
-        if (!editFormData.category_id) return packages;
+        if (!editFormData.category_id) {
+return packages;
+}
+
         return packages.filter((pkg) => String(pkg.category_id) === String(editFormData.category_id));
     }, [packages, editFormData.category_id]);
 
@@ -735,6 +768,7 @@ export default function ClientDetail({
     const handleRemoveChild = (index: number) => {
         setEditFormData((prev) => {
             const nextChildren = prev.children.filter((_, idx) => idx !== index);
+
             return {
                 ...prev,
                 children: nextChildren,
@@ -748,6 +782,7 @@ export default function ClientDetail({
             nextChildren[index] = { ...nextChildren[index], [field]: value };
             const names = nextChildren.map((c) => c.name).filter(Boolean).join(' & ');
             const isTwin = nextChildren.length > 1;
+
             return {
                 ...prev,
                 children: nextChildren,
@@ -760,20 +795,26 @@ export default function ClientDetail({
 
     const [editNewTagInput, setEditNewTagInput] = useState('');
     const handleAddEditCustomTag = () => {
-        if (!editNewTagInput.trim()) return;
+        if (!editNewTagInput.trim()) {
+return;
+}
+
         const tag = editNewTagInput.trim();
+
         if (!editFormData.tags.includes(tag)) {
             setEditFormData((prev) => ({
                 ...prev,
                 tags: [...prev.tags, tag],
             }));
         }
+
         setEditNewTagInput('');
     };
 
     const editPrimaryContactInfo = useMemo(() => {
         if (editActiveCategoryKey === 'wedding' || editActiveCategoryKey === 'engagement') {
             const isBride = editFormData.primary_contact === 'cpw' || !editFormData.primary_contact;
+
             return {
                 name: isBride ? ((editCategoryData as any).bride_name || editFormData.bride_name || '-') : ((editCategoryData as any).groom_name || editFormData.groom_name || '-'),
                 nickname: isBride ? ((editCategoryData as any).bride_nickname || editFormData.bride_nickname || '-') : ((editCategoryData as any).groom_nickname || editFormData.groom_nickname || '-'),
@@ -783,8 +824,10 @@ export default function ClientDetail({
                 role: isBride ? 'CPW' : 'CPP',
             };
         }
+
         if (editActiveCategoryKey === 'prewedding') {
             const isP1 = editFormData.primary_contact === 'cpw' || !editFormData.primary_contact;
+
             return {
                 name: isP1 ? ((editCategoryData as any).partner_1 || (editCategoryData as any).bride_name || '-') : ((editCategoryData as any).partner_2 || (editCategoryData as any).groom_name || '-'),
                 nickname: isP1 ? ((editCategoryData as any).partner_1_nickname || '-') : ((editCategoryData as any).partner_2_nickname || '-'),
@@ -794,8 +837,10 @@ export default function ClientDetail({
                 role: isP1 ? 'Pasangan 1' : 'Pasangan 2',
             };
         }
+
         if (editActiveCategoryKey === 'maternity') {
             const isMom = editFormData.primary_contact === 'cpw' || !editFormData.primary_contact;
+
             return {
                 name: isMom ? ((editCategoryData as any).mom_name || (editCategoryData as any).mother_name || '-') : ((editCategoryData as any).partner_name || (editCategoryData as any).father_name || '-'),
                 nickname: '-',
@@ -805,6 +850,7 @@ export default function ClientDetail({
                 role: isMom ? 'Ibu Hamil' : 'Pasangan',
             };
         }
+
         if (editActiveCategoryKey === 'corporate' || editActiveCategoryKey === 'komunitas') {
             return {
                 name: (editCategoryData as any).pic_name || (editCategoryData as any).contact_person || editFormData.name || '-',
@@ -815,8 +861,10 @@ export default function ClientDetail({
                 role: 'PIC / Koordinator',
             };
         }
+
         if (editActiveCategoryKey === 'newborn') {
             const isMother = editFormData.primary_contact === 'mother' || !editFormData.primary_contact;
+
             return {
                 name: isMother ? ((editCategoryData as any).mother_name || editFormData.mother_name || '-') : ((editCategoryData as any).father_name || editFormData.father_name || '-'),
                 nickname: '-',
@@ -826,6 +874,7 @@ export default function ClientDetail({
                 role: isMother ? 'Ibu' : 'Ayah',
             };
         }
+
         return {
             name: (editCategoryData as any).client_name || (editCategoryData as any).name || (editCategoryData as any).contact_person || (editCategoryData as any).pic_name || (editFormData.name && editFormData.name !== '-' ? editFormData.name : '') || '-',
             nickname: (editCategoryData as any).nickname || '-',
@@ -842,6 +891,7 @@ export default function ClientDetail({
             const phoneVal = (editCategoryData as any).bride_phone || editFormData.phone;
             const emailVal = (editCategoryData as any).bride_email || editFormData.email;
             const igVal = (editCategoryData as any).bride_instagram || editFormData.instagram;
+
             if (phoneVal || emailVal || igVal) {
                 setEditFormData((prev) => ({
                     ...prev,
@@ -854,6 +904,7 @@ export default function ClientDetail({
             const phoneVal = (editCategoryData as any).groom_phone || editFormData.phone;
             const emailVal = (editCategoryData as any).groom_email || editFormData.email;
             const igVal = (editCategoryData as any).groom_instagram || editFormData.instagram;
+
             if (phoneVal || emailVal || igVal) {
                 setEditFormData((prev) => ({
                     ...prev,
@@ -865,6 +916,7 @@ export default function ClientDetail({
         } else if (editFormData.primary_contact === 'mother') {
             const phoneVal = (editCategoryData as any).mother_phone || editFormData.phone;
             const emailVal = (editCategoryData as any).mother_email || editFormData.email;
+
             if (phoneVal || emailVal) {
                 setEditFormData((prev) => ({
                     ...prev,
@@ -875,6 +927,7 @@ export default function ClientDetail({
         } else if (editFormData.primary_contact === 'pic') {
             const phoneVal = (editCategoryData as any).pic_phone || editFormData.phone;
             const emailVal = (editCategoryData as any).pic_email || editFormData.email;
+
             if (phoneVal || emailVal) {
                 setEditFormData((prev) => ({
                     ...prev,
@@ -903,6 +956,7 @@ export default function ClientDetail({
                 map.set(String(inv.id), inv);
             }
         });
+
         return Array.from(map.values());
     }, [client.invoices, client.projects]);
 
@@ -932,9 +986,11 @@ export default function ClientDetail({
     // Filter unpaid/partially-paid projects for payment modal
     const unpaidProjects = useMemo(() => {
         const list = client.projects || [];
+
         return list.filter((p) => {
             const total = Number(p.total_amount || 0);
             const paid = Number(p.paid_amount || 0);
+
             return total === 0 || paid < total;
         });
     }, [client.projects]);
@@ -942,6 +998,7 @@ export default function ClientDetail({
     // Active project selected in the payment modal
     const selectedPaymentProject = useMemo(() => {
         const list = client.projects || [];
+
         return (
             list.find((p) => String(p.id) === String(paymentFormData.project_id)) ||
             unpaidProjects[0] ||
@@ -950,7 +1007,10 @@ export default function ClientDetail({
     }, [client.projects, paymentFormData.project_id, unpaidProjects]);
 
     const availableInvoicesForSelectedProject = useMemo(() => {
-        if (!selectedPaymentProject) return [];
+        if (!selectedPaymentProject) {
+return [];
+}
+
         return allInvoices.filter(
             (inv: any) => String(inv.project_id || inv.project?.id) === String(selectedPaymentProject.id)
         );
@@ -977,9 +1037,13 @@ export default function ClientDetail({
     const paymentProjectRemaining = Math.max(0, paymentProjectTotal - paymentProjectPaid);
 
     const applyPaymentShortcut = (type: 'dp30' | 'dp50' | 'full') => {
-        if (!selectedPaymentProject) return;
+        if (!selectedPaymentProject) {
+return;
+}
+
         let amount = 0;
         let note = '';
+
         if (type === 'dp30') {
             amount = Math.round(paymentProjectTotal * 0.3);
             note = `DP 30% - ${selectedPaymentProject.name}`;
@@ -990,6 +1054,7 @@ export default function ClientDetail({
             amount = paymentProjectRemaining > 0 ? paymentProjectRemaining : paymentProjectTotal;
             note = `Pelunasan Sisa Tagihan - ${selectedPaymentProject.name}`;
         }
+
         setPaymentFormData((prev) => ({
             ...prev,
             amount: String(amount),
@@ -1024,6 +1089,7 @@ export default function ClientDetail({
                 };
             });
         }
+
         return [];
     }, [client.projects]);
 
@@ -1032,6 +1098,7 @@ export default function ClientDetail({
         if (client.projects && client.projects.length > 0) {
             return client.projects.reduce((acc, p) => acc + Number(p.total_amount || 0), 0);
         }
+
         return 0;
     }, [client.projects]);
 
@@ -1039,9 +1106,11 @@ export default function ClientDetail({
         if (client.payments && client.payments.length > 0) {
             return client.payments.reduce((acc, p) => acc + Number(p.amount || 0), 0);
         }
+
         if (client.projects && client.projects.length > 0) {
             return client.projects.reduce((acc, p) => acc + Number(p.paid_amount || 0), 0);
         }
+
         return 0;
     }, [client.payments, client.projects]);
 
@@ -1069,6 +1138,7 @@ export default function ClientDetail({
             ];
             const names = nextChildren.map((c) => c.name.trim()).filter(Boolean).join(' & ');
             const isTwin = nextChildren.length > 1;
+
             return {
                 ...prev,
                 children: nextChildren,
@@ -1080,10 +1150,15 @@ export default function ClientDetail({
     const handleRemoveEditChild = (index: number) => {
         setEditFormData((prev) => {
             const currentChildren = prev.children || [];
-            if (currentChildren.length <= 1) return prev;
+
+            if (currentChildren.length <= 1) {
+return prev;
+}
+
             const nextChildren = currentChildren.filter((_, i) => i !== index);
             const names = nextChildren.map((c) => c.name.trim()).filter(Boolean).join(' & ');
             const isTwin = nextChildren.length > 1;
+
             return {
                 ...prev,
                 children: nextChildren,
@@ -1102,6 +1177,7 @@ export default function ClientDetail({
             );
             const names = nextChildren.map((c) => c.name.trim()).filter(Boolean).join(' & ');
             const isTwin = nextChildren.length > 1;
+
             return {
                 ...prev,
                 children: nextChildren,
@@ -1122,358 +1198,500 @@ export default function ClientDetail({
             (editPrimaryContactInfo.name && editPrimaryContactInfo.name.trim() !== '-' ? editPrimaryContactInfo.name.trim() : '');
 
         if (stepNum === 1) {
+            if (!(editCategoryData as any).client_name?.trim() || (editCategoryData as any).client_name.trim() === '-') {
+                toast.error('Nama Pemesan wajib diisi');
+                return false;
+            }
             switch (editActiveCategoryKey) {
                 case 'maternity':
                     if (!editCategoryData.mom_name?.trim() && !editCategoryData.mother_name?.trim() && !editFormData.mother_name?.trim() && !clientNameVal) {
                         toast.error('Nama Ibu wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.partner_name?.trim() && !editCategoryData.father_name?.trim() && !editFormData.father_name?.trim()) {
                         toast.error('Nama Ayah / Pasangan wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.gestational_age_weeks) {
                         toast.error('Usia Kehamilan Saat Sesi wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.hpl_date) {
                         toast.error('HPL (Hari Perkiraan Lahir) wajib diisi');
+
                         return false;
                     }
+
                     return true;
 
                 case 'lainnya':
                     if (!clientNameVal && !(editCategoryData as any).client_name?.trim() && !(editCategoryData as any).name?.trim() && !(editCategoryData as any).pic_name?.trim()) {
                         toast.error('Nama Pemesan wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.event_date && !editFormData.event_date) {
                         toast.error('Tanggal Event wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.event_time_range?.trim() && !editFormData.event_time?.trim()) {
                         toast.error('Waktu Event wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.event_type?.trim()) {
                         toast.error('Jenis Event wajib dipilih');
+
                         return false;
                     }
+
                     if (!editCategoryData.needs_type?.trim()) {
                         toast.error('Jenis Kebutuhan wajib dipilih');
+
                         return false;
                     }
+
                     if (!editCategoryData.location?.trim() && !(editCategoryData as any).event_location?.trim() && !editFormData.event_location?.trim()) {
                         toast.error('Lokasi Event wajib diisi');
+
                         return false;
                     }
+
                     return true;
 
                 case 'perorangan':
-                    if (!clientNameVal) {
+                    if (!(editCategoryData as any).client_name?.trim()) {
                         toast.error('Nama Lengkap Pemesan wajib diisi');
+
                         return false;
                     }
+
                     return true;
 
                 case 'prewedding':
                     if ((!editCategoryData.groom_name?.trim() && !editFormData.groom_name?.trim()) || (!editCategoryData.bride_name?.trim() && !editFormData.bride_name?.trim())) {
                         if (!clientNameVal) {
                             toast.error('Nama Lengkap Kedua Pasangan wajib diisi');
+
                             return false;
                         }
                     }
+
+                    if (!editCategoryData.groom_nickname?.trim() || !editCategoryData.bride_nickname?.trim()) {
+                        toast.error('Nama panggilan CPP dan CPW wajib diisi.');
+                        return false;
+                    }
+
                     if (!editCategoryData.session_date && !editFormData.event_date) {
                         toast.error('Tanggal Sesi Foto Prewedding wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.concept_theme?.trim() && !editFormData.concept_theme?.trim()) {
                         toast.error('Konsep / Tema Foto wajib dipilih');
+
                         return false;
                     }
+
                     if (!editCategoryData.session_location?.trim() && !editFormData.event_location?.trim()) {
                         toast.error('Lokasi Sesi Foto wajib diisi');
+
                         return false;
                     }
+
                     return true;
 
                 case 'commercial':
                     if (!clientNameVal && !(editCategoryData as any).pic_name?.trim()) {
                         toast.error('Nama Contact Person / PIC wajib diisi');
+
                         return false;
                     }
-                    if (!editCategoryData.commercial_purpose?.trim()) {
-                        toast.error('Tujuan / Jenis Kebutuhan Foto wajib dipilih');
+
+                    if (!editCategoryData.brand_name?.trim()) {
+                        toast.error('Nama Brand / Bisnis wajib diisi');
+
                         return false;
                     }
-                    if (!editCategoryData.product_brand_type?.trim()) {
-                        toast.error('Jenis Produk / Brand wajib diisi');
+
+                    if (!editCategoryData.product_type?.trim()) {
+                        toast.error('Jenis Produk wajib diisi');
+
                         return false;
                     }
-                    if (!editCategoryData.products_count) {
-                        toast.error('Jumlah Produk wajib diisi');
-                        return false;
-                    }
+
                     if (!editCategoryData.background_type?.trim()) {
                         toast.error('Latar / Background Foto wajib dipilih');
+
                         return false;
                     }
-                    if (!editCategoryData.photo_style_mood?.trim()) {
-                        toast.error('Gaya Foto / Mood wajib dipilih');
+
+                    if (!editCategoryData.lighting_style?.trim()) {
+                        toast.error('Lighting Style wajib dipilih');
+
                         return false;
                     }
-                    if (!editCategoryData.photo_usage || !Array.isArray(editCategoryData.photo_usage) || editCategoryData.photo_usage.length === 0) {
-                        toast.error('Pilih minimal satu Penggunaan Foto');
+
+                    if (!Array.isArray(editCategoryData.mood_style) || editCategoryData.mood_style.length === 0) {
+                        toast.error('Pilih minimal satu Mood / Style Foto');
+
                         return false;
                     }
+
                     return true;
 
                 case 'traveling':
                     if (!clientNameVal) {
                         toast.error('Nama Pemesan / Kontak Utama wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.destination_city_country?.trim()) {
                         toast.error('Tujuan Destinasi (Negara / Kota) wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.travelers_count) {
                         toast.error('Jumlah Traveler wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.trip_type?.trim()) {
                         toast.error('Jenis Trip wajib dipilih');
+
                         return false;
                     }
+
                     if (!editCategoryData.trip_duration_days) {
                         toast.error('Durasi Trip wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.departure_date) {
                         toast.error('Tanggal Berangkat wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.return_date) {
                         toast.error('Tanggal Pulang wajib diisi');
+
                         return false;
                     }
+
                     return true;
 
                 case 'wedding':
                     if (!editCategoryData.groom_name?.trim() && !editFormData.groom_name?.trim()) {
                         toast.error('Nama Lengkap CPP (Mempelai Pria) wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.groom_nickname?.trim() && !editFormData.groom_nickname?.trim()) {
                         toast.error('Nama Panggilan CPP (Mempelai Pria) wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.bride_name?.trim() && !editFormData.bride_name?.trim()) {
                         toast.error('Nama Lengkap CPW (Mempelai Wanita) wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.bride_nickname?.trim() && !editFormData.bride_nickname?.trim()) {
                         toast.error('Nama Panggilan CPW (Mempelai Wanita) wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.akad_date && !editFormData.event_date) {
                         toast.error('Tanggal Akad wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.akad_time?.trim() && !editFormData.event_time?.trim()) {
                         toast.error('Waktu Akad wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.akad_location?.trim() && !editFormData.event_location?.trim()) {
                         toast.error('Lokasi Akad wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.reception_date && !editCategoryData.akad_date && !editFormData.event_date) {
                         toast.error('Tanggal Resepsi wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.reception_time?.trim() && !editCategoryData.akad_time?.trim() && !editFormData.event_time?.trim()) {
                         toast.error('Waktu Resepsi wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.reception_location?.trim() && !editFormData.reception_location?.trim() && !editFormData.event_location?.trim()) {
                         toast.error('Lokasi Resepsi wajib diisi');
+
                         return false;
                     }
+
                     return true;
 
                 case 'birthday':
                     if (!editCategoryData.celebrant_name?.trim() && !clientNameVal) {
                         toast.error('Nama yang Berulang Tahun wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.celebrant_age) {
                         toast.error('Usia wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.birthday_theme?.trim()) {
                         toast.error('Tema Ulang Tahun wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.event_type?.trim()) {
                         toast.error('Jenis Acara wajib dipilih');
+
                         return false;
                     }
+
                     if (!editCategoryData.estimated_guests) {
                         toast.error('Jumlah Tamu wajib diisi');
+
                         return false;
                     }
+
                     return true;
 
                 case 'corporate':
                     if (!editCategoryData.company_name?.trim() && !editFormData.company_name?.trim()) {
                         toast.error('Nama Perusahaan wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.event_type?.trim()) {
                         toast.error('Jenis Acara wajib dipilih');
+
                         return false;
                     }
-                    if (!editCategoryData.event_scale?.trim()) {
-                        toast.error('Skala Acara wajib dipilih');
-                        return false;
-                    }
-                    if (!editCategoryData.documentation_purpose?.trim()) {
+
+                    if (Array.isArray(editCategoryData.documentation_purpose) && editCategoryData.documentation_purpose.length === 0) {
                         toast.error('Tujuan Dokumentasi wajib dipilih');
+
                         return false;
                     }
-                    if (!editCategoryData.pic_name?.trim() && !editFormData.contact_person?.trim()) {
-                        toast.error('Nama PIC Acara wajib diisi');
-                        return false;
-                    }
-                    if (!editCategoryData.pic_phone?.trim() && !editFormData.phone?.trim()) {
-                        toast.error('Nomor Telepon / WA PIC wajib diisi');
-                        return false;
-                    }
+
                     return true;
 
                 case 'engagement':
                     if ((!editCategoryData.groom_name?.trim() && !editFormData.groom_name?.trim()) || (!editCategoryData.bride_name?.trim() && !editFormData.bride_name?.trim())) {
                         if (!clientNameVal) {
                             toast.error('Nama Calon Pria dan Wanita wajib diisi');
+
                             return false;
                         }
                     }
+
                     if (!editCategoryData.engagement_date && !editFormData.event_date) {
                         toast.error('Tanggal Lamaran wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.engagement_time?.trim() && !editFormData.event_time?.trim()) {
                         toast.error('Waktu Lamaran wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.engagement_location?.trim() && !editFormData.event_location?.trim()) {
                         toast.error('Lokasi Lamaran wajib diisi');
+
                         return false;
                     }
+
                     return true;
 
                 case 'event':
                     if (!clientNameVal && !(editCategoryData as any).pic_name?.trim() && !(editCategoryData as any).client_name?.trim()) {
                         toast.error('Nama Pemesan wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.event_date && !editFormData.event_date) {
                         toast.error('Tanggal Event wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.event_time_range?.trim() && !editFormData.event_time?.trim()) {
                         toast.error('Waktu Event wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.event_type?.trim()) {
                         toast.error('Jenis Event wajib dipilih');
+
                         return false;
                     }
+
                     if (!editCategoryData.needs_type?.trim()) {
                         toast.error('Jenis Kebutuhan wajib dipilih');
+
                         return false;
                     }
+
                     if (!editCategoryData.event_location?.trim() && !editFormData.event_location?.trim()) {
                         toast.error('Lokasi Event wajib diisi');
+
                         return false;
                     }
+
                     return true;
 
                 case 'family':
+                    if (!(editCategoryData as any).client_name?.trim()) {
+                        toast.error('Nama Pemesan wajib diisi');
+                        return false;
+                    }
                     if (!editCategoryData.family_name?.trim()) {
                         toast.error('Nama Keluarga wajib diisi');
+
                         return false;
                     }
-                    if (!editCategoryData.father_name?.trim() && !editFormData.father_name?.trim()) {
-                        toast.error('Nama Ayah wajib diisi');
+
+                    if (!Number.isInteger(getFamilyMemberCount(editCategoryData)) || getFamilyMemberCount(editCategoryData) < 1) {
+                        toast.error('Jumlah Anggota Keluarga yang Difoto minimal 1 orang');
+
                         return false;
                     }
-                    if (!editCategoryData.mother_name?.trim() && !editFormData.mother_name?.trim()) {
-                        toast.error('Nama Ibu wajib diisi');
+
+                    if (!editCategoryData.concept_theme?.trim()) {
+                        toast.error('Konsep Sesi Foto Keluarga wajib dipilih');
+
                         return false;
                     }
-                    if (!editCategoryData.members_count) {
-                        toast.error('Jumlah Anggota Keluarga wajib diisi');
+
+                    if (!editCategoryData.session_location_type?.trim() || (editCategoryData.session_location_type === 'Lainnya' && !editCategoryData.session_location?.trim())) {
+                        toast.error('Lokasi Sesi Foto Keluarga wajib diisi');
+
                         return false;
                     }
-                    if (!editCategoryData.session_location?.trim() && !editFormData.event_location?.trim()) {
-                        toast.error('Lokasi Sesi Foto wajib diisi');
-                        return false;
-                    }
+
                     return true;
 
                 case 'komunitas':
+                    if (!(editCategoryData as any).client_name?.trim()) {
+                        toast.error('Nama Pemesan wajib diisi');
+                        return false;
+                    }
                     if (!editCategoryData.community_name?.trim()) {
                         toast.error('Nama Komunitas wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.community_type?.trim()) {
                         toast.error('Jenis Komunitas wajib dipilih');
+
                         return false;
                     }
+
                     if (!editCategoryData.pic_name?.trim() && !editFormData.contact_person?.trim()) {
                         toast.error('Nama PIC Komunitas wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.pic_phone?.trim() && !editFormData.phone?.trim()) {
                         toast.error('Nomor Telepon / WA PIC wajib diisi');
+
                         return false;
                     }
+
                     if (!editCategoryData.activity_type?.trim()) {
                         toast.error('Jenis Kegiatan Komunitas wajib dipilih');
+
                         return false;
                     }
+
                     return true;
 
                 case 'newborn': {
                     const firstBabyName = editCategoryData.babies?.[0]?.name?.trim() || editCategoryData.baby_name?.trim() || editFormData.child_name?.trim() || clientNameVal;
+
                     if (!firstBabyName) {
                         toast.error('Nama Lengkap Bayi wajib diisi');
+
                         return false;
                     }
+
                     return true;
                 }
 
                 default:
                     if (!clientNameVal) {
                         toast.error('Nama Lengkap Pemesan / Klien wajib diisi');
+
                         return false;
                     }
+
                     return true;
             }
         }
 
         if (stepNum === 2) {
             const phone = editFormData.phone?.trim() || (editCategoryData as any).pic_phone?.trim() || (editCategoryData as any).bride_phone?.trim() || (editCategoryData as any).groom_phone?.trim();
+
             if (!phone) {
                 toast.error('Nomor WhatsApp wajib diisi untuk konfirmasi.');
+
                 return false;
             }
+
             if (editFormData.email && editFormData.email.trim() && !/\S+@\S+\.\S+/.test(editFormData.email.trim())) {
                 toast.error('Format email tidak valid.');
+
                 return false;
             }
+        }
+
+        if (stepNum === 3 && (!editFormData.package_id || !editFilteredPackages.some((pkg) => String(pkg.id) === String(editFormData.package_id)))) {
+            toast.error('Paket yang diminati wajib dipilih.');
+
+            return false;
         }
 
         return true;
@@ -1481,39 +1699,22 @@ export default function ClientDetail({
 
     // Submit Edit Client Modal
     const handleSaveClientEdit = () => {
-        const candidateName =
-            (editFormData.name && editFormData.name.trim() !== '-' ? editFormData.name.trim() : '') ||
-            ((editCategoryData as any).client_name && (editCategoryData as any).client_name.trim() !== '-' ? (editCategoryData as any).client_name.trim() : '') ||
-            ((editCategoryData as any).name && (editCategoryData as any).name.trim() !== '-' ? (editCategoryData as any).name.trim() : '') ||
-            ((editCategoryData as any).contact_person && (editCategoryData as any).contact_person.trim() !== '-' ? (editCategoryData as any).contact_person.trim() : '') ||
-            ((editCategoryData as any).pic_name && (editCategoryData as any).pic_name.trim() !== '-' ? (editCategoryData as any).pic_name.trim() : '') ||
-            (editPrimaryContactInfo.name && editPrimaryContactInfo.name.trim() !== '-' ? editPrimaryContactInfo.name.trim() : '') ||
-            '';
-
-        let clientName = candidateName;
-        if (editActiveCategoryKey === 'wedding' || editActiveCategoryKey === 'engagement' || editActiveCategoryKey === 'prewedding') {
-            const bName = (editCategoryData as any).bride_name || (editCategoryData as any).partner_1 || editFormData.bride_name;
-            const gName = (editCategoryData as any).groom_name || (editCategoryData as any).partner_2 || editFormData.groom_name;
-            if (bName && gName) {
-                clientName = `${bName} & ${gName}`;
-            } else if (bName) {
-                clientName = bName;
-            } else if (gName) {
-                clientName = gName;
-            }
-        } else if (editActiveCategoryKey === 'corporate' || editActiveCategoryKey === 'commercial' || editActiveCategoryKey === 'komunitas') {
-            clientName = (editCategoryData as any).company_name || (editCategoryData as any).community_name || (editCategoryData as any).brand_name || editFormData.company_name || candidateName;
-        } else if (editActiveCategoryKey === 'newborn') {
-            clientName = (editCategoryData as any).child_name || (editCategoryData as any).baby_name || editFormData.child_name || candidateName;
+        if (!validateEditStep(3)) {
+            setEditCurrentStep(3);
+            return;
         }
+
+        const clientName = (editCategoryData as any).client_name?.trim() || editFormData.name?.trim() || '';
 
         if (!clientName && !editFormData.name) {
             toast.error('Nama klien / pemesan wajib diisi');
+
             return;
         }
 
         if (!editFormData.phone && !(editCategoryData as any).pic_phone && !(editCategoryData as any).bride_phone && !(editCategoryData as any).groom_phone) {
             toast.error('Nomor telepon / WhatsApp wajib diisi');
+
             return;
         }
 
@@ -1617,12 +1818,15 @@ export default function ClientDetail({
 
         if (!paymentFormData.amount || Number(paymentFormData.amount) <= 0) {
             toast.error('Nominal pembayaran wajib diisi lebih dari 0');
+
             return;
         }
 
         const targetProjectId = paymentFormData.project_id || (client.projects?.[0]?.id ?? '');
+
         if (!targetProjectId) {
             toast.error('Silakan pilih project tujuan pembayaran');
+
             return;
         }
 
@@ -1801,7 +2005,7 @@ export default function ClientDetail({
             concept_theme: (client.projects?.[0]?.category_data as any)?.concept || (client.projects?.[0]?.category_data as any)?.theme || '',
             other_vendors: '',
             reference_url: (client.projects?.[0]?.category_data as any)?.reference_url || '',
-            package_id: client.projects?.[0]?.package_id ? String(client.projects[0].package_id) : (packages[0]?.id || ''),
+            package_id: client.projects?.[0]?.package_id ? String(client.projects[0].package_id) : '',
             source: client.source || 'Instagram',
             client_source_id: client.client_source_id || '',
             referred_by_client_id: client.referred_by_client_id || '',
@@ -1835,9 +2039,18 @@ export default function ClientDetail({
     ];
 
     const clientTierValue = useMemo(() => {
-        if (client.client_type === 'corporate' || client.company_name) return 'corporate';
-        if (client.client_type === 'vip' || client.tags?.includes('VIP') || client.tags?.includes('vip')) return 'vip';
-        if (client.client_type === 'premium' || client.tags?.includes('Premium') || client.tags?.includes('premium') || (client as any).total_value > 40000000) return 'premium';
+        if (client.client_type === 'corporate' || client.company_name) {
+return 'corporate';
+}
+
+        if (client.client_type === 'vip' || client.tags?.includes('VIP') || client.tags?.includes('vip')) {
+return 'vip';
+}
+
+        if (client.client_type === 'premium' || client.tags?.includes('Premium') || client.tags?.includes('premium') || (client as any).total_value > 40000000) {
+return 'premium';
+}
+
         return 'regular';
     }, [client.client_type, client.company_name, client.tags, (client as any).total_value]);
 
@@ -1853,8 +2066,14 @@ export default function ClientDetail({
     const handleUpdateClientTier = (newTier: string) => {
         const currentTags = Array.isArray(client.tags) ? [...client.tags] : [];
         const cleanTags = currentTags.filter((t) => !['Premium', 'premium', 'VIP', 'vip'].includes(t));
-        if (newTier === 'premium') cleanTags.push('Premium');
-        if (newTier === 'vip') cleanTags.push('VIP');
+
+        if (newTier === 'premium') {
+cleanTags.push('Premium');
+}
+
+        if (newTier === 'vip') {
+cleanTags.push('VIP');
+}
 
         router.put(
             `/clients/${client.id}`,
@@ -1979,6 +2198,7 @@ export default function ClientDetail({
                 updated_at: p.updated_at ? formatDate(p.updated_at) : (p.created_at ? formatDate(p.created_at) : '-'),
             }));
         }
+
         return [];
     }, [client.projects, client.client_type]);
 
@@ -1993,6 +2213,7 @@ export default function ClientDetail({
                 (projectStatusFilter === 'completed' && item.status === 'Selesai') ||
                 (projectStatusFilter === 'in_progress' && item.status === 'Sedang Dikerjakan') ||
                 (projectStatusFilter === 'upcoming' && item.status === 'Akan Datang');
+
             return matchesSearch && matchesStatus;
         });
     }, [initialProjectsList, projectSearchQuery, projectStatusFilter]);
@@ -2013,6 +2234,7 @@ export default function ClientDetail({
                 const remaining = Math.max(0, Number(inv.remaining_amount ?? (total - paid)));
                 let status = 'Belum Dibayar';
                 let status_variant = 'destructive';
+
                 if (total > 0 && paid >= total) {
                     status = 'Lunas';
                     status_variant = 'success';
@@ -2043,6 +2265,7 @@ export default function ClientDetail({
         if (client.payments && client.payments.length > 0) {
             return client.payments.map((p, idx) => {
                 const total = Number(p.amount || 0);
+
                 return {
                     id: String(p.id || idx + 1),
                     project_id: String(p.project_id || p.project?.id || ''),
@@ -2061,6 +2284,7 @@ export default function ClientDetail({
                 };
             });
         }
+
         return [];
     }, [allInvoices, client.payments, client.projects]);
 
@@ -2077,6 +2301,7 @@ export default function ClientDetail({
                 (paymentStatusFilter === 'unpaid' && inv.status === 'Belum Dibayar');
             const matchesMethod =
                 paymentMethodFilter === 'all' || inv.payment_method.toLowerCase().includes(paymentMethodFilter.toLowerCase());
+
             return matchesSearch && matchesStatus && matchesMethod;
         });
     }, [initialInvoicesList, paymentSearchQuery, paymentStatusFilter, paymentMethodFilter]);
@@ -2134,6 +2359,7 @@ export default function ClientDetail({
                 })),
             }));
         }
+
         return ALL_WORKFLOWS;
     }, [workflows]);
 
@@ -2182,6 +2408,7 @@ export default function ClientDetail({
     // Checklist synced from DB custom_timeline.checklist
     const [jobChecklist, setJobChecklist] = useState(() => {
         const dbChecklist = client.projects?.[0]?.custom_timeline?.checklist || {};
+
         return {
             editedPhoto: dbChecklist.editedPhoto ?? false,
             revisiEditedPhoto: dbChecklist.revisiEditedPhoto ?? false,
@@ -2216,17 +2443,34 @@ export default function ClientDetail({
             stageIndex: number,
             totalStages: number
         ): 'done' | 'active' | 'pending' => {
-            if (isCompleted) return 'done';
-            if (isUpcoming) return stageIndex === 0 ? 'active' : 'pending';
+            if (isCompleted) {
+return 'done';
+}
+
+            if (isUpcoming) {
+return stageIndex === 0 ? 'active' : 'pending';
+}
+
             // Match by workflow_step name from DB
             const isActiveStep = dbWorkflowStep && stageTitle.toLowerCase().includes(dbWorkflowStep.split(' ')[0]);
-            if (isActiveStep) return 'active';
+
+            if (isActiveStep) {
+return 'active';
+}
+
             // Determine by DB progress if no workflow_step match
             const dbProgress = Number(selectedRawProject?.progress || 0);
             const progressPerStep = 100 / (totalStages || 1);
             const stepsCompleted = Math.floor(dbProgress / progressPerStep);
-            if (stageIndex < stepsCompleted) return 'done';
-            if (stageIndex === stepsCompleted) return 'active';
+
+            if (stageIndex < stepsCompleted) {
+return 'done';
+}
+
+            if (stageIndex === stepsCompleted) {
+return 'active';
+}
+
             return 'pending';
         };
 
@@ -2291,8 +2535,14 @@ export default function ClientDetail({
     }, [currentStages]);
 
     const overallProgressPercent = useMemo(() => {
-        if (selectedProject?.status === 'Selesai') return 100;
-        if (selectedProject?.status === 'Akan Datang') return 15;
+        if (selectedProject?.status === 'Selesai') {
+return 100;
+}
+
+        if (selectedProject?.status === 'Akan Datang') {
+return 15;
+}
+
         return Math.round((completedStagesCount / (currentStages.length || 1)) * 100);
     }, [selectedProject, completedStagesCount, currentStages.length]);
 
@@ -2300,6 +2550,7 @@ export default function ClientDetail({
         if (selectedStageIndex >= currentStages.length) {
             return currentStages[currentStages.length - 1] || currentStages[0];
         }
+
         return currentStages[selectedStageIndex] || currentStages[0];
     }, [currentStages, selectedStageIndex]);
 
@@ -2321,7 +2572,11 @@ export default function ClientDetail({
 
     const openEditStageModal = (stageIdx: number) => {
         const stage = currentStages[stageIdx];
-        if (!stage) return;
+
+        if (!stage) {
+return;
+}
+
         setEditingStageIndex(stageIdx);
         setStageFormData({
             step: stage.step,
@@ -2338,15 +2593,21 @@ export default function ClientDetail({
     };
 
     const handleSaveStageEdit = (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
+        if (e) {
+e.preventDefault();
+}
+
         const rawProject = client.projects?.find((p: any) => String(p.id) === String(selectedProject?.id));
+
         if (!rawProject?.id) {
             toast.error('Project tidak ditemukan.');
+
             return;
         }
 
         if (!stageFormData.title.trim()) {
             toast.error('Nama tahap tidak boleh kosong.');
+
             return;
         }
 
@@ -2385,6 +2646,7 @@ export default function ClientDetail({
             updatedProjectProgress = Math.round((editingStageIndex / (currentStages.length || 1)) * 100);
         } else if (stageFormData.status === 'done') {
             const allDone = currentStages.every((s, idx) => (idx === editingStageIndex ? true : s.status === 'done'));
+
             if (allDone) {
                 updatedProjectStatus = 'completed';
                 updatedProjectProgress = 100;
@@ -2417,7 +2679,10 @@ export default function ClientDetail({
 
     const handleResetStageToDefault = () => {
         const rawProject = client.projects?.find((p: any) => String(p.id) === String(selectedProject?.id));
-        if (!rawProject?.id) return;
+
+        if (!rawProject?.id) {
+return;
+}
 
         setIsSavingStage(true);
         const currentCustomTimeline = rawProject.custom_timeline || {};
@@ -2453,6 +2718,7 @@ export default function ClientDetail({
         setSelectedStageIndex(0);
 
         const rawProj = client.projects?.find((p: any) => String(p.id) === String(projectId));
+
         if (rawProj) {
             // Sync checklist from the newly selected project's DB custom_timeline
             const dbChecklist = rawProj.custom_timeline?.checklist || {};
@@ -2473,7 +2739,13 @@ export default function ClientDetail({
     const [updatingStage, setUpdatingStage] = useState(false);
     const handleUpdateStage = (newWorkflowStep: string, newStatus: 'in_progress' | 'completed', newProgress: number) => {
         const rawProject = client.projects?.find((p: any) => String(p.id) === String(selectedProject?.id));
-        if (!rawProject?.id) { toast.error('Project tidak ditemukan'); return; }
+
+        if (!rawProject?.id) {
+ toast.error('Project tidak ditemukan');
+
+ return;
+}
+
         setUpdatingStage(true);
         router.patch(
             `/projects/${rawProject.id}/status`,
@@ -2489,8 +2761,16 @@ export default function ClientDetail({
 
     const handleRevertStage = (stageTitle: string, stageIndex: number) => {
         const rawProject = client.projects?.find((p: any) => String(p.id) === String(selectedProject?.id));
-        if (!rawProject?.id) { toast.error('Project tidak ditemukan'); return; }
-        if (!confirm(`Kembalikan status project ke tahap "${stageTitle}"? Link file hasil tahap ini atau setelahnya akan otomatis dihapus.`)) return;
+
+        if (!rawProject?.id) {
+ toast.error('Project tidak ditemukan');
+
+ return;
+}
+
+        if (!confirm(`Kembalikan status project ke tahap "${stageTitle}"? Link file hasil tahap ini atau setelahnya akan otomatis dihapus.`)) {
+return;
+}
 
         setUpdatingStage(true);
         router.patch(
@@ -2513,8 +2793,10 @@ export default function ClientDetail({
     // Quick Update Project Overall Status — Gambar 2
     const handleUpdateProjectStatus = (newStatus: string) => {
         const rawProject = client.projects?.find((p: any) => String(p.id) === String(selectedProject?.id));
+
         if (!rawProject?.id) {
             toast.error('Project tidak ditemukan.');
+
             return;
         }
 
@@ -2532,6 +2814,7 @@ export default function ClientDetail({
             newStep = currentStages[1]?.title || currentStages[0]?.title || 'Dalam Proses';
         } else if (newStatus === 'editing') {
             const editingStage = currentStages.find((s) => s.title.toLowerCase().includes('edit') || s.phase.toLowerCase().includes('edit'));
+
             if (editingStage) {
                 newStep = editingStage.title;
             }
@@ -2559,13 +2842,18 @@ export default function ClientDetail({
     // Quick Update Individual Stage Status from Stepper — Gambar 1
     const handleQuickUpdateStageStatus = (stageIdx: number, newStatus: 'done' | 'active' | 'pending') => {
         const rawProject = client.projects?.find((p: any) => String(p.id) === String(selectedProject?.id));
+
         if (!rawProject?.id) {
             toast.error('Project tidak ditemukan.');
+
             return;
         }
 
         const targetStage = currentStages[stageIdx];
-        if (!targetStage) return;
+
+        if (!targetStage) {
+return;
+}
 
         const currentCustomTimeline = rawProject.custom_timeline || {};
         const existingStages: any[] = currentCustomTimeline.stages || [];
@@ -2596,23 +2884,29 @@ export default function ClientDetail({
 
         if (newStatus === 'active') {
             updatedWorkflowStep = targetStage.title;
+
             if (rawProject.status === 'draft' || rawProject.status === 'pending' || rawProject.status === 'completed') {
                 updatedProjectStatus = 'in_progress';
             }
+
             updatedProjectProgress = Math.round(((stageIdx + 0.5) / (currentStages.length || 1)) * 100);
         } else if (newStatus === 'done') {
             const allDone = currentStages.every((s, idx) => (idx === stageIdx ? true : s.status === 'done'));
+
             if (allDone) {
                 updatedProjectStatus = 'completed';
                 updatedProjectProgress = 100;
             } else {
                 const nextIdx = stageIdx + 1;
+
                 if (nextIdx < currentStages.length) {
                     updatedWorkflowStep = currentStages[nextIdx].title;
                 }
+
                 if (rawProject.status === 'draft' || rawProject.status === 'pending') {
                     updatedProjectStatus = 'in_progress';
                 }
+
                 const completedCount = currentStages.filter((s, idx) => (idx === stageIdx ? true : s.status === 'done')).length;
                 updatedProjectProgress = Math.round((completedCount / (currentStages.length || 1)) * 100);
             }
@@ -2621,9 +2915,11 @@ export default function ClientDetail({
                 const prevStage = stageIdx > 0 ? currentStages[stageIdx - 1] : null;
                 updatedWorkflowStep = prevStage ? prevStage.title : currentStages[0]?.title || 'Booking';
             }
+
             if (rawProject.status === 'completed') {
                 updatedProjectStatus = 'in_progress';
             }
+
             const completedCount = currentStages.filter((s, idx) => (idx === stageIdx ? false : s.status === 'done')).length;
             updatedProjectProgress = Math.round((completedCount / (currentStages.length || 1)) * 100);
         }
@@ -2661,7 +2957,11 @@ export default function ClientDetail({
         toast.success(isNowChecked ? `"${taskLabel}" ditandai selesai!` : `"${taskLabel}" dibatalkan.`);
 
         const rawProject = client.projects?.find((p: any) => String(p.id) === String(selectedProject?.id));
-        if (!rawProject?.id) return;
+
+        if (!rawProject?.id) {
+return;
+}
+
         const currentTimeline = rawProject.custom_timeline || {};
         setSavingChecklist(true);
         router.patch(
@@ -2681,7 +2981,10 @@ export default function ClientDetail({
     // Delete file link — DELETE /files/{id}
     const [deletingLinkId, setDeletingLinkId] = useState<string | null>(null);
     const handleDeleteLink = (linkId: string, linkTitle: string) => {
-        if (!confirm(`Hapus link "${linkTitle}"?`)) return;
+        if (!confirm(`Hapus link "${linkTitle}"?`)) {
+return;
+}
+
         setDeletingLinkId(linkId);
         router.delete(`/files/${linkId}`, {
             preserveScroll: true,
@@ -2730,10 +3033,13 @@ export default function ClientDetail({
     // Sync selectedStageIndex to active stage from DB workflow_step on project switch
     useEffect(() => {
         const dbStep = (selectedRawProject?.workflow_step || '').toLowerCase().trim();
+
         if (!dbStep || selectedProject?.status === 'Selesai') {
             setSelectedStageIndex(0);
+
             return;
         }
+
         const stageIdx = currentStages.findIndex(
             (s) => s.title.toLowerCase().includes(dbStep.split(' ')[0])
         );
@@ -2744,9 +3050,13 @@ export default function ClientDetail({
     const [newDriveLinkType, setNewDriveLinkType] = useState('google_drive');
 
     const handleSaveDriveLink = (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
+        if (e) {
+e.preventDefault();
+}
+
         if (!newDriveTitle.trim() || !newDriveUrl.trim()) {
             toast.error('Judul dan URL Google Drive wajib diisi');
+
             return;
         }
 
@@ -2834,12 +3144,14 @@ export default function ClientDetail({
                 },
             ];
         }
+
         return [];
     });
 
     const handleAddNote = () => {
         if (!noteInputText.trim()) {
             toast.error('Isi catatan tidak boleh kosong');
+
             return;
         }
 
@@ -2874,6 +3186,7 @@ export default function ClientDetail({
         return notesList.filter((n) => {
             const matchesCat = noteCategoryFilter === 'all' || n.category.toLowerCase() === noteCategoryFilter.toLowerCase();
             const matchesAuth = noteAuthorFilter === 'all' || n.author.toLowerCase().includes(noteAuthorFilter.toLowerCase());
+
             return matchesCat && matchesAuth;
         });
     }, [notesList, noteCategoryFilter, noteAuthorFilter]);
@@ -2902,11 +3215,16 @@ export default function ClientDetail({
     });
 
     const handleSaveComm = (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
+        if (e) {
+e.preventDefault();
+}
+
         if (!newCommFormData.title.trim() || !newCommFormData.content.trim()) {
             toast.error('Judul dan isi catatan komunikasi wajib diisi');
+
             return;
         }
+
         setCommList((prev) => [
             {
                 id: String(Date.now()),
@@ -2965,17 +3283,25 @@ export default function ClientDetail({
     }, [client]);
 
     const handleSaveClientAccount = (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
+        if (e) {
+e.preventDefault();
+}
+
         if (!accountEmail.trim()) {
             toast.error('Email akun wajib diisi');
+
             return;
         }
+
         if (!accountPassword || accountPassword !== accountPasswordConfirm) {
             toast.error('Password dan konfirmasi password tidak cocok');
+
             return;
         }
+
         if (accountPassword.length < 6) {
             toast.error('Password minimal 6 karakter');
+
             return;
         }
 
@@ -2995,8 +3321,10 @@ export default function ClientDetail({
                     setSubmittingAccount(false);
                     toast.success(clientUser ? 'Kredensial akun klien berhasil diperbarui!' : 'Akun klien berhasil dibuat & diaktifkan!');
                     const flash = (page.props as any).flash;
+
                     if (flash?.whatsapp_url && (accountShareMethod === 'whatsapp' || accountShareMethod === 'both')) {
                         const newWin = window.open(flash.whatsapp_url, '_blank');
+
                         if (!newWin || newWin.closed || typeof newWin.closed === 'undefined') {
                             toast.info('Klik untuk membuka pesan WhatsApp', {
                                 action: {
@@ -3094,15 +3422,14 @@ export default function ClientDetail({
                                             <DropdownMenuTrigger asChild>
                                                 <button
                                                     type="button"
-                                                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-bold border transition-all cursor-pointer shadow-2xs hover:scale-105 ${
-                                                        clientTierValue === 'corporate'
+                                                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-bold border transition-all cursor-pointer shadow-2xs hover:scale-105 ${clientTierValue === 'corporate'
                                                             ? 'bg-blue-50 text-blue-700 border-blue-200/80'
                                                             : clientTierValue === 'vip'
-                                                            ? 'bg-amber-50 text-amber-700 border-amber-200/80'
-                                                            : clientTierValue === 'premium'
-                                                            ? 'bg-[#F3E8FF] text-[#7E22CE] border-purple-200/80'
-                                                            : 'bg-slate-100 text-slate-700 border-slate-200/80'
-                                                    }`}
+                                                                ? 'bg-amber-50 text-amber-700 border-amber-200/80'
+                                                                : clientTierValue === 'premium'
+                                                                    ? 'bg-[#F3E8FF] text-[#7E22CE] border-purple-200/80'
+                                                                    : 'bg-slate-100 text-slate-700 border-slate-200/80'
+                                                        }`}
                                                     title="Klik untuk mengubah tingkatan klien"
                                                 >
                                                     <Sparkles className="w-3 h-3 opacity-80" />
@@ -3118,9 +3445,8 @@ export default function ClientDetail({
                                                     <DropdownMenuItem
                                                         key={opt.value}
                                                         onClick={() => handleUpdateClientTier(opt.value)}
-                                                        className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                                                            clientTierValue === opt.value ? 'bg-slate-100 font-bold' : 'hover:bg-slate-50'
-                                                        }`}
+                                                        className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${clientTierValue === opt.value ? 'bg-slate-100 font-bold' : 'hover:bg-slate-50'
+                                                            }`}
                                                     >
                                                         <div className="flex items-center gap-2">
                                                             <span className={`w-2 h-2 rounded-full ${opt.dotColor}`} />
@@ -3137,15 +3463,14 @@ export default function ClientDetail({
                                             <DropdownMenuTrigger asChild>
                                                 <button
                                                     type="button"
-                                                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-bold border transition-all cursor-pointer shadow-2xs hover:scale-105 ${
-                                                        client.status === 'completed'
+                                                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-bold border transition-all cursor-pointer shadow-2xs hover:scale-105 ${client.status === 'completed'
                                                             ? 'bg-blue-50 text-blue-700 border-blue-200/80'
                                                             : client.status === 'lead'
-                                                            ? 'bg-amber-50 text-amber-700 border-amber-200/80'
-                                                            : client.status === 'blocked'
-                                                            ? 'bg-rose-50 text-rose-700 border-rose-200/80'
-                                                            : 'bg-[#DCFCE7] text-[#15803D] border-emerald-200/80'
-                                                    }`}
+                                                                ? 'bg-amber-50 text-amber-700 border-amber-200/80'
+                                                                : client.status === 'blocked'
+                                                                    ? 'bg-rose-50 text-rose-700 border-rose-200/80'
+                                                                    : 'bg-[#DCFCE7] text-[#15803D] border-emerald-200/80'
+                                                        }`}
                                                     title="Klik untuk mengubah status aktif klien"
                                                 >
                                                     <span className="w-1.5 h-1.5 rounded-full bg-current" />
@@ -3153,10 +3478,10 @@ export default function ClientDetail({
                                                         {client.status === 'completed'
                                                             ? 'Selesai'
                                                             : client.status === 'lead'
-                                                            ? 'Lead'
-                                                            : client.status === 'blocked'
-                                                            ? 'Diblokir'
-                                                            : 'Aktif'}
+                                                                ? 'Lead'
+                                                                : client.status === 'blocked'
+                                                                    ? 'Diblokir'
+                                                                    : 'Aktif'}
                                                     </span>
                                                     <ChevronDown className="w-2.5 h-2.5 opacity-60" />
                                                 </button>
@@ -3169,9 +3494,8 @@ export default function ClientDetail({
                                                     <DropdownMenuItem
                                                         key={opt.value}
                                                         onClick={() => handleUpdateClientStatus(opt.value)}
-                                                        className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                                                            client.status === opt.value ? 'bg-slate-100 font-bold' : 'hover:bg-slate-50'
-                                                        }`}
+                                                        className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${client.status === opt.value ? 'bg-slate-100 font-bold' : 'hover:bg-slate-50'
+                                                            }`}
                                                     >
                                                         <div className="flex items-center gap-2">
                                                             <span className={`w-2 h-2 rounded-full ${opt.dotColor}`} />
@@ -3258,9 +3582,9 @@ export default function ClientDetail({
                                             {client.referral_name && (
                                                 <span
                                                     className="text-[10px] font-bold text-purple-700 bg-purple-100/90 px-1.5 py-0.5 rounded inline-block leading-tight truncate mt-0.5 max-w-[150px]"
-                                                    title={`WO / Rekomendasi: ${client.referral_name}`}
+                                                    title={`Rekomendasi: ${client.referral_name}`}
                                                 >
-                                                    WO: {client.referral_name}
+                                                    Rekomendasi: {client.referral_name}
                                                 </span>
                                             )}
                                         </div>
@@ -3513,6 +3837,7 @@ export default function ClientDetail({
                                 {activityItems.length > 0 ? (
                                     activityItems.slice(0, 3).map((act) => {
                                         const IconCmp = act.icon;
+
                                         return (
                                             <div key={act.id} className="flex items-start gap-3">
                                                 <div
@@ -3561,1437 +3886,1430 @@ export default function ClientDetail({
                     <div className="bg-white border border-slate-200/80 rounded-2xl shadow-2xs overflow-hidden flex flex-col">
                         {/* Tab Bar Header inside Card */}
                         <div className="px-4 sm:px-6 pt-4 border-b border-slate-100 flex items-center gap-6 sm:gap-8 overflow-x-auto scrollbar-none shrink-0">
-                                {[
-                                    { id: 'ringkasan', label: 'Ringkasan' },
-                                    { id: 'projects', label: 'Projects & Orders' },
-                                    { id: 'pembayaran', label: 'Pembayaran' },
-                                    { id: 'files', label: 'Files' },
-                                    { id: 'catatan', label: 'Catatan' },
-                                    // { id: 'komunikasi', label: 'Riwayat Komunikasi' }, // Dihide sementara sesuai permintaan
-                                    { id: 'akun', label: 'Informasi Akun' },
-                                ].map((t) => {
-                                    const isActive = mainTab === t.id;
-                                    return (
-                                        <button
-                                            key={t.id}
-                                            type="button"
-                                            onClick={() => setMainTab(t.id as any)}
-                                            className={`pb-3 text-xs whitespace-nowrap cursor-pointer relative transition-colors ${isActive
-                                                ? 'font-extrabold text-[#E57A00]'
-                                                : 'font-semibold text-slate-500 hover:text-slate-900'
-                                                }`}
-                                        >
-                                            {t.label}
-                                            {isActive && (
-                                                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#E57A00] rounded-full" />
-                                            )}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-
-                            {/* TAB 1: RINGKASAN (INFORMASI DETAIL KLIEN DENGAN CATEGORY SPECIFIC VIEW) */}
-                            {mainTab === 'ringkasan' && (() => {
-                                const clientCategory = (categories || []).find((c) =>
-                                    String(c.id) === String(client.category_id || (client.category as any)?.id) ||
-                                    c.slug === client.client_type ||
-                                    c.name.toLowerCase() === (client.client_type || '').toLowerCase()
-                                ) || client.category || {
-                                    name: client.client_type || 'Wedding',
-                                    form_type: resolveCategoryKey(client.category || { slug: client.client_type, form_type: client.client_type }),
-                                };
-
-                                const rawProjectCandidate = selectedRawProject || client.projects?.[0];
-                                const effectiveCategory = rawProjectCandidate?.category || projectCategory || clientCategory;
-
-                                const activeProjectForView = {
-                                    ...(rawProjectCandidate || {}),
-                                    category: effectiveCategory,
-                                    client: {
-                                        ...client,
-                                        ...(rawProjectCandidate?.client || {}),
-                                        name: (client.name && client.name !== '-') ? client.name : ((client.category_data as any)?.client_name || (client.category_data as any)?.name || '-'),
-                                    },
-                                    category_data: {
-                                        ...(client.category_data || {}),
-                                        ...(rawProjectCandidate?.category_data || {}),
-                                    },
-                                    location: rawProjectCandidate?.location || (rawProjectCandidate?.category_data as any)?.location || client.address,
-                                    event_date: rawProjectCandidate?.event_date || (rawProjectCandidate?.category_data as any)?.event_date,
-                                    name: rawProjectCandidate?.name || client.name,
-                                };
-
-                                const effectiveProvince = client.province || (client.category_data as any)?.province || '-';
-                                const effectiveCity = client.city || (client.category_data as any)?.city || (rawProjectCandidate?.category_data as any)?.city || '-';
-                                const effectiveDistrict = client.district || (client.category_data as any)?.district || '-';
-                                const effectiveVillage = client.village || (client.category_data as any)?.village || '-';
-                                const effectivePostalCode = client.postal_code || (client.category_data as any)?.postal_code || '-';
-                                const effectiveAddress = client.address || (client.category_data as any)?.address || rawProjectCandidate?.location || (rawProjectCandidate?.category_data as any)?.event_location || (rawProjectCandidate?.category_data as any)?.venue_location || '-';
-
-                                const effectivePhone = client.phone || (client.category_data as any)?.phone || (client.category_data as any)?.pic_phone || (rawProjectCandidate?.category_data as any)?.pic_phone || '';
-                                const effectiveSecondaryPhone = client.secondary_phone || (client.category_data as any)?.secondary_phone || '';
-                                const effectiveEmail = client.email || (client.category_data as any)?.email || (client.category_data as any)?.pic_email || (rawProjectCandidate?.category_data as any)?.pic_email || '';
-                                const effectiveInstagram = client.instagram || (client.category_data as any)?.instagram || (client.category_data as any)?.groom_instagram || (client.category_data as any)?.bride_instagram || '';
-                                const effectiveOtherSocial = client.other_social_media || (client.category_data as any)?.other_social_media || '';
-
-                                const effectivePackageName = rawProjectCandidate?.package?.name || (rawProjectCandidate?.name ? `Custom (${rawProjectCandidate.name})` : 'Paket Custom / Direct Order');
-                                const effectiveEventTime = rawProjectCandidate?.event_time || (rawProjectCandidate?.category_data as any)?.event_time || (rawProjectCandidate?.category_data as any)?.session_time || '-';
-                                const effectiveLocation = rawProjectCandidate?.location || (rawProjectCandidate?.category_data as any)?.location || (rawProjectCandidate?.category_data as any)?.event_location || (rawProjectCandidate?.category_data as any)?.venue_location || client.address || '-';
+                            {[
+                                { id: 'ringkasan', label: 'Ringkasan' },
+                                { id: 'projects', label: 'Projects & Orders' },
+                                { id: 'pembayaran', label: 'Pembayaran' },
+                                { id: 'files', label: 'Files' },
+                                { id: 'catatan', label: 'Catatan' },
+                                // { id: 'komunikasi', label: 'Riwayat Komunikasi' }, // Dihide sementara sesuai permintaan
+                                { id: 'akun', label: 'Informasi Akun' },
+                            ].map((t) => {
+                                const isActive = mainTab === t.id;
 
                                 return (
-                                    <div className="p-6 space-y-5 animate-in fade-in duration-150 flex-1 flex flex-col justify-between">
-                                        <div className="flex items-center justify-between">
-                                            <h3 className="text-sm font-extrabold text-slate-900 tracking-tight">
-                                                Informasi Detail Klien
-                                            </h3>
-                                            {/* <span className="text-[11px] font-semibold text-slate-500">
+                                    <button
+                                        key={t.id}
+                                        type="button"
+                                        onClick={() => setMainTab(t.id as any)}
+                                        className={`pb-3 text-xs whitespace-nowrap cursor-pointer relative transition-colors ${isActive
+                                            ? 'font-extrabold text-[#E57A00]'
+                                            : 'font-semibold text-slate-500 hover:text-slate-900'
+                                            }`}
+                                    >
+                                        {t.label}
+                                        {isActive && (
+                                            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#E57A00] rounded-full" />
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* TAB 1: RINGKASAN (INFORMASI DETAIL KLIEN DENGAN CATEGORY SPECIFIC VIEW) */}
+                        {mainTab === 'ringkasan' && (() => {
+                            const clientCategory = (categories || []).find((c) =>
+                                String(c.id) === String(client.category_id || (client.category as any)?.id) ||
+                                c.slug === client.client_type ||
+                                c.name.toLowerCase() === (client.client_type || '').toLowerCase()
+                            ) || client.category || {
+                                name: client.client_type || 'Wedding',
+                                form_type: resolveCategoryKey(client.category || { slug: client.client_type, form_type: client.client_type }),
+                            };
+
+                            const rawProjectCandidate = selectedRawProject || client.projects?.[0];
+                            const effectiveCategory = rawProjectCandidate?.category || projectCategory || clientCategory;
+
+                            const activeProjectForView = {
+                                ...(rawProjectCandidate || {}),
+                                category: effectiveCategory,
+                                client: {
+                                    ...client,
+                                    ...(rawProjectCandidate?.client || {}),
+                                    name: (client.name && client.name !== '-') ? client.name : ((client.category_data as any)?.client_name || (client.category_data as any)?.name || '-'),
+                                },
+                                category_data: {
+                                    ...(client.category_data || {}),
+                                    ...(rawProjectCandidate?.category_data || {}),
+                                },
+                                location: rawProjectCandidate?.location || (rawProjectCandidate?.category_data as any)?.location || '',
+                                event_date: rawProjectCandidate?.event_date || (rawProjectCandidate?.category_data as any)?.event_date,
+                                name: rawProjectCandidate?.name || client.name,
+                            };
+
+                            const effectiveProvince = client.province || (client.category_data as any)?.province || '-';
+                            const effectiveCity = client.city || (client.category_data as any)?.city || (rawProjectCandidate?.category_data as any)?.city || '-';
+                            const effectiveDistrict = client.district || (client.category_data as any)?.district || '-';
+                            const effectiveVillage = client.village || (client.category_data as any)?.village || '-';
+                            const effectivePostalCode = client.postal_code || (client.category_data as any)?.postal_code || '-';
+                            const effectiveAddress = client.address || (client.category_data as any)?.address || rawProjectCandidate?.location || (rawProjectCandidate?.category_data as any)?.event_location || (rawProjectCandidate?.category_data as any)?.venue_location || '-';
+
+                            const effectivePhone = client.phone || (client.category_data as any)?.phone || (client.category_data as any)?.pic_phone || (rawProjectCandidate?.category_data as any)?.pic_phone || '';
+                            const effectiveSecondaryPhone = client.secondary_phone || (client.category_data as any)?.secondary_phone || '';
+                            const effectiveEmail = client.email || (client.category_data as any)?.email || (client.category_data as any)?.pic_email || (rawProjectCandidate?.category_data as any)?.pic_email || '';
+                            const effectiveInstagram = client.instagram || (client.category_data as any)?.instagram || (client.category_data as any)?.groom_instagram || (client.category_data as any)?.bride_instagram || '';
+                            const effectiveOtherSocial = client.other_social_media || (client.category_data as any)?.other_social_media || '';
+
+                            const effectivePackageName = rawProjectCandidate?.package?.name || 'Belum dipilih';
+                            const effectiveEventTime = rawProjectCandidate?.event_time || (rawProjectCandidate?.category_data as any)?.event_time || (rawProjectCandidate?.category_data as any)?.session_time || '-';
+                            const effectiveLocation = rawProjectCandidate?.location || (rawProjectCandidate?.category_data as any)?.location || (rawProjectCandidate?.category_data as any)?.event_location || (rawProjectCandidate?.category_data as any)?.venue_location || client.address || '-';
+
+                            return (
+                                <div className="p-6 space-y-5 animate-in fade-in duration-150 flex-1 flex flex-col justify-between">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-sm font-extrabold text-slate-900 tracking-tight">
+                                            Informasi Detail Klien
+                                        </h3>
+                                        {/* <span className="text-[11px] font-semibold text-slate-500">
                                                 ID Klien: <span className="font-mono text-slate-700">#{client.id}</span>
                                             </span> */}
-                                        </div>
+                                    </div>
 
-                                        {/* SECTION 1: Dynamic Category Specific Details */}
-                                        <CategorySpecificView project={activeProjectForView} />
+                                    {/* SECTION 1: Dynamic Category Specific Details */}
+                                    <CategorySpecificView project={activeProjectForView} />
 
-                                        {/* SECTION 3: Informasi Alamat & Kontak (Numbered 1-12 Badges in 1 Column) */}
-                                        <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 sm:p-5 space-y-4">
-                                            <div className="flex items-center justify-between pb-2 border-b border-slate-100/80">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
-                                                        <MapPin className="w-3.5 h-3.5" />
-                                                    </div>
-                                                    <h4 className="text-xs font-bold text-slate-900">
-                                                        Informasi Alamat &amp; Kontak
-                                                    </h4>
-                                                </div>
-                                                <span className="text-[10.5px] font-semibold text-slate-500 bg-white px-2.5 py-0.5 rounded-full border border-slate-200/60 shadow-2xs">
-                                                    12 Poin Informasi Lengkap
-                                                </span>
-                                            </div>
-
-                                            {/* SUBSECTION A: WILAYAH & ALAMAT DOMISILI (1 - 6) */}
-                                            <div className="space-y-2">
-                                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block px-1">
-                                                    Wilayah &amp; Alamat Lengkap
-                                                </span>
-                                                <div className="bg-white rounded-xl border border-slate-200/70 divide-y divide-slate-100/90 text-xs overflow-hidden shadow-2xs">
-                                                    {/* 1. Provinsi */}
-                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                        <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
-                                                            <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">1</span>
-                                                            <span className="text-[11.5px] font-medium text-slate-600">Provinsi</span>
-                                                        </div>
-                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
-                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                            <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">{effectiveProvince}</span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* 2. Kota/Kabupaten */}
-                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                        <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
-                                                            <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">2</span>
-                                                            <span className="text-[11.5px] font-medium text-slate-600">Kota/Kabupaten</span>
-                                                        </div>
-                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
-                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                            <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">{effectiveCity}</span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* 3. Kecamatan */}
-                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                        <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
-                                                            <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">3</span>
-                                                            <span className="text-[11.5px] font-medium text-slate-600">Kecamatan</span>
-                                                        </div>
-                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
-                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                            <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">{effectiveDistrict}</span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* 4. Kelurahan */}
-                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                        <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
-                                                            <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">4</span>
-                                                            <span className="text-[11.5px] font-medium text-slate-600">Kelurahan</span>
-                                                        </div>
-                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
-                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                            <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">{effectiveVillage}</span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* 5. Kode Pos */}
-                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                        <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
-                                                            <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">5</span>
-                                                            <span className="text-[11.5px] font-medium text-slate-600">Kode Pos</span>
-                                                        </div>
-                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
-                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                            <span className="font-mono font-bold text-slate-900 leading-snug flex-1 min-w-0">{effectivePostalCode}</span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* 6. Alamat Lengkap */}
-                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                        <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
-                                                            <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">6</span>
-                                                            <span className="text-[11.5px] font-medium text-slate-600">Alamat Lengkap</span>
-                                                        </div>
-                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
-                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                            <span className="font-semibold text-slate-900 leading-relaxed flex-1 min-w-0 break-words">{effectiveAddress}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* SUBSECTION B: KONTAK & MEDIA SOSIAL (7 - 12) */}
-                                            <div className="space-y-2 pt-1">
-                                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block px-1">
-                                                    Kontak &amp; Media Sosial
-                                                </span>
-                                                <div className="bg-white rounded-xl border border-slate-200/70 divide-y divide-slate-100/90 text-xs overflow-hidden shadow-2xs">
-                                                    {/* 7. No. WhatsApp */}
-                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                        <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
-                                                            <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">7</span>
-                                                            <span className="text-[11.5px] font-medium text-slate-600">No. WhatsApp</span>
-                                                        </div>
-                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
-                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                            <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 font-mono">
-                                                                {effectivePhone ? (
-                                                                    <a
-                                                                        href={`https://wa.me/${String(effectivePhone).replace(/[^0-9]/g, '').replace(/^0/, '62')}`}
-                                                                        target="_blank"
-                                                                        rel="noopener noreferrer"
-                                                                        className="text-emerald-700 hover:text-emerald-800 hover:underline inline-flex items-center gap-1.5 font-bold"
-                                                                    >
-                                                                        <span>{effectivePhone}</span>
-                                                                        <ExternalLink className="w-3 h-3 text-emerald-600 shrink-0" />
-                                                                    </a>
-                                                                ) : '-'}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* 8. No. Alternatif */}
-                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                        <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
-                                                            <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">8</span>
-                                                            <span className="text-[11.5px] font-medium text-slate-600">No. Alternatif</span>
-                                                        </div>
-                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
-                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                            <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 font-mono">
-                                                                {effectiveSecondaryPhone || '-'}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* 9. Preferensi Kontak */}
-                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                        <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
-                                                            <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">9</span>
-                                                            <span className="text-[11.5px] font-medium text-slate-600">Preferensi Kontak</span>
-                                                        </div>
-                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
-                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                            <span className="font-semibold text-slate-900 leading-snug capitalize flex-1 min-w-0">
-                                                                {client.preferred_contact === 'email' ? 'Email' : client.preferred_contact === 'phone' ? 'Telepon' : 'WhatsApp'}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* 10. Email Aktif */}
-                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                        <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
-                                                            <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">10</span>
-                                                            <span className="text-[11.5px] font-medium text-slate-600">Email Aktif</span>
-                                                        </div>
-                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
-                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                            <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 break-all" title={effectiveEmail || '-'}>
-                                                                {effectiveEmail ? (
-                                                                    <a href={`mailto:${effectiveEmail}`} className="text-indigo-600 hover:underline">
-                                                                        {effectiveEmail}
-                                                                    </a>
-                                                                ) : '-'}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* 11. Instagram */}
-                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                        <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
-                                                            <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">11</span>
-                                                            <span className="text-[11.5px] font-medium text-slate-600">Instagram</span>
-                                                        </div>
-                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
-                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                            <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
-                                                                {effectiveInstagram ? (
-                                                                    <a
-                                                                        href={`https://instagram.com/${effectiveInstagram.replace(/^@/, '')}`}
-                                                                        target="_blank"
-                                                                        rel="noopener noreferrer"
-                                                                        className="text-pink-600 hover:underline inline-flex items-center gap-1 break-all font-medium"
-                                                                    >
-                                                                        <span>{effectiveInstagram.startsWith('@') ? effectiveInstagram : `@${effectiveInstagram}`}</span>
-                                                                        <ExternalLink className="w-3 h-3 shrink-0" />
-                                                                    </a>
-                                                                ) : '-'}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* 12. Media Sosial Lain */}
-                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                        <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
-                                                            <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">12</span>
-                                                            <span className="text-[11.5px] font-medium text-slate-600">Media Sosial Lain</span>
-                                                        </div>
-                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
-                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                            <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 break-words whitespace-pre-line">
-                                                                {effectiveOtherSocial || '-'}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* SECTION 4: Informasi Acara / Project & Paket */}
-                                        <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 sm:p-5 space-y-3.5">
-                                            <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
+                                    {/* SECTION 3: Informasi Pemesan & Kontak (Numbered 1-12 Badges in 1 Column) */}
+                                    <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 sm:p-5 space-y-4">
+                                        <div className="flex items-center justify-between pb-2 border-b border-slate-100/80">
+                                            <div className="flex items-center gap-2">
                                                 <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
-                                                    <Calendar className="w-3.5 h-3.5" />
+                                                    <MapPin className="w-3.5 h-3.5" />
                                                 </div>
                                                 <h4 className="text-xs font-bold text-slate-900">
-                                                    Informasi Acara / Project &amp; Paket Layanan
+                                                    Informasi Pemesan &amp; Kontak
                                                 </h4>
                                             </div>
+                                            <span className="text-[10.5px] font-semibold text-slate-500 bg-white px-2.5 py-0.5 rounded-full border border-slate-200/60 shadow-2xs">
+                                                12 Poin Informasi Lengkap
+                                            </span>
+                                        </div>
 
+                                        {/* SUBSECTION A: WILAYAH & ALAMAT DOMISILI (1 - 6) */}
+                                        <div className="space-y-2">
+                                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block px-1">
+                                                Wilayah &amp; Alamat Lengkap
+                                            </span>
                                             <div className="bg-white rounded-xl border border-slate-200/70 divide-y divide-slate-100/90 text-xs overflow-hidden shadow-2xs">
+                                                {/* 1. Provinsi */}
                                                 <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                    <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Jenis Acara</span>
+                                                    <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                                        <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">1</span>
+                                                        <span className="text-[11.5px] font-medium text-slate-600">Provinsi</span>
+                                                    </div>
                                                     <div className="flex items-baseline gap-2 flex-1 min-w-0">
                                                         <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                        <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">
-                                                            {rawProjectCandidate?.category?.name || client.client_type || '-'}
-                                                        </span>
+                                                        <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">{effectiveProvince}</span>
                                                     </div>
                                                 </div>
+
+                                                {/* 2. Kota/Kabupaten */}
                                                 <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                    <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Tanggal Pelaksanaan</span>
+                                                    <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                                        <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">2</span>
+                                                        <span className="text-[11.5px] font-medium text-slate-600">Kota/Kabupaten</span>
+                                                    </div>
                                                     <div className="flex items-baseline gap-2 flex-1 min-w-0">
                                                         <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                        <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">
-                                                            {rawProjectCandidate?.event_date ? formatDate(rawProjectCandidate.event_date) : '-'}
-                                                        </span>
+                                                        <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">{effectiveCity}</span>
                                                     </div>
                                                 </div>
+
+                                                {/* 3. Kecamatan */}
                                                 <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                    <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Waktu Pelaksanaan</span>
+                                                    <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                                        <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">3</span>
+                                                        <span className="text-[11.5px] font-medium text-slate-600">Kecamatan</span>
+                                                    </div>
                                                     <div className="flex items-baseline gap-2 flex-1 min-w-0">
                                                         <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                        <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">
-                                                            {effectiveEventTime}
-                                                        </span>
+                                                        <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">{effectiveDistrict}</span>
                                                     </div>
                                                 </div>
+
+                                                {/* 4. Kelurahan */}
                                                 <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                    <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Tempat / Lokasi Acara</span>
+                                                    <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                                        <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">4</span>
+                                                        <span className="text-[11.5px] font-medium text-slate-600">Kelurahan</span>
+                                                    </div>
                                                     <div className="flex items-baseline gap-2 flex-1 min-w-0">
                                                         <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                        <span className="font-bold text-slate-900 leading-relaxed flex-1 min-w-0 break-words">
-                                                            {effectiveLocation}
-                                                        </span>
+                                                        <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">{effectiveVillage}</span>
                                                     </div>
                                                 </div>
+
+                                                {/* 5. Kode Pos */}
                                                 <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                    <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Paket Dipilih</span>
+                                                    <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                                        <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">5</span>
+                                                        <span className="text-[11.5px] font-medium text-slate-600">Kode Pos</span>
+                                                    </div>
                                                     <div className="flex items-baseline gap-2 flex-1 min-w-0">
                                                         <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                        <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">
-                                                            {effectivePackageName}
-                                                        </span>
+                                                        <span className="font-mono font-bold text-slate-900 leading-snug flex-1 min-w-0">{effectivePostalCode}</span>
                                                     </div>
                                                 </div>
+
+                                                {/* 6. Alamat Lengkap */}
                                                 <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                    <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Kategori Layanan</span>
-                                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
-                                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                        <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">
-                                                            {rawProjectCandidate?.category?.name || '-'}
-                                                        </span>
+                                                    <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                                        <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">6</span>
+                                                        <span className="text-[11.5px] font-medium text-slate-600">Alamat Lengkap</span>
                                                     </div>
-                                                </div>
-                                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                    <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Total Nilai Project</span>
                                                     <div className="flex items-baseline gap-2 flex-1 min-w-0">
                                                         <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                        <span className="font-bold text-emerald-700 leading-snug flex-1 min-w-0 font-mono break-words">
-                                                            {rawProjectCandidate?.total_amount ? formatRupiah(rawProjectCandidate.total_amount) : '-'}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                    <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Status Pembayaran</span>
-                                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
-                                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                        <span className="font-bold text-slate-900 leading-snug capitalize flex-1 min-w-0">
-                                                            {rawProjectCandidate?.payment_status === 'paid' ? 'Lunas' : rawProjectCandidate?.payment_status === 'partial' ? 'DP / Sebagian' : 'Belum Dibayar'}
-                                                        </span>
+                                                        <span className="font-semibold text-slate-900 leading-relaxed flex-1 min-w-0 break-words">{effectiveAddress}</span>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* SECTION 5: Sumber Lead & Partner Referral */}
-                                        <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 sm:p-5 space-y-3.5">
-                                            <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
-                                                <div className="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100/80">
-                                                    <Users className="w-3.5 h-3.5" />
-                                                </div>
-                                                <h4 className="text-xs font-bold text-slate-900">
-                                                    Sumber Lead &amp; Partner Referral
-                                                </h4>
-                                            </div>
-
+                                        {/* SUBSECTION B: KONTAK & MEDIA SOSIAL (7 - 12) */}
+                                        <div className="space-y-2 pt-1">
+                                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block px-1">
+                                                Kontak &amp; Media Sosial
+                                            </span>
                                             <div className="bg-white rounded-xl border border-slate-200/70 divide-y divide-slate-100/90 text-xs overflow-hidden shadow-2xs">
+                                                {/* 7. No. WhatsApp */}
                                                 <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                    <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Sumber Pendaftaran</span>
+                                                    <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                                        <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">7</span>
+                                                        <span className="text-[11.5px] font-medium text-slate-600">No. WhatsApp</span>
+                                                    </div>
                                                     <div className="flex items-baseline gap-2 flex-1 min-w-0">
                                                         <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                        <div className="font-bold text-slate-900 leading-snug flex-1 min-w-0 flex items-center gap-2 flex-wrap">
-                                                            <span>{client.source || 'Formulir Online (Client Intake)'}</span>
-                                                            {client.client_source && (
-                                                                <Link
-                                                                    href={`/client-sources/${client.client_source.id}`}
-                                                                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-violet-50 text-violet-700 border border-violet-200 hover:bg-violet-100 transition-colors"
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 font-mono">
+                                                            {effectivePhone ? (
+                                                                <a
+                                                                    href={`https://wa.me/${String(effectivePhone).replace(/[^0-9]/g, '').replace(/^0/, '62')}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="text-emerald-700 hover:text-emerald-800 hover:underline inline-flex items-center gap-1.5 font-bold"
                                                                 >
-                                                                    Master: {client.client_source.name}
-                                                                </Link>
-                                                            )}
-                                                        </div>
+                                                                    <span>{effectivePhone}</span>
+                                                                    <ExternalLink className="w-3 h-3 text-emerald-600 shrink-0" />
+                                                                </a>
+                                                            ) : '-'}
+                                                        </span>
                                                     </div>
                                                 </div>
 
-                                                {client.wedding_organizer && (
-                                                    <>
-                                                        <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                            <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Partner WO / EO</span>
-                                                            <div className="flex items-baseline gap-2 flex-1 min-w-0">
-                                                                <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                                <span className="font-bold text-indigo-700 leading-snug flex-1 min-w-0 break-words">
-                                                                    {client.wedding_organizer.name} ({client.wedding_organizer.tier || 'Partner'})
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                        {client.wedding_organizer.pic_name && (
-                                                            <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                                <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">PIC Wedding Organizer</span>
-                                                                <div className="flex items-baseline gap-2 flex-1 min-w-0">
-                                                                    <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                                    <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">
-                                                                        {client.wedding_organizer.pic_name} {client.wedding_organizer.phone ? `(${client.wedding_organizer.phone})` : ''}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </>
-                                                )}
-
-                                                {client.referred_by_client && (
-                                                    <>
-                                                        <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                            <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Direferensikan Klien</span>
-                                                            <div className="flex items-baseline gap-2 flex-1 min-w-0">
-                                                                <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                                <span className="font-bold text-indigo-700 leading-snug flex-1 min-w-0 break-words">
-                                                                    {client.referred_by_client.name}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                        {client.referred_by_client.phone && (
-                                                            <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                                <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Kontak Referrer</span>
-                                                                <div className="flex items-baseline gap-2 flex-1 min-w-0">
-                                                                    <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                                    <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 font-mono break-all">
-                                                                        {client.referred_by_client.phone}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </>
-                                                )}
-
-                                                {client.referral_name && (
-                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                        <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Nama WO / Rekomendasi</span>
-                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
-                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                            <div className="flex items-center gap-2 flex-wrap">
-                                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs">
-                                                                    <Users className="w-3.5 h-3.5 text-purple-600" />
-                                                                    <span>{client.referral_name}</span>
-                                                                </span>
-                                                            </div>
-                                                        </div>
+                                                {/* 8. No. Alternatif */}
+                                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                    <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                                        <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">8</span>
+                                                        <span className="text-[11.5px] font-medium text-slate-600">No. Alternatif</span>
                                                     </div>
-                                                )}
+                                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 font-mono">
+                                                            {effectiveSecondaryPhone || '-'}
+                                                        </span>
+                                                    </div>
+                                                </div>
 
-                                                {!client.wedding_organizer && !client.referred_by_client && !client.referral_name && (
+                                                {/* 9. Preferensi Kontak */}
+                                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                    <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                                        <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">9</span>
+                                                        <span className="text-[11.5px] font-medium text-slate-600">Preferensi Kontak</span>
+                                                    </div>
+                                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug capitalize flex-1 min-w-0">
+                                                            {client.preferred_contact === 'email' ? 'Email' : client.preferred_contact === 'phone' ? 'Telepon' : 'WhatsApp'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* 10. Email Aktif */}
+                                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                    <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                                        <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">10</span>
+                                                        <span className="text-[11.5px] font-medium text-slate-600">Email Aktif</span>
+                                                    </div>
+                                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 break-all" title={effectiveEmail || '-'}>
+                                                            {effectiveEmail ? (
+                                                                <a href={`mailto:${effectiveEmail}`} className="text-indigo-600 hover:underline">
+                                                                    {effectiveEmail}
+                                                                </a>
+                                                            ) : '-'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* 11. Instagram */}
+                                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                    <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                                        <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">11</span>
+                                                        <span className="text-[11.5px] font-medium text-slate-600">Instagram</span>
+                                                    </div>
+                                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0">
+                                                            {effectiveInstagram ? (
+                                                                <a
+                                                                    href={`https://instagram.com/${effectiveInstagram.replace(/^@/, '')}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="text-pink-600 hover:underline inline-flex items-center gap-1 break-all font-medium"
+                                                                >
+                                                                    <span>{effectiveInstagram.startsWith('@') ? effectiveInstagram : `@${effectiveInstagram}`}</span>
+                                                                    <ExternalLink className="w-3 h-3 shrink-0" />
+                                                                </a>
+                                                            ) : '-'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* 12. Media Sosial Lain */}
+                                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                    <div className="w-44 sm:w-52 shrink-0 flex items-center gap-2 text-slate-500">
+                                                        <span className="w-4.5 h-4.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center shrink-0 shadow-2xs">12</span>
+                                                        <span className="text-[11.5px] font-medium text-slate-600">Media Sosial Lain</span>
+                                                    </div>
+                                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                        <span className="font-semibold text-slate-900 leading-snug flex-1 min-w-0 break-words whitespace-pre-line">
+                                                            {effectiveOtherSocial || '-'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* SECTION 4: Informasi Acara / Project & Paket */}
+                                    <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 sm:p-5 space-y-3.5">
+                                        <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
+                                            <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100/80">
+                                                <Calendar className="w-3.5 h-3.5" />
+                                            </div>
+                                            <h4 className="text-xs font-bold text-slate-900">
+                                                Informasi Acara / Project &amp; Paket Layanan
+                                            </h4>
+                                        </div>
+
+                                        <div className="bg-white rounded-xl border border-slate-200/70 divide-y divide-slate-100/90 text-xs overflow-hidden shadow-2xs">
+                                            <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Jenis Acara</span>
+                                                <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                    <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                    <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">
+                                                        {rawProjectCandidate?.category?.name || client.client_type || '-'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Tanggal Pelaksanaan</span>
+                                                <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                    <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                    <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">
+                                                        {rawProjectCandidate?.event_date ? formatDate(rawProjectCandidate.event_date) : '-'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Waktu Pelaksanaan</span>
+                                                <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                    <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                    <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">
+                                                        {effectiveEventTime}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Tempat / Lokasi Acara</span>
+                                                <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                    <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                    <span className="font-bold text-slate-900 leading-relaxed flex-1 min-w-0 break-words">
+                                                        {effectiveLocation}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Paket Dipilih</span>
+                                                <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                    <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                    <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">
+                                                        {effectivePackageName}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Total Nilai Project</span>
+                                                <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                    <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                    <span className="font-bold text-emerald-700 leading-snug flex-1 min-w-0 font-mono break-words">
+                                                        {rawProjectCandidate?.total_amount ? formatRupiah(rawProjectCandidate.total_amount) : '-'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Status Pembayaran</span>
+                                                <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                    <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                    <span className="font-bold text-slate-900 leading-snug capitalize flex-1 min-w-0">
+                                                        {rawProjectCandidate?.payment_status === 'paid' ? 'Lunas' : rawProjectCandidate?.payment_status === 'partial' ? 'DP / Sebagian' : 'Belum Dibayar'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* SECTION 5: Sumber Lead & Partner Referral */}
+                                    <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 sm:p-5 space-y-3.5">
+                                        <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
+                                            <div className="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 border border-indigo-100/80">
+                                                <Users className="w-3.5 h-3.5" />
+                                            </div>
+                                            <h4 className="text-xs font-bold text-slate-900">
+                                                Sumber Lead &amp; Partner Referral
+                                            </h4>
+                                        </div>
+
+                                        <div className="bg-white rounded-xl border border-slate-200/70 divide-y divide-slate-100/90 text-xs overflow-hidden shadow-2xs">
+                                            <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Sumber Pendaftaran</span>
+                                                <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                    <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                    <div className="font-bold text-slate-900 leading-snug flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+                                                        <span>{client.source || 'Formulir Online (Client Intake)'}</span>
+                                                        {client.client_source && (
+                                                            <Link
+                                                                href={`/client-sources/${client.client_source.id}`}
+                                                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-violet-50 text-violet-700 border border-violet-200 hover:bg-violet-100 transition-colors"
+                                                            >
+                                                                Master: {client.client_source.name}
+                                                            </Link>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {client.wedding_organizer && (
+                                                <>
                                                     <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                        <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Jenis Referral</span>
+                                                        <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Partner WO / EO</span>
                                                         <div className="flex items-baseline gap-2 flex-1 min-w-0">
                                                             <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                            <span className="font-medium text-slate-600 leading-snug flex-1 min-w-0">
-                                                                Organik / Pendaftaran Langsung
+                                                            <span className="font-bold text-indigo-700 leading-snug flex-1 min-w-0 break-words">
+                                                                {client.wedding_organizer.name} ({client.wedding_organizer.tier || 'Partner'})
                                                             </span>
                                                         </div>
                                                     </div>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* SECTION 6: Catatan Tambahan & Tag */}
-                                        <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3">
-                                            <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
-                                                <div className="w-6 h-6 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-100/80">
-                                                    <FileText className="w-3.5 h-3.5" />
-                                                </div>
-                                                <h4 className="text-xs font-bold text-slate-900">
-                                                    Catatan Khusus &amp; Label Tag
-                                                </h4>
-                                            </div>
-
-                                            <div className="space-y-2.5 text-xs">
-                                                <div className="flex items-start">
-                                                    <span className="text-slate-500 w-28 sm:w-32 shrink-0 text-[11px] pt-0.5">Catatan Klien</span>
-                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                    <div className="font-medium text-slate-700 leading-relaxed flex-1 min-w-0 whitespace-pre-line bg-white/70 p-3 rounded-xl border border-slate-200/60">
-                                                        {client.notes || 'Tidak ada catatan khusus.'}
-                                                    </div>
-                                                </div>
-
-                                                {client.tags && client.tags.length > 0 && (
-                                                    <div className="flex items-start pt-1">
-                                                        <span className="text-slate-500 w-28 sm:w-32 shrink-0 text-[11px] pt-0.5">Tag / Label</span>
-                                                        <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
-                                                        <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
-                                                            {client.tags.map((t, idx) => (
-                                                                <span key={idx} className="px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200/70 text-indigo-700 text-[11px] font-bold">
-                                                                    #{t}
+                                                    {client.wedding_organizer.pic_name && (
+                                                        <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                            <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">PIC Wedding Organizer</span>
+                                                            <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                                <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                                <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">
+                                                                    {client.wedding_organizer.pic_name} {client.wedding_organizer.phone ? `(${client.wedding_organizer.phone})` : ''}
                                                                 </span>
-                                                            ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+
+                                            {client.referred_by_client && (
+                                                <>
+                                                    <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                        <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Direferensikan Klien</span>
+                                                        <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                            <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                            <span className="font-bold text-indigo-700 leading-snug flex-1 min-w-0 break-words">
+                                                                {client.referred_by_client.name}
+                                                            </span>
                                                         </div>
                                                     </div>
-                                                )}
+                                                    {client.referred_by_client.phone && (
+                                                        <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                            <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Kontak Referrer</span>
+                                                            <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                                <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                                <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 font-mono break-all">
+                                                                    {client.referred_by_client.phone}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+
+                                            {client.referral_name && (
+                                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                    <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Rekomendasi</span>
+                                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs">
+                                                                <Users className="w-3.5 h-3.5 text-purple-600" />
+                                                                <span>{client.referral_name}</span>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {!client.wedding_organizer && !client.referred_by_client && !client.referral_name && (
+                                                <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
+                                                    <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Jenis Referral</span>
+                                                    <div className="flex items-baseline gap-2 flex-1 min-w-0">
+                                                        <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
+                                                        <span className="font-medium text-slate-600 leading-snug flex-1 min-w-0">
+                                                            Organik / Pendaftaran Langsung
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* SECTION 6: Catatan Tambahan & Tag */}
+                                    <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4.5 space-y-3">
+                                        <div className="flex items-center gap-2 pb-1 border-b border-slate-100/80">
+                                            <div className="w-6 h-6 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-100/80">
+                                                <FileText className="w-3.5 h-3.5" />
                                             </div>
-                                        </div>
-                                    </div>
-                                );
-                            })()}
-
-                            {/* TAB 2: PROJECTS & ORDERS (Gambar 4) */}
-                            {mainTab === 'projects' && (
-                                <div className="p-6 space-y-5 animate-in fade-in duration-150">
-                                    {/* Header */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                                        <div>
-                                            <h3 className="text-sm font-bold text-slate-900">
-                                                Daftar Projects & Orders
-                                            </h3>
-                                            <p className="text-xs text-slate-500 mt-0.5">
-                                                Kelola project aktif, riwayat order, dan progress pengerjaan klien.
-                                            </p>
+                                            <h4 className="text-xs font-bold text-slate-900">
+                                                Catatan Khusus &amp; Label Tag
+                                            </h4>
                                         </div>
 
-                                        {!isSupervisor && (
-                                            <Link
-                                                href={`/projects/create?client_id=${client.id}`}
-                                                className="px-4 py-2 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs shrink-0 self-start sm:self-auto cursor-pointer"
-                                            >
-                                                <Plus className="w-3.5 h-3.5" />
-                                                <span>Buat Project Baru</span>
-                                            </Link>
-                                        )}
-                                    </div>
-
-                                    {/* Filter Bar */}
-                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                                        <div className="relative flex-1">
-                                            <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                                            <input
-                                                type="text"
-                                                value={projectSearchQuery}
-                                                onChange={(e) => setProjectSearchQuery(e.target.value)}
-                                                placeholder="Cari project / order..."
-                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                                            />
-                                        </div>
-
-                                        <div className="flex items-center gap-2">
-                                            <NativeSelect
-                                                value={projectStatusFilter}
-                                                onChange={(e) => setProjectStatusFilter(e.target.value)}
-                                                className="text-xs min-w-[140px]"
-                                            >
-                                                <option value="all">Semua Status</option>
-                                                <option value="completed">Selesai</option>
-                                                <option value="in_progress">Sedang Dikerjakan</option>
-                                                <option value="upcoming">Akan Datang</option>
-                                            </NativeSelect>
-
-                                            <NativeSelect
-                                                value={projectPeriodFilter}
-                                                onChange={(e) => setProjectPeriodFilter(e.target.value)}
-                                                className="text-xs min-w-[140px]"
-                                            >
-                                                <option value="all">Semua Periode</option>
-                                                <option value="year">Tahun 2025</option>
-                                                <option value="month">Bulan Ini</option>
-                                            </NativeSelect>
-                                        </div>
-                                    </div>
-
-                                    {/* Table */}
-                                    <div className="border border-slate-200/80 rounded-2xl overflow-hidden shadow-2xs">
-                                        <Table>
-                                            <TableHeader className="bg-slate-50/80">
-                                                <TableRow>
-                                                    <TableHead className="text-[11px] font-bold text-slate-600">No. Project</TableHead>
-                                                    <TableHead className="text-[11px] font-bold text-slate-600">Nama Project</TableHead>
-                                                    <TableHead className="text-[11px] font-bold text-slate-600">Tanggal Acara</TableHead>
-                                                    <TableHead className="text-[11px] font-bold text-slate-600">Paket</TableHead>
-                                                    <TableHead className="text-[11px] font-bold text-slate-600">Status</TableHead>
-                                                    <TableHead className="text-[11px] font-bold text-slate-600 text-right">Total</TableHead>
-                                                    <TableHead className="text-[11px] font-bold text-slate-600">Terakhir Diperbarui</TableHead>
-                                                    <TableHead className="text-[11px] font-bold text-slate-600 text-center">Aksi</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {filteredProjectsTable.length > 0 ? (
-                                                    filteredProjectsTable.map((p) => (
-                                                        <TableRow key={p.id} className="hover:bg-slate-50/50 transition-colors">
-                                                            <TableCell className="font-mono font-bold text-xs text-slate-800">
-                                                                {p.code}
-                                                            </TableCell>
-                                                            <TableCell className="font-bold text-xs text-slate-900">
-                                                                {p.name}
-                                                            </TableCell>
-                                                            <TableCell className="text-xs text-slate-600">
-                                                                {p.event_date}
-                                                            </TableCell>
-                                                            <TableCell className="text-xs text-slate-600 font-medium">
-                                                                {p.package_name}
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <Badge variant={p.status_color as any} className="text-[10px] font-bold">
-                                                                    {p.status}
-                                                                </Badge>
-                                                            </TableCell>
-                                                            <TableCell className="text-xs font-mono font-bold text-slate-900 text-right">
-                                                                {formatRupiah(p.total_amount)}
-                                                            </TableCell>
-                                                            <TableCell className="text-[11px] text-slate-400 font-medium">
-                                                                {p.updated_at}
-                                                            </TableCell>
-                                                            <TableCell className="text-center">
-                                                                <div className="flex items-center justify-center gap-1.5">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => {
-                                                                            handleSelectProject(p.id);
-                                                                            setMainTab('files');
-                                                                        }}
-                                                                        className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-primary-accent shadow-2xs transition-all cursor-pointer"
-                                                                        title="Lihat Timeline & Berkas Project"
-                                                                    >
-                                                                        <Clock className="w-3.5 h-3.5" />
-                                                                    </button>
-                                                                    <Link
-                                                                        href={`/projects/${p.id}`}
-                                                                        className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 shadow-2xs transition-all"
-                                                                        title="Lihat Detail Project"
-                                                                    >
-                                                                        <Eye className="w-3.5 h-3.5" />
-                                                                    </Link>
-                                                                </div>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))
-                                                ) : (
-                                                    <TableRow>
-                                                        <TableCell colSpan={8} className="text-center py-8 text-xs text-slate-400">
-                                                            Tidak ada data project yang sesuai filter.
-                                                        </TableCell>
-                                                    </TableRow>
-                                                )}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
-
-                                    {/* Pagination Footer */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500 pt-1">
-                                        <span>
-                                            Menampilkan 1 - {filteredProjectsTable.length} dari {filteredProjectsTable.length} data
-                                        </span>
-                                        <div className="flex items-center gap-2">
-                                            <div className="flex items-center gap-1">
-                                                <button
-                                                    type="button"
-                                                    disabled
-                                                    className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 cursor-not-allowed"
-                                                >
-                                                    &lt;
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className="w-7 h-7 rounded-lg bg-indigo-600 text-white font-bold flex items-center justify-center text-xs shadow-2xs"
-                                                >
-                                                    1
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    disabled
-                                                    className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 cursor-not-allowed"
-                                                >
-                                                    &gt;
-                                                </button>
+                                        <div className="space-y-2.5 text-xs">
+                                            <div className="flex items-start">
+                                                <span className="text-slate-500 w-28 sm:w-32 shrink-0 text-[11px] pt-0.5">Catatan Klien</span>
+                                                <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
+                                                <div className="font-medium text-slate-700 leading-relaxed flex-1 min-w-0 whitespace-pre-line bg-white/70 p-3 rounded-xl border border-slate-200/60">
+                                                    {client.notes || 'Tidak ada catatan khusus.'}
+                                                </div>
                                             </div>
-                                            <span className="text-[11px] text-slate-400 pl-2">10 / halaman</span>
+
+                                            {client.tags && client.tags.length > 0 && (
+                                                <div className="flex items-start pt-1">
+                                                    <span className="text-slate-500 w-28 sm:w-32 shrink-0 text-[11px] pt-0.5">Tag / Label</span>
+                                                    <span className="text-slate-400 mr-2 shrink-0 pt-0.5">:</span>
+                                                    <div className="flex flex-wrap gap-1.5 flex-1 min-w-0">
+                                                        {client.tags.map((t, idx) => (
+                                                            <span key={idx} className="px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200/70 text-indigo-700 text-[11px] font-bold">
+                                                                #{t}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
-                            )}
+                            );
+                        })()}
 
-                            {/* TAB 3: PEMBAYARAN (Gambar 1) */}
-                            {mainTab === 'pembayaran' && (
-                                <div className="p-6 space-y-5 animate-in fade-in duration-150">
-                                    {/* Header */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                                        <div>
-                                            <h3 className="text-sm font-bold text-slate-900">
-                                                Riwayat Pembayaran
-                                            </h3>
-                                            <p className="text-xs text-slate-500 mt-0.5">
-                                                Monitoring invoice, catatan transaksi, dan status pelunasan klien.
-                                            </p>
+                        {/* TAB 2: PROJECTS & ORDERS (Gambar 4) */}
+                        {mainTab === 'projects' && (
+                            <div className="p-6 space-y-5 animate-in fade-in duration-150">
+                                {/* Header */}
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                                    <div>
+                                        <h3 className="text-sm font-bold text-slate-900">
+                                            Daftar Projects & Orders
+                                        </h3>
+                                        <p className="text-xs text-slate-500 mt-0.5">
+                                            Kelola project aktif, riwayat order, dan progress pengerjaan klien.
+                                        </p>
+                                    </div>
+
+                                    {!isSupervisor && (
+                                        <Link
+                                            href={`/projects/create?client_id=${client.id}`}
+                                            className="px-4 py-2 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs shrink-0 self-start sm:self-auto cursor-pointer"
+                                        >
+                                            <Plus className="w-3.5 h-3.5" />
+                                            <span>Buat Project Baru</span>
+                                        </Link>
+                                    )}
+                                </div>
+
+                                {/* Filter Bar */}
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                                    <div className="relative flex-1">
+                                        <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            value={projectSearchQuery}
+                                            onChange={(e) => setProjectSearchQuery(e.target.value)}
+                                            placeholder="Cari project / order..."
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                                        />
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        <NativeSelect
+                                            value={projectStatusFilter}
+                                            onChange={(e) => setProjectStatusFilter(e.target.value)}
+                                            className="text-xs min-w-[140px]"
+                                        >
+                                            <option value="all">Semua Status</option>
+                                            <option value="completed">Selesai</option>
+                                            <option value="in_progress">Sedang Dikerjakan</option>
+                                            <option value="upcoming">Akan Datang</option>
+                                        </NativeSelect>
+
+                                        <NativeSelect
+                                            value={projectPeriodFilter}
+                                            onChange={(e) => setProjectPeriodFilter(e.target.value)}
+                                            className="text-xs min-w-[140px]"
+                                        >
+                                            <option value="all">Semua Periode</option>
+                                            <option value="year">Tahun 2025</option>
+                                            <option value="month">Bulan Ini</option>
+                                        </NativeSelect>
+                                    </div>
+                                </div>
+
+                                {/* Table */}
+                                <div className="border border-slate-200/80 rounded-2xl overflow-hidden shadow-2xs">
+                                    <Table>
+                                        <TableHeader className="bg-slate-50/80">
+                                            <TableRow>
+                                                <TableHead className="text-[11px] font-bold text-slate-600">No. Project</TableHead>
+                                                <TableHead className="text-[11px] font-bold text-slate-600">Nama Project</TableHead>
+                                                <TableHead className="text-[11px] font-bold text-slate-600">Tanggal Acara</TableHead>
+                                                <TableHead className="text-[11px] font-bold text-slate-600">Paket</TableHead>
+                                                <TableHead className="text-[11px] font-bold text-slate-600">Status</TableHead>
+                                                <TableHead className="text-[11px] font-bold text-slate-600 text-right">Total</TableHead>
+                                                <TableHead className="text-[11px] font-bold text-slate-600">Terakhir Diperbarui</TableHead>
+                                                <TableHead className="text-[11px] font-bold text-slate-600 text-center">Aksi</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {filteredProjectsTable.length > 0 ? (
+                                                filteredProjectsTable.map((p) => (
+                                                    <TableRow key={p.id} className="hover:bg-slate-50/50 transition-colors">
+                                                        <TableCell className="font-mono font-bold text-xs text-slate-800">
+                                                            {p.code}
+                                                        </TableCell>
+                                                        <TableCell className="font-bold text-xs text-slate-900">
+                                                            {p.name}
+                                                        </TableCell>
+                                                        <TableCell className="text-xs text-slate-600">
+                                                            {p.event_date}
+                                                        </TableCell>
+                                                        <TableCell className="text-xs text-slate-600 font-medium">
+                                                            {p.package_name}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge variant={p.status_color as any} className="text-[10px] font-bold">
+                                                                {p.status}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell className="text-xs font-mono font-bold text-slate-900 text-right">
+                                                            {formatRupiah(p.total_amount)}
+                                                        </TableCell>
+                                                        <TableCell className="text-[11px] text-slate-400 font-medium">
+                                                            {p.updated_at}
+                                                        </TableCell>
+                                                        <TableCell className="text-center">
+                                                            <div className="flex items-center justify-center gap-1.5">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        handleSelectProject(p.id);
+                                                                        setMainTab('files');
+                                                                    }}
+                                                                    className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-primary-accent shadow-2xs transition-all cursor-pointer"
+                                                                    title="Lihat Timeline & Berkas Project"
+                                                                >
+                                                                    <Clock className="w-3.5 h-3.5" />
+                                                                </button>
+                                                                <Link
+                                                                    href={`/projects/${p.id}`}
+                                                                    className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 shadow-2xs transition-all"
+                                                                    title="Lihat Detail Project"
+                                                                >
+                                                                    <Eye className="w-3.5 h-3.5" />
+                                                                </Link>
+                                                            </div>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            ) : (
+                                                <TableRow>
+                                                    <TableCell colSpan={8} className="text-center py-8 text-xs text-slate-400">
+                                                        Tidak ada data project yang sesuai filter.
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+
+                                {/* Pagination Footer */}
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500 pt-1">
+                                    <span>
+                                        Menampilkan 1 - {filteredProjectsTable.length} dari {filteredProjectsTable.length} data
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                type="button"
+                                                disabled
+                                                className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 cursor-not-allowed"
+                                            >
+                                                &lt;
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="w-7 h-7 rounded-lg bg-indigo-600 text-white font-bold flex items-center justify-center text-xs shadow-2xs"
+                                            >
+                                                1
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled
+                                                className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 cursor-not-allowed"
+                                            >
+                                                &gt;
+                                            </button>
                                         </div>
+                                        <span className="text-[11px] text-slate-400 pl-2">10 / halaman</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TAB 3: PEMBAYARAN (Gambar 1) */}
+                        {mainTab === 'pembayaran' && (
+                            <div className="p-6 space-y-5 animate-in fade-in duration-150">
+                                {/* Header */}
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                                    <div>
+                                        <h3 className="text-sm font-bold text-slate-900">
+                                            Riwayat Pembayaran
+                                        </h3>
+                                        <p className="text-xs text-slate-500 mt-0.5">
+                                            Monitoring invoice, catatan transaksi, dan status pelunasan klien.
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsPaymentModalOpen(true)}
+                                        className="px-4 py-2 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0 self-start sm:self-auto"
+                                    >
+                                        <Plus className="w-3.5 h-3.5" />
+                                        <span>Tambah Pembayaran</span>
+                                    </button>
+                                </div>
+
+                                {/* Filter Bar */}
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                                    <div className="relative flex-1">
+                                        <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            value={paymentSearchQuery}
+                                            onChange={(e) => setPaymentSearchQuery(e.target.value)}
+                                            placeholder="Cari invoice / project..."
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-accent/20 focus:border-primary-accent transition-all"
+                                        />
+                                    </div>
+
+                                    <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                                        <NativeSelect
+                                            value={paymentStatusFilter}
+                                            onChange={(e) => setPaymentStatusFilter(e.target.value)}
+                                            className="text-xs min-w-[130px]"
+                                        >
+                                            <option value="all">Semua Status</option>
+                                            <option value="lunas">Lunas</option>
+                                            <option value="sebagian">Sebagian</option>
+                                            <option value="unpaid">Belum Dibayar</option>
+                                        </NativeSelect>
+
+                                        <NativeSelect
+                                            value={paymentMethodFilter}
+                                            onChange={(e) => setPaymentMethodFilter(e.target.value)}
+                                            className="text-xs min-w-[130px]"
+                                        >
+                                            <option value="all">Semua Metode</option>
+                                            <option value="bca">Transfer BCA</option>
+                                            <option value="mandiri">Transfer Mandiri</option>
+                                            <option value="cash">Cash / Tunai</option>
+                                        </NativeSelect>
 
                                         <button
                                             type="button"
-                                            onClick={() => setIsPaymentModalOpen(true)}
+                                            onClick={() => toast.info('Fitur export data pembayaran')}
+                                            className="px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer transition-colors"
+                                        >
+                                            <Download className="w-3.5 h-3.5" />
+                                            <span>Export</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* 4 KPI Summary Cards (Gambar 3) */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
+                                    <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-1">
+                                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+                                            Total Tagihan
+                                        </span>
+                                        <div
+                                            className="text-lg font-bold font-mono text-slate-900"
+                                            title={formatRupiah(paymentSummary.totalTagihan)}
+                                        >
+                                            {formatCurrencyShort(paymentSummary.totalTagihan)}
+                                        </div>
+                                        <span className="text-[11px] text-slate-400 block">
+                                            {paymentSummary.invoiceCount} Invoice
+                                        </span>
+                                    </div>
+
+                                    <div className="p-4 rounded-2xl bg-emerald-50/40 border border-emerald-100 shadow-2xs space-y-1">
+                                        <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">
+                                            Total Dibayar
+                                        </span>
+                                        <div
+                                            className="text-lg font-bold font-mono text-emerald-600"
+                                            title={formatRupiah(paymentSummary.totalDibayar)}
+                                        >
+                                            {formatCurrencyShort(paymentSummary.totalDibayar)}
+                                        </div>
+                                        <span className="text-[11px] text-emerald-600/80 block">
+                                            {paymentSummary.paymentCount} Pembayaran
+                                        </span>
+                                    </div>
+
+                                    <div className="p-4 rounded-2xl bg-amber-50/40 border border-amber-100 shadow-2xs space-y-1">
+                                        <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider block">
+                                            Sisa Tagihan
+                                        </span>
+                                        <div
+                                            className="text-lg font-bold font-mono text-amber-600"
+                                            title={formatRupiah(paymentSummary.sisaTagihan)}
+                                        >
+                                            {formatCurrencyShort(paymentSummary.sisaTagihan)}
+                                        </div>
+                                        <span className="text-[11px] text-amber-600/80 block">
+                                            {paymentSummary.unpaidInvoiceCount} Invoice
+                                        </span>
+                                    </div>
+
+                                    <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-1.5">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                                Persentase Dibayar
+                                            </span>
+                                            <span className="text-xs font-bold font-mono text-slate-900">
+                                                {paymentSummary.percent.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%
+                                            </span>
+                                        </div>
+                                        <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                                            <div
+                                                className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                                                style={{ width: `${paymentSummary.percent}%` }}
+                                            />
+                                        </div>
+                                        <span className="text-[10px] text-slate-400 block pt-0.5">
+                                            {paymentSummary.percent >= 100
+                                                ? 'Tagihan sudah lunas sepenuhnya'
+                                                : paymentSummary.percent >= 80
+                                                    ? 'Tingkat pelunasan sangat baik'
+                                                    : paymentSummary.percent >= 50
+                                                        ? 'Pembayaran sebagian telah diterima'
+                                                        : 'Menunggu pembayaran tahap berikutnya'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Table */}
+                                <div className="border border-slate-200/80 rounded-2xl overflow-hidden shadow-2xs">
+                                    <Table>
+                                        <TableHeader className="bg-slate-50/80">
+                                            <TableRow>
+                                                <TableHead className="text-[11px] font-bold text-slate-600">No. Invoice</TableHead>
+                                                <TableHead className="text-[11px] font-bold text-slate-600">Project</TableHead>
+                                                <TableHead className="text-[11px] font-bold text-slate-600">Tanggal Invoice</TableHead>
+                                                <TableHead className="text-[11px] font-bold text-slate-600">Jatuh Tempo</TableHead>
+                                                <TableHead className="text-[11px] font-bold text-slate-600 text-right">Total Tagihan</TableHead>
+                                                <TableHead className="text-[11px] font-bold text-slate-600 text-right">Dibayar</TableHead>
+                                                <TableHead className="text-[11px] font-bold text-slate-600 text-right">Sisa</TableHead>
+                                                <TableHead className="text-[11px] font-bold text-slate-600">Status</TableHead>
+                                                <TableHead className="text-[11px] font-bold text-slate-600">Metode</TableHead>
+                                                <TableHead className="text-[11px] font-bold text-slate-600 text-center">Aksi</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {filteredInvoicesList.length > 0 ? (
+                                                filteredInvoicesList.map((inv) => (
+                                                    <TableRow key={inv.id} className="hover:bg-slate-50/50 transition-colors">
+                                                        <TableCell>
+                                                            <a
+                                                                href={inv.project_id ? `/projects/${inv.project_id}/invoice?invoice_id=${inv.id}` : '#'}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="font-mono font-bold text-xs text-indigo-600 hover:underline inline-flex items-center gap-1"
+                                                                title="Buka Invoice & Riwayat Termin"
+                                                            >
+                                                                <span>{inv.invoice_no}</span>
+                                                                <ExternalLink className="w-3 h-3 text-indigo-400" />
+                                                            </a>
+                                                            <span className="block text-[10px] text-slate-500 font-medium truncate max-w-[150px]">
+                                                                {inv.notes || 'Termin Tagihan'}
+                                                            </span>
+                                                        </TableCell>
+                                                        <TableCell className="font-semibold text-xs text-slate-900">
+                                                            {inv.project_id ? (
+                                                                <Link
+                                                                    href={`/projects/${inv.project_id}`}
+                                                                    className="hover:text-primary-accent hover:underline"
+                                                                >
+                                                                    {inv.project_name}
+                                                                </Link>
+                                                            ) : (
+                                                                inv.project_name
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell className="text-xs text-slate-600">
+                                                            {inv.invoice_date}
+                                                        </TableCell>
+                                                        <TableCell className="text-xs text-slate-600">
+                                                            {inv.due_date}
+                                                        </TableCell>
+                                                        <TableCell className="text-xs font-mono font-bold text-slate-900 text-right">
+                                                            {formatRupiah(inv.total_amount)}
+                                                        </TableCell>
+                                                        <TableCell className="text-xs font-mono font-bold text-emerald-600 text-right">
+                                                            {formatRupiah(inv.paid_amount)}
+                                                        </TableCell>
+                                                        <TableCell
+                                                            className={`text-xs font-mono font-bold text-right ${inv.remaining_amount > 0 ? 'text-amber-600' : 'text-slate-400'
+                                                                }`}
+                                                        >
+                                                            {formatRupiah(inv.remaining_amount)}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge variant={inv.status_variant as any} className="text-[10px] font-bold">
+                                                                {inv.status}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <span className="text-xs font-bold text-slate-800 block">
+                                                                {inv.payment_method}
+                                                            </span>
+                                                            <span className="text-[10px] text-slate-400 block">
+                                                                {inv.paid_at}
+                                                            </span>
+                                                        </TableCell>
+                                                        <TableCell className="text-center">
+                                                            <div className="flex items-center justify-center gap-1.5">
+                                                                {inv.remaining_amount > 0 && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => openPaymentForInvoice(inv)}
+                                                                        className="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold shadow-2xs transition-all cursor-pointer inline-flex items-center gap-1 whitespace-nowrap"
+                                                                        title="Konfirmasi Pembayaran Termin Ini"
+                                                                    >
+                                                                        <Wallet className="w-3 h-3" />
+                                                                        <span>Konfirmasi Bayar</span>
+                                                                    </button>
+                                                                )}
+                                                                {inv.project_id && (
+                                                                    <a
+                                                                        href={`/projects/${inv.project_id}/invoice?invoice_id=${inv.id}`}
+                                                                        target="_blank"
+                                                                        rel="noreferrer"
+                                                                        className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 shadow-2xs transition-all"
+                                                                        title="Lihat & Download Invoice"
+                                                                    >
+                                                                        <Download className="w-3.5 h-3.5" />
+                                                                    </a>
+                                                                )}
+                                                            </div>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            ) : (
+                                                <TableRow>
+                                                    <TableCell colSpan={10} className="text-center py-8 text-xs text-slate-400">
+                                                        Tidak ada data invoice yang sesuai kriteria pencarian.
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+
+                                {/* Callout & Pagination */}
+                                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2 text-xs text-slate-600">
+                                    <div className="w-4 h-4 rounded-full bg-indigo-100 text-indigo-600 font-bold text-[10px] flex items-center justify-center shrink-0">
+                                        i
+                                    </div>
+                                    <span>Klik nomor invoice untuk melihat detail invoice dan riwayat pembayaran.</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TAB 4: FILES (Timeline & Workflow Pengerjaan Project) */}
+                        {mainTab === 'files' && (
+                            <div className="p-6 space-y-6 animate-in fade-in duration-150">
+                                {/* Header */}
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="text-sm font-bold text-slate-900">
+                                                Timeline / Progres Pengerjaan Project
+                                            </h3>
+                                            <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-bold text-[10px]">
+                                                {initialProjectsList.length} Project Klien
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-slate-500 mt-0.5">
+                                            Tracking alur tahapan kerja foto & video per project klien secara real-time
+                                        </p>
+                                    </div>
+
+                                    {initialProjectsList.length > 0 ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsAddDriveLinkModalOpen(true)}
                                             className="px-4 py-2 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0 self-start sm:self-auto"
                                         >
                                             <Plus className="w-3.5 h-3.5" />
-                                            <span>Tambah Pembayaran</span>
+                                            <span>Simpan Link Google Drive</span>
                                         </button>
-                                    </div>
-
-                                    {/* Filter Bar */}
-                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                                        <div className="relative flex-1">
-                                            <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                                            <input
-                                                type="text"
-                                                value={paymentSearchQuery}
-                                                onChange={(e) => setPaymentSearchQuery(e.target.value)}
-                                                placeholder="Cari invoice / project..."
-                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-accent/20 focus:border-primary-accent transition-all"
-                                            />
-                                        </div>
-
-                                        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                                            <NativeSelect
-                                                value={paymentStatusFilter}
-                                                onChange={(e) => setPaymentStatusFilter(e.target.value)}
-                                                className="text-xs min-w-[130px]"
-                                            >
-                                                <option value="all">Semua Status</option>
-                                                <option value="lunas">Lunas</option>
-                                                <option value="sebagian">Sebagian</option>
-                                                <option value="unpaid">Belum Dibayar</option>
-                                            </NativeSelect>
-
-                                            <NativeSelect
-                                                value={paymentMethodFilter}
-                                                onChange={(e) => setPaymentMethodFilter(e.target.value)}
-                                                className="text-xs min-w-[130px]"
-                                            >
-                                                <option value="all">Semua Metode</option>
-                                                <option value="bca">Transfer BCA</option>
-                                                <option value="mandiri">Transfer Mandiri</option>
-                                                <option value="cash">Cash / Tunai</option>
-                                            </NativeSelect>
-
-                                            <button
-                                                type="button"
-                                                onClick={() => toast.info('Fitur export data pembayaran')}
-                                                className="px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer transition-colors"
-                                            >
-                                                <Download className="w-3.5 h-3.5" />
-                                                <span>Export</span>
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* 4 KPI Summary Cards (Gambar 3) */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
-                                        <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-1">
-                                            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                                                Total Tagihan
-                                            </span>
-                                            <div
-                                                className="text-lg font-bold font-mono text-slate-900"
-                                                title={formatRupiah(paymentSummary.totalTagihan)}
-                                            >
-                                                {formatCurrencyShort(paymentSummary.totalTagihan)}
-                                            </div>
-                                            <span className="text-[11px] text-slate-400 block">
-                                                {paymentSummary.invoiceCount} Invoice
-                                            </span>
-                                        </div>
-
-                                        <div className="p-4 rounded-2xl bg-emerald-50/40 border border-emerald-100 shadow-2xs space-y-1">
-                                            <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">
-                                                Total Dibayar
-                                            </span>
-                                            <div
-                                                className="text-lg font-bold font-mono text-emerald-600"
-                                                title={formatRupiah(paymentSummary.totalDibayar)}
-                                            >
-                                                {formatCurrencyShort(paymentSummary.totalDibayar)}
-                                            </div>
-                                            <span className="text-[11px] text-emerald-600/80 block">
-                                                {paymentSummary.paymentCount} Pembayaran
-                                            </span>
-                                        </div>
-
-                                        <div className="p-4 rounded-2xl bg-amber-50/40 border border-amber-100 shadow-2xs space-y-1">
-                                            <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider block">
-                                                Sisa Tagihan
-                                            </span>
-                                            <div
-                                                className="text-lg font-bold font-mono text-amber-600"
-                                                title={formatRupiah(paymentSummary.sisaTagihan)}
-                                            >
-                                                {formatCurrencyShort(paymentSummary.sisaTagihan)}
-                                            </div>
-                                            <span className="text-[11px] text-amber-600/80 block">
-                                                {paymentSummary.unpaidInvoiceCount} Invoice
-                                            </span>
-                                        </div>
-
-                                        <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-1.5">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                                                    Persentase Dibayar
-                                                </span>
-                                                <span className="text-xs font-bold font-mono text-slate-900">
-                                                    {paymentSummary.percent.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%
-                                                </span>
-                                            </div>
-                                            <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                                                <div
-                                                    className="h-full bg-emerald-500 rounded-full transition-all duration-300"
-                                                    style={{ width: `${paymentSummary.percent}%` }}
-                                                />
-                                            </div>
-                                            <span className="text-[10px] text-slate-400 block pt-0.5">
-                                                {paymentSummary.percent >= 100
-                                                    ? 'Tagihan sudah lunas sepenuhnya'
-                                                    : paymentSummary.percent >= 80
-                                                        ? 'Tingkat pelunasan sangat baik'
-                                                        : paymentSummary.percent >= 50
-                                                            ? 'Pembayaran sebagian telah diterima'
-                                                            : 'Menunggu pembayaran tahap berikutnya'}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Table */}
-                                    <div className="border border-slate-200/80 rounded-2xl overflow-hidden shadow-2xs">
-                                        <Table>
-                                            <TableHeader className="bg-slate-50/80">
-                                                <TableRow>
-                                                    <TableHead className="text-[11px] font-bold text-slate-600">No. Invoice</TableHead>
-                                                    <TableHead className="text-[11px] font-bold text-slate-600">Project</TableHead>
-                                                    <TableHead className="text-[11px] font-bold text-slate-600">Tanggal Invoice</TableHead>
-                                                    <TableHead className="text-[11px] font-bold text-slate-600">Jatuh Tempo</TableHead>
-                                                    <TableHead className="text-[11px] font-bold text-slate-600 text-right">Total Tagihan</TableHead>
-                                                    <TableHead className="text-[11px] font-bold text-slate-600 text-right">Dibayar</TableHead>
-                                                    <TableHead className="text-[11px] font-bold text-slate-600 text-right">Sisa</TableHead>
-                                                    <TableHead className="text-[11px] font-bold text-slate-600">Status</TableHead>
-                                                    <TableHead className="text-[11px] font-bold text-slate-600">Metode</TableHead>
-                                                    <TableHead className="text-[11px] font-bold text-slate-600 text-center">Aksi</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {filteredInvoicesList.length > 0 ? (
-                                                    filteredInvoicesList.map((inv) => (
-                                                        <TableRow key={inv.id} className="hover:bg-slate-50/50 transition-colors">
-                                                            <TableCell>
-                                                                <a
-                                                                    href={inv.project_id ? `/projects/${inv.project_id}/invoice?invoice_id=${inv.id}` : '#'}
-                                                                    target="_blank"
-                                                                    rel="noreferrer"
-                                                                    className="font-mono font-bold text-xs text-indigo-600 hover:underline inline-flex items-center gap-1"
-                                                                    title="Buka Invoice & Riwayat Termin"
-                                                                >
-                                                                    <span>{inv.invoice_no}</span>
-                                                                    <ExternalLink className="w-3 h-3 text-indigo-400" />
-                                                                </a>
-                                                                <span className="block text-[10px] text-slate-500 font-medium truncate max-w-[150px]">
-                                                                    {inv.notes || 'Termin Tagihan'}
-                                                                </span>
-                                                            </TableCell>
-                                                            <TableCell className="font-semibold text-xs text-slate-900">
-                                                                {inv.project_id ? (
-                                                                    <Link
-                                                                        href={`/projects/${inv.project_id}`}
-                                                                        className="hover:text-primary-accent hover:underline"
-                                                                    >
-                                                                        {inv.project_name}
-                                                                    </Link>
-                                                                ) : (
-                                                                    inv.project_name
-                                                                )}
-                                                            </TableCell>
-                                                            <TableCell className="text-xs text-slate-600">
-                                                                {inv.invoice_date}
-                                                            </TableCell>
-                                                            <TableCell className="text-xs text-slate-600">
-                                                                {inv.due_date}
-                                                            </TableCell>
-                                                            <TableCell className="text-xs font-mono font-bold text-slate-900 text-right">
-                                                                {formatRupiah(inv.total_amount)}
-                                                            </TableCell>
-                                                            <TableCell className="text-xs font-mono font-bold text-emerald-600 text-right">
-                                                                {formatRupiah(inv.paid_amount)}
-                                                            </TableCell>
-                                                            <TableCell
-                                                                className={`text-xs font-mono font-bold text-right ${inv.remaining_amount > 0 ? 'text-amber-600' : 'text-slate-400'
-                                                                    }`}
-                                                            >
-                                                                {formatRupiah(inv.remaining_amount)}
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <Badge variant={inv.status_variant as any} className="text-[10px] font-bold">
-                                                                    {inv.status}
-                                                                </Badge>
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <span className="text-xs font-bold text-slate-800 block">
-                                                                    {inv.payment_method}
-                                                                </span>
-                                                                <span className="text-[10px] text-slate-400 block">
-                                                                    {inv.paid_at}
-                                                                </span>
-                                                            </TableCell>
-                                                            <TableCell className="text-center">
-                                                                <div className="flex items-center justify-center gap-1.5">
-                                                                    {inv.remaining_amount > 0 && (
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => openPaymentForInvoice(inv)}
-                                                                            className="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold shadow-2xs transition-all cursor-pointer inline-flex items-center gap-1 whitespace-nowrap"
-                                                                            title="Konfirmasi Pembayaran Termin Ini"
-                                                                        >
-                                                                            <Wallet className="w-3 h-3" />
-                                                                            <span>Konfirmasi Bayar</span>
-                                                                        </button>
-                                                                    )}
-                                                                    {inv.project_id && (
-                                                                        <a
-                                                                            href={`/projects/${inv.project_id}/invoice?invoice_id=${inv.id}`}
-                                                                            target="_blank"
-                                                                            rel="noreferrer"
-                                                                            className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 shadow-2xs transition-all"
-                                                                            title="Lihat & Download Invoice"
-                                                                        >
-                                                                            <Download className="w-3.5 h-3.5" />
-                                                                        </a>
-                                                                    )}
-                                                                </div>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))
-                                                ) : (
-                                                    <TableRow>
-                                                        <TableCell colSpan={10} className="text-center py-8 text-xs text-slate-400">
-                                                            Tidak ada data invoice yang sesuai kriteria pencarian.
-                                                        </TableCell>
-                                                    </TableRow>
-                                                )}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
-
-                                    {/* Callout & Pagination */}
-                                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-2 text-xs text-slate-600">
-                                        <div className="w-4 h-4 rounded-full bg-indigo-100 text-indigo-600 font-bold text-[10px] flex items-center justify-center shrink-0">
-                                            i
-                                        </div>
-                                        <span>Klik nomor invoice untuk melihat detail invoice dan riwayat pembayaran.</span>
-                                    </div>
+                                    ) : !isSupervisor ? (
+                                        <Link
+                                            href={`/projects/create?client_id=${client.id}`}
+                                            className="px-4 py-2 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0 self-start sm:self-auto"
+                                        >
+                                            <Plus className="w-3.5 h-3.5" />
+                                            <span>Buat Project</span>
+                                        </Link>
+                                    ) : null}
                                 </div>
-                            )}
 
-                            {/* TAB 4: FILES (Timeline & Workflow Pengerjaan Project) */}
-                            {mainTab === 'files' && (
-                                <div className="p-6 space-y-6 animate-in fade-in duration-150">
-                                    {/* Header */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <h3 className="text-sm font-bold text-slate-900">
-                                                    Timeline / Progres Pengerjaan Project
-                                                </h3>
-                                                <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-bold text-[10px]">
-                                                    {initialProjectsList.length} Project Klien
-                                                </span>
-                                            </div>
-                                            <p className="text-xs text-slate-500 mt-0.5">
-                                                Tracking alur tahapan kerja foto & video per project klien secara real-time
+                                {initialProjectsList.length === 0 ? (
+                                    <div className="p-12 text-center rounded-3xl border border-dashed border-slate-200 bg-slate-50/50 space-y-4 my-4">
+                                        <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 text-slate-400 flex items-center justify-center mx-auto shadow-2xs">
+                                            <Folder className="w-8 h-8 stroke-[1.5]" />
+                                        </div>
+                                        <div className="space-y-1 max-w-md mx-auto">
+                                            <h4 className="text-sm font-bold text-slate-900">
+                                                Belum Ada Project Terdaftar
+                                            </h4>
+                                            <p className="text-xs text-slate-500 leading-relaxed">
+                                                Klien ini belum memiliki project aktif. Alur tahapan kerja, progres timeline, dan folder penyimpanan Google Drive akan otomatis tersedia setelah project dibuat.
                                             </p>
                                         </div>
-
-                                        {initialProjectsList.length > 0 ? (
-                                            <button
-                                                type="button"
-                                                onClick={() => setIsAddDriveLinkModalOpen(true)}
-                                                className="px-4 py-2 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0 self-start sm:self-auto"
-                                            >
-                                                <Plus className="w-3.5 h-3.5" />
-                                                <span>Simpan Link Google Drive</span>
-                                            </button>
-                                        ) : !isSupervisor ? (
-                                            <Link
-                                                href={`/projects/create?client_id=${client.id}`}
-                                                className="px-4 py-2 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0 self-start sm:self-auto"
-                                            >
-                                                <Plus className="w-3.5 h-3.5" />
-                                                <span>Buat Project</span>
-                                            </Link>
-                                        ) : null}
+                                        {!isSupervisor && (
+                                            <div className="pt-2">
+                                                <Link
+                                                    href={`/projects/create?client_id=${client.id}`}
+                                                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+                                                >
+                                                    <Plus className="w-4 h-4" />
+                                                    <span>Buat Project Pertama</span>
+                                                </Link>
+                                            </div>
+                                        )}
                                     </div>
-
-                                    {initialProjectsList.length === 0 ? (
-                                        <div className="p-12 text-center rounded-3xl border border-dashed border-slate-200 bg-slate-50/50 space-y-4 my-4">
-                                            <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 text-slate-400 flex items-center justify-center mx-auto shadow-2xs">
-                                                <Folder className="w-8 h-8 stroke-[1.5]" />
-                                            </div>
-                                            <div className="space-y-1 max-w-md mx-auto">
-                                                <h4 className="text-sm font-bold text-slate-900">
-                                                    Belum Ada Project Terdaftar
-                                                </h4>
-                                                <p className="text-xs text-slate-500 leading-relaxed">
-                                                    Klien ini belum memiliki project aktif. Alur tahapan kerja, progres timeline, dan folder penyimpanan Google Drive akan otomatis tersedia setelah project dibuat.
-                                                </p>
-                                            </div>
-                                            {!isSupervisor && (
-                                                <div className="pt-2">
-                                                    <Link
-                                                        href={`/projects/create?client_id=${client.id}`}
-                                                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
-                                                    >
-                                                        <Plus className="w-4 h-4" />
-                                                        <span>Buat Project Pertama</span>
-                                                    </Link>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <>
-                                            {/* PROJECT SWITCHER BAR WITH SELECT SEARCH */}
-                                    <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 shadow-2xs space-y-3.5">
-                                        {/* Header Row with Title & Active Workflow Indicator */}
-                                        <div className="flex items-center justify-between gap-3">
-                                            <div>
-                                                <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                                                    <Folder className="w-4 h-4 text-primary-accent" />
-                                                    <span>Pilih Project Klien ({initialProjectsList.length} Project)</span>
-                                                </label>
-                                                <p className="text-[11px] text-slate-500 mt-0.5">
-                                                    Cari & pilih project untuk cek alur tahapan kerja, berkas & deliverables pengerjaan
-                                                </p>
-                                            </div>
-
-                                            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs text-xs font-bold text-slate-700 shrink-0">
-                                                <Layers className="w-3.5 h-3.5 text-primary-accent" />
-                                                <span>{activeWorkflowDef.name}</span>
-                                            </div>
-                                        </div>
-
-                                        {/* Full-width SelectSearch Input */}
-                                        <div className="w-full">
-                                            <SelectSearch
-                                                options={projectSearchOptions}
-                                                value={String(selectedProject?.id || selectedProjectId)}
-                                                onChange={(val) => val && handleSelectProject(val)}
-                                                placeholder="Cari & pilih project klien..."
-                                                searchPlaceholder="Ketik nomor project atau nama acara..."
-                                                clearable={false}
-                                                className="w-full text-xs bg-white"
-                                            />
-                                        </div>
-
-                                        {/* Active Project Info Strip (Gambar 2: Interactive Project Status Switcher) */}
-                                        <div className="pt-3 border-t border-slate-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
-                                            <div className="flex items-center gap-2 flex-wrap min-w-0">
-                                                <span className="font-mono text-xs font-extrabold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-primary-accent shadow-2xs shrink-0">
-                                                    {selectedProject?.code}
-                                                </span>
-                                                <span className="font-bold text-slate-900 truncate">
-                                                    {selectedProject?.name}
-                                                </span>
-                                                <span className="text-slate-300 hidden sm:inline">•</span>
-                                                <span className="text-slate-600 truncate">
-                                                    {selectedProject?.package_name}
-                                                </span>
-                                            </div>
-
-                                            <div className="flex items-center gap-3 shrink-0 self-start sm:self-auto">
-                                                <span className="text-slate-500 flex items-center gap-1 text-[11px] font-medium">
-                                                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                                                    {selectedProject?.event_date}
-                                                </span>
-
-                                                {/* Project Overall Status Dropdown Switcher */}
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <button
-                                                            type="button"
-                                                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border shadow-2xs cursor-pointer transition-all hover:ring-2 hover:ring-primary-accent/20 ${getProjectStatusBadgeStyle(selectedRawProject?.status || 'draft')}`}
-                                                            title="Klik untuk mengubah status project langsung ke database"
-                                                        >
-                                                            <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                                                            <span>{getProjectStatusLabel(selectedRawProject?.status || 'draft')}</span>
-                                                            <ChevronDown className="w-3 h-3 opacity-70" />
-                                                        </button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="w-48 p-1.5 text-xs bg-white shadow-xl rounded-xl border border-slate-200 z-50">
-                                                        <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                                            Ubah Status Project
-                                                        </div>
-                                                        {PROJECT_STATUS_OPTIONS.map((opt) => (
-                                                            <DropdownMenuItem
-                                                                key={opt.value}
-                                                                onClick={() => handleUpdateProjectStatus(opt.value)}
-                                                                className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${selectedRawProject?.status === opt.value ? 'bg-slate-100 font-bold' : 'hover:bg-slate-50'}`}
-                                                            >
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className={`w-2 h-2 rounded-full ${opt.dotColor}`} />
-                                                                    <span className={opt.textColor}>{opt.label}</span>
-                                                                </div>
-                                                                {selectedRawProject?.status === opt.value && (
-                                                                    <Check className="w-3.5 h-3.5 text-slate-600" />
-                                                                )}
-                                                            </DropdownMenuItem>
-                                                        ))}
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Connected Horizontal Stepper Timeline (Gambar 1: Direct Timeline Status Update) */}
-                                    <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-3">
-                                        <div className="flex items-center justify-between pb-1 border-b border-slate-100 text-xs">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-6 h-6 rounded-lg bg-primary-accent/10 flex items-center justify-center text-primary-accent shrink-0">
-                                                    <Layers className="w-3.5 h-3.5" />
-                                                </div>
+                                ) : (
+                                    <>
+                                        {/* PROJECT SWITCHER BAR WITH SELECT SEARCH */}
+                                        <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 border border-slate-200/80 shadow-2xs space-y-3.5">
+                                            {/* Header Row with Title & Active Workflow Indicator */}
+                                            <div className="flex items-center justify-between gap-3">
                                                 <div>
-                                                    <span className="font-bold text-slate-900 block text-xs">
-                                                        {activeWorkflowDef.name} — Alur Tahapan Kerja
+                                                    <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                                        <Folder className="w-4 h-4 text-primary-accent" />
+                                                        <span>Pilih Project Klien ({initialProjectsList.length} Project)</span>
+                                                    </label>
+                                                    <p className="text-[11px] text-slate-500 mt-0.5">
+                                                        Cari & pilih project untuk cek alur tahapan kerja, berkas & deliverables pengerjaan
+                                                    </p>
+                                                </div>
+
+                                                <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs text-xs font-bold text-slate-700 shrink-0">
+                                                    <Layers className="w-3.5 h-3.5 text-primary-accent" />
+                                                    <span>{activeWorkflowDef.name}</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Full-width SelectSearch Input */}
+                                            <div className="w-full">
+                                                <SelectSearch
+                                                    options={projectSearchOptions}
+                                                    value={String(selectedProject?.id || selectedProjectId)}
+                                                    onChange={(val) => val && handleSelectProject(val)}
+                                                    placeholder="Cari & pilih project klien..."
+                                                    searchPlaceholder="Ketik nomor project atau nama acara..."
+                                                    clearable={false}
+                                                    className="w-full text-xs bg-white"
+                                                />
+                                            </div>
+
+                                            {/* Active Project Info Strip (Gambar 2: Interactive Project Status Switcher) */}
+                                            <div className="pt-3 border-t border-slate-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+                                                <div className="flex items-center gap-2 flex-wrap min-w-0">
+                                                    <span className="font-mono text-xs font-extrabold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-primary-accent shadow-2xs shrink-0">
+                                                        {selectedProject?.code}
                                                     </span>
-                                                    <span className="text-[11px] text-slate-400 block sm:hidden">
+                                                    <span className="font-bold text-slate-900 truncate">
+                                                        {selectedProject?.name}
+                                                    </span>
+                                                    <span className="text-slate-300 hidden sm:inline">•</span>
+                                                    <span className="text-slate-600 truncate">
+                                                        {selectedProject?.package_name}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex items-center gap-3 shrink-0 self-start sm:self-auto">
+                                                    <span className="text-slate-500 flex items-center gap-1 text-[11px] font-medium">
+                                                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                                                        {selectedProject?.event_date}
+                                                    </span>
+
+                                                    {/* Project Overall Status Dropdown Switcher */}
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <button
+                                                                type="button"
+                                                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border shadow-2xs cursor-pointer transition-all hover:ring-2 hover:ring-primary-accent/20 ${getProjectStatusBadgeStyle(selectedRawProject?.status || 'draft')}`}
+                                                                title="Klik untuk mengubah status project langsung ke database"
+                                                            >
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                                                                <span>{getProjectStatusLabel(selectedRawProject?.status || 'draft')}</span>
+                                                                <ChevronDown className="w-3 h-3 opacity-70" />
+                                                            </button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end" className="w-48 p-1.5 text-xs bg-white shadow-xl rounded-xl border border-slate-200 z-50">
+                                                            <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                                                Ubah Status Project
+                                                            </div>
+                                                            {PROJECT_STATUS_OPTIONS.map((opt) => (
+                                                                <DropdownMenuItem
+                                                                    key={opt.value}
+                                                                    onClick={() => handleUpdateProjectStatus(opt.value)}
+                                                                    className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${selectedRawProject?.status === opt.value ? 'bg-slate-100 font-bold' : 'hover:bg-slate-50'}`}
+                                                                >
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className={`w-2 h-2 rounded-full ${opt.dotColor}`} />
+                                                                        <span className={opt.textColor}>{opt.label}</span>
+                                                                    </div>
+                                                                    {selectedRawProject?.status === opt.value && (
+                                                                        <Check className="w-3.5 h-3.5 text-slate-600" />
+                                                                    )}
+                                                                </DropdownMenuItem>
+                                                            ))}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Connected Horizontal Stepper Timeline (Gambar 1: Direct Timeline Status Update) */}
+                                        <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-3">
+                                            <div className="flex items-center justify-between pb-1 border-b border-slate-100 text-xs">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-6 h-6 rounded-lg bg-primary-accent/10 flex items-center justify-center text-primary-accent shrink-0">
+                                                        <Layers className="w-3.5 h-3.5" />
+                                                    </div>
+                                                    <div>
+                                                        <span className="font-bold text-slate-900 block text-xs">
+                                                            {activeWorkflowDef.name} — Alur Tahapan Kerja
+                                                        </span>
+                                                        <span className="text-[11px] text-slate-400 block sm:hidden">
+                                                            {completedStagesCount} dari {currentStages.length} Tahap Selesai
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div className="hidden sm:flex items-center gap-2">
+                                                    <span className="text-[11px] text-slate-500">Status Alur:</span>
+                                                    <span className="font-bold text-slate-800 font-mono text-xs px-2.5 py-0.5 rounded-md bg-slate-100">
                                                         {completedStagesCount} dari {currentStages.length} Tahap Selesai
                                                     </span>
                                                 </div>
                                             </div>
-                                            <div className="hidden sm:flex items-center gap-2">
-                                                <span className="text-[11px] text-slate-500">Status Alur:</span>
-                                                <span className="font-bold text-slate-800 font-mono text-xs px-2.5 py-0.5 rounded-md bg-slate-100">
-                                                    {completedStagesCount} dari {currentStages.length} Tahap Selesai
-                                                </span>
-                                            </div>
-                                        </div>
 
-                                        <div className="overflow-x-auto pb-2 pt-2 -mx-1 px-1">
-                                            <div
-                                                className="relative pt-2 pb-1"
-                                                style={{ minWidth: currentStages.length > 5 ? `${currentStages.length * 115}px` : '100%' }}
-                                            >
-                                                {/* Connecting line bar aligned to the center of first & last circle */}
+                                            <div className="overflow-x-auto pb-2 pt-2 -mx-1 px-1">
                                                 <div
-                                                    className="absolute top-[26px] h-1 bg-slate-200 -z-0 rounded-full overflow-hidden"
-                                                    style={{
-                                                        left: `calc(100% / (${currentStages.length} * 2))`,
-                                                        right: `calc(100% / (${currentStages.length} * 2))`,
-                                                    }}
+                                                    className="relative pt-2 pb-1"
+                                                    style={{ minWidth: currentStages.length > 5 ? `${currentStages.length * 115}px` : '100%' }}
                                                 >
+                                                    {/* Connecting line bar aligned to the center of first & last circle */}
                                                     <div
-                                                        className="h-full bg-emerald-500 transition-all duration-300 rounded-full"
+                                                        className="absolute top-[26px] h-1 bg-slate-200 -z-0 rounded-full overflow-hidden"
                                                         style={{
-                                                            width: `${Math.min(
-                                                                100,
-                                                                currentStages.length > 1
-                                                                    ? (completedStagesCount / (currentStages.length - 1)) * 100
-                                                                    : completedStagesCount === 1 ? 100 : 0
-                                                            )}%`,
+                                                            left: `calc(100% / (${currentStages.length} * 2))`,
+                                                            right: `calc(100% / (${currentStages.length} * 2))`,
                                                         }}
-                                                    />
-                                                </div>
+                                                    >
+                                                        <div
+                                                            className="h-full bg-emerald-500 transition-all duration-300 rounded-full"
+                                                            style={{
+                                                                width: `${Math.min(
+                                                                    100,
+                                                                    currentStages.length > 1
+                                                                        ? (completedStagesCount / (currentStages.length - 1)) * 100
+                                                                        : completedStagesCount === 1 ? 100 : 0
+                                                                )}%`,
+                                                            }}
+                                                        />
+                                                    </div>
 
-                                                <div className="flex items-start justify-between relative z-10">
-                                                    {currentStages.map((s, idx) => {
-                                                        const isStepSelected = selectedStageIndex === idx;
-                                                        return (
-                                                            <div
-                                                                key={s.step || idx}
-                                                                className="flex-1 flex flex-col items-center text-center group transition-all px-1"
-                                                            >
-                                                                {/* Step Circle & Title Button (Selects Stage) */}
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setSelectedStageIndex(idx)}
-                                                                    className="w-full flex flex-col items-center text-center cursor-pointer focus:outline-none"
-                                                                    title={`Klik untuk lihat detail Tahap ${s.step}: ${s.title}`}
+                                                    <div className="flex items-start justify-between relative z-10">
+                                                        {currentStages.map((s, idx) => {
+                                                            const isStepSelected = selectedStageIndex === idx;
+
+                                                            return (
+                                                                <div
+                                                                    key={s.step || idx}
+                                                                    className="flex-1 flex flex-col items-center text-center group transition-all px-1"
                                                                 >
-                                                                    <div
-                                                                        className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shadow-2xs mb-2 transition-all relative ${s.status === 'done'
+                                                                    {/* Step Circle & Title Button (Selects Stage) */}
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setSelectedStageIndex(idx)}
+                                                                        className="w-full flex flex-col items-center text-center cursor-pointer focus:outline-none"
+                                                                        title={`Klik untuk lihat detail Tahap ${s.step}: ${s.title}`}
+                                                                    >
+                                                                        <div
+                                                                            className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shadow-2xs mb-2 transition-all relative ${s.status === 'done'
                                                                                 ? 'bg-emerald-500 text-white shadow-emerald-200 ring-2 ring-white'
                                                                                 : s.status === 'active'
                                                                                     ? 'bg-primary-accent text-white ring-4 ring-primary-accent/25 shadow-md scale-105'
                                                                                     : 'bg-white border-2 border-slate-300 text-slate-500 group-hover:border-slate-400 group-hover:bg-slate-50'
-                                                                            } ${isStepSelected ? 'ring-2 ring-offset-2 ring-primary-accent' : ''}`}
-                                                                    >
-                                                                        {s.status === 'done' ? (
-                                                                            <Check className="w-4 h-4 stroke-[2.5]" />
-                                                                        ) : (
-                                                                            <span>{s.step}</span>
-                                                                        )}
-                                                                    </div>
+                                                                                } ${isStepSelected ? 'ring-2 ring-offset-2 ring-primary-accent' : ''}`}
+                                                                        >
+                                                                            {s.status === 'done' ? (
+                                                                                <Check className="w-4 h-4 stroke-[2.5]" />
+                                                                            ) : (
+                                                                                <span>{s.step}</span>
+                                                                            )}
+                                                                        </div>
 
-                                                                    <div className="h-8 sm:h-9 flex items-center justify-center text-center w-full px-0.5">
-                                                                        <span
-                                                                            className={`text-[11px] font-bold line-clamp-2 max-w-[110px] leading-tight transition-colors ${isStepSelected
+                                                                        <div className="h-8 sm:h-9 flex items-center justify-center text-center w-full px-0.5">
+                                                                            <span
+                                                                                className={`text-[11px] font-bold line-clamp-2 max-w-[110px] leading-tight transition-colors ${isStepSelected
                                                                                     ? 'text-primary-accent font-extrabold'
                                                                                     : s.status === 'active'
                                                                                         ? 'text-slate-900 font-extrabold'
                                                                                         : 'text-slate-700 group-hover:text-slate-900'
-                                                                                }`}
-                                                                        >
-                                                                            {s.title === 'Penyerahan Final' ? (
-                                                                                <>
-                                                                                    Penyerahan
-                                                                                    <br />
-                                                                                    File Final
-                                                                                </>
-                                                                            ) : (
-                                                                                s.title
-                                                                            )}
-                                                                        </span>
-                                                                    </div>
-                                                                </button>
+                                                                                    }`}
+                                                                            >
+                                                                                {s.title === 'Penyerahan Final' ? (
+                                                                                    <>
+                                                                                        Penyerahan
+                                                                                        <br />
+                                                                                        File Final
+                                                                                    </>
+                                                                                ) : (
+                                                                                    s.title
+                                                                                )}
+                                                                            </span>
+                                                                        </div>
+                                                                    </button>
 
-                                                                {/* Direct Stage Status Update Dropdown Trigger (Gambar 1) */}
-                                                                <DropdownMenu>
-                                                                    <DropdownMenuTrigger asChild>
-                                                                        <button
-                                                                            type="button"
-                                                                            className={`text-[10px] font-semibold mt-1.5 px-2 py-0.5 rounded-md flex items-center gap-1 cursor-pointer transition-all hover:ring-2 hover:ring-primary-accent/20 border shadow-2xs ${s.status === 'done'
+                                                                    {/* Direct Stage Status Update Dropdown Trigger (Gambar 1) */}
+                                                                    <DropdownMenu>
+                                                                        <DropdownMenuTrigger asChild>
+                                                                            <button
+                                                                                type="button"
+                                                                                className={`text-[10px] font-semibold mt-1.5 px-2 py-0.5 rounded-md flex items-center gap-1 cursor-pointer transition-all hover:ring-2 hover:ring-primary-accent/20 border shadow-2xs ${s.status === 'done'
                                                                                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80 hover:bg-emerald-100'
                                                                                     : s.status === 'active'
                                                                                         ? 'bg-amber-50 text-amber-700 border-amber-200/80 font-bold hover:bg-amber-100'
                                                                                         : 'text-slate-500 bg-slate-50 border-slate-200 hover:bg-slate-100'
-                                                                                }`}
-                                                                            title="Klik untuk ubah status tahap ini"
-                                                                        >
-                                                                            <span className={`w-1.5 h-1.5 rounded-full ${s.status === 'done' ? 'bg-emerald-500' : s.status === 'active' ? 'bg-amber-500' : 'bg-slate-300'}`} />
-                                                                            <span>{s.status === 'done' ? 'Selesai' : s.status === 'active' ? 'Dikerjakan' : 'Belum Mulai'}</span>
-                                                                            <ChevronDown className="w-2.5 h-2.5 opacity-60 ml-0.5" />
-                                                                        </button>
-                                                                    </DropdownMenuTrigger>
-                                                                    <DropdownMenuContent align="center" className="w-48 p-1.5 text-xs bg-white shadow-xl rounded-xl border border-slate-200 z-50">
-                                                                        <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                                                            Status Tahap {s.step}
-                                                                        </div>
-                                                                        <DropdownMenuItem
-                                                                            onClick={() => handleQuickUpdateStageStatus(idx, 'done')}
-                                                                            className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-700 hover:bg-emerald-50 ${s.status === 'done' ? 'bg-emerald-50 font-bold' : ''}`}
-                                                                        >
-                                                                            <div className="flex items-center gap-2">
-                                                                                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                                                                                <span>Tandai Selesai</span>
+                                                                                    }`}
+                                                                                title="Klik untuk ubah status tahap ini"
+                                                                            >
+                                                                                <span className={`w-1.5 h-1.5 rounded-full ${s.status === 'done' ? 'bg-emerald-500' : s.status === 'active' ? 'bg-amber-500' : 'bg-slate-300'}`} />
+                                                                                <span>{s.status === 'done' ? 'Selesai' : s.status === 'active' ? 'Dikerjakan' : 'Belum Mulai'}</span>
+                                                                                <ChevronDown className="w-2.5 h-2.5 opacity-60 ml-0.5" />
+                                                                            </button>
+                                                                        </DropdownMenuTrigger>
+                                                                        <DropdownMenuContent align="center" className="w-48 p-1.5 text-xs bg-white shadow-xl rounded-xl border border-slate-200 z-50">
+                                                                            <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                                                                Status Tahap {s.step}
                                                                             </div>
-                                                                            {s.status === 'done' && <Check className="w-3.5 h-3.5 text-emerald-600" />}
-                                                                        </DropdownMenuItem>
-                                                                        <DropdownMenuItem
-                                                                            onClick={() => handleQuickUpdateStageStatus(idx, 'active')}
-                                                                            className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium text-amber-700 hover:bg-amber-50 ${s.status === 'active' ? 'bg-amber-50 font-bold' : ''}`}
-                                                                        >
-                                                                            <div className="flex items-center gap-2">
-                                                                                <span className="w-2 h-2 rounded-full bg-amber-500" />
-                                                                                <span>Sedang Dikerjakan</span>
-                                                                            </div>
-                                                                            {s.status === 'active' && <Check className="w-3.5 h-3.5 text-amber-600" />}
-                                                                        </DropdownMenuItem>
-                                                                        <DropdownMenuItem
-                                                                            onClick={() => handleQuickUpdateStageStatus(idx, 'pending')}
-                                                                            className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 ${s.status === 'pending' ? 'bg-slate-100 font-bold' : ''}`}
-                                                                        >
-                                                                            <div className="flex items-center gap-2">
-                                                                                <span className="w-2 h-2 rounded-full bg-slate-300" />
-                                                                                <span>Belum Dimulai</span>
-                                                                            </div>
-                                                                            {s.status === 'pending' && <Check className="w-3.5 h-3.5 text-slate-600" />}
-                                                                        </DropdownMenuItem>
-                                                                        <DropdownMenuSeparator />
-                                                                        <DropdownMenuItem
-                                                                            onClick={() => openEditStageModal(idx)}
-                                                                            className="flex items-center gap-2 cursor-pointer text-slate-700 hover:bg-slate-50 px-2.5 py-1.5 rounded-lg text-xs font-medium"
-                                                                        >
-                                                                            <Pencil className="w-3 h-3 text-slate-400" />
-                                                                            <span>Edit Detail Tahap...</span>
-                                                                        </DropdownMenuItem>
-                                                                    </DropdownMenuContent>
-                                                                </DropdownMenu>
-                                                            </div>
-                                                        );
-                                                    })}
+                                                                            <DropdownMenuItem
+                                                                                onClick={() => handleQuickUpdateStageStatus(idx, 'done')}
+                                                                                className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-700 hover:bg-emerald-50 ${s.status === 'done' ? 'bg-emerald-50 font-bold' : ''}`}
+                                                                            >
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                                                                    <span>Tandai Selesai</span>
+                                                                                </div>
+                                                                                {s.status === 'done' && <Check className="w-3.5 h-3.5 text-emerald-600" />}
+                                                                            </DropdownMenuItem>
+                                                                            <DropdownMenuItem
+                                                                                onClick={() => handleQuickUpdateStageStatus(idx, 'active')}
+                                                                                className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium text-amber-700 hover:bg-amber-50 ${s.status === 'active' ? 'bg-amber-50 font-bold' : ''}`}
+                                                                            >
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                                                                                    <span>Sedang Dikerjakan</span>
+                                                                                </div>
+                                                                                {s.status === 'active' && <Check className="w-3.5 h-3.5 text-amber-600" />}
+                                                                            </DropdownMenuItem>
+                                                                            <DropdownMenuItem
+                                                                                onClick={() => handleQuickUpdateStageStatus(idx, 'pending')}
+                                                                                className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 ${s.status === 'pending' ? 'bg-slate-100 font-bold' : ''}`}
+                                                                            >
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <span className="w-2 h-2 rounded-full bg-slate-300" />
+                                                                                    <span>Belum Dimulai</span>
+                                                                                </div>
+                                                                                {s.status === 'pending' && <Check className="w-3.5 h-3.5 text-slate-600" />}
+                                                                            </DropdownMenuItem>
+                                                                            <DropdownMenuSeparator />
+                                                                            <DropdownMenuItem
+                                                                                onClick={() => openEditStageModal(idx)}
+                                                                                className="flex items-center gap-2 cursor-pointer text-slate-700 hover:bg-slate-50 px-2.5 py-1.5 rounded-lg text-xs font-medium"
+                                                                            >
+                                                                                <Pencil className="w-3 h-3 text-slate-400" />
+                                                                                <span>Edit Detail Tahap...</span>
+                                                                            </DropdownMenuItem>
+                                                                        </DropdownMenuContent>
+                                                                    </DropdownMenu>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    {/* 2 Dynamic Metric & Detail Boxes */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-                                        {/* Left Card: Detail Tahap Terpilih */}
-                                        <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex flex-col justify-between gap-4">
-                                            {/* Stage Pill & Status Header */}
-                                            <div className="space-y-2.5 pb-3 border-b border-slate-100">
-                                                <div className="flex items-center justify-between gap-2 flex-wrap">
-                                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                                        <span className="px-2.5 py-1 rounded-lg bg-primary-accent/10 text-primary-accent text-xs font-black tracking-wide whitespace-nowrap shrink-0">
-                                                            Tahap {selectedStage.step} dari {currentStages.length}
-                                                        </span>
-                                                        {selectedStage.isCustom && (
-                                                            <span className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-100 text-[10px] font-extrabold whitespace-nowrap shrink-0">
-                                                                Custom
+                                        {/* 2 Dynamic Metric & Detail Boxes */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+                                            {/* Left Card: Detail Tahap Terpilih */}
+                                            <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex flex-col justify-between gap-4">
+                                                {/* Stage Pill & Status Header */}
+                                                <div className="space-y-2.5 pb-3 border-b border-slate-100">
+                                                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                            <span className="px-2.5 py-1 rounded-lg bg-primary-accent/10 text-primary-accent text-xs font-black tracking-wide whitespace-nowrap shrink-0">
+                                                                Tahap {selectedStage.step} dari {currentStages.length}
                                                             </span>
-                                                        )}
-                                                    </div>
+                                                            {selectedStage.isCustom && (
+                                                                <span className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-100 text-[10px] font-extrabold whitespace-nowrap shrink-0">
+                                                                    Custom
+                                                                </span>
+                                                            )}
+                                                        </div>
 
-                                                    <div className="flex items-center gap-2 shrink-0">
-                                                        {/* Stage Status Dropdown Switcher on Detail Card */}
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <button
-                                                                    type="button"
-                                                                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold border shadow-2xs cursor-pointer transition-all hover:ring-2 hover:ring-primary-accent/20 ${selectedStage.status === 'done'
+                                                        <div className="flex items-center gap-2 shrink-0">
+                                                            {/* Stage Status Dropdown Switcher on Detail Card */}
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <button
+                                                                        type="button"
+                                                                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold border shadow-2xs cursor-pointer transition-all hover:ring-2 hover:ring-primary-accent/20 ${selectedStage.status === 'done'
                                                                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                                                             : selectedStage.status === 'active'
                                                                                 ? 'bg-amber-50 text-amber-700 border-amber-200'
                                                                                 : 'bg-slate-100 text-slate-700 border-slate-200'
-                                                                        }`}
-                                                                    title="Klik untuk ubah status tahap ini"
-                                                                >
-                                                                    <span className={`w-1.5 h-1.5 rounded-full ${selectedStage.status === 'done' ? 'bg-emerald-500' : selectedStage.status === 'active' ? 'bg-amber-500' : 'bg-slate-300'}`} />
-                                                                    <span>
-                                                                        {selectedStage.status === 'done'
-                                                                            ? 'Selesai (100%)'
-                                                                            : selectedStage.status === 'active'
-                                                                                ? 'Sedang Dikerjakan'
-                                                                                : 'Belum Dimulai'}
-                                                                    </span>
-                                                                    <ChevronDown className="w-2.5 h-2.5 opacity-60 ml-0.5" />
-                                                                </button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end" className="w-48 p-1.5 text-xs bg-white shadow-xl rounded-xl border border-slate-200 z-50">
-                                                                <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                                                    Status Tahap {selectedStage.step}
-                                                                </div>
-                                                                <DropdownMenuItem
-                                                                    onClick={() => handleQuickUpdateStageStatus(selectedStageIndex, 'done')}
-                                                                    className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-700 hover:bg-emerald-50 ${selectedStage.status === 'done' ? 'bg-emerald-50 font-bold' : ''}`}
-                                                                >
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                                                                        <span>Tandai Selesai</span>
+                                                                            }`}
+                                                                        title="Klik untuk ubah status tahap ini"
+                                                                    >
+                                                                        <span className={`w-1.5 h-1.5 rounded-full ${selectedStage.status === 'done' ? 'bg-emerald-500' : selectedStage.status === 'active' ? 'bg-amber-500' : 'bg-slate-300'}`} />
+                                                                        <span>
+                                                                            {selectedStage.status === 'done'
+                                                                                ? 'Selesai (100%)'
+                                                                                : selectedStage.status === 'active'
+                                                                                    ? 'Sedang Dikerjakan'
+                                                                                    : 'Belum Dimulai'}
+                                                                        </span>
+                                                                        <ChevronDown className="w-2.5 h-2.5 opacity-60 ml-0.5" />
+                                                                    </button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end" className="w-48 p-1.5 text-xs bg-white shadow-xl rounded-xl border border-slate-200 z-50">
+                                                                    <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                                                        Status Tahap {selectedStage.step}
                                                                     </div>
-                                                                    {selectedStage.status === 'done' && <Check className="w-3.5 h-3.5 text-emerald-600" />}
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem
-                                                                    onClick={() => handleQuickUpdateStageStatus(selectedStageIndex, 'active')}
-                                                                    className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium text-amber-700 hover:bg-amber-50 ${selectedStage.status === 'active' ? 'bg-amber-50 font-bold' : ''}`}
-                                                                >
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="w-2 h-2 rounded-full bg-amber-500" />
-                                                                        <span>Sedang Dikerjakan</span>
-                                                                    </div>
-                                                                    {selectedStage.status === 'active' && <Check className="w-3.5 h-3.5 text-amber-600" />}
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem
-                                                                    onClick={() => handleQuickUpdateStageStatus(selectedStageIndex, 'pending')}
-                                                                    className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 ${selectedStage.status === 'pending' ? 'bg-slate-100 font-bold' : ''}`}
-                                                                >
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="w-2 h-2 rounded-full bg-slate-300" />
-                                                                        <span>Belum Dimulai</span>
-                                                                    </div>
-                                                                    {selectedStage.status === 'pending' && <Check className="w-3.5 h-3.5 text-slate-600" />}
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuSeparator />
-                                                                <DropdownMenuItem
-                                                                    onClick={() => openEditStageModal(selectedStageIndex)}
-                                                                    className="flex items-center gap-2 cursor-pointer text-slate-700 hover:bg-slate-50 px-2.5 py-1.5 rounded-lg text-xs font-medium"
-                                                                >
-                                                                    <Pencil className="w-3 h-3 text-slate-400" />
-                                                                    <span>Edit Detail Tahap...</span>
-                                                                </DropdownMenuItem>
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => handleQuickUpdateStageStatus(selectedStageIndex, 'done')}
+                                                                        className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium text-emerald-700 hover:bg-emerald-50 ${selectedStage.status === 'done' ? 'bg-emerald-50 font-bold' : ''}`}
+                                                                    >
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                                                            <span>Tandai Selesai</span>
+                                                                        </div>
+                                                                        {selectedStage.status === 'done' && <Check className="w-3.5 h-3.5 text-emerald-600" />}
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => handleQuickUpdateStageStatus(selectedStageIndex, 'active')}
+                                                                        className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium text-amber-700 hover:bg-amber-50 ${selectedStage.status === 'active' ? 'bg-amber-50 font-bold' : ''}`}
+                                                                    >
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="w-2 h-2 rounded-full bg-amber-500" />
+                                                                            <span>Sedang Dikerjakan</span>
+                                                                        </div>
+                                                                        {selectedStage.status === 'active' && <Check className="w-3.5 h-3.5 text-amber-600" />}
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => handleQuickUpdateStageStatus(selectedStageIndex, 'pending')}
+                                                                        className={`flex items-center justify-between cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 ${selectedStage.status === 'pending' ? 'bg-slate-100 font-bold' : ''}`}
+                                                                    >
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="w-2 h-2 rounded-full bg-slate-300" />
+                                                                            <span>Belum Dimulai</span>
+                                                                        </div>
+                                                                        {selectedStage.status === 'pending' && <Check className="w-3.5 h-3.5 text-slate-600" />}
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuSeparator />
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => openEditStageModal(selectedStageIndex)}
+                                                                        className="flex items-center gap-2 cursor-pointer text-slate-700 hover:bg-slate-50 px-2.5 py-1.5 rounded-lg text-xs font-medium"
+                                                                    >
+                                                                        <Pencil className="w-3 h-3 text-slate-400" />
+                                                                        <span>Edit Detail Tahap...</span>
+                                                                    </DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </div>
                                                     </div>
+
+                                                    <h4 className="text-base sm:text-lg font-extrabold text-slate-900 leading-snug">
+                                                        {selectedStage.title}
+                                                    </h4>
                                                 </div>
 
-                                                <h4 className="text-base sm:text-lg font-extrabold text-slate-900 leading-snug">
-                                                    {selectedStage.title}
-                                                </h4>
-                                            </div>
-
-                                            {/* Stage Progress Bar */}
-                                            <div className="space-y-1.5">
-                                                <div className="flex items-center justify-between text-xs">
-                                                    <span className="text-slate-500 font-medium">Progres Pengerjaan Tahap Ini</span>
-                                                    <span className="font-extrabold text-slate-900 text-sm font-mono">{selectedStage.progress}%</span>
-                                                </div>
-                                                <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                                                    <div
-                                                        className={`h-full rounded-full transition-all duration-500 ${selectedStage.status === 'done'
+                                                {/* Stage Progress Bar */}
+                                                <div className="space-y-1.5">
+                                                    <div className="flex items-center justify-between text-xs">
+                                                        <span className="text-slate-500 font-medium">Progres Pengerjaan Tahap Ini</span>
+                                                        <span className="font-extrabold text-slate-900 text-sm font-mono">{selectedStage.progress}%</span>
+                                                    </div>
+                                                    <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                                                        <div
+                                                            className={`h-full rounded-full transition-all duration-500 ${selectedStage.status === 'done'
                                                                 ? 'bg-emerald-500'
                                                                 : selectedStage.status === 'active'
                                                                     ? 'bg-primary-accent'
                                                                     : 'bg-slate-300'
-                                                            }`}
-                                                        style={{ width: `${selectedStage.progress}%` }}
-                                                    />
+                                                                }`}
+                                                            style={{ width: `${selectedStage.progress}%` }}
+                                                        />
+                                                    </div>
                                                 </div>
-                                            </div>
 
-                                            {/* Target Duration & Output Deliverable Info */}
-                                            {/* <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                                                {/* Target Duration & Output Deliverable Info */}
+                                                {/* <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
                                                 <div className="p-3.5 rounded-xl bg-slate-50/90 border border-slate-100 space-y-1">
                                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
                                                         <Clock className="w-3 h-3 text-slate-400" />
@@ -5012,8 +5330,8 @@ export default function ClientDetail({
                                                 </div>
                                             </div> */}
 
-                                            {/* Description Box */}
-                                            {/* <div className="p-3.5 rounded-xl bg-slate-50/80 border-l-4 border-primary-accent border border-slate-100 space-y-1">
+                                                {/* Description Box */}
+                                                {/* <div className="p-3.5 rounded-xl bg-slate-50/80 border-l-4 border-primary-accent border border-slate-100 space-y-1">
                                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
                                                     <FileText className="w-3 h-3 text-slate-400" />
                                                     <span>Aktivitas Tim & Deskripsi</span>
@@ -5023,21 +5341,21 @@ export default function ClientDetail({
                                                 </p>
                                             </div> */}
 
-                                            {/* Footer Metadata */}
-                                            <div className="grid grid-cols-2 gap-3 pt-2 text-xs border-t border-slate-100">
-                                                <div>
-                                                    <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Status Tahap</span>
-                                                    <span className="font-bold text-slate-800 mt-0.5 block">{selectedStage.date}</span>
+                                                {/* Footer Metadata */}
+                                                <div className="grid grid-cols-2 gap-3 pt-2 text-xs border-t border-slate-100">
+                                                    <div>
+                                                        <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Status Tahap</span>
+                                                        <span className="font-bold text-slate-800 mt-0.5 block">{selectedStage.date}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Penanggung Jawab (PIC)</span>
+                                                        <span className="font-bold text-slate-800 mt-0.5 block truncate" title={selectedStage.pic}>{selectedStage.pic}</span>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Penanggung Jawab (PIC)</span>
-                                                    <span className="font-bold text-slate-800 mt-0.5 block truncate" title={selectedStage.pic}>{selectedStage.pic}</span>
-                                                </div>
-                                            </div>
 
-                                            {/* Action Buttons: Edit Stage & Update Status to DB */}
-                                            <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
-                                                {/* <button
+                                                {/* Action Buttons: Edit Stage & Update Status to DB */}
+                                                <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                                                    {/* <button
                                                     type="button"
                                                     onClick={() => openEditStageModal(selectedStageIndex)}
                                                     className="py-2 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:scale-[0.99] text-slate-700 font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs shrink-0"
@@ -5046,991 +5364,993 @@ export default function ClientDetail({
                                                     <span>Edit Detail Tahap</span>
                                                 </button> */}
 
-                                                {selectedProject?.status !== 'Selesai' && (
-                                                    <>
-                                                        {selectedStage.status === 'pending' && (
-                                                            <button
-                                                                type="button"
-                                                                disabled={updatingStage}
-                                                                onClick={() => handleUpdateStage(selectedStage.title, 'in_progress', Math.round(((selectedStageIndex) / currentStages.length) * 100))}
-                                                                className="flex-1 py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                                                            >
-                                                                <PlayCircle className="w-3.5 h-3.5" />
-                                                                <span>{updatingStage ? 'Menyimpan...' : 'Jadikan Aktif'}</span>
-                                                            </button>
-                                                        )}
-                                                        {selectedStage.status === 'active' && (
-                                                            <button
-                                                                type="button"
-                                                                disabled={updatingStage}
-                                                                onClick={() => handleUpdateStage(selectedStage.title, 'completed', Math.round(((selectedStageIndex + 1) / currentStages.length) * 100))}
-                                                                className="flex-1 py-2 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                                                            >
-                                                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                                                <span>{updatingStage ? 'Menyimpan...' : 'Tandai Selesai'}</span>
-                                                            </button>
-                                                        )}
-                                                        {selectedStage.status === 'done' && (
-                                                            <div className="flex-1 flex items-center gap-2">
-                                                                <span className="flex-1 py-2 px-3 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 font-bold text-xs flex items-center justify-center gap-1.5">
-                                                                    <CheckCircle2 className="w-3.5 h-3.5" />
-                                                                    Tahap Selesai
-                                                                </span>
+                                                    {selectedProject?.status !== 'Selesai' && (
+                                                        <>
+                                                            {selectedStage.status === 'pending' && (
                                                                 <button
                                                                     type="button"
                                                                     disabled={updatingStage}
-                                                                    onClick={() => handleRevertStage(selectedStage.title, selectedStageIndex)}
-                                                                    className="py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
-                                                                    title="Kembalikan status ke tahap ini"
+                                                                    onClick={() => handleUpdateStage(selectedStage.title, 'in_progress', Math.round(((selectedStageIndex) / currentStages.length) * 100))}
+                                                                    className="flex-1 py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                                                                 >
-                                                                    <RotateCcw className="w-3.5 h-3.5" />
-                                                                    <span>Kembalikan Status</span>
+                                                                    <PlayCircle className="w-3.5 h-3.5" />
+                                                                    <span>{updatingStage ? 'Menyimpan...' : 'Jadikan Aktif'}</span>
                                                                 </button>
-                                                            </div>
-                                                        )}
-                                                    </>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Right Card: Progress Keseluruhan Project */}
-                                        <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex flex-col justify-between gap-4">
-                                            {/* Header with Title & Big Hero Metric */}
-                                            <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
-                                                <div className="space-y-1">
-                                                    <h4 className="text-base sm:text-lg font-extrabold text-slate-900 leading-snug">
-                                                        Progress Keseluruhan
-                                                    </h4>
-                                                    <p className="text-xs text-slate-500">
-                                                        <span className="font-extrabold text-slate-800">{completedStagesCount}</span> dari{' '}
-                                                        {currentStages.length} tahap pengerjaan telah selesai
-                                                    </p>
-                                                </div>
-                                                <div className="text-3xl sm:text-4xl font-black font-mono text-primary-accent shrink-0 text-right">
-                                                    {overallProgressPercent}%
-                                                </div>
-                                            </div>
-
-                                            {/* Overall Progress Bar & Milestone Labels */}
-                                            <div className="space-y-2">
-                                                <div className="flex items-center justify-between text-xs text-slate-500">
-                                                    <span className="font-medium">Total Akumulasi Milestone</span>
-                                                    <span className="font-bold text-primary-accent">{overallProgressPercent}% Selesai</span>
-                                                </div>
-                                                <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-primary-accent rounded-full transition-all duration-500"
-                                                        style={{ width: `${overallProgressPercent}%` }}
-                                                    />
-                                                </div>
-                                                <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium pt-0.5">
-                                                    <span>Awal Project (DP)</span>
-                                                    <span>Editing & Produksi</span>
-                                                    <span>Final Delivery</span>
+                                                            )}
+                                                            {selectedStage.status === 'active' && (
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={updatingStage}
+                                                                    onClick={() => handleUpdateStage(selectedStage.title, 'completed', Math.round(((selectedStageIndex + 1) / currentStages.length) * 100))}
+                                                                    className="flex-1 py-2 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                                                >
+                                                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                                                    <span>{updatingStage ? 'Menyimpan...' : 'Tandai Selesai'}</span>
+                                                                </button>
+                                                            )}
+                                                            {selectedStage.status === 'done' && (
+                                                                <div className="flex-1 flex items-center gap-2">
+                                                                    <span className="flex-1 py-2 px-3 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 font-bold text-xs flex items-center justify-center gap-1.5">
+                                                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                                                        Tahap Selesai
+                                                                    </span>
+                                                                    <button
+                                                                        type="button"
+                                                                        disabled={updatingStage}
+                                                                        onClick={() => handleRevertStage(selectedStage.title, selectedStageIndex)}
+                                                                        className="py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                                                                        title="Kembalikan status ke tahap ini"
+                                                                    >
+                                                                        <RotateCcw className="w-3.5 h-3.5" />
+                                                                        <span>Kembalikan Status</span>
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
 
-                                            {/* Stage Counts Breakdown Pill Grid */}
-                                            <div className="grid grid-cols-3 gap-2 text-center">
-                                                <div className="p-2 rounded-xl bg-emerald-50/70 border border-emerald-100">
-                                                    <span className="text-[10px] font-bold text-emerald-600 uppercase block">Selesai</span>
-                                                    <span className="text-xs sm:text-sm font-extrabold text-emerald-700 font-mono">{completedStagesCount} Tahap</span>
-                                                </div>
-                                                <div className="p-2 rounded-xl bg-amber-50/70 border border-amber-100">
-                                                    <span className="text-[10px] font-bold text-amber-600 uppercase block">Aktif</span>
-                                                    <span className="text-xs sm:text-sm font-extrabold text-amber-700 font-mono">
-                                                        {currentStages.some((s) => s.status === 'active') ? 1 : 0} Tahap
-                                                    </span>
-                                                </div>
-                                                <div className="p-2 rounded-xl bg-slate-50 border border-slate-100">
-                                                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Menunggu</span>
-                                                    <span className="text-xs sm:text-sm font-extrabold text-slate-600 font-mono">
-                                                        {currentStages.filter((s) => s.status === 'pending').length} Tahap
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            {/* Active Project Box */}
-                                            <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-100 flex items-center justify-between gap-2 text-xs">
-                                                <div className="min-w-0">
-                                                    <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Project Aktif</span>
-                                                    <span className="font-bold text-slate-800 truncate block mt-0.5">
-                                                        {selectedProject?.name}
-                                                    </span>
-                                                </div>
-                                                <Badge
-                                                    variant={selectedProject?.status_color as any}
-                                                    className="text-[10px] font-bold shrink-0"
-                                                >
-                                                    {selectedProject?.status}
-                                                </Badge>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* SECTION: RINCIAN DELIVERABLES & LAYANAN PAKET (SESUAI MASTER DATA) */}
-                                    {selectedProjectPackage && (
-                                        <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-4">
-                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
-                                                <div>
-                                                    <div className="flex items-center gap-2">
-                                                        <Box className="w-4 h-4 text-primary-accent" />
-                                                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                                                            Rincian Deliverables & Layanan Paket ({selectedProjectPackage.name})
+                                            {/* Right Card: Progress Keseluruhan Project */}
+                                            <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex flex-col justify-between gap-4">
+                                                {/* Header with Title & Big Hero Metric */}
+                                                <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
+                                                    <div className="space-y-1">
+                                                        <h4 className="text-base sm:text-lg font-extrabold text-slate-900 leading-snug">
+                                                            Progress Keseluruhan
                                                         </h4>
+                                                        <p className="text-xs text-slate-500">
+                                                            <span className="font-extrabold text-slate-800">{completedStagesCount}</span> dari{' '}
+                                                            {currentStages.length} tahap pengerjaan telah selesai
+                                                        </p>
                                                     </div>
-                                                    <p className="text-xs text-slate-500 mt-0.5">
-                                                        Daftar deliverable, estimasi target deadline, dan layanan yang termasuk dalam paket pengerjaan ini
-                                                    </p>
+                                                    <div className="text-3xl sm:text-4xl font-black font-mono text-primary-accent shrink-0 text-right">
+                                                        {overallProgressPercent}%
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-2 shrink-0">
-                                                    <span className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-mono font-bold text-xs">
-                                                        {formatRupiah(Number(selectedProjectPackage.base_price || 0))}
-                                                    </span>
+
+                                                {/* Overall Progress Bar & Milestone Labels */}
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center justify-between text-xs text-slate-500">
+                                                        <span className="font-medium">Total Akumulasi Milestone</span>
+                                                        <span className="font-bold text-primary-accent">{overallProgressPercent}% Selesai</span>
+                                                    </div>
+                                                    <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                                                        <div
+                                                            className="h-full bg-primary-accent rounded-full transition-all duration-500"
+                                                            style={{ width: `${overallProgressPercent}%` }}
+                                                        />
+                                                    </div>
+                                                    <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium pt-0.5">
+                                                        <span>Awal Project (DP)</span>
+                                                        <span>Editing & Produksi</span>
+                                                        <span>Final Delivery</span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Stage Counts Breakdown Pill Grid */}
+                                                <div className="grid grid-cols-3 gap-2 text-center">
+                                                    <div className="p-2 rounded-xl bg-emerald-50/70 border border-emerald-100">
+                                                        <span className="text-[10px] font-bold text-emerald-600 uppercase block">Selesai</span>
+                                                        <span className="text-xs sm:text-sm font-extrabold text-emerald-700 font-mono">{completedStagesCount} Tahap</span>
+                                                    </div>
+                                                    <div className="p-2 rounded-xl bg-amber-50/70 border border-amber-100">
+                                                        <span className="text-[10px] font-bold text-amber-600 uppercase block">Aktif</span>
+                                                        <span className="text-xs sm:text-sm font-extrabold text-amber-700 font-mono">
+                                                            {currentStages.some((s) => s.status === 'active') ? 1 : 0} Tahap
+                                                        </span>
+                                                    </div>
+                                                    <div className="p-2 rounded-xl bg-slate-50 border border-slate-100">
+                                                        <span className="text-[10px] font-bold text-slate-400 uppercase block">Menunggu</span>
+                                                        <span className="text-xs sm:text-sm font-extrabold text-slate-600 font-mono">
+                                                            {currentStages.filter((s) => s.status === 'pending').length} Tahap
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Active Project Box */}
+                                                <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-100 flex items-center justify-between gap-2 text-xs">
+                                                    <div className="min-w-0">
+                                                        <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Project Aktif</span>
+                                                        <span className="font-bold text-slate-800 truncate block mt-0.5">
+                                                            {selectedProject?.name}
+                                                        </span>
+                                                    </div>
+                                                    <Badge
+                                                        variant={selectedProject?.status_color as any}
+                                                        className="text-[10px] font-bold shrink-0"
+                                                    >
+                                                        {selectedProject?.status}
+                                                    </Badge>
                                                 </div>
                                             </div>
+                                        </div>
 
-                                            {/* Included Deliverables Grid */}
-                                            {selectedProjectPackage.included_deliverables && selectedProjectPackage.included_deliverables.length > 0 ? (
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                                    {selectedProjectPackage.included_deliverables.map((deliv: any, dIdx: number) => {
-                                                        const isPhoto = deliv.type === 'Photo';
-                                                        const isVideo = deliv.type === 'Video';
-                                                        const isAlbum = deliv.type === 'Album';
-                                                        return (
-                                                            <div
-                                                                key={deliv.id || dIdx}
-                                                                className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 flex flex-col justify-between gap-2.5 hover:border-slate-300 transition-colors"
-                                                            >
-                                                                <div className="space-y-1.5">
-                                                                    <div className="flex items-center justify-between gap-2">
-                                                                        <span
-                                                                            className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${isPhoto
+                                        {/* SECTION: RINCIAN DELIVERABLES & LAYANAN PAKET (SESUAI MASTER DATA) */}
+                                        {selectedProjectPackage && (
+                                            <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-4">
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+                                                    <div>
+                                                        <div className="flex items-center gap-2">
+                                                            <Box className="w-4 h-4 text-primary-accent" />
+                                                            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                                                                Rincian Deliverables & Layanan Paket ({selectedProjectPackage.name})
+                                                            </h4>
+                                                        </div>
+                                                        <p className="text-xs text-slate-500 mt-0.5">
+                                                            Daftar deliverable, estimasi target deadline, dan layanan yang termasuk dalam paket pengerjaan ini
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        <span className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-mono font-bold text-xs">
+                                                            {formatRupiah(Number(selectedProjectPackage.base_price || 0))}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Included Deliverables Grid */}
+                                                {selectedProjectPackage.included_deliverables && selectedProjectPackage.included_deliverables.length > 0 ? (
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                        {selectedProjectPackage.included_deliverables.map((deliv: any, dIdx: number) => {
+                                                            const isPhoto = deliv.type === 'Photo';
+                                                            const isVideo = deliv.type === 'Video';
+                                                            const isAlbum = deliv.type === 'Album';
+
+                                                            return (
+                                                                <div
+                                                                    key={deliv.id || dIdx}
+                                                                    className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 flex flex-col justify-between gap-2.5 hover:border-slate-300 transition-colors"
+                                                                >
+                                                                    <div className="space-y-1.5">
+                                                                        <div className="flex items-center justify-between gap-2">
+                                                                            <span
+                                                                                className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${isPhoto
                                                                                     ? 'bg-blue-50 text-blue-700 border border-blue-100'
                                                                                     : isVideo
                                                                                         ? 'bg-purple-50 text-purple-700 border border-purple-100'
                                                                                         : isAlbum
                                                                                             ? 'bg-amber-50 text-amber-700 border border-amber-100'
                                                                                             : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                                                                                }`}
-                                                                        >
-                                                                            {deliv.type || 'Deliverable'}
+                                                                                    }`}
+                                                                            >
+                                                                                {deliv.type || 'Deliverable'}
+                                                                            </span>
+                                                                            <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
+                                                                                {deliv.deadline || 'H+14'}
+                                                                            </span>
+                                                                        </div>
+                                                                        <span className="font-bold text-xs text-slate-900 block leading-snug">
+                                                                            {deliv.name}
                                                                         </span>
-                                                                        <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
-                                                                            {deliv.deadline || 'H+14'}
-                                                                        </span>
+                                                                        {deliv.description && (
+                                                                            <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
+                                                                                {deliv.description}
+                                                                            </p>
+                                                                        )}
                                                                     </div>
-                                                                    <span className="font-bold text-xs text-slate-900 block leading-snug">
-                                                                        {deliv.name}
-                                                                    </span>
-                                                                    {deliv.description && (
-                                                                        <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
-                                                                            {deliv.description}
-                                                                        </p>
-                                                                    )}
-                                                                </div>
 
-                                                                <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[10px]">
-                                                                    <span className="font-semibold text-slate-500">
-                                                                        {deliv.required ? 'Deliverable Utama' : 'Deliverable Tambahan'}
-                                                                    </span>
-                                                                    {deliv.by_owner && (
-                                                                        <span className="text-purple-600 font-bold">
-                                                                            Approval Owner
+                                                                    <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[10px]">
+                                                                        <span className="font-semibold text-slate-500">
+                                                                            {deliv.required ? 'Deliverable Utama' : 'Deliverable Tambahan'}
                                                                         </span>
-                                                                    )}
+                                                                        {deliv.by_owner && (
+                                                                            <span className="text-purple-600 font-bold">
+                                                                                Approval Owner
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
-                                                            </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                ) : (
+                                                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 text-center text-xs text-slate-500">
+                                                        Deliverables standar paket mengikuti alur tahapan {activeWorkflowDef.name}.
+                                                    </div>
+                                                )}
+
+                                                {/* Included Services Tags */}
+                                                {selectedProjectPackage.included_services && selectedProjectPackage.included_services.length > 0 && (
+                                                    <div className="pt-2 border-t border-slate-100 flex items-center gap-2 flex-wrap">
+                                                        <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1 shrink-0">
+                                                            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                                                            <span>Layanan Termasuk:</span>
+                                                        </span>
+                                                        {selectedProjectPackage.included_services.map((srv: string, sIdx: number) => (
+                                                            <span
+                                                                key={sIdx}
+                                                                className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 text-[11px] font-medium"
+                                                            >
+                                                                {srv}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* 2-Column Split: Checklist + Link Google Drive */}
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                                            {/* Left Card: Opsi Pekerjaan (Internal) */}
+                                            <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-4">
+                                                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                                                    <div>
+                                                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                                                            Opsi Pekerjaan (Internal)
+                                                        </h4>
+                                                        <p className="text-xs text-slate-500 mt-0.5">
+                                                            Checklist tugas tim editing & produksi untuk project ini
+                                                        </p>
+                                                    </div>
+                                                    <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold text-xs">
+                                                        {checkedTasksCount}/8 Selesai
+                                                    </span>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                                    {[
+                                                        { id: 'editedPhoto', label: 'Edited Photo' },
+                                                        { id: 'revisiEditedPhoto', label: 'Revisi Edited Photo (Opsional)' },
+                                                        { id: 'finalEditedPhoto', label: 'Final Edited Photo' },
+                                                        { id: 'editedVideoHL', label: 'Edited Video HL' },
+                                                        { id: 'revisiEditedVideoHL', label: 'Revisi Edited Video HL (Opsional)' },
+                                                        { id: 'editedFullDoc', label: 'Edited Full Doc (Opsional)' },
+                                                        { id: 'finalEditedVideoHL', label: 'Final Edited Video HL' },
+                                                        { id: 'finalEditedFullDoc', label: 'Final Edited Full Doc (Opsional)' },
+                                                    ].map((task) => {
+                                                        const isChecked = (jobChecklist as any)[task.id] || false;
+
+                                                        return (
+                                                            <label
+                                                                key={task.id}
+                                                                className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all cursor-pointer select-none ${isChecked
+                                                                    ? 'border-emerald-300 bg-emerald-50/50 text-emerald-950 shadow-2xs font-semibold'
+                                                                    : 'border-slate-200/80 bg-slate-50/40 hover:bg-slate-100/70 hover:border-slate-300 text-slate-800'
+                                                                    }`}
+                                                            >
+                                                                <Checkbox
+                                                                    checked={isChecked}
+                                                                    disabled={savingChecklist}
+                                                                    onCheckedChange={(val) => {
+                                                                        handleChecklistChange(task.id, !!val, task.label);
+                                                                    }}
+                                                                    className="shrink-0"
+                                                                />
+                                                                <span
+                                                                    className={`text-xs ${isChecked ? 'line-through text-slate-400' : 'font-medium'
+                                                                        }`}
+                                                                >
+                                                                    {task.label}
+                                                                </span>
+                                                            </label>
                                                         );
                                                     })}
                                                 </div>
-                                            ) : (
-                                                <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 text-center text-xs text-slate-500">
-                                                    Deliverables standar paket mengikuti alur tahapan {activeWorkflowDef.name}.
-                                                </div>
-                                            )}
-
-                                            {/* Included Services Tags */}
-                                            {selectedProjectPackage.included_services && selectedProjectPackage.included_services.length > 0 && (
-                                                <div className="pt-2 border-t border-slate-100 flex items-center gap-2 flex-wrap">
-                                                    <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1 shrink-0">
-                                                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                                                        <span>Layanan Termasuk:</span>
-                                                    </span>
-                                                    {selectedProjectPackage.included_services.map((srv: string, sIdx: number) => (
-                                                        <span
-                                                            key={sIdx}
-                                                            className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 text-[11px] font-medium"
-                                                        >
-                                                            {srv}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* 2-Column Split: Checklist + Link Google Drive */}
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                                        {/* Left Card: Opsi Pekerjaan (Internal) */}
-                                        <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-4">
-                                            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                                                <div>
-                                                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                                                        Opsi Pekerjaan (Internal)
-                                                    </h4>
-                                                    <p className="text-xs text-slate-500 mt-0.5">
-                                                        Checklist tugas tim editing & produksi untuk project ini
-                                                    </p>
-                                                </div>
-                                                <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold text-xs">
-                                                    {checkedTasksCount}/8 Selesai
-                                                </span>
                                             </div>
 
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                                {[
-                                                    { id: 'editedPhoto', label: 'Edited Photo' },
-                                                    { id: 'revisiEditedPhoto', label: 'Revisi Edited Photo (Opsional)' },
-                                                    { id: 'finalEditedPhoto', label: 'Final Edited Photo' },
-                                                    { id: 'editedVideoHL', label: 'Edited Video HL' },
-                                                    { id: 'revisiEditedVideoHL', label: 'Revisi Edited Video HL (Opsional)' },
-                                                    { id: 'editedFullDoc', label: 'Edited Full Doc (Opsional)' },
-                                                    { id: 'finalEditedVideoHL', label: 'Final Edited Video HL' },
-                                                    { id: 'finalEditedFullDoc', label: 'Final Edited Full Doc (Opsional)' },
-                                                ].map((task) => {
-                                                    const isChecked = (jobChecklist as any)[task.id] || false;
-                                                    return (
-                                                        <label
-                                                            key={task.id}
-                                                            className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all cursor-pointer select-none ${isChecked
-                                                                ? 'border-emerald-300 bg-emerald-50/50 text-emerald-950 shadow-2xs font-semibold'
-                                                                : 'border-slate-200/80 bg-slate-50/40 hover:bg-slate-100/70 hover:border-slate-300 text-slate-800'
-                                                                }`}
-                                                        >
-                                                            <Checkbox
-                                                                checked={isChecked}
-                                                                disabled={savingChecklist}
-                                                                onCheckedChange={(val) => {
-                                                                    handleChecklistChange(task.id, !!val, task.label);
-                                                                }}
-                                                                className="shrink-0"
-                                                            />
-                                                            <span
-                                                                className={`text-xs ${isChecked ? 'line-through text-slate-400' : 'font-medium'
-                                                                    }`}
-                                                            >
-                                                                {task.label}
-                                                            </span>
-                                                        </label>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-
-                                        {/* Right Card: Link Google Drive */}
-                                        <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-4">
-                                            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                                                <div>
-                                                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                                                        Link Google Drive
-                                                    </h4>
-                                                    <p className="text-xs text-slate-500 mt-0.5">
-                                                        Folder berkas & preview untuk project: <span className="font-semibold text-slate-700">{selectedProject?.code}</span>
-                                                    </p>
-                                                </div>
-                                                <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs">
-                                                    {projectDriveLinks.length} Folder
-                                                </span>
-                                            </div>
-
-                                            <div className="space-y-3">
-                                                {projectDriveLinks.length === 0 && (
-                                                    <div className="py-8 flex flex-col items-center justify-center text-center gap-2 text-slate-400">
-                                                        <Folder className="w-8 h-8 text-slate-300" />
-                                                        <p className="text-xs font-semibold">Belum ada link Google Drive</p>
-                                                        <p className="text-[11px]">Klik "Tambah Link" untuk menyimpan folder berkas project ini ke database.</p>
+                                            {/* Right Card: Link Google Drive */}
+                                            <div className="p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-4">
+                                                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                                                    <div>
+                                                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                                                            Link Google Drive
+                                                        </h4>
+                                                        <p className="text-xs text-slate-500 mt-0.5">
+                                                            Folder berkas & preview untuk project: <span className="font-semibold text-slate-700">{selectedProject?.code}</span>
+                                                        </p>
                                                     </div>
-                                                )}
-                                                {projectDriveLinks.map((dl) => (
-                                                    <div
-                                                        key={dl.id}
-                                                        className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/60 flex items-start justify-between gap-3 hover:border-slate-300 transition-colors"
-                                                    >
-                                                        <div className="flex items-start gap-3 min-w-0">
-                                                            <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0 mt-0.5 shadow-2xs">
-                                                                <Folder className="w-4 h-4" />
+                                                    <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-bold text-xs">
+                                                        {projectDriveLinks.length} Folder
+                                                    </span>
+                                                </div>
+
+                                                <div className="space-y-3">
+                                                    {projectDriveLinks.length === 0 && (
+                                                        <div className="py-8 flex flex-col items-center justify-center text-center gap-2 text-slate-400">
+                                                            <Folder className="w-8 h-8 text-slate-300" />
+                                                            <p className="text-xs font-semibold">Belum ada link Google Drive</p>
+                                                            <p className="text-[11px]">Klik "Tambah Link" untuk menyimpan folder berkas project ini ke database.</p>
+                                                        </div>
+                                                    )}
+                                                    {projectDriveLinks.map((dl) => (
+                                                        <div
+                                                            key={dl.id}
+                                                            className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/60 flex items-start justify-between gap-3 hover:border-slate-300 transition-colors"
+                                                        >
+                                                            <div className="flex items-start gap-3 min-w-0">
+                                                                <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 shrink-0 mt-0.5 shadow-2xs">
+                                                                    <Folder className="w-4 h-4" />
+                                                                </div>
+                                                                <div className="min-w-0">
+                                                                    <span className="font-bold text-xs text-slate-900 block leading-snug">
+                                                                        {dl.title}
+                                                                    </span>
+                                                                    <a
+                                                                        href={dl.url}
+                                                                        target="_blank"
+                                                                        rel="noreferrer"
+                                                                        className="text-xs text-primary-accent hover:underline block truncate mt-0.5"
+                                                                    >
+                                                                        {dl.url}
+                                                                    </a>
+                                                                    <span className="text-[10px] text-slate-400 block mt-1">
+                                                                        Diupload oleh {dl.uploader} • {dl.date}
+                                                                    </span>
+                                                                </div>
                                                             </div>
-                                                            <div className="min-w-0">
-                                                                <span className="font-bold text-xs text-slate-900 block leading-snug">
-                                                                    {dl.title}
-                                                                </span>
+
+                                                            <div className="flex items-center gap-1.5 shrink-0">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleCopyLink(dl.url)}
+                                                                    className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-primary-accent text-xs font-bold shadow-2xs transition-colors cursor-pointer"
+                                                                    title="Salin Link"
+                                                                >
+                                                                    <Copy className="w-3.5 h-3.5" />
+                                                                </button>
                                                                 <a
                                                                     href={dl.url}
                                                                     target="_blank"
                                                                     rel="noreferrer"
-                                                                    className="text-xs text-primary-accent hover:underline block truncate mt-0.5"
+                                                                    className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-xs font-bold shadow-2xs flex items-center gap-1"
                                                                 >
-                                                                    {dl.url}
+                                                                    <span>Buka</span>
+                                                                    <ExternalLink className="w-3 h-3" />
                                                                 </a>
-                                                                <span className="text-[10px] text-slate-400 block mt-1">
-                                                                    Diupload oleh {dl.uploader} • {dl.date}
-                                                                </span>
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={deletingLinkId === dl.id}
+                                                                    onClick={() => handleDeleteLink(dl.id, dl.title)}
+                                                                    className="p-1.5 rounded-lg border border-red-100 bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-700 text-xs shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
+                                                                    title="Hapus Link"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
                                                             </div>
                                                         </div>
+                                                    ))}
 
-                                                        <div className="flex items-center gap-1.5 shrink-0">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleCopyLink(dl.url)}
-                                                                className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-primary-accent text-xs font-bold shadow-2xs transition-colors cursor-pointer"
-                                                                title="Salin Link"
-                                                            >
-                                                                <Copy className="w-3.5 h-3.5" />
-                                                            </button>
-                                                            <a
-                                                                href={dl.url}
-                                                                target="_blank"
-                                                                rel="noreferrer"
-                                                                className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 text-xs font-bold shadow-2xs flex items-center gap-1"
-                                                            >
-                                                                <span>Buka</span>
-                                                                <ExternalLink className="w-3 h-3" />
-                                                            </a>
-                                                            <button
-                                                                type="button"
-                                                                disabled={deletingLinkId === dl.id}
-                                                                onClick={() => handleDeleteLink(dl.id, dl.title)}
-                                                                className="p-1.5 rounded-lg border border-red-100 bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-700 text-xs shadow-2xs transition-colors cursor-pointer disabled:opacity-50"
-                                                                title="Hapus Link"
-                                                            >
-                                                                <Trash2 className="w-3.5 h-3.5" />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                ))}
-
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setIsAddDriveLinkModalOpen(true)}
-                                                    className="w-full py-2.5 rounded-xl border-2 border-dashed border-slate-200 hover:border-primary-accent/40 hover:bg-primary-accent/5 text-slate-600 hover:text-primary-accent font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                                                >
-                                                    <Plus className="w-3.5 h-3.5" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    )}
-
-                            {/* TAB 5: CATATAN (Gambar 3) */}
-                            {mainTab === 'catatan' && (
-                                <div className="p-6 space-y-5 animate-in fade-in duration-150">
-                                    {/* Header */}
-                                    <div>
-                                        <h3 className="text-sm font-bold text-slate-900">
-                                            Catatan
-                                        </h3>
-                                        <p className="text-xs text-slate-500 mt-0.5">
-                                            Kelola catatan internal terkait klien, preferensi, dan instruksi khusus
-                                        </p>
-                                    </div>
-
-                                    {/* Add Note Box */}
-                                    <div className="border border-slate-200/80 rounded-2xl overflow-hidden bg-white shadow-2xs">
-                                        <textarea
-                                            rows={3}
-                                            value={noteInputText}
-                                            onChange={(e) => setNoteInputText(e.target.value)}
-                                            placeholder="Tulis catatan baru..."
-                                            className="w-full p-4 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none resize-none"
-                                        />
-                                        <div className="px-4 py-2.5 bg-slate-50/80 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                            <div className="flex items-center gap-3">
-                                                <NativeSelect
-                                                    value={noteInputCategory}
-                                                    onChange={(e) => setNoteInputCategory(e.target.value)}
-                                                    className="text-xs py-1"
-                                                >
-                                                    <option value="Preferensi">Preferensi</option>
-                                                    <option value="Informasi">Informasi</option>
-                                                    <option value="Pembayaran">Pembayaran</option>
-                                                    <option value="Meeting">Meeting</option>
-                                                </NativeSelect>
-
-                                                <div className="flex items-center gap-2 text-slate-400 border-l border-slate-200 pl-3">
                                                     <button
                                                         type="button"
-                                                        onClick={() => toast.info('Fitur lampirkan file ke catatan')}
-                                                        className="hover:text-slate-700 cursor-pointer"
-                                                        title="Lampirkan File"
+                                                        onClick={() => setIsAddDriveLinkModalOpen(true)}
+                                                        className="w-full py-2.5 rounded-xl border-2 border-dashed border-slate-200 hover:border-primary-accent/40 hover:bg-primary-accent/5 text-slate-600 hover:text-primary-accent font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                                                     >
-                                                        <Paperclip className="w-3.5 h-3.5" />
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setNoteInputText((prev) => prev + '**tebal**')}
-                                                        className="hover:text-slate-700 cursor-pointer"
-                                                        title="Teks Tebal"
-                                                    >
-                                                        <Bold className="w-3.5 h-3.5" />
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setNoteInputText((prev) => prev + '_miring_')}
-                                                        className="hover:text-slate-700 cursor-pointer"
-                                                        title="Teks Miring"
-                                                    >
-                                                        <Italic className="w-3.5 h-3.5" />
+                                                        <Plus className="w-3.5 h-3.5" />
                                                     </button>
                                                 </div>
                                             </div>
-
-                                            <button
-                                                type="button"
-                                                onClick={handleAddNote}
-                                                className="px-4 py-1.5 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer self-end sm:self-auto"
-                                            >
-                                                <Check className="w-3.5 h-3.5" />
-                                                <span>Simpan Catatan</span>
-                                            </button>
                                         </div>
-                                    </div>
+                                    </>
+                                )}
+                            </div>
+                        )}
 
-                                    {/* Filter Bar */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            <NativeSelect
-                                                value={noteCategoryFilter}
-                                                onChange={(e) => setNoteCategoryFilter(e.target.value)}
-                                                className="text-xs min-w-[140px]"
-                                            >
-                                                <option value="all">Semua Kategori</option>
-                                                <option value="preferensi">Preferensi</option>
-                                                <option value="informasi">Informasi</option>
-                                                <option value="pembayaran">Pembayaran</option>
-                                                <option value="meeting">Meeting</option>
-                                            </NativeSelect>
-
-                                            <NativeSelect
-                                                value={noteAuthorFilter}
-                                                onChange={(e) => setNoteAuthorFilter(e.target.value)}
-                                                className="text-xs min-w-[140px]"
-                                            >
-                                                <option value="all">Dibuat Oleh</option>
-                                                <option value="admin">Admin Arams</option>
-                                                <option value="budi">Budi Santoso (Supervisor)</option>
-                                            </NativeSelect>
-                                        </div>
-
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setNoteCategoryFilter('all');
-                                                setNoteAuthorFilter('all');
-                                            }}
-                                            className="text-xs font-bold text-slate-500 hover:text-slate-900 flex items-center gap-1 cursor-pointer"
-                                        >
-                                            <RotateCcw className="w-3.5 h-3.5" />
-                                            <span>Reset Filter</span>
-                                        </button>
-                                    </div>
-
-                                    {/* Note Cards */}
-                                    <div className="space-y-3.5">
-                                        {filteredNotesList.length > 0 ? (
-                                            filteredNotesList.map((note) => (
-                                                <div
-                                                    key={note.id}
-                                                    className={`p-4 rounded-2xl bg-white border border-slate-200/80 border-l-4 ${note.border_color} shadow-2xs space-y-2`}
-                                                >
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-2">
-                                                            <div
-                                                                className={`w-6 h-6 rounded-lg flex items-center justify-center ${note.icon_color}`}
-                                                            >
-                                                                {note.category === 'Preferensi' ? (
-                                                                    <Star className="w-3.5 h-3.5" />
-                                                                ) : note.category === 'Informasi' ? (
-                                                                    <FileText className="w-3.5 h-3.5" />
-                                                                ) : note.category === 'Pembayaran' ? (
-                                                                    <Receipt className="w-3.5 h-3.5" />
-                                                                ) : (
-                                                                    <MessageSquare className="w-3.5 h-3.5" />
-                                                                )}
-                                                            </div>
-                                                            <h4 className="text-xs font-bold text-slate-900">
-                                                                {note.title}
-                                                            </h4>
-                                                        </div>
-
-                                                        <Badge variant={note.badge_color as any} className="text-[10px] font-bold">
-                                                            {note.category}
-                                                        </Badge>
-                                                    </div>
-
-                                                    <p className="text-xs text-slate-700 leading-relaxed pl-8">
-                                                        {note.content}
-                                                    </p>
-
-                                                    <div className="text-[11px] text-slate-400 font-medium pl-8 flex items-center gap-2">
-                                                        <span>{note.author}</span>
-                                                        <span>•</span>
-                                                        <span>{note.date}</span>
-                                                        <span>•</span>
-                                                        <span>{note.project}</span>
-                                                    </div>
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <div className="p-8 rounded-2xl bg-slate-50/70 border border-slate-200/80 text-center space-y-2">
-                                                <FileText className="w-8 h-8 text-slate-300 mx-auto" />
-                                                <p className="text-xs font-semibold text-slate-700">Belum Ada Catatan Khusus</p>
-                                                <p className="text-[11px] text-slate-400">Tulis catatan preferensi, briefing, atau instruksi kerja untuk klien ini di atas.</p>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Pagination */}
-                                    {filteredNotesList.length > 0 && (
-                                        <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
-                                            <span>
-                                                Menampilkan 1 - {filteredNotesList.length} dari {filteredNotesList.length} catatan
-                                            </span>
-                                            <div className="flex items-center gap-1">
-                                                <button
-                                                    type="button"
-                                                    disabled
-                                                    className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 cursor-not-allowed"
-                                                >
-                                                    &lt;
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className="w-7 h-7 rounded-lg bg-indigo-600 text-white font-bold flex items-center justify-center text-xs shadow-2xs"
-                                                >
-                                                    1
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    disabled
-                                                    className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 cursor-not-allowed"
-                                                >
-                                                    &gt;
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
+                        {/* TAB 5: CATATAN (Gambar 3) */}
+                        {mainTab === 'catatan' && (
+                            <div className="p-6 space-y-5 animate-in fade-in duration-150">
+                                {/* Header */}
+                                <div>
+                                    <h3 className="text-sm font-bold text-slate-900">
+                                        Catatan
+                                    </h3>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        Kelola catatan internal terkait klien, preferensi, dan instruksi khusus
+                                    </p>
                                 </div>
-                            )}
 
-                            {/* TAB 6: RIWAYAT KOMUNIKASI */}
-                            {mainTab === 'komunikasi' && (
-                                <div className="p-6 space-y-5 animate-in fade-in duration-150">
-                                    {/* Header */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                                        <div>
-                                            <h3 className="text-sm font-bold text-slate-900">
-                                                Riwayat Komunikasi & WhatsApp Chat
-                                            </h3>
-                                            <p className="text-xs text-slate-500 mt-0.5">
-                                                Catatan interaksi, pesan WhatsApp, email, dan meeting klien
-                                            </p>
+                                {/* Add Note Box */}
+                                <div className="border border-slate-200/80 rounded-2xl overflow-hidden bg-white shadow-2xs">
+                                    <textarea
+                                        rows={3}
+                                        value={noteInputText}
+                                        onChange={(e) => setNoteInputText(e.target.value)}
+                                        placeholder="Tulis catatan baru..."
+                                        className="w-full p-4 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none resize-none"
+                                    />
+                                    <div className="px-4 py-2.5 bg-slate-50/80 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <NativeSelect
+                                                value={noteInputCategory}
+                                                onChange={(e) => setNoteInputCategory(e.target.value)}
+                                                className="text-xs py-1"
+                                            >
+                                                <option value="Preferensi">Preferensi</option>
+                                                <option value="Informasi">Informasi</option>
+                                                <option value="Pembayaran">Pembayaran</option>
+                                                <option value="Meeting">Meeting</option>
+                                            </NativeSelect>
+
+                                            <div className="flex items-center gap-2 text-slate-400 border-l border-slate-200 pl-3">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toast.info('Fitur lampirkan file ke catatan')}
+                                                    className="hover:text-slate-700 cursor-pointer"
+                                                    title="Lampirkan File"
+                                                >
+                                                    <Paperclip className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setNoteInputText((prev) => prev + '**tebal**')}
+                                                    className="hover:text-slate-700 cursor-pointer"
+                                                    title="Teks Tebal"
+                                                >
+                                                    <Bold className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setNoteInputText((prev) => prev + '_miring_')}
+                                                    className="hover:text-slate-700 cursor-pointer"
+                                                    title="Teks Miring"
+                                                >
+                                                    <Italic className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
                                         </div>
 
                                         <button
                                             type="button"
-                                            onClick={() => setIsAddCommModalOpen(true)}
-                                            className="px-4 py-2 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0 self-start sm:self-auto"
+                                            onClick={handleAddNote}
+                                            className="px-4 py-1.5 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer self-end sm:self-auto"
                                         >
-                                            <Plus className="w-3.5 h-3.5" />
-                                            <span>+ Catat Komunikasi</span>
+                                            <Check className="w-3.5 h-3.5" />
+                                            <span>Simpan Catatan</span>
                                         </button>
                                     </div>
+                                </div>
 
-                                    {/* Filter Bar */}
-                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                                        <div className="relative flex-1">
-                                            <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                                            <input
-                                                type="text"
-                                                value={commSearchQuery}
-                                                onChange={(e) => setCommSearchQuery(e.target.value)}
-                                                placeholder="Cari riwayat komunikasi..."
-                                                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                                            />
-                                        </div>
-
+                                {/* Filter Bar */}
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
                                         <NativeSelect
-                                            value={commChannelFilter}
-                                            onChange={(e) => setCommChannelFilter(e.target.value)}
+                                            value={noteCategoryFilter}
+                                            onChange={(e) => setNoteCategoryFilter(e.target.value)}
                                             className="text-xs min-w-[140px]"
                                         >
-                                            <option value="all">Semua Channel</option>
-                                            <option value="WhatsApp">WhatsApp</option>
-                                            <option value="Email">Email</option>
-                                            <option value="Telepon">Telepon</option>
+                                            <option value="all">Semua Kategori</option>
+                                            <option value="preferensi">Preferensi</option>
+                                            <option value="informasi">Informasi</option>
+                                            <option value="pembayaran">Pembayaran</option>
+                                            <option value="meeting">Meeting</option>
+                                        </NativeSelect>
+
+                                        <NativeSelect
+                                            value={noteAuthorFilter}
+                                            onChange={(e) => setNoteAuthorFilter(e.target.value)}
+                                            className="text-xs min-w-[140px]"
+                                        >
+                                            <option value="all">Dibuat Oleh</option>
+                                            <option value="admin">Admin Arams</option>
+                                            <option value="budi">Budi Santoso (Supervisor)</option>
                                         </NativeSelect>
                                     </div>
 
-                                    {/* Communication Cards List */}
-                                    <div className="space-y-3">
-                                        {commList.filter(
-                                            (c) =>
-                                                (commChannelFilter === 'all' || c.channel === commChannelFilter) &&
-                                                (c.title.toLowerCase().includes(commSearchQuery.toLowerCase()) ||
-                                                    c.content.toLowerCase().includes(commSearchQuery.toLowerCase()))
-                                        ).length > 0 ? (
-                                            commList
-                                                .filter(
-                                                    (c) =>
-                                                        (commChannelFilter === 'all' || c.channel === commChannelFilter) &&
-                                                        (c.title.toLowerCase().includes(commSearchQuery.toLowerCase()) ||
-                                                            c.content.toLowerCase().includes(commSearchQuery.toLowerCase()))
-                                                )
-                                                .map((item) => (
-                                                    <div
-                                                        key={item.id}
-                                                        className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex items-start gap-3.5 hover:border-slate-300 transition-colors"
-                                                    >
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setNoteCategoryFilter('all');
+                                            setNoteAuthorFilter('all');
+                                        }}
+                                        className="text-xs font-bold text-slate-500 hover:text-slate-900 flex items-center gap-1 cursor-pointer"
+                                    >
+                                        <RotateCcw className="w-3.5 h-3.5" />
+                                        <span>Reset Filter</span>
+                                    </button>
+                                </div>
+
+                                {/* Note Cards */}
+                                <div className="space-y-3.5">
+                                    {filteredNotesList.length > 0 ? (
+                                        filteredNotesList.map((note) => (
+                                            <div
+                                                key={note.id}
+                                                className={`p-4 rounded-2xl bg-white border border-slate-200/80 border-l-4 ${note.border_color} shadow-2xs space-y-2`}
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
                                                         <div
-                                                            className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${item.channel === 'WhatsApp'
-                                                                ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-                                                                : item.channel === 'Email'
-                                                                    ? 'bg-blue-50 text-blue-600 border border-blue-100'
-                                                                    : 'bg-amber-50 text-amber-600 border border-amber-100'
-                                                                }`}
+                                                            className={`w-6 h-6 rounded-lg flex items-center justify-center ${note.icon_color}`}
                                                         >
-                                                            {item.channel === 'WhatsApp' ? (
-                                                                <MessageCircle className="w-4 h-4" />
-                                                            ) : item.channel === 'Email' ? (
-                                                                <Mail className="w-4 h-4" />
+                                                            {note.category === 'Preferensi' ? (
+                                                                <Star className="w-3.5 h-3.5" />
+                                                            ) : note.category === 'Informasi' ? (
+                                                                <FileText className="w-3.5 h-3.5" />
+                                                            ) : note.category === 'Pembayaran' ? (
+                                                                <Receipt className="w-3.5 h-3.5" />
                                                             ) : (
-                                                                <Phone className="w-4 h-4" />
+                                                                <MessageSquare className="w-3.5 h-3.5" />
                                                             )}
                                                         </div>
-
-                                                        <div className="flex-1 space-y-1 min-w-0">
-                                                            <div className="flex items-center justify-between gap-2">
-                                                                <h4 className="text-xs font-bold text-slate-900 truncate">
-                                                                    {item.channel}: {item.title}
-                                                                </h4>
-                                                                <Badge
-                                                                    variant={item.channel === 'WhatsApp' ? 'success' : item.channel === 'Email' ? 'info' : 'warning'}
-                                                                    className="text-[10px] font-bold shrink-0"
-                                                                >
-                                                                    {item.status}
-                                                                </Badge>
-                                                            </div>
-
-                                                            <p className="text-xs text-slate-600 leading-relaxed">
-                                                                {item.content}
-                                                            </p>
-
-                                                            <div className="text-[10px] text-slate-400 flex items-center gap-2 pt-1">
-                                                                <span>{item.author}</span>
-                                                                <span>•</span>
-                                                                <span>{item.date}</span>
-                                                            </div>
-                                                        </div>
+                                                        <h4 className="text-xs font-bold text-slate-900">
+                                                            {note.title}
+                                                        </h4>
                                                     </div>
-                                                ))
-                                        ) : (
-                                            <div className="p-8 rounded-2xl bg-slate-50/70 border border-slate-200/80 text-center space-y-2">
-                                                <MessageCircle className="w-8 h-8 text-slate-300 mx-auto" />
-                                                <p className="text-xs font-semibold text-slate-700">Belum Ada Riwayat Komunikasi</p>
-                                                <p className="text-[11px] text-slate-400">Klik tombol "+ Catat Komunikasi" untuk mencatat WhatsApp, email, atau telepon klien.</p>
+
+                                                    <Badge variant={note.badge_color as any} className="text-[10px] font-bold">
+                                                        {note.category}
+                                                    </Badge>
+                                                </div>
+
+                                                <p className="text-xs text-slate-700 leading-relaxed pl-8">
+                                                    {note.content}
+                                                </p>
+
+                                                <div className="text-[11px] text-slate-400 font-medium pl-8 flex items-center gap-2">
+                                                    <span>{note.author}</span>
+                                                    <span>•</span>
+                                                    <span>{note.date}</span>
+                                                    <span>•</span>
+                                                    <span>{note.project}</span>
+                                                </div>
                                             </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* TAB 7: INFORMASI AKUN (Gambar 5) */}
-                            {mainTab === 'akun' && (
-                                <div className="p-6 space-y-6 animate-in fade-in duration-150">
-                                    {/* Header */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                                        <div>
-                                            <h3 className="text-sm font-bold text-slate-900">
-                                                Informasi Akun Klien (Akses Portal Klien)
-                                            </h3>
-                                            <p className="text-xs text-slate-500 mt-0.5">
-                                                Klien dapat login ke portal untuk melihat progress project, review foto, dan download file.
-                                            </p>
+                                        ))
+                                    ) : (
+                                        <div className="p-8 rounded-2xl bg-slate-50/70 border border-slate-200/80 text-center space-y-2">
+                                            <FileText className="w-8 h-8 text-slate-300 mx-auto" />
+                                            <p className="text-xs font-semibold text-slate-700">Belum Ada Catatan Khusus</p>
+                                            <p className="text-[11px] text-slate-400">Tulis catatan preferensi, briefing, atau instruksi kerja untuk klien ini di atas.</p>
                                         </div>
+                                    )}
+                                </div>
 
-                                        {/* Toggle Switch */}
-                                        <div className="flex items-center gap-2 shrink-0">
-                                            <span className="text-xs font-bold text-slate-700">{clientUser ? 'Akses Portal Klien' : 'Buat akun klien'}</span>
+                                {/* Pagination */}
+                                {filteredNotesList.length > 0 && (
+                                    <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+                                        <span>
+                                            Menampilkan 1 - {filteredNotesList.length} dari {filteredNotesList.length} catatan
+                                        </span>
+                                        <div className="flex items-center gap-1">
                                             <button
                                                 type="button"
-                                                onClick={() => setIsAccountActive(!isAccountActive)}
-                                                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${isAccountActive ? 'bg-indigo-600' : 'bg-slate-200'
-                                                    }`}
+                                                disabled
+                                                className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 cursor-not-allowed"
                                             >
-                                                <span
-                                                    className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform shadow-xs ${isAccountActive ? 'left-6' : 'left-1'
-                                                        }`}
-                                                />
+                                                &lt;
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="w-7 h-7 rounded-lg bg-indigo-600 text-white font-bold flex items-center justify-center text-xs shadow-2xs"
+                                            >
+                                                1
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled
+                                                className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 cursor-not-allowed"
+                                            >
+                                                &gt;
                                             </button>
                                         </div>
                                     </div>
+                                )}
+                            </div>
+                        )}
 
-                                    {isAccountActive ? (
-                                        <div className="space-y-5">
-                                            {/* Status Akun Aktif Card jika user sudah terdaftar */}
-                                            {clientUser && (
-                                                <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                                    <div className="flex items-start gap-3">
-                                                        <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                                                            <CheckCircle2 className="w-5 h-5" />
-                                                        </div>
-                                                        <div className="space-y-1">
-                                                            <div className="flex items-center gap-2 flex-wrap">
-                                                                <span className="text-xs font-bold text-emerald-950">
-                                                                    Akun Portal Klien Aktif
-                                                                </span>
-                                                                <Badge variant="success" className="text-[10px] py-0 px-2 font-bold uppercase">
-                                                                    {clientUser.status || 'Active'}
-                                                                </Badge>
-                                                                <span className="text-[11px] text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-full font-medium">
-                                                                    Role: Client
-                                                                </span>
-                                                            </div>
-                                                            <p className="text-xs text-emerald-900">
-                                                                Email Login: <span className="font-semibold text-emerald-950 underline">{clientUser.email}</span>
-                                                            </p>
-                                                            <div className="text-[11px] text-emerald-700 flex items-center gap-2 pt-0.5">
-                                                                <span>Dibuat: {clientUser.created_at ? new Date(clientUser.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}</span>
-                                                                <span>•</span>
-                                                                <span>Login Terakhir: {clientUser.last_login_at ? new Date(clientUser.last_login_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : 'Belum pernah login'}</span>
-                                                            </div>
-                                                        </div>
+                        {/* TAB 6: RIWAYAT KOMUNIKASI */}
+                        {mainTab === 'komunikasi' && (
+                            <div className="p-6 space-y-5 animate-in fade-in duration-150">
+                                {/* Header */}
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                                    <div>
+                                        <h3 className="text-sm font-bold text-slate-900">
+                                            Riwayat Komunikasi & WhatsApp Chat
+                                        </h3>
+                                        <p className="text-xs text-slate-500 mt-0.5">
+                                            Catatan interaksi, pesan WhatsApp, email, dan meeting klien
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsAddCommModalOpen(true)}
+                                        className="px-4 py-2 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs cursor-pointer shrink-0 self-start sm:self-auto"
+                                    >
+                                        <Plus className="w-3.5 h-3.5" />
+                                        <span>+ Catat Komunikasi</span>
+                                    </button>
+                                </div>
+
+                                {/* Filter Bar */}
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                                    <div className="relative flex-1">
+                                        <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            value={commSearchQuery}
+                                            onChange={(e) => setCommSearchQuery(e.target.value)}
+                                            placeholder="Cari riwayat komunikasi..."
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                                        />
+                                    </div>
+
+                                    <NativeSelect
+                                        value={commChannelFilter}
+                                        onChange={(e) => setCommChannelFilter(e.target.value)}
+                                        className="text-xs min-w-[140px]"
+                                    >
+                                        <option value="all">Semua Channel</option>
+                                        <option value="WhatsApp">WhatsApp</option>
+                                        <option value="Email">Email</option>
+                                        <option value="Telepon">Telepon</option>
+                                    </NativeSelect>
+                                </div>
+
+                                {/* Communication Cards List */}
+                                <div className="space-y-3">
+                                    {commList.filter(
+                                        (c) =>
+                                            (commChannelFilter === 'all' || c.channel === commChannelFilter) &&
+                                            (c.title.toLowerCase().includes(commSearchQuery.toLowerCase()) ||
+                                                c.content.toLowerCase().includes(commSearchQuery.toLowerCase()))
+                                    ).length > 0 ? (
+                                        commList
+                                            .filter(
+                                                (c) =>
+                                                    (commChannelFilter === 'all' || c.channel === commChannelFilter) &&
+                                                    (c.title.toLowerCase().includes(commSearchQuery.toLowerCase()) ||
+                                                        c.content.toLowerCase().includes(commSearchQuery.toLowerCase()))
+                                            )
+                                            .map((item) => (
+                                                <div
+                                                    key={item.id}
+                                                    className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs flex items-start gap-3.5 hover:border-slate-300 transition-colors"
+                                                >
+                                                    <div
+                                                        className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${item.channel === 'WhatsApp'
+                                                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                                            : item.channel === 'Email'
+                                                                ? 'bg-blue-50 text-blue-600 border border-blue-100'
+                                                                : 'bg-amber-50 text-amber-600 border border-amber-100'
+                                                            }`}
+                                                    >
+                                                        {item.channel === 'WhatsApp' ? (
+                                                            <MessageCircle className="w-4 h-4" />
+                                                        ) : item.channel === 'Email' ? (
+                                                            <Mail className="w-4 h-4" />
+                                                        ) : (
+                                                            <Phone className="w-4 h-4" />
+                                                        )}
                                                     </div>
 
-                                                    {client.phone && (
-                                                        <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    const cleanPhone = (client.phone || '').replace(/[^0-9]/g, '').replace(/^0/, '62');
-                                                                    const loginUrl = `${window.location.origin}/login`;
-                                                                    const msg = `Halo Kak ${client.name},\n\nBerikut pengingat akses login Portal Klien Arams Photography Anda:\n\n🌐 Link Login : ${loginUrl}\n👤 Nama Klien : ${client.name}\n📧 Email      : ${clientUser.email}\n\nSilakan login untuk memantau progress project, review foto, dan download file dokumentasi Anda. Terima kasih!`;
-                                                                    window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
-                                                                }}
-                                                                className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                                                    <div className="flex-1 space-y-1 min-w-0">
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <h4 className="text-xs font-bold text-slate-900 truncate">
+                                                                {item.channel}: {item.title}
+                                                            </h4>
+                                                            <Badge
+                                                                variant={item.channel === 'WhatsApp' ? 'success' : item.channel === 'Email' ? 'info' : 'warning'}
+                                                                className="text-[10px] font-bold shrink-0"
                                                             >
-                                                                <MessageCircle className="w-3.5 h-3.5" />
-                                                                <span>WA Pengingat</span>
-                                                            </button>
+                                                                {item.status}
+                                                            </Badge>
                                                         </div>
-                                                    )}
-                                                </div>
-                                            )}
 
-                                            <form onSubmit={handleSaveClientAccount} className="space-y-5">
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                    <div>
-                                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                            Email Akun <span className="text-red-500">*</span>
-                                                        </label>
-                                                        <div className="relative">
-                                                            <Mail className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                                                            <input
-                                                                type="email"
-                                                                required
-                                                                value={accountEmail}
-                                                                onChange={(e) => setAccountEmail(e.target.value)}
-                                                                placeholder="andipratama@email.com"
-                                                                className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
-                                                            />
+                                                        <p className="text-xs text-slate-600 leading-relaxed">
+                                                            {item.content}
+                                                        </p>
+
+                                                        <div className="text-[10px] text-slate-400 flex items-center gap-2 pt-1">
+                                                            <span>{item.author}</span>
+                                                            <span>•</span>
+                                                            <span>{item.date}</span>
                                                         </div>
                                                     </div>
+                                                </div>
+                                            ))
+                                    ) : (
+                                        <div className="p-8 rounded-2xl bg-slate-50/70 border border-slate-200/80 text-center space-y-2">
+                                            <MessageCircle className="w-8 h-8 text-slate-300 mx-auto" />
+                                            <p className="text-xs font-semibold text-slate-700">Belum Ada Riwayat Komunikasi</p>
+                                            <p className="text-[11px] text-slate-400">Klik tombol "+ Catat Komunikasi" untuk mencatat WhatsApp, email, atau telepon klien.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
-                                                    <div>
-                                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                            Username (opsional)
-                                                        </label>
-                                                        <div className="relative">
-                                                            <span className="text-xs font-bold text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2">
-                                                                @
+                        {/* TAB 7: INFORMASI AKUN (Gambar 5) */}
+                        {mainTab === 'akun' && (
+                            <div className="p-6 space-y-6 animate-in fade-in duration-150">
+                                {/* Header */}
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                                    <div>
+                                        <h3 className="text-sm font-bold text-slate-900">
+                                            Informasi Akun Klien (Akses Portal Klien)
+                                        </h3>
+                                        <p className="text-xs text-slate-500 mt-0.5">
+                                            Klien dapat login ke portal untuk melihat progress project, review foto, dan download file.
+                                        </p>
+                                    </div>
+
+                                    {/* Toggle Switch */}
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <span className="text-xs font-bold text-slate-700">{clientUser ? 'Akses Portal Klien' : 'Buat akun klien'}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsAccountActive(!isAccountActive)}
+                                            className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${isAccountActive ? 'bg-indigo-600' : 'bg-slate-200'
+                                                }`}
+                                        >
+                                            <span
+                                                className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform shadow-xs ${isAccountActive ? 'left-6' : 'left-1'
+                                                    }`}
+                                            />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {isAccountActive ? (
+                                    <div className="space-y-5">
+                                        {/* Status Akun Aktif Card jika user sudah terdaftar */}
+                                        {clientUser && (
+                                            <div className="p-4 rounded-2xl bg-emerald-50/80 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                <div className="flex items-start gap-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                                                        <CheckCircle2 className="w-5 h-5" />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <span className="text-xs font-bold text-emerald-950">
+                                                                Akun Portal Klien Aktif
                                                             </span>
-                                                            <input
-                                                                type="text"
-                                                                value={accountUsername}
-                                                                onChange={(e) => setAccountUsername(e.target.value)}
-                                                                placeholder="andipratama"
-                                                                className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                                                            />
+                                                            <Badge variant="success" className="text-[10px] py-0 px-2 font-bold uppercase">
+                                                                {clientUser.status || 'Active'}
+                                                            </Badge>
+                                                            <span className="text-[11px] text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-full font-medium">
+                                                                Role: Client
+                                                            </span>
                                                         </div>
-                                                    </div>
-
-                                                    <div>
-                                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                            {clientUser ? 'Password Baru / Kredensial' : 'Password Akun'} <span className="text-red-500">*</span>
-                                                        </label>
-                                                        <div className="relative">
-                                                            <Lock className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                                                            <input
-                                                                type={showAccountPassword ? 'text' : 'password'}
-                                                                required
-                                                                value={accountPassword}
-                                                                onChange={(e) => setAccountPassword(e.target.value)}
-                                                                placeholder="Abc123!@#"
-                                                                className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-9 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
-                                                            />
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setShowAccountPassword(!showAccountPassword)}
-                                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                                                            >
-                                                                {showAccountPassword ? (
-                                                                    <EyeOff className="w-3.5 h-3.5" />
-                                                                ) : (
-                                                                    <Eye className="w-3.5 h-3.5" />
-                                                                )}
-                                                            </button>
-                                                        </div>
-                                                    </div>
-
-                                                    <div>
-                                                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                                            Konfirmasi Password <span className="text-red-500">*</span>
-                                                        </label>
-                                                        <div className="relative">
-                                                            <Lock className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                                                            <input
-                                                                type={showAccountPasswordConfirm ? 'text' : 'password'}
-                                                                required
-                                                                value={accountPasswordConfirm}
-                                                                onChange={(e) => setAccountPasswordConfirm(e.target.value)}
-                                                                placeholder="Abc123!@#"
-                                                                className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-9 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
-                                                            />
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setShowAccountPasswordConfirm(!showAccountPasswordConfirm)}
-                                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                                                            >
-                                                                {showAccountPasswordConfirm ? (
-                                                                    <EyeOff className="w-3.5 h-3.5" />
-                                                                ) : (
-                                                                    <Eye className="w-3.5 h-3.5" />
-                                                                )}
-                                                            </button>
+                                                        <p className="text-xs text-emerald-900">
+                                                            Email Login: <span className="font-semibold text-emerald-950 underline">{clientUser.email}</span>
+                                                        </p>
+                                                        <div className="text-[11px] text-emerald-700 flex items-center gap-2 pt-0.5">
+                                                            <span>Dibuat: {clientUser.created_at ? new Date(clientUser.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}</span>
+                                                            <span>•</span>
+                                                            <span>Login Terakhir: {clientUser.last_login_at ? new Date(clientUser.last_login_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : 'Belum pernah login'}</span>
                                                         </div>
                                                     </div>
                                                 </div>
 
-                                                <div>
-                                                    <div className="flex items-center justify-between mb-1">
-                                                        <label className="text-[11px] font-bold text-slate-700">
-                                                            Pesan untuk Klien (Akan dikirim bersama kredensial)
-                                                        </label>
-                                                        <span className="text-[10px] text-slate-400">
-                                                            {accountMessage.length} / 500
-                                                        </span>
+                                                {client.phone && (
+                                                    <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const cleanPhone = (client.phone || '').replace(/[^0-9]/g, '').replace(/^0/, '62');
+                                                                const loginUrl = `${window.location.origin}/login`;
+                                                                const msg = `Halo Kak ${client.name},\n\nBerikut pengingat akses login Portal Klien Arams Photography Anda:\n\n🌐 Link Login : ${loginUrl}\n👤 Nama Klien : ${client.name}\n📧 Email      : ${clientUser.email}\n\nSilakan login untuk memantau progress project, review foto, dan download file dokumentasi Anda. Terima kasih!`;
+                                                                window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+                                                            }}
+                                                            className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                                                        >
+                                                            <MessageCircle className="w-3.5 h-3.5" />
+                                                            <span>WA Pengingat</span>
+                                                        </button>
                                                     </div>
-                                                    <textarea
-                                                        rows={3}
-                                                        maxLength={500}
-                                                        value={accountMessage}
-                                                        onChange={(e) => setAccountMessage(e.target.value)}
-                                                        className="w-full bg-white border border-slate-200 rounded-xl p-3.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-none leading-relaxed"
-                                                    />
-                                                </div>
+                                                )}
+                                            </div>
+                                        )}
 
+                                        <form onSubmit={handleSaveClientAccount} className="space-y-5">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                 <div>
-                                                    <label className="text-[11px] font-bold text-slate-700 block mb-2">
-                                                        Metode Pengiriman Kredensial Akun
+                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                        Email Akun <span className="text-red-500">*</span>
                                                     </label>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setAccountShareMethod('email')}
-                                                            className={`p-3.5 rounded-xl border text-left flex flex-col justify-between gap-2 transition-all cursor-pointer ${accountShareMethod === 'email'
-                                                                ? 'border-indigo-600 bg-indigo-50/50 text-indigo-950 font-bold ring-1 ring-indigo-600 shadow-2xs'
-                                                                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                                                                }`}
-                                                        >
-                                                            <div className="flex items-center gap-2">
-                                                                <Mail className="w-4 h-4 text-indigo-600 shrink-0" />
-                                                                <span className="text-xs font-bold">Email</span>
-                                                            </div>
-                                                            <p className="text-[11px] font-normal text-slate-500 leading-tight">
-                                                                Kirim detail login ke email klien.
-                                                            </p>
-                                                        </button>
+                                                    <div className="relative">
+                                                        <Mail className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                                        <input
+                                                            type="email"
+                                                            required
+                                                            value={accountEmail}
+                                                            onChange={(e) => setAccountEmail(e.target.value)}
+                                                            placeholder="andipratama@email.com"
+                                                            className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
+                                                        />
+                                                    </div>
+                                                </div>
 
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setAccountShareMethod('whatsapp')}
-                                                            className={`p-3.5 rounded-xl border text-left flex flex-col justify-between gap-2 transition-all cursor-pointer ${accountShareMethod === 'whatsapp'
-                                                                ? 'border-emerald-600 bg-emerald-50/50 text-emerald-950 font-bold ring-1 ring-emerald-600 shadow-2xs'
-                                                                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                                                                }`}
-                                                        >
-                                                            <div className="flex items-center gap-2">
-                                                                <MessageCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                                                                <span className="text-xs font-bold">WhatsApp</span>
-                                                            </div>
-                                                            <p className="text-[11px] font-normal text-slate-500 leading-tight">
-                                                                Buka chat WhatsApp dengan draft kredensial klien.
-                                                            </p>
-                                                        </button>
+                                                <div>
+                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                        Username (opsional)
+                                                    </label>
+                                                    <div className="relative">
+                                                        <span className="text-xs font-bold text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2">
+                                                            @
+                                                        </span>
+                                                        <input
+                                                            type="text"
+                                                            value={accountUsername}
+                                                            onChange={(e) => setAccountUsername(e.target.value)}
+                                                            placeholder="andipratama"
+                                                            className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                                                        />
+                                                    </div>
+                                                </div>
 
+                                                <div>
+                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                        {clientUser ? 'Password Baru / Kredensial' : 'Password Akun'} <span className="text-red-500">*</span>
+                                                    </label>
+                                                    <div className="relative">
+                                                        <Lock className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                                        <input
+                                                            type={showAccountPassword ? 'text' : 'password'}
+                                                            required
+                                                            value={accountPassword}
+                                                            onChange={(e) => setAccountPassword(e.target.value)}
+                                                            placeholder="Abc123!@#"
+                                                            className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-9 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
+                                                        />
                                                         <button
                                                             type="button"
-                                                            onClick={() => setAccountShareMethod('both')}
-                                                            className={`p-3.5 rounded-xl border text-left flex flex-col justify-between gap-2 transition-all cursor-pointer ${accountShareMethod === 'both'
-                                                                ? 'border-primary-accent bg-amber-50/30 text-slate-950 font-bold ring-1 ring-primary-accent shadow-2xs'
-                                                                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                                                                }`}
+                                                            onClick={() => setShowAccountPassword(!showAccountPassword)}
+                                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                                                         >
-                                                            <div className="flex items-center gap-2">
-                                                                <Send className="w-4 h-4 text-primary-accent shrink-0" />
-                                                                <span className="text-xs font-bold">Email &amp; WhatsApp</span>
-                                                            </div>
-                                                            <p className="text-[11px] font-normal text-slate-500 leading-tight">
-                                                                Kirim email sekaligus siapkan chat WhatsApp.
-                                                            </p>
+                                                            {showAccountPassword ? (
+                                                                <EyeOff className="w-3.5 h-3.5" />
+                                                            ) : (
+                                                                <Eye className="w-3.5 h-3.5" />
+                                                            )}
                                                         </button>
                                                     </div>
+                                                </div>
 
-                                                    {/* Pratinjau Teks Pesan WhatsApp (wa.me) */}
-                                                    {accountShareMethod !== 'email' && (
-                                                        <div className="mt-3 p-3.5 bg-emerald-50/80 border border-emerald-200 rounded-xl space-y-2">
-                                                            <div className="flex items-center justify-between">
-                                                                <span className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
-                                                                    <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-                                                                    Format Pesan WhatsApp
+                                                <div>
+                                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                                        Konfirmasi Password <span className="text-red-500">*</span>
+                                                    </label>
+                                                    <div className="relative">
+                                                        <Lock className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                                        <input
+                                                            type={showAccountPasswordConfirm ? 'text' : 'password'}
+                                                            required
+                                                            value={accountPasswordConfirm}
+                                                            onChange={(e) => setAccountPasswordConfirm(e.target.value)}
+                                                            placeholder="Abc123!@#"
+                                                            className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-9 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setShowAccountPasswordConfirm(!showAccountPasswordConfirm)}
+                                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                                                        >
+                                                            {showAccountPasswordConfirm ? (
+                                                                <EyeOff className="w-3.5 h-3.5" />
+                                                            ) : (
+                                                                <Eye className="w-3.5 h-3.5" />
+                                                            )}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <label className="text-[11px] font-bold text-slate-700">
+                                                        Pesan untuk Klien (Akan dikirim bersama kredensial)
+                                                    </label>
+                                                    <span className="text-[10px] text-slate-400">
+                                                        {accountMessage.length} / 500
+                                                    </span>
+                                                </div>
+                                                <textarea
+                                                    rows={3}
+                                                    maxLength={500}
+                                                    value={accountMessage}
+                                                    onChange={(e) => setAccountMessage(e.target.value)}
+                                                    className="w-full bg-white border border-slate-200 rounded-xl p-3.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-none leading-relaxed"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="text-[11px] font-bold text-slate-700 block mb-2">
+                                                    Metode Pengiriman Kredensial Akun
+                                                </label>
+                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setAccountShareMethod('email')}
+                                                        className={`p-3.5 rounded-xl border text-left flex flex-col justify-between gap-2 transition-all cursor-pointer ${accountShareMethod === 'email'
+                                                            ? 'border-indigo-600 bg-indigo-50/50 text-indigo-950 font-bold ring-1 ring-indigo-600 shadow-2xs'
+                                                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                                            }`}
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <Mail className="w-4 h-4 text-indigo-600 shrink-0" />
+                                                            <span className="text-xs font-bold">Email</span>
+                                                        </div>
+                                                        <p className="text-[11px] font-normal text-slate-500 leading-tight">
+                                                            Kirim detail login ke email klien.
+                                                        </p>
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setAccountShareMethod('whatsapp')}
+                                                        className={`p-3.5 rounded-xl border text-left flex flex-col justify-between gap-2 transition-all cursor-pointer ${accountShareMethod === 'whatsapp'
+                                                            ? 'border-emerald-600 bg-emerald-50/50 text-emerald-950 font-bold ring-1 ring-emerald-600 shadow-2xs'
+                                                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                                            }`}
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <MessageCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                                                            <span className="text-xs font-bold">WhatsApp</span>
+                                                        </div>
+                                                        <p className="text-[11px] font-normal text-slate-500 leading-tight">
+                                                            Buka chat WhatsApp dengan draft kredensial klien.
+                                                        </p>
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setAccountShareMethod('both')}
+                                                        className={`p-3.5 rounded-xl border text-left flex flex-col justify-between gap-2 transition-all cursor-pointer ${accountShareMethod === 'both'
+                                                            ? 'border-primary-accent bg-amber-50/30 text-slate-950 font-bold ring-1 ring-primary-accent shadow-2xs'
+                                                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                                            }`}
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <Send className="w-4 h-4 text-primary-accent shrink-0" />
+                                                            <span className="text-xs font-bold">Email &amp; WhatsApp</span>
+                                                        </div>
+                                                        <p className="text-[11px] font-normal text-slate-500 leading-tight">
+                                                            Kirim email sekaligus siapkan chat WhatsApp.
+                                                        </p>
+                                                    </button>
+                                                </div>
+
+                                                {/* Pratinjau Teks Pesan WhatsApp (wa.me) */}
+                                                {accountShareMethod !== 'email' && (
+                                                    <div className="mt-3 p-3.5 bg-emerald-50/80 border border-emerald-200 rounded-xl space-y-2">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                                                                <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                                                                Format Pesan WhatsApp
+                                                            </span>
+                                                            {client.phone ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        const cleanPhone = (client.phone || '').replace(/[^0-9]/g, '').replace(/^0/, '62');
+                                                                        const loginUrl = `${window.location.origin}/login`;
+                                                                        const note = accountMessage || 'Silakan login untuk memantau progress project, review foto, dan download file dokumentasi Anda.';
+                                                                        const msg = `Halo Kak ${client.name},\n\nBerikut informasi akun akses Portal Klien Arams Photography Anda:\n\n🌐 Link Login : ${loginUrl}\n👤 Nama Klien : ${client.name}\n📧 Email      : ${accountEmail}\n🔑 Password   : ${accountPassword}\n\n📝 Keterangan:\n${note}\n\nTerima kasih!`;
+                                                                        window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
+                                                                    }}
+                                                                    className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 underline flex items-center gap-1 cursor-pointer"
+                                                                >
+                                                                    <span>Uji / Buka di WhatsApp Sekarang</span>
+                                                                    <ExternalLink className="w-3 h-3" />
+                                                                </button>
+                                                            ) : (
+                                                                <span className="text-[11px] text-amber-700 font-medium">
+                                                                    ⚠️ Nomor HP klien belum diisi
                                                                 </span>
-                                                                {client.phone ? (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => {
-                                                                            const cleanPhone = (client.phone || '').replace(/[^0-9]/g, '').replace(/^0/, '62');
-                                                                            const loginUrl = `${window.location.origin}/login`;
-                                                                            const note = accountMessage || 'Silakan login untuk memantau progress project, review foto, dan download file dokumentasi Anda.';
-                                                                            const msg = `Halo Kak ${client.name},\n\nBerikut informasi akun akses Portal Klien Arams Photography Anda:\n\n🌐 Link Login : ${loginUrl}\n👤 Nama Klien : ${client.name}\n📧 Email      : ${accountEmail}\n🔑 Password   : ${accountPassword}\n\n📝 Keterangan:\n${note}\n\nTerima kasih!`;
-                                                                            window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
-                                                                        }}
-                                                                        className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 underline flex items-center gap-1 cursor-pointer"
-                                                                    >
-                                                                        <span>Uji / Buka di WhatsApp Sekarang</span>
-                                                                        <ExternalLink className="w-3 h-3" />
-                                                                    </button>
-                                                                ) : (
-                                                                    <span className="text-[11px] text-amber-700 font-medium">
-                                                                        ⚠️ Nomor HP klien belum diisi
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <div className="text-[11px] font-mono text-emerald-950 bg-white p-3 rounded-lg border border-emerald-200/70 whitespace-pre-line leading-relaxed select-all">
-                                                                {`Halo Kak ${client.name},
+                                                            )}
+                                                        </div>
+                                                        <div className="text-[11px] font-mono text-emerald-950 bg-white p-3 rounded-lg border border-emerald-200/70 whitespace-pre-line leading-relaxed select-all">
+                                                            {`Halo Kak ${client.name},
 
 Berikut informasi akun akses Portal Klien Arams Photography Anda:
 
@@ -6043,45 +6363,45 @@ Berikut informasi akun akses Portal Klien Arams Photography Anda:
 ${accountMessage || '-'}
 
 Terima kasih!`}
-                                                            </div>
                                                         </div>
-                                                    )}
-                                                </div>
-
-                                                <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                                    <div className="flex items-start gap-2.5">
-                                                        <div className="w-4 h-4 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">
-                                                            i
-                                                        </div>
-                                                        <p className="text-xs text-indigo-950 leading-relaxed">
-                                                            Akun ini langsung tersimpan ke sistem (tabel users) dengan role <strong>Client</strong>. Klien dapat langsung login ke portal via <strong>/login</strong>.
-                                                        </p>
                                                     </div>
+                                                )}
+                                            </div>
 
-                                                    <button
-                                                        type="submit"
-                                                        disabled={submittingAccount}
-                                                        className="px-5 py-2.5 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs shrink-0 cursor-pointer disabled:opacity-50"
-                                                    >
-                                                        <Send className="w-3.5 h-3.5" />
-                                                        <span>{submittingAccount ? 'Menyimpan...' : (clientUser ? 'Simpan & Kirim Ulang Kredensial' : 'Buat & Kirim Akun')}</span>
-                                                    </button>
+                                            <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                <div className="flex items-start gap-2.5">
+                                                    <div className="w-4 h-4 rounded-full bg-indigo-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">
+                                                        i
+                                                    </div>
+                                                    <p className="text-xs text-indigo-950 leading-relaxed">
+                                                        Akun ini langsung tersimpan ke sistem (tabel users) dengan role <strong>Client</strong>. Klien dapat langsung login ke portal via <strong>/login</strong>.
+                                                    </p>
                                                 </div>
-                                            </form>
-                                        </div>
-                                    ) : (
-                                        <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
-                                            <Lock className="w-8 h-8 text-slate-300 mx-auto" />
-                                            <h4 className="text-xs font-bold text-slate-700">Akses Portal Klien Non-Aktif</h4>
-                                            <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                                                Aktifkan tombol toggle "Akses Portal Klien" di kanan atas untuk memberikan akses portal kepada klien.
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
+
+                                                <button
+                                                    type="submit"
+                                                    disabled={submittingAccount}
+                                                    className="px-5 py-2.5 rounded-xl bg-primary-accent hover:opacity-90 active:scale-[0.99] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs shrink-0 cursor-pointer disabled:opacity-50"
+                                                >
+                                                    <Send className="w-3.5 h-3.5" />
+                                                    <span>{submittingAccount ? 'Menyimpan...' : (clientUser ? 'Simpan & Kirim Ulang Kredensial' : 'Buat & Kirim Akun')}</span>
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                ) : (
+                                    <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200/80 space-y-2">
+                                        <Lock className="w-8 h-8 text-slate-300 mx-auto" />
+                                        <h4 className="text-xs font-bold text-slate-700">Akses Portal Klien Non-Aktif</h4>
+                                        <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                                            Aktifkan tombol toggle "Akses Portal Klien" di kanan atas untuk memberikan akses portal kepada klien.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
+                </div>
 
                 {/* ========================================================================= */}
                 {/* MODAL 1: EDIT CLIENT (4-Step Wizard matching ClientIntakeForm & Index.tsx) */}
@@ -6118,7 +6438,10 @@ Terima kasih!`}
                                     <button
                                         type="button"
                                         onClick={() => {
-                                            if (!validateEditStep(editCurrentStep)) return;
+                                            if (!validateEditStep(editCurrentStep)) {
+return;
+}
+
                                             setEditCurrentStep((s) => Math.min(4, s + 1));
                                         }}
                                         className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
@@ -6166,6 +6489,7 @@ Terima kasih!`}
                                 {editSteps.map((s) => {
                                     const isDone = editCurrentStep > s.number;
                                     const isCurrent = editCurrentStep === s.number;
+
                                     return (
                                         <div key={s.number} className="flex-1 flex flex-col items-center text-center px-1">
                                             <div className="relative flex items-center justify-center mb-1.5">
@@ -6173,25 +6497,23 @@ Terima kasih!`}
                                                     type="button"
                                                     onClick={() => (isDone ? setEditCurrentStep(s.number) : null)}
                                                     disabled={!isDone}
-                                                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all relative z-10 ${
-                                                        isDone
+                                                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all relative z-10 ${isDone
                                                             ? 'bg-[#C89445] text-white cursor-pointer hover:opacity-90 shadow-md'
                                                             : isCurrent
-                                                            ? 'bg-[#C89445] text-white ring-4 ring-[#C89445]/20 shadow-md font-extrabold'
-                                                            : 'bg-white border-2 border-slate-300 text-slate-400 cursor-not-allowed'
-                                                    }`}
+                                                                ? 'bg-[#C89445] text-white ring-4 ring-[#C89445]/20 shadow-md font-extrabold'
+                                                                : 'bg-white border-2 border-slate-300 text-slate-400 cursor-not-allowed'
+                                                        }`}
                                                 >
                                                     {isDone ? <Check className="w-4 h-4 stroke-[3]" /> : s.number}
                                                 </button>
                                             </div>
                                             <span
-                                                className={`text-[11px] sm:text-xs max-w-[130px] line-clamp-2 leading-tight ${
-                                                    isCurrent
+                                                className={`text-[11px] sm:text-xs max-w-[130px] line-clamp-2 leading-tight ${isCurrent
                                                         ? 'font-bold text-[#C89445]'
                                                         : isDone
-                                                        ? 'text-slate-700 font-semibold'
-                                                        : 'text-slate-400'
-                                                }`}
+                                                            ? 'text-slate-700 font-semibold'
+                                                            : 'text-slate-400'
+                                                    }`}
                                             >
                                                 {s.title}
                                             </span>
@@ -6223,6 +6545,7 @@ Terima kasih!`}
                                 <ul className="list-disc list-inside text-xs text-rose-700 space-y-1 ml-1 font-medium">
                                     {Object.entries(formErrors).map(([key, val]) => {
                                         const readableKey = FIELD_LABELS[key] || key.replace(/_/g, ' ');
+
                                         return (
                                             <li key={key}>
                                                 <strong className="font-bold text-rose-900">{readableKey}:</strong> {Array.isArray(val) ? val.join(', ') : String(val)}
@@ -6243,8 +6566,8 @@ Terima kasih!`}
                                         {editActiveCategoryKey === 'wedding'
                                             ? 'Informasi Awal & Calon Pengantin (CPP/CPW)'
                                             : editActiveCategoryKey === 'newborn'
-                                            ? 'Informasi Awal & Data Bayi (Newborn)'
-                                            : 'Informasi Awal & Identitas Klien'}
+                                                ? 'Informasi Awal & Data Bayi (Newborn)'
+                                                : 'Informasi Awal & Identitas Klien'}
                                     </h3>
                                     <p className="text-xs text-slate-500 mt-0.5">
                                         Pilih kategori project terlebih dahulu, formulir akan otomatis menyesuaikan data yang diperlukan.
@@ -6325,7 +6648,7 @@ Terima kasih!`}
                                                     <div className="flex items-center justify-between pb-1 border-b border-slate-100">
                                                         <span className="text-[11px] font-bold text-slate-800">Bayi #{idx + 1}</span>
                                                         {(editFormData.children || []).length > 1 && (
-                                                             <button
+                                                            <button
                                                                 type="button"
                                                                 onClick={() => handleRemoveChild(idx)}
                                                                 className="text-red-500 hover:text-red-700 text-[11px] flex items-center gap-1 cursor-pointer"
@@ -6375,15 +6698,15 @@ Terima kasih!`}
                             </div>
                         )}
 
-                        {/* STEP 2: INFORMASI ALAMAT & KONTAK */}
+                        {/* STEP 2: INFORMASI PEMESAN & KONTAK */}
                         {editCurrentStep === 2 && (
                             <div className="space-y-5 animate-in fade-in duration-200">
                                 <div>
                                     <h3 className="text-base font-bold text-slate-900">
-                                        Informasi Alamat
+                                        Informasi Pemesan
                                     </h3>
                                     <p className="text-xs text-slate-500 mt-0.5">
-                                        Lengkapi informasi alamat wilayah dan pilih kontak utama untuk komunikasi.
+                                        Lengkapi informasi domisili pemesan dan pilih kontak utama untuk komunikasi.
                                     </p>
                                 </div>
 
@@ -6403,7 +6726,7 @@ Terima kasih!`}
                                         </div>
                                         <div>
                                             <h4 className="text-xs font-bold text-slate-900">
-                                                Informasi Alamat
+                                                Informasi Pemesan
                                             </h4>
                                             <p className="text-[11px] text-slate-500">
                                                 Pilih Provinsi, Kota, Kecamatan, dan Kelurahan Indonesia secara bertingkat.
@@ -6625,24 +6948,24 @@ Terima kasih!`}
                                                         {editPrimaryContactInfo.name} ({editPrimaryContactInfo.role})
                                                     </span>
                                                 </div>
-                                                <div className="flex justify-between py-0.5 border-b border-slate-100">
+                                                {/* <div className="flex justify-between py-0.5 border-b border-slate-100">
                                                     <span className="text-slate-400">Pekerjaan</span>
                                                     <span className="font-semibold text-slate-800 text-right">
                                                         {editPrimaryContactInfo.occupation}
                                                     </span>
-                                                </div>
+                                                </div> */}
                                                 <div className="flex justify-between py-0.5 border-b border-slate-100">
                                                     <span className="text-slate-400">No. WhatsApp</span>
                                                     <span className="font-semibold text-slate-800 text-right">
                                                         {editFormData.phone || '-'}
                                                     </span>
                                                 </div>
-                                                <div className="flex justify-between py-0.5 border-b border-slate-100">
+                                                {/* <div className="flex justify-between py-0.5 border-b border-slate-100">
                                                     <span className="text-slate-400">Akun Instagram</span>
                                                     <span className="font-semibold text-slate-800 text-right">
                                                         {editPrimaryContactInfo.instagram}
                                                     </span>
-                                                </div>
+                                                </div> */}
                                                 <div className="flex justify-between py-0.5 border-b border-slate-100">
                                                     <span className="text-slate-400">Email</span>
                                                     <span className="font-semibold text-slate-800 text-right">
@@ -6743,7 +7066,7 @@ Terima kasih!`}
 
                                         <div>
                                             <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                Pilihan Paket (Opsional)
+                                                Paket yang Diminati <span className="text-rose-600">*</span>
                                             </label>
                                             <SelectSearch
                                                 options={[
@@ -6753,17 +7076,18 @@ Terima kasih!`}
                                                         subtitle: p.description
                                                             ? p.description
                                                             : p.base_price
-                                                            ? `Rp ${Number(p.base_price).toLocaleString('id-ID')}`
-                                                            : undefined,
+                                                                ? `Rp ${Number(p.base_price).toLocaleString('id-ID')}`
+                                                                : undefined,
                                                     })),
                                                 ]}
                                                 value={editFormData.package_id}
                                                 onChange={(val) => setEditFormData({ ...editFormData, package_id: val })}
-                                                placeholder="Pilih paket atau layanan"
+                                                placeholder={editFilteredPackages.length ? 'Pilih paket atau layanan' : 'Belum ada paket untuk kategori ini'}
                                                 searchPlaceholder="Cari paket..."
-                                                clearable={true}
+                                                clearable={false}
                                                 className="w-full bg-white"
                                             />
+                                            {editFilteredPackages.length === 0 && <p className="mt-2 text-xs text-amber-700" role="status">Tambahkan paket di admin untuk kategori ini sebelum menyimpan.</p>}
                                         </div>
                                     </div>
 
@@ -6942,7 +7266,9 @@ Terima kasih!`}
                                                 selectedCs.name.toLowerCase().includes('wo')
                                             )) || editFormData.source === 'Lainnya' || editFormData.source?.toLowerCase().includes('lainnya');
 
-                                            if (!isLainnya) return null;
+                                            if (!isLainnya) {
+return null;
+}
 
                                             return (
                                                 <div className="sm:col-span-2 p-3 rounded-xl bg-purple-50/70 border border-purple-200/90 space-y-1 animate-in fade-in duration-200">
@@ -7010,16 +7336,16 @@ Terima kasih!`}
                                             <div className="flex flex-wrap gap-1.5 mb-2">
                                                 {presetTags.map((tag) => {
                                                     const isSelected = editFormData.tags.includes(tag);
+
                                                     return (
                                                         <button
                                                             key={tag}
                                                             type="button"
                                                             onClick={() => toggleEditTag(tag)}
-                                                            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                                                                isSelected
+                                                            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${isSelected
                                                                     ? 'bg-amber-100 text-amber-800 border border-amber-300'
                                                                     : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
-                                                            }`}
+                                                                }`}
                                                         >
                                                             #{tag}
                                                         </button>
@@ -7153,7 +7479,7 @@ Terima kasih!`}
                                                 <MapPin className="w-3.5 h-3.5" />
                                             </div>
                                             <h4 className="text-xs font-bold text-slate-900">
-                                                Informasi Alamat
+                                                Informasi Pemesan
                                             </h4>
                                         </div>
                                         <button
@@ -7168,7 +7494,7 @@ Terima kasih!`}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                                         <div className="p-3 bg-slate-50/70 rounded-xl space-y-1">
                                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                                                Informasi Alamat
+                                                Informasi Pemesan & Domisili
                                             </span>
                                             <p className="font-semibold text-slate-800">
                                                 {[editFormData.village, editFormData.district, editFormData.city, editFormData.province].filter(Boolean).join(', ') || '-'}
@@ -7183,7 +7509,7 @@ Terima kasih!`}
                                                 Kontak Utama ({editPrimaryContactInfo.role})
                                             </span>
                                             <p className="font-semibold text-slate-800">
-                                                {editPrimaryContactInfo.name} • {editFormData.phone || '-'}
+                                                {(editCategoryData as any).client_name || '-'} • {editFormData.phone || '-'}
                                             </p>
                                             {editFormData.email && (
                                                 <p className="text-[11px] text-slate-500">Email: {editFormData.email}</p>
@@ -7221,13 +7547,13 @@ Terima kasih!`}
                                         </button>
                                     </div>
 
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
-                                        <div className="p-3 bg-slate-50/70 rounded-xl">
+                                    <div className="grid grid-cols-1 gap-3 text-xs md:grid-cols-2">
+                                        {editFormData.event_type && editFormData.event_type !== editActiveCategory?.name && <div className="min-w-0 p-3 bg-slate-50/70 rounded-xl">
                                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                                                 Jenis Acara
                                             </span>
                                             <span className="font-semibold text-slate-800">{editFormData.event_type}</span>
-                                        </div>
+                                        </div>}
                                         <div className="p-3 bg-slate-50/70 rounded-xl">
                                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                                                 Tanggal &amp; Waktu
@@ -7240,7 +7566,7 @@ Terima kasih!`}
                                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                                                 Lokasi Acara
                                             </span>
-                                            <span className="font-semibold text-slate-800">{editFormData.event_location || '-'}</span>
+                                            <span className="font-semibold text-slate-800 [overflow-wrap:anywhere]">{editFormData.event_location || '-'}</span>
                                         </div>
                                         <div className="p-3 bg-slate-50/70 rounded-xl">
                                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">

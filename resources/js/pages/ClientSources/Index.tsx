@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import {
     Plus,
@@ -14,22 +13,19 @@ import {
     BarChart2,
     ChevronDown,
     MoreVertical,
-    X,
     Info,
-    CheckCircle2,
     User,
     HeartHandshake,
     Store,
     Instagram as InstagramIcon,
     Globe,
     Megaphone,
-    Video,
     Sparkles,
     Eye,
     Tag,
-    Youtube,
-    Facebook,
+    Heart,
 } from 'lucide-react';
+import React, { useState } from 'react';
 import { toast } from 'sonner';
 import {
     Table,
@@ -41,7 +37,6 @@ import {
     TableEmpty,
     Modal,
     AlertConfirmation,
-    Badge,
     StatCard,
     DropdownMenu,
     DropdownMenuTrigger,
@@ -173,6 +168,7 @@ export default function ClientSourcesIndex({
 
     const handleSave = (e: React.FormEvent) => {
         e.preventDefault();
+
         if (editItem) {
             router.put(`/client-sources/${editItem.id}`, form, {
                 onSuccess: () => {
@@ -206,7 +202,10 @@ export default function ClientSourcesIndex({
     };
 
     const handleDelete = () => {
-        if (!confirmDelete.id) return;
+        if (!confirmDelete.id) {
+return;
+}
+
         router.delete(`/client-sources/${confirmDelete.id}`, {
             onSuccess: () => {
                 setConfirmDelete({ isOpen: false });
@@ -218,86 +217,122 @@ export default function ClientSourcesIndex({
         });
     };
 
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('id-ID', {
-            style: 'currency',
-            currency: 'IDR',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-        }).format(amount);
-    };
+    const getTypeMeta = (type: string, name: string) => {
+        const lower = (name || '').toLowerCase().trim();
 
-    const getTypeMeta = (type: string, name: string, index: number) => {
+        // 1. Instagram
+        if (lower.includes('instagram')) {
+            return {
+                label: 'Media Sosial (Instagram)',
+                icon: InstagramIcon,
+                color: 'text-pink-600 bg-pink-50 border border-pink-100',
+                initials: undefined,
+                defaultDate: '-',
+            };
+        }
+
+        // 2. Website
+        if (lower === 'website' || lower.includes('website')) {
+            return {
+                label: 'Website / Web Portofolio',
+                icon: Globe,
+                color: 'text-blue-600 bg-blue-50 border border-blue-100',
+                initials: undefined,
+                defaultDate: '-',
+            };
+        }
+
+        // 3. Sosial Media Lainnya
+        if (lower.includes('sosial media lainnya') || lower.includes('medsos lainnya')) {
+            return {
+                label: 'Media Sosial Lainnya',
+                icon: Sparkles,
+                color: 'text-violet-600 bg-violet-50 border border-violet-100',
+                initials: undefined,
+                defaultDate: '-',
+            };
+        }
+
+        // 4. WO
+        if (lower === 'wo' || lower.includes('wedding organizer')) {
+            return {
+                label: 'Wedding Organizer (WO)',
+                icon: HeartHandshake,
+                color: 'text-purple-600 bg-purple-50 border border-purple-100',
+                initials: undefined,
+                defaultDate: '-',
+            };
+        }
+
+        // 5. Teman
+        if (lower === 'teman' || lower.includes('teman')) {
+            return {
+                label: 'Perorangan (Teman)',
+                icon: Users,
+                color: 'text-emerald-600 bg-emerald-50 border border-emerald-100',
+                initials: undefined,
+                defaultDate: '-',
+            };
+        }
+
+        // 6. Saudara
+        if (lower === 'saudara' || lower.includes('keluarga') || lower.includes('saudara')) {
+            return {
+                label: 'Keluarga / Saudara',
+                icon: Heart,
+                color: 'text-rose-600 bg-rose-50 border border-rose-100',
+                initials: undefined,
+                defaultDate: '-',
+            };
+        }
+
+        // 7. Lainnya
+        if (lower === 'lainnya' || type === 'other') {
+            return {
+                label: 'Lainnya / Khusus',
+                icon: Tag,
+                color: 'text-slate-600 bg-slate-100 border border-slate-200',
+                initials: undefined,
+                defaultDate: '-',
+            };
+        }
+
+        // Generic fallback by type
         switch (type) {
             case 'wedding_organizer':
                 return {
                     label: 'Wedding Organizer',
                     icon: HeartHandshake,
                     color: 'text-purple-600 bg-purple-50',
-                    defaultDate: '24 Mei 2026',
+                    initials: undefined,
+                    defaultDate: '-',
                 };
             case 'vendor':
                 return {
                     label: 'Vendor / Partner',
                     icon: Store,
                     color: 'text-amber-600 bg-amber-50',
-                    defaultDate: '12 Mei 2026',
-                };
-            case 'other':
-                return {
-                    label: 'Lainnya / Rekomendasi',
-                    icon: HeartHandshake,
-                    color: 'text-purple-600 bg-purple-50',
-                    defaultDate: '1 Mei 2026',
+                    initials: undefined,
+                    defaultDate: '-',
                 };
             case 'social_media':
-                if (name.toLowerCase().includes('instagram')) {
-                    return {
-                        label: 'Media Sosial / Online',
-                        icon: InstagramIcon,
-                        color: 'text-pink-600 bg-pink-50',
-                        defaultDate: '29 Mei 2026',
-                    };
-                }
-                if (name.toLowerCase().includes('facebook')) {
-                    return {
-                        label: 'Media Sosial / Online',
-                        icon: Facebook,
-                        color: 'text-blue-600 bg-blue-50',
-                        defaultDate: '28 Mei 2026',
-                    };
-                }
-                if (name.toLowerCase().includes('youtube')) {
-                    return {
-                        label: 'Media Sosial / Online',
-                        icon: Youtube,
-                        color: 'text-red-600 bg-red-50',
-                        defaultDate: '27 Mei 2026',
-                    };
-                }
-                if (name.toLowerCase().includes('tiktok')) {
-                    return {
-                        label: 'Media Sosial / Online',
-                        icon: Video,
-                        color: 'text-slate-900 bg-slate-100',
-                        defaultDate: '14 Mei 2026',
-                    };
-                }
                 return {
                     label: 'Media Sosial / Online',
                     icon: Globe,
                     color: 'text-blue-600 bg-blue-50',
-                    defaultDate: '28 Mei 2026',
+                    initials: undefined,
+                    defaultDate: '-',
                 };
             case 'ads':
                 return {
                     label: 'Iklan (Ads)',
                     icon: Megaphone,
                     color: 'text-rose-600 bg-rose-50',
-                    defaultDate: '10 Mei 2026',
+                    initials: undefined,
+                    defaultDate: '-',
                 };
             case 'individual':
-            default:
+            default: {
                 const initials = name
                     .split(' ')
                     .filter(Boolean)
@@ -305,24 +340,29 @@ export default function ClientSourcesIndex({
                     .slice(0, 2)
                     .join('')
                     .toUpperCase() || 'RS';
+
                 return {
                     label: 'Perorangan',
                     icon: User,
                     color: 'text-indigo-600 bg-indigo-50',
                     initials,
-                    defaultDate: index === 0 ? '27 Mei 2026' : index === 2 ? '20 Mei 2026' : index === 5 ? '18 Mei 2026' : index === 6 ? '16 Mei 2026' : '15 Mei 2026',
+                    defaultDate: '-',
                 };
+            }
         }
     };
 
     const exportToCSV = () => {
         if (!listData.data || listData.data.length === 0) {
             toast.error('Tidak ada data sumber klien untuk diexport.');
+
             return;
         }
+
         const headers = ['NO', 'NAMA SUMBER KLIEN', 'TIPE SUMBER', 'KONTAK', 'TERAKHIR REFERRAL', 'STATUS', 'SUMBER PRIMARY'];
         const rows = listData.data.map((item, idx) => {
-            const meta = getTypeMeta(item.type, item.name, idx);
+            const meta = getTypeMeta(item.type, item.name);
+
             return [
                 idx + 1,
                 `"${item.name.replace(/"/g, '""')}"`,
@@ -458,6 +498,24 @@ export default function ClientSourcesIndex({
                         </div>
                     </div>
 
+                    <div className="flex items-center gap-2 text-xs text-slate-600">
+                        <span className="font-semibold text-slate-500">Tipe Sumber:</span>
+                        <div className="relative min-w-36">
+                            <select
+                                value={selectedType}
+                                onChange={(e) => setSelectedType(e.target.value)}
+                                className="w-full appearance-none px-3 py-1.5 pr-7 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 outline-hidden cursor-pointer"
+                            >
+                                <option value="all">Semua Tipe</option>
+                                <option value="social_media">Media Sosial / Online</option>
+                                <option value="wedding_organizer">Wedding Organizer</option>
+                                <option value="individual">Perorangan</option>
+                                <option value="other">Lainnya</option>
+                            </select>
+                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
+                        </div>
+                    </div>
+
                     <div className="flex items-center gap-2 text-xs text-slate-600 ml-auto">
                         <button
                             type="button"
@@ -485,7 +543,7 @@ export default function ClientSourcesIndex({
                 <TableBody>
                     {listData.data && listData.data.length > 0 ? (
                         listData.data.map((item, idx) => {
-                            const meta = getTypeMeta(item.type, item.name, idx);
+                            const meta = getTypeMeta(item.type, item.name);
                             const TypeIcon = meta.icon;
                             const rowNumber = (listData.current_page - 1) * listData.per_page + idx + 1;
 
@@ -515,11 +573,19 @@ export default function ClientSourcesIndex({
                                                 >
                                                     {item.name}
                                                 </Link>
-                                                {item.phone && (
-                                                    <span className="text-[10px] text-slate-400 font-mono">
-                                                        {item.phone}
+                                                <div className="flex items-center gap-1.5 mt-0.5">
+                                                    <span className="text-[10px] font-medium text-slate-400">
+                                                        {meta.label}
                                                     </span>
-                                                )}
+                                                    {item.phone && (
+                                                        <>
+                                                            <span className="text-slate-300 text-[10px]">•</span>
+                                                            <span className="text-[10px] text-slate-400 font-mono">
+                                                                {item.phone}
+                                                            </span>
+                                                        </>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </TableCell>
@@ -673,44 +739,24 @@ export default function ClientSourcesIndex({
                 <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
                     <h3 className="font-extrabold text-sm text-slate-900">Tentang Sumber Klien</h3>
                     <p className="text-xs text-slate-600 leading-relaxed">
-                        Sumber klien adalah pihak yang merekomendasikan Arams Pictures kepada klien baru. Bisa berupa perorangan, wedding organizer, vendor/partner, media sosial, atau lainnya.
+                        Sumber klien adalah kanal pemasaran atau pihak yang merekomendasikan Arams Pictures kepada klien baru, baik online (Instagram, Website) maupun personal (WO, Teman, Saudara).
                     </p>
                     <p className="text-xs text-slate-500 leading-relaxed">
-                        Data ini akan digunakan untuk rekapitulasi dan apresiasi kepada pihak yang telah membantu mereferensikan Arams Pictures.
+                        Data ini digunakan untuk rekapitulasi efektivitas kanal dan pencatatan komisi / apresiasi referral.
                     </p>
                 </div>
 
-                {/* Card 2: Tipe Sumber Klien */}
+                {/* Card 2: 7 Sumber Klien Utama */}
                 <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
-                    <h3 className="font-extrabold text-sm text-slate-900">Tipe Sumber Klien</h3>
-                    <div className="space-y-2.5 text-xs">
+                    <h3 className="font-extrabold text-sm text-slate-900">Daftar Sumber Klien</h3>
+                    <div className="space-y-2 text-xs">
                         <div className="flex items-start gap-2.5">
-                            <div className="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5">
-                                <User className="w-3.5 h-3.5" />
+                            <div className="w-6 h-6 rounded-lg bg-pink-50 text-pink-600 flex items-center justify-center shrink-0 mt-0.5">
+                                <InstagramIcon className="w-3.5 h-3.5" />
                             </div>
                             <div>
-                                <span className="font-bold text-slate-900 block">Perorangan</span>
-                                <span className="text-slate-500 text-[11px]">Teman, keluarga, kenalan, atau individu.</span>
-                            </div>
-                        </div>
-
-                        <div className="flex items-start gap-2.5">
-                            <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 mt-0.5">
-                                <HeartHandshake className="w-3.5 h-3.5" />
-                            </div>
-                            <div>
-                                <span className="font-bold text-slate-900 block">Wedding Organizer</span>
-                                <span className="text-slate-500 text-[11px]">Wedding organizer / planner / coordinator.</span>
-                            </div>
-                        </div>
-
-                        <div className="flex items-start gap-2.5">
-                            <div className="w-6 h-6 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 mt-0.5">
-                                <Store className="w-3.5 h-3.5" />
-                            </div>
-                            <div>
-                                <span className="font-bold text-slate-900 block">Vendor / Partner</span>
-                                <span className="text-slate-500 text-[11px]">Vendor atau partner bisnis.</span>
+                                <span className="font-bold text-slate-900 block">1. Instagram</span>
+                                <span className="text-slate-500 text-[11px]">Akun Instagram resmi @aramspictures.</span>
                             </div>
                         </div>
 
@@ -719,18 +765,48 @@ export default function ClientSourcesIndex({
                                 <Globe className="w-3.5 h-3.5" />
                             </div>
                             <div>
-                                <span className="font-bold text-slate-900 block">Media Sosial / Online</span>
-                                <span className="text-slate-500 text-[11px]">Instagram, TikTok, Website, Google, dll.</span>
+                                <span className="font-bold text-slate-900 block">2. Website</span>
+                                <span className="text-slate-500 text-[11px]">Website portofolio &amp; form intake klien.</span>
                             </div>
                         </div>
 
                         <div className="flex items-start gap-2.5">
-                            <div className="w-6 h-6 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 mt-0.5">
-                                <Megaphone className="w-3.5 h-3.5" />
+                            <div className="w-6 h-6 rounded-lg bg-violet-50 text-violet-600 flex items-center justify-center shrink-0 mt-0.5">
+                                <Sparkles className="w-3.5 h-3.5" />
                             </div>
                             <div>
-                                <span className="font-bold text-slate-900 block">Iklan (Ads)</span>
-                                <span className="text-slate-500 text-[11px]">Iklan berbayar (Facebook Ads, Google Ads, dll).</span>
+                                <span className="font-bold text-slate-900 block">3. Sosial Media Lainnya</span>
+                                <span className="text-slate-500 text-[11px]">TikTok, YouTube, Threads, Facebook, dsb.</span>
+                            </div>
+                        </div>
+
+                        <div className="flex items-start gap-2.5">
+                            <div className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 mt-0.5">
+                                <HeartHandshake className="w-3.5 h-3.5" />
+                            </div>
+                            <div>
+                                <span className="font-bold text-slate-900 block">4. WO (Wedding Organizer)</span>
+                                <span className="text-slate-500 text-[11px]">Partner atau wedding organizer pernikahan.</span>
+                            </div>
+                        </div>
+
+                        <div className="flex items-start gap-2.5">
+                            <div className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                                <Users className="w-3.5 h-3.5" />
+                            </div>
+                            <div>
+                                <span className="font-bold text-slate-900 block">5. Teman &amp; 6. Saudara</span>
+                                <span className="text-slate-500 text-[11px]">Rekomendasi rekan perorangan atau keluarga.</span>
+                            </div>
+                        </div>
+
+                        <div className="flex items-start gap-2.5">
+                            <div className="w-6 h-6 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center shrink-0 mt-0.5">
+                                <Tag className="w-3.5 h-3.5" />
+                            </div>
+                            <div>
+                                <span className="font-bold text-slate-900 block">7. Lainnya</span>
+                                <span className="text-slate-500 text-[11px]">Event, pameran wedding expo, dsb.</span>
                             </div>
                         </div>
                     </div>

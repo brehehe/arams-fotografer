@@ -1,4 +1,3 @@
-import React, { useRef, useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import {
     ArrowLeft,
@@ -8,26 +7,26 @@ import {
     DollarSign,
     Calendar,
     CheckCircle2,
-    Clock,
     Gift,
     Info,
     Plus,
     X,
     Trash2,
-    Check,
-    ChevronRight,
-    Wallet,
-    CreditCard,
-    ExternalLink,
     Receipt,
-    RefreshCw,
     ImageIcon,
     Upload,
+    Instagram as InstagramIcon,
+    Globe,
+    Sparkles,
+    HeartHandshake,
+    Tag,
+    Heart,
+    User,
 } from 'lucide-react';
+import React, { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
     Modal,
-    Badge,
     AlertConfirmation,
     StatCard,
 } from '@/components/ui';
@@ -167,13 +166,74 @@ export default function ClientSourceShow({
         }).format(val || 0);
     };
 
-    const initials = source.name
-        .split(' ')
-        .filter(Boolean)
-        .map((w) => w[0])
-        .slice(0, 2)
-        .join('')
-        .toUpperCase() || 'SK';
+    const getSourceMeta = () => {
+        const lower = (source.name || '').toLowerCase().trim();
+
+        if (lower.includes('instagram')) {
+            return {
+                label: 'Media Sosial (Instagram)',
+                icon: InstagramIcon,
+                color: 'text-pink-600 bg-pink-50 border-pink-100',
+            };
+        }
+
+        if (lower === 'website' || lower.includes('website')) {
+            return {
+                label: 'Website / Web Portofolio',
+                icon: Globe,
+                color: 'text-blue-600 bg-blue-50 border-blue-100',
+            };
+        }
+
+        if (lower.includes('sosial media lainnya') || lower.includes('medsos lainnya')) {
+            return {
+                label: 'Media Sosial Lainnya',
+                icon: Sparkles,
+                color: 'text-violet-600 bg-violet-50 border-violet-100',
+            };
+        }
+
+        if (lower === 'wo' || lower.includes('wedding organizer')) {
+            return {
+                label: 'Wedding Organizer (WO)',
+                icon: HeartHandshake,
+                color: 'text-purple-600 bg-purple-50 border-purple-100',
+            };
+        }
+
+        if (lower === 'teman' || lower.includes('teman')) {
+            return {
+                label: 'Perorangan (Teman)',
+                icon: Users,
+                color: 'text-emerald-600 bg-emerald-50 border-emerald-100',
+            };
+        }
+
+        if (lower === 'saudara' || lower.includes('keluarga') || lower.includes('saudara')) {
+            return {
+                label: 'Keluarga / Saudara',
+                icon: Heart,
+                color: 'text-rose-600 bg-rose-50 border-rose-100',
+            };
+        }
+
+        if (lower === 'lainnya' || source.type === 'other') {
+            return {
+                label: 'Lainnya / Khusus',
+                icon: Tag,
+                color: 'text-slate-600 bg-slate-100 border-slate-200',
+            };
+        }
+
+        return {
+            label: source.type === 'individual' ? 'Perorangan' : source.type.replace('_', ' '),
+            icon: User,
+            color: 'text-indigo-600 bg-indigo-50 border-indigo-100',
+        };
+    };
+
+    const sourceMeta = getSourceMeta();
+    const SourceIcon = sourceMeta.icon;
 
     const getCategoryBadgeColor = (cat: string) => {
         switch ((cat || '').toLowerCase()) {
@@ -252,7 +312,11 @@ export default function ClientSourceShow({
         setProofImageFile(null);
         setProofImagePreview(null);
         setExistingProofImage(null);
-        if (proofImageInputRef.current) proofImageInputRef.current.value = '';
+
+        if (proofImageInputRef.current) {
+proofImageInputRef.current.value = '';
+}
+
         setAppreciationForm({
             status: 'given',
             date: new Date().toISOString().split('T')[0],
@@ -266,7 +330,11 @@ export default function ClientSourceShow({
 
     const handleProofImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file) return;
+
+        if (!file) {
+return;
+}
+
         setProofImageFile(file);
         const reader = new FileReader();
         reader.onload = (ev) => setProofImagePreview(ev.target?.result as string);
@@ -284,6 +352,7 @@ export default function ClientSourceShow({
         formData.append('payment_method_id', appreciationForm.payment_method_id || '');
         formData.append('is_recorded_in_finance', appreciationForm.is_recorded_in_finance ? '1' : '0');
         formData.append('notes', appreciationForm.notes || '');
+
         if (proofImageFile) {
             formData.append('proof_image', proofImageFile);
         }
@@ -321,14 +390,18 @@ export default function ClientSourceShow({
     const handleCancelAppreciation = () => {
         if (!confirmCancelAppreciation.id) {
             setConfirmCancelAppreciation({ isOpen: false });
+
             return;
         }
+
         router.delete(`/client-sources/${source.id}/appreciation/${confirmCancelAppreciation.id}`, {
             onSuccess: () => {
                 setConfirmCancelAppreciation({ isOpen: false });
+
                 if (editingAppreciationId === confirmCancelAppreciation.id) {
                     handleResetAppreciationForm();
                 }
+
                 toast.success('Apresiasi referral berhasil dihapus.');
             },
             onError: () => {
@@ -377,8 +450,8 @@ export default function ClientSourceShow({
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                     {/* Left: Avatar & Identity */}
                     <div className="flex items-center gap-4 min-w-0">
-                        <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center font-black text-2xl shadow-xs shrink-0">
-                            {initials}
+                        <div className={`w-16 h-16 rounded-2xl border flex items-center justify-center font-black text-2xl shadow-xs shrink-0 ${sourceMeta.color}`}>
+                            <SourceIcon className="w-8 h-8" />
                         </div>
                         <div className="min-w-0 space-y-1">
                             <div className="flex items-center gap-2.5 flex-wrap">
@@ -398,8 +471,8 @@ export default function ClientSourceShow({
                             <div className="flex items-center gap-2 text-xs text-slate-500">
                                 <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                                 <span>Tipe Sumber:</span>
-                                <span className="font-bold text-slate-800 capitalize">
-                                    {source.type === 'individual' ? 'Perorangan' : source.type.replace('_', ' ')}
+                                <span className="font-bold text-slate-800">
+                                    {sourceMeta.label}
                                 </span>
                                 {source.phone && (
                                     <>
@@ -573,9 +646,9 @@ export default function ClientSourceShow({
                                                         {item.referral_name && (
                                                             <span
                                                                 className="inline-flex items-center gap-1 text-[10px] font-bold text-purple-700 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded-md mt-0.5"
-                                                                title={`WO / Rekomendasi: ${item.referral_name}`}
+                                                                title={`Rekomendasi: ${item.referral_name}`}
                                                             >
-                                                                WO/Ref: {item.referral_name}
+                                                                Rek: {item.referral_name}
                                                             </span>
                                                         )}
                                                     </div>
@@ -849,7 +922,10 @@ export default function ClientSourceShow({
                                                 setProofImageFile(null);
                                                 setProofImagePreview(null);
                                                 setExistingProofImage(null);
-                                                if (proofImageInputRef.current) proofImageInputRef.current.value = '';
+
+                                                if (proofImageInputRef.current) {
+proofImageInputRef.current.value = '';
+}
                                             }}
                                             className="absolute top-1.5 right-1.5 w-6 h-6 bg-rose-600 text-white rounded-full flex items-center justify-center hover:bg-rose-700 transition-colors cursor-pointer"
                                         >

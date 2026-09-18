@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Project;
 use App\Models\ProjectSchedule;
 use App\Services\CalendarService;
 use Illuminate\Http\RedirectResponse;
@@ -39,7 +40,7 @@ class CalendarController extends Controller
         $projectId = !empty($validated['project_id']) ? $validated['project_id'] : null;
 
         if (!$projectId && $request->filled('client_id')) {
-            $projectId = \App\Models\Project::where('client_id', $request->input('client_id'))->latest()->first()?->id;
+            $projectId = Project::where('client_id', $request->input('client_id'))->latest()->first()?->id;
         }
 
         ProjectSchedule::create([
@@ -57,10 +58,58 @@ class CalendarController extends Controller
         return redirect()->back()->with('success', 'Jadwal berhasil ditambahkan!');
     }
 
-    public function destroySchedule(ProjectSchedule $schedule): RedirectResponse
+    public function destroySchedule(string $schedule): RedirectResponse
     {
-        $schedule->delete();
+        // 1. If it's a project reference (e.g. "p-01a0...")
+        if (str_starts_with($schedule, 'p-')) {
+            $projectId = substr($schedule, 2);
+            $project = Project::find($projectId);
+            if ($project) {
+                $project->update([
+                    'event_date' => null,
+                    'event_time' => null,
+                    'end_date'   => null,
+                ]);
+                return redirect()->back()->with('success', 'Jadwal project berhasil dihapus dari kalender!');
+            }
+        }
 
-        return redirect()->back()->with('success', 'Jadwal berhasil dihapus!');
+        // 2. If it's a ProjectSchedule
+        $item = ProjectSchedule::find($schedule);
+        if ($item) {
+            $projectId = $item->project_id;
+            $eventDate = $item->date;
+            $item->delete();
+
+            // Clear project event_date if no other schedule remains and it matched
+            if ($projectId) {
+                $otherSchedulesCount = ProjectSchedule::where('project_id', $projectId)->count();
+                if ($otherSchedulesCount === 0) {
+                    $project = Project::find($projectId);
+                    if ($project && $project->event_date && $eventDate && $project->event_date->format('Y-m-d') === $eventDate->format('Y-m-d')) {
+                        $project->update([
+                            'event_date' => null,
+                            'event_time' => null,
+                            'end_date'   => null,
+                        ]);
+                    }
+                }
+            }
+
+            return redirect()->back()->with('success', 'Jadwal berhasil dihapus!');
+        }
+
+        // 3. Fallback: maybe $schedule is a raw Project ID
+        $project = Project::find($schedule);
+        if ($project && $project->event_date) {
+            $project->update([
+                'event_date' => null,
+                'event_time' => null,
+                'end_date'   => null,
+            ]);
+            return redirect()->back()->with('success', 'Jadwal project berhasil dihapus dari kalender!');
+        }
+
+        return redirect()->back()->with('error', 'Jadwal tidak ditemukan atau sudah dihapus.');
     }
 }

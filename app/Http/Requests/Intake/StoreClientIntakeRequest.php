@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Intake;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreClientIntakeRequest extends FormRequest
 {
@@ -53,8 +54,8 @@ class StoreClientIntakeRequest extends FormRequest
             'village_code' => 'nullable|string|max:30',
             'postal_code' => 'nullable|string|max:20',
             'address' => 'nullable|string',
-            'category_id' => 'nullable',
-            'package_id' => 'nullable',
+            'category_id' => ['required', Rule::exists('categories', 'id')],
+            'package_id' => ['required', Rule::exists('packages', 'id')->where('category_id', $this->input('category_id'))->where('status', 'active')->whereNull('deleted_at')],
             'custom_price' => 'nullable|numeric|min:0',
             'needs_type' => 'nullable|string|max:100',
             'event_date' => 'nullable|date',

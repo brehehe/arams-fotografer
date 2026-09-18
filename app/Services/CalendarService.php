@@ -92,13 +92,15 @@ class CalendarService
                     ? "{$client->bride_name} & {$client->groom_name}"
                     : ($client?->name ?? '-');
 
+                $eventDate = $p->event_date ? Carbon::parse($p->event_date) : null;
+
                 $normalizedTime = ProjectSchedule::normalizeTime($p->event_time);
                 $startTime  = $normalizedTime
                     ? substr($normalizedTime, 0, 5)
                     : null;
 
                 $endTime = null;
-                if ($p->end_date) {
+                if ($p->end_date && $eventDate) {
                     $endDate = Carbon::parse($p->end_date);
                     if ($endDate->format('Y-m-d') === $eventDate->format('Y-m-d')) {
                         $endTime = $endDate->format('H:i');
@@ -120,7 +122,7 @@ class CalendarService
                     'client_phone'   => $client?->phone,
                     'category_name'  => $catName ?: 'Pemotretan',
                     'category_color' => $p->category?->color ?? '#3B82F6',
-                    'date'           => $eventDate->format('Y-m-d'),
+                    'date'           => $eventDate?->format('Y-m-d'),
                     'start_time'     => $startTime,
                     'end_time'       => $endTime,
                     'location'       => $p->location,

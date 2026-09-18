@@ -7,22 +7,24 @@ import {
     Calendar,
     Clock,
     MapPin,
-    Package,
     Plane,
     Sparkles,
     User,
-    Phone,
-    Mail,
     Gift,
+    Camera,
+    FileText,
 } from 'lucide-react';
 import React from 'react';
 import { formatDate } from '@/lib/formatters';
 import type {
     CategoryFormKey,
     AnyCategorySpecificData,
+    BabyItem,
 } from '@/types/category-forms';
 import {
     resolveCategoryKey,
+    getFamilyMemberCount,
+    calculateTripDuration,
 } from '@/types/category-forms';
 
 interface CategorySpecificViewProps {
@@ -37,74 +39,72 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
     const rawData: AnyCategorySpecificData = project?.category_data || {};
     const client = project?.client || {};
 
-    // Intelligent fallback extraction from composite client names (e.g. "Komunitas / PIC" or "Bride & Groom")
-    const clientNameRaw = String(client.name || '').trim();
-    const slashParts = clientNameRaw.includes('/') ? clientNameRaw.split('/').map((s: string) => s.trim()) : [];
-    const ampParts = clientNameRaw.includes('&') ? clientNameRaw.split('&').map((s: string) => s.trim()) : [];
-
-    const communityFallbackName = slashParts.length > 0 ? slashParts[0] : (client.company_name || client.name || '');
-    const picFallbackName = slashParts.length > 1 ? slashParts[1] : (client.name || '');
-
-    const brideFallbackName = client.bride_name || (ampParts.length > 0 ? ampParts[0] : (client.name || ''));
-    const groomFallbackName = client.groom_name || client.partner_name || (ampParts.length > 1 ? ampParts[1] : '');
-
     const data: AnyCategorySpecificData = {
         ...rawData,
-        // Fallbacks for common fields
-        groom_name: rawData.groom_name || groomFallbackName || '',
-        groom_nickname: rawData.groom_nickname || client.groom_nickname || '',
-        groom_occupation: rawData.groom_occupation || '',
-        groom_birth_date: rawData.groom_birth_date || client.groom_birth_date || '',
-        groom_instagram: rawData.groom_instagram || '',
-        bride_name: rawData.bride_name || brideFallbackName || '',
-        bride_nickname: rawData.bride_nickname || client.bride_nickname || '',
-        bride_occupation: rawData.bride_occupation || '',
-        bride_birth_date: rawData.bride_birth_date || client.bride_birth_date || '',
-        bride_instagram: rawData.bride_instagram || '',
-        father_name: rawData.father_name || client.father_name || '',
-        mother_name: rawData.mother_name || client.mother_name || '',
+        groom_name: rawData.groom_name || client.groom_name || '',
+        bride_name: rawData.bride_name || client.bride_name || '',
+        partner_1: rawData.partner_1 || client.bride_name || '',
+        partner_2: rawData.partner_2 || client.groom_name || client.partner_name || '',
         mom_name: rawData.mom_name || client.mother_name || client.name || '',
-        partner_name: rawData.partner_name || client.partner_name || client.father_name || '',
-        baby_name: rawData.baby_name || client.child_name || '',
-        baby_nickname: rawData.baby_nickname || client.child_nickname || '',
-        baby_birth_date: rawData.baby_birth_date || client.child_birth_date || '',
-        baby_gender: rawData.baby_gender || client.child_gender || '',
-        babies: (Array.isArray(rawData.babies) && rawData.babies.length > 0)
-            ? rawData.babies
-            : (Array.isArray(client.children) && client.children.length > 0
-                ? client.children
-                : undefined),
-        children: (Array.isArray(rawData.children) && rawData.children.length > 0)
-            ? rawData.children
-            : (Array.isArray(client.children) ? client.children : []),
-        company_name: rawData.company_name || client.company_name || communityFallbackName || '',
-        location: rawData.location || project?.location || client.address || '',
-        event_location: rawData.event_location || project?.location || client.address || '',
-        session_location: rawData.session_location || project?.location || client.address || '',
-        akad_location: rawData.akad_location || project?.location || client.address || '',
-        destination_city_country: rawData.destination_city_country || project?.location || client.city || '',
-        event_date: rawData.event_date || project?.event_date || project?.project_date || '',
-        session_date: rawData.session_date || project?.event_date || project?.project_date || '',
-        akad_date: rawData.akad_date || project?.event_date || project?.project_date || '',
-        departure_date: rawData.departure_date || project?.event_date || project?.project_date || '',
-        client_name: rawData.client_name || client.name || '',
-        pic_name: rawData.pic_name || picFallbackName || client.name || '',
-        pic_phone: rawData.pic_phone || client.phone || client.secondary_phone || '',
-        pic_email: rawData.pic_email || client.email || '',
-        community_name: rawData.community_name || communityFallbackName || '',
-        community_type: rawData.community_type || 'Komunitas / Publik',
-        activity_type: rawData.activity_type || project?.name || 'Dokumentasi Acara & Komunitas',
+        family_name: rawData.family_name || '',
+        company_name: rawData.company_name || client.company_name || '',
+        brand_name: rawData.brand_name || '',
+        event_name: rawData.event_name || '',
+        community_name: rawData.community_name || '',
+        location: rawData.location || project?.location || '',
     };
 
-    const renderItem = (label: string, value: any, icon?: React.ReactNode, fallback: string = '-') => {
-        const hasVal = value !== null && value !== undefined && String(value).trim() !== '' && String(value).trim() !== 'null';
+    const renderItem = (label: string, value: any, icon?: React.ReactNode, fallback: string = '-', hideIfEmpty: boolean = true) => {
+        const hasVal = value !== null && value !== undefined && String(value).trim() !== '' && String(value).trim() !== 'null' && String(value).trim() !== '-';
+
+        if (!hasVal && hideIfEmpty) {
+            return null;
+        }
 
         return (
             <div className="space-y-1 min-w-0">
                 <span className="text-[11px] font-semibold text-slate-400 block break-words leading-tight" title={label}>{label}</span>
                 <div className={`text-xs flex items-start gap-1.5 min-w-0 ${hasVal ? 'font-bold text-slate-800' : 'font-normal text-slate-400'}`}>
                     {icon && <span className={`${hasVal ? 'text-slate-500' : 'text-slate-300'} shrink-0 mt-0.5`}>{icon}</span>}
-                    <span className="break-words min-w-0 flex-1 leading-snug">{hasVal ? String(value) : fallback}</span>
+                    <span className="min-w-0 flex-1 whitespace-pre-line [overflow-wrap:anywhere] leading-snug">{hasVal ? String(value) : fallback}</span>
+                </div>
+            </div>
+        );
+    };
+
+    const renderChips = (label: string, items?: string[], otherVal?: string, hideIfEmpty: boolean = true) => {
+        const list = Array.isArray(items) ? items : [];
+
+        if (list.length === 0 && !otherVal) {
+            if (hideIfEmpty) return null;
+
+            return renderItem(label, null);
+        }
+
+        return (
+            <div className="space-y-1.5 col-span-full">
+                <span className="text-[11px] font-semibold text-slate-400 block">{label}</span>
+                <div className="flex flex-wrap gap-1.5">
+                    {list.map((it, idx) => {
+                        if (it === 'Lainnya' && otherVal) {
+                            return (
+                                <span key={idx} className="max-w-full px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-xs font-semibold [overflow-wrap:anywhere]">
+                                    {otherVal}
+                                </span>
+                            );
+                        }
+
+                        return (
+                            <span key={idx} className="max-w-full px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 border border-slate-200/80 text-xs font-semibold [overflow-wrap:anywhere]">
+                                {it}
+                            </span>
+                        );
+                    })}
+                    {!list.includes('Lainnya') && otherVal && (
+                        <span className="max-w-full px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-xs font-semibold [overflow-wrap:anywhere]">
+                            {otherVal}
+                        </span>
+                    )}
                 </div>
             </div>
         );
@@ -121,15 +121,147 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
                     <p className="text-[11px] text-slate-400">{subtitle}</p>
                 </div>
             </div>
-            <span className="text-[11px] font-bold px-2.5 py-1 rounded-full border bg-slate-50 text-slate-700 border-slate-200">
+            <span className="text-[11px] font-bold px-2.5 py-1 rounded-full border bg-slate-50 text-slate-700 border-slate-200 shrink-0">
                 {category?.name || 'Kategori'}
             </span>
         </div>
     );
 
+    const renderCouple = (isPrewedding: boolean) => (
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            {(['groom', 'bride'] as const).map((person) => {
+                const isGroom = person === 'groom';
+                const prefix = isGroom ? 'groom' : 'bride';
+                const name = isPrewedding
+                    ? (isGroom ? data.partner_2 || data.groom_name : data.partner_1 || data.bride_name)
+                    : data[`${prefix}_name`];
+
+                return (
+                    <div key={person} className={`min-w-0 space-y-3 rounded-xl border p-4 ${isGroom ? 'border-blue-100 bg-blue-50/40' : 'border-rose-100 bg-rose-50/40'}`}>
+                        <h4 className="text-xs font-bold text-slate-800">Calon Pengantin {isGroom ? 'Pria (CPP)' : 'Wanita (CPW)'}</h4>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            {renderItem('Nama Lengkap', name)}
+                            {renderItem('Panggilan', data[`${prefix}_nickname`])}
+                            {renderItem('Pekerjaan', data[`${prefix}_occupation`])}
+                            {renderItem('Tanggal Lahir', data[`${prefix}_birth_date`] ? formatDate(data[`${prefix}_birth_date`]) : null)}
+                            {renderItem('Instagram', data[`${prefix}_instagram`])}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+
     return (
         <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs space-y-4">
-            {/* ── 1. MATERNITY ──────────────────────────────────────────────── */}
+            {/* ── 1. WEDDING ────────────────────────────────────────────────── */}
+            {categoryKey === 'wedding' && (
+                <>
+                    {renderHeader(
+                        'Informasi Pernikahan (Wedding)',
+                        'Detail calon pengantin, jadwal & lokasi akad dan resepsi',
+                        <Heart className="w-4 h-4 text-amber-600" />,
+                        'bg-amber-50 text-amber-700'
+                    )}
+                    {/* Pasangan */}
+                    {renderCouple(false)}
+
+                    {/* Akad & Resepsi */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="p-3.5 bg-slate-50/70 rounded-xl border border-slate-200/70 space-y-2">
+                            <span className="text-xs font-bold text-slate-800 block border-b border-slate-200/50 pb-1">Detail Akad</span>
+                            {renderItem('Tanggal Akad', data.akad_date ? formatDate(data.akad_date) : null, <Calendar className="w-3.5 h-3.5" />)}
+                            {renderItem('Waktu Akad', data.akad_time, <Clock className="w-3.5 h-3.5" />)}
+                            {renderItem('Lokasi Akad', data.akad_location, <MapPin className="w-3.5 h-3.5" />)}
+                        </div>
+                        <div className="p-3.5 bg-slate-50/70 rounded-xl border border-slate-200/70 space-y-2">
+                            <span className="text-xs font-bold text-slate-800 block border-b border-slate-200/50 pb-1">Detail Resepsi</span>
+                            {renderItem('Tanggal Resepsi', data.reception_date ? formatDate(data.reception_date) : null, <Calendar className="w-3.5 h-3.5" />)}
+                            {renderItem('Waktu Resepsi', data.reception_time, <Clock className="w-3.5 h-3.5" />)}
+                            {renderItem('Lokasi Resepsi', data.reception_location, <MapPin className="w-3.5 h-3.5" />)}
+                        </div>
+                    </div>
+
+                    {/* Detail Acara */}
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-1">
+                        {renderItem('Estimasi Tamu', data.estimated_guests ? `${data.estimated_guests} Tamu` : null)}
+                        {renderItem('Konsep Acara', data.concept_theme === 'Lainnya' ? (data.concept_theme_other || 'Lainnya') : data.concept_theme)}
+                        {renderItem('Wedding Organizer (WO)', data.wedding_organizer)}
+                        {renderItem('Makeup Artist (MUA)', data.makeup_artist || data.mua_dress)}
+                    </div>
+                </>
+            )}
+
+            {/* ── 2. PREWEDDING ─────────────────────────────────────────────── */}
+            {categoryKey === 'prewedding' && (
+                <>
+                    {renderHeader(
+                        'Informasi Prewedding',
+                        'Detail pasangan, konsep sesi, wardrobe, dan lokasi',
+                        <HeartHandshake className="w-4 h-4 text-pink-600" />,
+                        'bg-pink-50 text-pink-700'
+                    )}
+                    {renderCouple(true)}
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                        {renderItem('Konsep Prewedding', data.concept_theme === 'Lainnya' ? (data.concept_theme_other || 'Lainnya') : data.concept_theme)}
+                        {renderItem('Lokasi Sesi', data.session_location || data.location, <MapPin className="w-3.5 h-3.5" />)}
+                        {renderItem('Jumlah Lokasi', data.locations_count ? `${data.locations_count} Lokasi` : null)}
+                        {renderItem('Jumlah Look / Wardrobe', data.wardrobe_looks_count ? `${data.wardrobe_looks_count} Look` : (data.outfit_wardrobe ? String(data.outfit_wardrobe) : null))}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                        {renderItem('Properti Khusus', data.props_special || data.props)}
+                    </div>
+                </>
+            )}
+
+            {/* ── 3. ENGAGEMENT ─────────────────────────────────────────────── */}
+            {categoryKey === 'engagement' && (
+                <>
+                    {renderHeader(
+                        'Informasi Engagement / Lamaran',
+                        'Jadwal, venue, tema warna, dan calon mempelai',
+                        <Sparkles className="w-4 h-4 text-indigo-600" />,
+                        'bg-indigo-50 text-indigo-700'
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {renderItem('Calon Mempelai Pria', data.groom_name, <User className="w-3.5 h-3.5" />)}
+                        {renderItem('Calon Mempelai Wanita', data.bride_name, <User className="w-3.5 h-3.5" />)}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {renderItem('Tanggal Acara', data.engagement_date ? formatDate(data.engagement_date) : null, <Calendar className="w-3.5 h-3.5" />)}
+                        {renderItem('Waktu Acara', data.engagement_time, <Clock className="w-3.5 h-3.5" />)}
+                        {renderItem('Estimasi Tamu', data.estimated_guests ? `${data.estimated_guests} Tamu` : null)}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {renderItem('Lokasi Acara', data.engagement_location || data.location, <MapPin className="w-3.5 h-3.5" />)}
+                        {renderItem('Konsep / Tema', data.concept_theme === 'Lainnya' ? (data.concept_theme_other || 'Lainnya') : data.concept_theme)}
+                        {renderItem('Tema Warna', data.theme_color)}
+                    </div>
+                    {renderItem('Wedding Organizer (WO)', data.wedding_organizer || data.vendor_wo)}
+                </>
+            )}
+
+            {/* ── 4. FAMILY ─────────────────────────────────────────────────── */}
+            {categoryKey === 'family' && (
+                <>
+                    {renderHeader(
+                        'Informasi Foto Keluarga',
+                        'Identitas keluarga, anggota keluarga yang difoto, dan lokasi sesi',
+                        <Users className="w-4 h-4 text-emerald-600" />,
+                        'bg-emerald-50 text-emerald-700'
+                    )}
+                    {data.client_name && <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">{renderItem('Nama Pemesan', data.client_name)}</div>}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {renderItem('Nama Keluarga', data.family_name)}
+                        {renderItem('Konsep Sesi', data.concept_theme === 'Lainnya' ? (data.concept_theme_other || 'Lainnya') : data.concept_theme)}
+                        {renderItem('Lokasi Sesi', data.session_location_type === 'Lainnya' ? (data.session_location || 'Lainnya') : (data.session_location_type || data.session_location || data.location), <MapPin className="w-3.5 h-3.5" />)}
+                    </div>
+
+                    {renderItem('Jumlah Anggota Keluarga yang Difoto', getFamilyMemberCount(data) > 0 ? `${getFamilyMemberCount(data)} Orang` : null)}
+                </>
+            )}
+
+            {/* ── 5. MATERNITY ──────────────────────────────────────────────── */}
             {categoryKey === 'maternity' && (
                 <>
                     {renderHeader(
@@ -138,537 +270,289 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
                         <Baby className="w-4 h-4 text-amber-600" />,
                         'bg-amber-50 text-amber-700'
                     )}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        {renderItem('Nama Ibu (Mom-to-be)', data.mom_name)}
-                        {renderItem('Nama Ayah / Pasangan', data.partner_name)}
-                        {renderItem('Usia Kehamilan Saat Sesi', data.gestational_age_weeks ? `${data.gestational_age_weeks} minggu` : null)}
-                        {renderItem('HPL (Hari Perkiraan Lahir)', data.hpl_date ? formatDate(data.hpl_date) : null, <Calendar className="w-3.5 h-3.5" />)}
-                        {renderItem('Konsep / Tema', data.concept_theme)}
-                        {renderItem('Lokasi Sesi', data.session_location_type, <MapPin className="w-3.5 h-3.5" />)}
-                    </div>
-                    {data.wardrobe_notes && (
-                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs">
-                            <span className="font-semibold text-slate-600 block mb-1">👗 Wardrobe / Outfit:</span>
-                            <p className="text-slate-800 whitespace-pre-line">{data.wardrobe_notes}</p>
-                        </div>
-                    )}
-                </>
-            )}
-
-            {/* ── 2. LAINNYA / TRADISIONAL EVENT ────────────────────────────── */}
-            {categoryKey === 'lainnya' && (
-                <>
-                    {renderHeader(
-                        'Informasi Tradisional Event (Pengajian, Siraman, Midodareni)',
-                        'Rangkaian prosesi adat sakral, jadwal waktu, jenis kebutuhan, dan lokasi',
-                        <Sparkles className="w-4 h-4 text-purple-600" />,
-                        'bg-purple-50 text-purple-700'
-                    )}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        {renderItem('Nama Pemesan', data.client_name || data.name || data.pic_name || data.contact_person || (project?.client?.name && project.client.name !== '-' ? project.client.name : null))}
-                        {renderItem('Tanggal Event', data.event_date ? formatDate(data.event_date) : null, <Calendar className="w-3.5 h-3.5" />)}
-                        {renderItem('Waktu Event', data.event_time_range || data.event_time, <Clock className="w-3.5 h-3.5" />)}
-                        {renderItem('Jenis Event', data.event_type)}
-                        {renderItem('Jenis Kebutuhan', data.needs_type)}
-                        {renderItem('Lokasi Event', data.event_location || data.location, <MapPin className="w-3.5 h-3.5" />)}
+                        {renderItem('Nama Calon Ibu', data.mom_name || data.mother_name, <User className="w-3.5 h-3.5" />)}
+                        {renderItem('Usia Kandungan', data.gestational_age_weeks ? `${data.gestational_age_weeks} Minggu` : null)}
+                        {renderItem('Hari Perkiraan Lahir (HPL)', data.hpl_date ? formatDate(data.hpl_date) : null, <Calendar className="w-3.5 h-3.5" />)}
                     </div>
-                    {(data.additional_notes || data.needs_description) && (
-                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs space-y-1">
-                            <span className="font-semibold text-slate-600 block">Catatan Tambahan:</span>
-                            <p className="text-slate-800 whitespace-pre-line">{data.additional_notes || data.needs_description}</p>
-                        </div>
-                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {renderItem('Konsep / Tema', data.concept_theme === 'Lainnya' ? (data.concept_theme_other || 'Lainnya') : data.concept_theme)}
+                        {renderItem('Lokasi Sesi', data.session_location_type === 'Lainnya' ? (data.session_location || 'Lainnya') : (data.session_location_type || data.session_location || data.location), <MapPin className="w-3.5 h-3.5" />)}
+                    </div>
+                    {renderChips('Pilihan Wardrobe', data.wardrobe, data.wardrobe_other)}
                 </>
             )}
 
-            {/* ── 3. PERORANGAN ────────────────────────────────────────────── */}
-            {categoryKey === 'perorangan' && (
+            {/* ── 6. NEWBORN ────────────────────────────────────────────────── */}
+            {categoryKey === 'newborn' && (
                 <>
                     {renderHeader(
-                        'Informasi Foto Perorangan',
-                        'Jenis sesi, durasi, outfit, dan setup studio',
-                        <User className="w-4 h-4 text-indigo-600" />,
-                        'bg-indigo-50 text-indigo-700'
-                    )}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                        {renderItem('Nama Pemesan', data.client_name || data.name || (project?.client?.name && project.client.name !== '-' ? project.client.name : null))}
-                        {renderItem('Nama Panggilan', data.nickname)}
-                        {renderItem('Jenis Sesi', data.session_type)}
-                        {renderItem('Jumlah Look / Outfit', data.outfit_looks_count ? `${data.outfit_looks_count} Look` : null)}
-                        {renderItem('Durasi Sesi', data.session_duration, <Clock className="w-3.5 h-3.5" />)}
-                        {renderItem('Backdrop / Tema', data.backdrop_theme)}
-                        {renderItem('Properti yang Diinginkan', data.desired_props)}
-                    </div>
-                    {data.additional_notes && (
-                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs">
-                            <span className="font-semibold text-slate-600 block mb-1">Catatan Tambahan:</span>
-                            <p className="text-slate-800 whitespace-pre-line">{data.additional_notes}</p>
-                        </div>
-                    )}
-                </>
-            )}
-
-            {/* ── 4. PREWEDDING ────────────────────────────────────────────── */}
-            {categoryKey === 'prewedding' && (
-                <>
-                    {renderHeader(
-                        'Informasi Prewedding',
-                        'Data pasangan, lokasi pemotretan, konsep, dan properti',
-                        <Heart className="w-4 h-4 text-rose-600" />,
+                        'Informasi Bayi (Newborn)',
+                        'Detail si kecil, tanggal lahir, dan pose khusus',
+                        <Baby className="w-4 h-4 text-rose-600" />,
                         'bg-rose-50 text-rose-700'
                     )}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                        {renderItem('Nama Calon Pria (CPP)', data.groom_name)}
-                        {renderItem('Nama Calon Wanita (CPW)', data.bride_name)}
-                        {renderItem('Tanggal Sesi', data.session_date ? formatDate(data.session_date) : null, <Calendar className="w-3.5 h-3.5" />)}
-                        {renderItem('Konsep / Tema', data.concept_theme)}
-                        {renderItem('Lokasi Sesi', data.session_location, <MapPin className="w-3.5 h-3.5" />)}
-                        {renderItem('Outfit / Wardrobe', data.outfit_wardrobe)}
-                        {renderItem('Jumlah Lokasi', data.locations_count ? `${data.locations_count} Lokasi` : null)}
-                        {renderItem('Makeup & Hairdo', data.makeup_hairdo)}
-                        {renderItem('Properti', data.props)}
-                    </div>
-                    {data.additional_notes && (
-                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs">
-                            <span className="font-semibold text-slate-600 block mb-1">Catatan Tambahan:</span>
-                            <p className="text-slate-800 whitespace-pre-line">{data.additional_notes}</p>
-                        </div>
-                    )}
-                </>
-            )}
-
-            {/* ── 5. PRODUK / BRAND / COMMERCIAL ──────────────────────────── */}
-            {categoryKey === 'commercial' && (
-                <>
-                    {renderHeader(
-                        'Informasi Produk / Brand / Commercial',
-                        'Tujuan komersial, jumlah SKU produk, latar, dan distribusi foto',
-                        <Package className="w-4 h-4 text-emerald-600" />,
-                        'bg-emerald-50 text-emerald-700'
-                    )}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        {renderItem('Nama Brand / Perusahaan', data.company_name)}
-                        {renderItem('Nama Pemesan', data.pic_name || data.client_name || (project?.client?.name && project.client.name !== '-' ? project.client.name : null))}
-                        {renderItem('Tujuan / Kebutuhan', data.commercial_purpose)}
-                        {renderItem('Jenis Produk / Brand', data.product_brand_type)}
-                        {renderItem('Jumlah Produk', data.products_count ? `${data.products_count} Item / SKU` : null)}
-                        {renderItem('Latar / Background', data.background_type)}
-                        {renderItem('Gaya Foto / Mood', data.photo_style_mood)}
-                    </div>
-                    {Array.isArray(data.photo_usage) && data.photo_usage.length > 0 && (
-                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 space-y-1.5">
-                            <span className="text-[11px] font-semibold text-slate-500 block">Penggunaan Foto:</span>
-                            <div className="flex flex-wrap gap-1.5">
-                                {data.photo_usage.map((usage: string) => (
-                                    <span key={usage} className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-[#3C0E0E] text-white">
-                                        {usage}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                    {data.reference_brief && (
-                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs space-y-1">
-                            <span className="font-semibold text-slate-600 block">Referensi / Brief:</span>
-                            <p className="text-slate-800 whitespace-pre-line">{data.reference_brief}</p>
-                        </div>
-                    )}
-                    {data.additional_notes && (
-                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs">
-                            <span className="font-semibold text-slate-600 block mb-1">Catatan Tambahan:</span>
-                            <p className="text-slate-800 whitespace-pre-line">{data.additional_notes}</p>
-                        </div>
-                    )}
-                </>
-            )}
-
-            {/* ── 6. TRAVELING ────────────────────────────────────────────── */}
-            {categoryKey === 'traveling' && (
-                <>
-                    {renderHeader(
-                        'Informasi Traveling Project',
-                        'Destinasi perjalanan, jadwal keberangkatan, dan akomodasi trip',
-                        <Plane className="w-4 h-4 text-sky-600" />,
-                        'bg-sky-50 text-sky-700'
-                    )}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                        {renderItem('Nama Pemesan / Koordinator', data.client_name || data.contact_person || (project?.client?.name && project.client.name !== '-' ? project.client.name : null))}
-                        {renderItem('Tujuan Destinasi', data.destination_city_country, <MapPin className="w-3.5 h-3.5" />)}
-                        {renderItem('Jumlah Traveler', data.travelers_count ? `${data.travelers_count} orang` : null)}
-                        {renderItem('Jenis Trip', data.trip_type)}
-                        {renderItem('Durasi Trip', data.trip_duration_days ? `${data.trip_duration_days} hari` : null, <Clock className="w-3.5 h-3.5" />)}
-                        {renderItem('Tanggal Berangkat', data.departure_date ? formatDate(data.departure_date) : null, <Calendar className="w-3.5 h-3.5" />)}
-                        {renderItem('Tanggal Pulang', data.return_date ? formatDate(data.return_date) : null, <Calendar className="w-3.5 h-3.5" />)}
-                        {renderItem('Maskapai', data.airline)}
-                        {renderItem('Akomodasi / Hotel', data.accommodation_hotel)}
-                        {renderItem('Transportasi Selama Trip', data.trip_transportation)}
-                    </div>
-                    {data.main_agenda_activity && (
-                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs space-y-1">
-                            <span className="font-semibold text-slate-600 block">Agenda / Aktivitas Utama:</span>
-                            <p className="text-slate-800 whitespace-pre-line">{data.main_agenda_activity}</p>
-                        </div>
-                    )}
-                    {data.additional_notes && (
-                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs">
-                            <span className="font-semibold text-slate-600 block mb-1">Catatan Tambahan:</span>
-                            <p className="text-slate-800 whitespace-pre-line">{data.additional_notes}</p>
-                        </div>
-                    )}
-                </>
-            )}
-
-            {/* ── 7. WEDDING ──────────────────────────────────────────────── */}
-            {categoryKey === 'wedding' && (
-                <>
-                    {renderHeader(
-                        'Informasi Wedding',
-                        'Detail lengkap mempelai, sesi akad, resepsi, dan tim vendor',
-                        <HeartHandshake className="w-4 h-4 text-rose-600" />,
-                        'bg-rose-50 text-rose-700'
-                    )}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        {/* CPP Card */}
-                        <div className="p-4 bg-gradient-to-br from-slate-50 to-blue-50/40 rounded-xl border border-slate-200/80 space-y-3 shadow-2xs">
-                            <div className="flex items-center gap-2 pb-2 border-b border-slate-200/60 font-semibold text-xs text-slate-900">
-                                <div className="w-6 h-6 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-[11px]">
-                                    CPP
-                                </div>
-                                <span>Calon Pengantin Pria (CPP)</span>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {renderItem('Nama Lengkap', data.groom_name)}
-                                {renderItem('Nama Panggilan', data.groom_nickname)}
-                                {renderItem('Pekerjaan', data.groom_occupation)}
-                                {renderItem('Tanggal Lahir', data.groom_birth_date ? formatDate(data.groom_birth_date) : null, <Calendar className="w-3.5 h-3.5" />)}
-                                {renderItem('Instagram', data.groom_instagram)}
-                            </div>
-                        </div>
-
-                        {/* CPW Card */}
-                        <div className="p-4 bg-gradient-to-br from-rose-50/40 to-pink-50/40 rounded-xl border border-rose-200/80 space-y-3 shadow-2xs">
-                            <div className="flex items-center gap-2 pb-2 border-b border-rose-200/60 font-semibold text-xs text-rose-950">
-                                <div className="w-6 h-6 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-[11px]">
-                                    CPW
-                                </div>
-                                <span>Calon Pengantin Wanita (CPW)</span>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {renderItem('Nama Lengkap', data.bride_name)}
-                                {renderItem('Nama Panggilan', data.bride_nickname)}
-                                {renderItem('Pekerjaan', data.bride_occupation)}
-                                {renderItem('Tanggal Lahir', data.bride_birth_date ? formatDate(data.bride_birth_date) : null, <Calendar className="w-3.5 h-3.5" />)}
-                                {renderItem('Instagram', data.bride_instagram)}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        {renderItem('Tanggal Akad', data.akad_date ? formatDate(data.akad_date) : null, <Calendar className="w-3.5 h-3.5" />)}
-                        {renderItem('Waktu Akad', data.akad_time, <Clock className="w-3.5 h-3.5" />)}
-                        {renderItem('Lokasi Akad', data.akad_location, <MapPin className="w-3.5 h-3.5" />)}
-
-                        {renderItem('Tanggal Resepsi', data.reception_date ? formatDate(data.reception_date) : null, <Calendar className="w-3.5 h-3.5" />)}
-                        {renderItem('Waktu Resepsi', data.reception_time, <Clock className="w-3.5 h-3.5" />)}
-                        {renderItem('Lokasi Resepsi', data.reception_location, <MapPin className="w-3.5 h-3.5" />)}
-
-                        {renderItem('Wedding Organizer', data.wedding_organizer)}
-                        {renderItem('Estimasi Tamu', data.estimated_guests ? `${data.estimated_guests} Tamu` : null)}
-                        {renderItem('Konsep / Tema', data.concept_theme)}
-                        {renderItem('Venue / Gedung', data.venue_building)}
-                        {renderItem('Dekorasi', data.decoration)}
-                        {renderItem('Dress & MUA', data.mua_dress)}
-                        {renderItem('Entertainment', data.entertainment)}
-                    </div>
-
-                    {data.additional_notes && (
-                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs">
-                            <span className="font-semibold text-slate-600 block mb-1">Catatan Tambahan:</span>
-                            <p className="text-slate-800 whitespace-pre-line">{data.additional_notes}</p>
-                        </div>
-                    )}
-                </>
-            )}
-
-            {/* ── 8. BIRTHDAY ─────────────────────────────────────────────── */}
-            {categoryKey === 'birthday' && (
-                <>
-                    {renderHeader(
-                        'Informasi Ulang Tahun (Birthday)',
-                        'Detail selebrasi, tema pesta, venue, dan rundown acara',
-                        <Gift className="w-4 h-4 text-pink-600" />,
-                        'bg-pink-50 text-pink-700'
-                    )}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        {renderItem('Nama yang Berulang Tahun', data.celebrant_name)}
-                        {renderItem('Usia yang Dirayakan', data.celebrant_age ? `${data.celebrant_age} tahun` : null)}
-                        {renderItem('Tema Ulang Tahun', data.birthday_theme)}
-                        {renderItem('Jenis Acara', data.event_type)}
-                        {renderItem('Jumlah Tamu', data.estimated_guests ? `${data.estimated_guests} Orang` : null)}
-                        {renderItem('Venue / Tempat', data.venue_location, <MapPin className="w-3.5 h-3.5" />)}
-                        {renderItem('Dekorasi / Warna Tema', data.decoration_color_theme)}
-                        {renderItem('Aktivitas / Hiburan', data.activity_entertainment)}
-                    </div>
-                    {data.additional_notes && (
-                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs">
-                            <span className="font-semibold text-slate-600 block mb-1">Catatan Tambahan:</span>
-                            <p className="text-slate-800 whitespace-pre-line">{data.additional_notes}</p>
-                        </div>
-                    )}
-                </>
-            )}
-
-            {/* ── 9. CORPORATE ────────────────────────────────────────────── */}
-            {categoryKey === 'corporate' && (
-                <>
-                    {renderHeader(
-                        'Informasi Corporate Event',
-                        'Detail perusahaan, skala perhelatan, PIC, dan tujuan dokumentasi',
-                        <Building2 className="w-4 h-4 text-blue-600" />,
-                        'bg-blue-50 text-blue-700'
-                    )}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        {renderItem('Nama Perusahaan', data.company_name)}
-                        {renderItem('Departemen / Divisi', data.department_division)}
-                        {renderItem('Jenis Acara', data.event_type)}
-                        {renderItem('Skala Acara', data.event_scale)}
-                        {renderItem('Tujuan Dokumentasi', data.documentation_purpose)}
-                        {renderItem('Nama Pemesan', data.pic_name, <User className="w-3.5 h-3.5" />)}
-                        {renderItem('No. Telepon PIC', data.pic_phone, <Phone className="w-3.5 h-3.5" />)}
-                        {renderItem('Email PIC', data.pic_email, <Mail className="w-3.5 h-3.5" />)}
-                    </div>
-                    {data.special_requirements && (
-                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs space-y-1">
-                            <span className="font-semibold text-slate-600 block">Kebutuhan Khusus / SOP:</span>
-                            <p className="text-slate-800 whitespace-pre-line">{data.special_requirements}</p>
-                        </div>
-                    )}
-                    {data.reference_brief && (
-                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs space-y-1">
-                            <span className="font-semibold text-slate-600 block">Referensi / Brief Rundown:</span>
-                            <p className="text-slate-800 whitespace-pre-line">{data.reference_brief}</p>
-                        </div>
-                    )}
-                </>
-            )}
-
-            {/* ── 10. ENGAGEMENT ──────────────────────────────────────────── */}
-            {categoryKey === 'engagement' && (
-                <>
-                    {renderHeader(
-                        'Informasi Engagement (Lamaran)',
-                        'Detail calon mempelai, sesi lamaran, dan nuansa tema',
-                        <HeartHandshake className="w-4 h-4 text-rose-600" />,
-                        'bg-rose-50 text-rose-700'
-                    )}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                        {renderItem('Nama Calon Pria (CPP)', data.groom_name)}
-                        {renderItem('Nama Calon Wanita (CPW)', data.bride_name)}
-                        {renderItem('Tanggal Lamaran', data.engagement_date ? formatDate(data.engagement_date) : null, <Calendar className="w-3.5 h-3.5" />)}
-                        {renderItem('Waktu Lamaran', data.engagement_time, <Clock className="w-3.5 h-3.5" />)}
-                        {renderItem('Lokasi Lamaran', data.engagement_location, <MapPin className="w-3.5 h-3.5" />)}
-                        {renderItem('Jumlah Tamu', data.estimated_guests ? `${data.estimated_guests} Tamu` : null)}
-                        {renderItem('Konsep / Tema', data.concept_theme)}
-                        {renderItem('Warna Tema', data.theme_color)}
-                        {renderItem('Vendor / WO', data.vendor_wo)}
-                    </div>
-                    {data.additional_notes && (
-                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs">
-                            <span className="font-semibold text-slate-600 block mb-1">Catatan Tambahan:</span>
-                            <p className="text-slate-800 whitespace-pre-line">{data.additional_notes}</p>
-                        </div>
-                    )}
-                </>
-            )}
-
-            {/* ── 11. EVENT ───────────────────────────────────────────────── */}
-            {categoryKey === 'event' && (
-                <>
-                    {renderHeader(
-                        'Informasi Event Publik / Panggung',
-                        'Jadwal waktu, jenis kebutuhan, nama acara, dan lokasi venue',
-                        <Sparkles className="w-4 h-4 text-indigo-600" />,
-                        'bg-indigo-50 text-indigo-700'
-                    )}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        {renderItem('Nama Event / Acara', data.event_name)}
-                        {renderItem('Nama Penanggung Jawab / Pemesan', data.pic_name || data.client_name || data.name || (project?.client?.name && project.client.name !== '-' ? project.client.name : null))}
-                        {renderItem('Tanggal Event', data.event_date ? formatDate(data.event_date) : null, <Calendar className="w-3.5 h-3.5" />)}
-                        {renderItem('Waktu Event', data.event_time_range || data.event_time, <Clock className="w-3.5 h-3.5" />)}
-                        {renderItem('Jenis Event', data.event_type)}
-                        {renderItem('Jenis Kebutuhan', data.needs_type)}
-                        {renderItem('Lokasi Event', data.event_location || data.location, <MapPin className="w-3.5 h-3.5" />)}
-                        {renderItem('Estimasi Pengunjung / Tamu', data.estimated_guests ? `${data.estimated_guests} Tamu` : null)}
-                    </div>
-                    {data.additional_notes && (
-                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs">
-                            <span className="font-semibold text-slate-600 block mb-1">Catatan Tambahan:</span>
-                            <p className="text-slate-800 whitespace-pre-line">{data.additional_notes}</p>
-                        </div>
-                    )}
-                </>
-            )}
-
-            {/* ── 12. FAMILY SESSION ──────────────────────────────────────── */}
-            {categoryKey === 'family' && (
-                <>
-                    {renderHeader(
-                        'Informasi Family Session',
-                        'Potret keluarga, orang tua, anak-anak, dan lokasi pemotretan',
-                        <Users className="w-4 h-4 text-amber-600" />,
-                        'bg-amber-50 text-amber-700'
-                    )}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        {renderItem('Nama Keluarga', data.family_name)}
-                        {renderItem('Nama Ayah', data.father_name)}
-                        {renderItem('Nama Ibu', data.mother_name)}
-                        {renderItem('Jumlah Anggota', data.members_count ? `${data.members_count} orang` : null)}
-                        {renderItem('Lokasi Sesi', data.session_location, <MapPin className="w-3.5 h-3.5" />)}
-                        {renderItem('Durasi Sesi', data.session_duration, <Clock className="w-3.5 h-3.5" />)}
-                        {renderItem('Konsep / Tema', data.concept_theme)}
-                    </div>
-
-                    {/* Children badges */}
-                    {Array.isArray(data.children) && data.children.length > 0 && (
-                        <div className="p-3.5 bg-amber-50/50 rounded-xl border border-amber-200/70 space-y-2">
-                            <span className="text-[11px] font-bold text-amber-900 block">
-                                👶 Daftar Anak ({data.children.length} Anak):
+                    {/* Repeater Bayi */}
+                    {Array.isArray(data.babies) && data.babies.length > 0 ? (
+                        <div className="space-y-2">
+                            <span className="text-xs font-bold text-slate-800 block">
+                                Bayi yang Difoto ({data.babies.length} Bayi):
                             </span>
-                            <div className="flex flex-wrap gap-2">
-                                {data.children.map((ch: { name?: string; age?: string | number }, idx: number) => (
-                                    <div
-                                        key={idx}
-                                        className="px-3 py-1.5 rounded-full bg-white border border-amber-300 shadow-2xs text-xs font-semibold text-slate-800 flex items-center gap-1"
-                                    >
-                                        <span>{ch.name}</span>
-                                        {ch.age && (
-                                            <span className="text-amber-700 text-[11px] font-medium">
-                                                ({ch.age}{String(ch.age).toLowerCase().includes('th') ? '' : ' th'})
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {data.babies.map((b: BabyItem, idx: number) => (
+                                    <div key={idx} className="p-3 bg-rose-50/40 rounded-xl border border-rose-200/70 text-xs space-y-1">
+                                        <div className="flex items-center justify-between">
+                                            <span className="font-bold text-rose-900">{b.name || `Bayi #${idx + 1}`}</span>
+                                            <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-semibold text-[10px]">
+                                                {b.gender}
                                             </span>
-                                        )}
+                                        </div>
+                                        {b.nickname && <p className="text-[11px] text-slate-500">Panggilan: {b.nickname}</p>}
+                                        {b.birth_date && <p className="text-[11px] text-slate-500">Lahir: {formatDate(b.birth_date)}</p>}
                                     </div>
                                 ))}
                             </div>
                         </div>
+                    ) : (
+                        /* Single baby fallback */
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            {renderItem('Nama Bayi', data.baby_name)}
+                            {renderItem('Tanggal Lahir', data.baby_birth_date ? formatDate(data.baby_birth_date) : null, <Calendar className="w-3.5 h-3.5" />)}
+                            {renderItem('Jenis Kelamin', data.baby_gender)}
+                        </div>
                     )}
 
-                    {data.additional_notes && (
-                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs">
-                            <span className="font-semibold text-slate-600 block mb-1">Catatan Tambahan:</span>
-                            <p className="text-slate-800 whitespace-pre-line">{data.additional_notes}</p>
+                    {renderChips('Konsep Sesi', data.concept_theme, data.concept_theme_other)}
+
+                    {(data.pose_special_requests || data.additional_notes) && (
+                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs space-y-1">
+                            <span className="font-semibold text-slate-600 block">Preferensi Pose / Request Khusus:</span>
+                            <p className="text-slate-800 whitespace-pre-line">{data.pose_special_requests || data.additional_notes}</p>
                         </div>
                     )}
                 </>
             )}
 
-            {/* ── 13. KOMUNITAS ───────────────────────────────────────────── */}
+            {/* ── 7. BIRTHDAY ───────────────────────────────────────────────── */}
+            {categoryKey === 'birthday' && (
+                <>
+                    {renderHeader(
+                        'Informasi Ulang Tahun',
+                        'Detail perayaan ulang tahun dan lokasi acara',
+                        <Gift className="w-4 h-4 text-purple-600" />,
+                        'bg-purple-50 text-purple-700'
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {renderItem('Nama yang Berulang Tahun', data.celebrant_name, <User className="w-3.5 h-3.5" />)}
+                        {renderItem('Usia yang Dirayakan', data.celebrant_age ? `${data.celebrant_age} Tahun` : null)}
+                        {renderItem('Jenis Acara', data.event_type === 'Lainnya' ? (data.event_type_other || 'Lainnya') : data.event_type)}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {renderItem('Estimasi Tamu', data.estimated_guests ? `${data.estimated_guests} Tamu` : null)}
+                        {renderItem('Venue / Lokasi', data.venue_location || data.location, <MapPin className="w-3.5 h-3.5" />)}
+                        {renderItem('Tema Acara', data.birthday_theme)}
+                    </div>
+                    {renderItem('Konsep Dekorasi', data.decoration_concept || data.decoration_color_theme)}
+                </>
+            )}
+
+            {/* ── 8. KOMUNITAS ──────────────────────────────────────────────── */}
             {categoryKey === 'komunitas' && (
                 <>
                     {renderHeader(
                         'Informasi Komunitas',
-                        'Identitas komunitas, penanggung jawab (PIC), dan kegiatan',
+                        'Identitas komunitas, jenis kegiatan, tema, dan lokasi',
                         <Users className="w-4 h-4 text-emerald-600" />,
                         'bg-emerald-50 text-emerald-700'
                     )}
+                    {data.client_name && <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">{renderItem('Nama Pemesan', data.client_name)}</div>}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         {renderItem('Nama Komunitas', data.community_name)}
-                        {renderItem('Jenis Komunitas', data.community_type)}
-                        {renderItem('Tahun Berdiri', data.established_year)}
-                        {renderItem('Jumlah Anggota', data.members_count ? `${data.members_count} Anggota` : null)}
-                        {renderItem('Nama Pemesan', data.pic_name, <User className="w-3.5 h-3.5" />)}
-                        {renderItem('No. Telepon PIC', data.pic_phone, <Phone className="w-3.5 h-3.5" />)}
-                        {renderItem('Email Komunitas', data.pic_email, <Mail className="w-3.5 h-3.5" />)}
-                        {renderItem('Jenis Kegiatan', data.activity_type)}
-                        {renderItem('Tema Kegiatan', data.activity_theme)}
+                        {renderItem('Jenis Komunitas', data.community_type === 'Lainnya' ? (data.community_type_other || 'Lainnya') : data.community_type)}
+                        {renderItem('Jumlah Peserta Kegiatan', data.participants_count ? `${data.participants_count} Peserta` : (data.members_count ? `${data.members_count} Anggota` : null))}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {renderItem('Jenis Kegiatan', data.activity_type === 'Lainnya' ? (data.activity_type_other || 'Lainnya') : data.activity_type)}
+                        {renderItem('Tema Kegiatan', data.activity_theme || data.concept_theme)}
+                        {renderItem('Lokasi Kegiatan', data.activity_location || data.session_location || data.location, <MapPin className="w-3.5 h-3.5" />)}
                     </div>
                     {(data.activity_description || project?.notes) && (
                         <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs space-y-1">
-                            <span className="font-semibold text-slate-600 block">Deskripsi Kegiatan:</span>
+                            <span className="font-semibold text-slate-600 block">Deskripsi / Agenda Kegiatan:</span>
                             <p className="text-slate-800 whitespace-pre-line">{data.activity_description || project?.notes}</p>
                         </div>
                     )}
                 </>
             )}
 
-            {/* ── 14. NEWBORN ─────────────────────────────────────────────── */}
-            {categoryKey === 'newborn' && (
+            {/* ── 9. CORPORATE ──────────────────────────────────────────────── */}
+            {categoryKey === 'corporate' && (
                 <>
                     {renderHeader(
-                        'Informasi Bayi (Newborn)',
-                        'Detail kelahiran si kecil, jenis kelamin, dan nama orang tua',
-                        <Baby className="w-4 h-4 text-rose-600" />,
-                        'bg-rose-50 text-rose-700'
+                        'Informasi Corporate & Dokumentasi Bisnis',
+                        'Detail perusahaan, agenda acara, tujuan dokumentasi, dan SOP',
+                        <Building2 className="w-4 h-4 text-blue-600" />,
+                        'bg-blue-50 text-blue-700'
                     )}
-                    {Array.isArray(data.babies) && data.babies.length > 0 ? (
-                        <div className="space-y-3">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {data.babies.map((b: any, idx: number, arr) => (
-                                    <div key={idx} className="p-3.5 bg-rose-50/40 rounded-xl border border-rose-100 space-y-2">
-                                        <div className="flex items-center gap-2 font-semibold text-xs text-rose-900 border-b border-rose-100 pb-1.5">
-                                            <div className="w-5 h-5 rounded-full bg-rose-200/80 text-rose-800 flex items-center justify-center text-[10px] font-bold">
-                                                {idx + 1}
-                                            </div>
-                                            <span>Bayi {arr.length > 1 ? `#${idx + 1}` : ''}</span>
-                                            {arr.length > 1 && (
-                                                <span className="text-[10px] text-rose-600 font-normal">(Kembar)</span>
-                                            )}
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2 text-xs">
-                                            {renderItem('Nama Lengkap', b.name)}
-                                            {renderItem('Nama Panggilan', b.nickname)}
-                                            {renderItem('Tanggal Lahir', b.birth_date ? formatDate(b.birth_date) : null, <Calendar className="w-3.5 h-3.5" />)}
-                                            {renderItem('Jenis Kelamin', b.gender === 'L' ? 'Laki-laki' : (b.gender === 'P' ? 'Perempuan' : b.gender))}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                                {renderItem('Nama Ayah', data.father_name)}
-                                {renderItem('Nama Ibu', data.mother_name)}
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            {renderItem('Nama Bayi', data.baby_name)}
-                            {renderItem('Nama Panggilan', data.baby_nickname)}
-                            {renderItem('Tanggal Lahir Bayi', data.baby_birth_date ? formatDate(data.baby_birth_date) : null, <Calendar className="w-3.5 h-3.5" />)}
-                            {renderItem('Jenis Kelamin', data.baby_gender === 'L' ? 'Laki-laki' : (data.baby_gender === 'P' ? 'Perempuan' : data.baby_gender))}
-                            {renderItem('Nama Ayah', data.father_name)}
-                            {renderItem('Nama Ibu', data.mother_name)}
-                        </div>
-                    )}
-                    {data.additional_notes && (
-                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs">
-                            <span className="font-semibold text-slate-600 block mb-1">Catatan Tambahan:</span>
-                            <p className="text-slate-800 whitespace-pre-line">{data.additional_notes}</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {renderItem('Nama Perusahaan', data.company_name)}
+                        {renderItem('Divisi / Departemen', data.department_division)}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {renderItem('Jenis Acara', data.event_type === 'Lainnya' ? (data.event_type_other || 'Lainnya') : data.event_type)}
+                        {renderItem('Jumlah Peserta', data.participants_count ? `${data.participants_count} Peserta` : (data.event_scale || null))}
+                    </div>
+                    {renderChips('Tujuan Dokumentasi', data.documentation_purpose, data.documentation_purpose_other)}
+                    {(data.special_rules_sop || data.special_requirements) && (
+                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs space-y-1">
+                            <span className="font-semibold text-slate-600 block">Aturan / SOP Khusus:</span>
+                            <p className="text-slate-800 whitespace-pre-line">{data.special_rules_sop || data.special_requirements}</p>
                         </div>
                     )}
                 </>
             )}
 
-            {/* ── STANDARD FALLBACK ────────────────────────────────────────── */}
-            {categoryKey === 'standard' && (
+            {/* ── 10. COMMERCIAL / BRAND ────────────────────────────────────── */}
+            {categoryKey === 'commercial' && (
                 <>
                     {renderHeader(
-                        'Informasi Layanan & Sesi',
-                        'Detail kontak klien, penanggung jawab, dan catatan sesi',
-                        <Sparkles className="w-4 h-4 text-indigo-600" />,
+                        'Informasi Foto Produk & Brand',
+                        'Detail produk dan gaya visual pemotretan',
+                        <Camera className="w-4 h-4 text-indigo-600" />,
                         'bg-indigo-50 text-indigo-700'
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        {renderItem('Nama Klien / PIC', data.client_name || client.name, <User className="w-3.5 h-3.5" />)}
-                        {renderItem('No. Telepon / WhatsApp', client.phone || data.pic_phone, <Phone className="w-3.5 h-3.5" />)}
-                        {renderItem('Email', client.email || data.pic_email, <Mail className="w-3.5 h-3.5" />)}
-                        {renderItem('Tanggal Acara / Pelaksanaan', data.event_date ? formatDate(data.event_date) : null, <Calendar className="w-3.5 h-3.5" />)}
-                        {renderItem('Lokasi Sesi / Acara', data.location || project?.location || client.address, <MapPin className="w-3.5 h-3.5" />)}
-                        {renderItem('Jenis Layanan', project?.name || category?.name || 'Dokumentasi Standard')}
+                        {renderItem('Nama Brand', data.brand_name || data.company_name)}
+                        {renderItem('Jenis Produk', data.product_type || data.product_brand_type)}
                     </div>
-                    {(data.additional_notes || project?.notes) && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {renderItem('Background', data.background_type === 'Lainnya' ? (data.background_type_other || 'Lainnya') : data.background_type)}
+                        {renderItem('Lighting Style', data.lighting_style === 'Lainnya' ? (data.lighting_style_other || 'Lainnya') : data.lighting_style)}
+                    </div>
+                    {renderChips('Mood / Style Foto', data.mood_style, data.mood_style_other)}
+                </>
+            )}
+
+            {/* ── 11. EVENT PUBLIK ──────────────────────────────────────────── */}
+            {categoryKey === 'event' && (
+                <>
+                    {renderHeader(
+                        'Informasi Event Publik',
+                        'Penyelenggara, peserta, dan lokasi event',
+                        <Calendar className="w-4 h-4 text-amber-600" />,
+                        'bg-amber-50 text-amber-700'
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {renderItem('Nama Event', data.event_name)}
+                        {renderItem('Penyelenggara / EO', data.organizer)}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {renderItem('Jenis Event', data.event_type === 'Lainnya' ? (data.event_type_other || 'Lainnya') : data.event_type)}
+                        {renderItem('Estimasi Peserta', data.estimated_participants ? `${data.estimated_participants} Peserta` : (data.estimated_guests ? `${data.estimated_guests} Tamu` : null))}
+                        {renderItem('Dress Code', data.dress_code)}
+                    </div>
+                    {renderItem('Lokasi Event', data.event_location || data.location, <MapPin className="w-3.5 h-3.5" />)}
+                </>
+            )}
+
+            {/* ── 12. TRAVELING ─────────────────────────────────────────────── */}
+            {categoryKey === 'traveling' && (
+                <>
+                    {renderHeader(
+                        'Informasi Dokumentasi Traveling',
+                        'Destinasi, jadwal perjalanan, akomodasi, dan agenda utama',
+                        <Plane className="w-4 h-4 text-sky-600" />,
+                        'bg-sky-50 text-sky-700'
+                    )}
+                    {/* Destinasi Tags */}
+                    {Array.isArray(data.destinations) && data.destinations.length > 0 ? (
+                        renderChips('Destinasi Perjalanan', data.destinations)
+                    ) : (
+                        renderItem('Destinasi Perjalanan', data.destination_city_country || data.destination || data.location, <MapPin className="w-3.5 h-3.5" />)
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                        {renderItem('Jumlah Peserta', data.participants_count ? `${data.participants_count} Orang` : (data.travelers_count ? `${data.travelers_count} Orang` : null))}
+                        {renderItem('Jenis Perjalanan', data.trip_type === 'Lainnya' ? (data.trip_type_other || 'Lainnya') : data.trip_type)}
+                        {renderItem('Tanggal Berangkat', data.departure_date ? formatDate(data.departure_date) : null, <Calendar className="w-3.5 h-3.5" />)}
+                        {renderItem('Tanggal Pulang', data.return_date ? formatDate(data.return_date) : null, <Calendar className="w-3.5 h-3.5" />)}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                        {renderItem('Durasi Perjalanan', calculateTripDuration(data.departure_date, data.return_date) || (data.trip_duration_days ? `${data.trip_duration_days} Hari` : null))}
+                        {renderItem('Transportasi Utama', data.transportation_mode === 'Lainnya' ? (data.transportation_other || 'Lainnya') : data.transportation_mode)}
+                        {renderItem('Maskapai / Kendaraan', data.airline_transport_detail || data.airline)}
+                        {renderItem('Hotel / Akomodasi', data.accommodation_hotel || data.accommodation_hotel_legacy)}
+                    </div>
+
+                    {(data.main_agenda || data.main_agenda_activity) && (
                         <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs space-y-1">
-                            <span className="font-semibold text-slate-600 block">Catatan Sesi:</span>
-                            <p className="text-slate-800 whitespace-pre-line">{data.additional_notes || project?.notes}</p>
+                            <span className="font-semibold text-slate-600 block">Agenda Utama Perjalanan:</span>
+                            <p className="text-slate-800 whitespace-pre-line">{data.main_agenda || data.main_agenda_activity}</p>
                         </div>
                     )}
+                </>
+            )}
+
+            {/* ── 13. PERORANGAN ────────────────────────────────────────────── */}
+            {categoryKey === 'perorangan' && (
+                <>
+                    {renderHeader(
+                        'Informasi Sesi Perorangan (Portrait / Personal)',
+                        'Tujuan foto, jenis sesi, durasi, backdrop, dan outfit',
+                        <User className="w-4 h-4 text-slate-700" />,
+                        'bg-slate-100 text-slate-800'
+                    )}
+                    {data.client_name && <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{renderItem('Nama Pemesan', data.client_name)}</div>}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {renderItem('Tujuan Foto', data.photo_purpose === 'Lainnya' ? (data.photo_purpose_other || 'Lainnya') : data.photo_purpose)}
+                        {renderItem('Jenis Sesi', data.session_type === 'Lainnya' ? (data.session_type_other || 'Lainnya') : data.session_type)}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {renderItem('Jumlah Look / Outfit', data.outfit_looks_count ? `${data.outfit_looks_count} Look` : null)}
+                        {renderItem('Durasi Sesi', data.session_duration)}
+                        {renderItem('Backdrop / Background', data.backdrop === 'Lainnya' ? (data.backdrop_other || 'Lainnya') : (data.backdrop || data.backdrop_theme))}
+                    </div>
+                    {renderItem('Properti Khusus Pribadi', data.special_props || data.desired_props)}
+                </>
+            )}
+
+            {/* ── 14. LAINNYA / TRADISIONAL ──────────────────────────────────── */}
+            {categoryKey === 'lainnya' && (
+                <>
+                    {renderHeader(
+                        'Informasi Event Utama',
+                        'Waktu, jenis kebutuhan, dan lokasi event',
+                        <Sparkles className="w-4 h-4 text-indigo-600" />,
+                        'bg-indigo-50 text-indigo-700'
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {renderItem('Nama Pemesan', data.client_name)}
+                        {renderItem('Tanggal Event', data.event_date)}
+                        {renderItem('Waktu Event', data.event_time_range || data.event_time)}
+                        {renderItem('Jenis Event', (data.event_type || data.event_tradition_type) === 'Lainnya' ? (data.event_tradition_other || 'Lainnya') : (data.event_type || data.event_tradition_type))}
+                        {renderItem('Jenis Kebutuhan', data.needs_type)}
+                        {renderItem('Lokasi Event', data.event_location || data.location, <MapPin className="w-3.5 h-3.5" />)}
+                    </div>
+                    {(data.special_requirements || data.needs_description || data.special_notes) && (
+                        <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs space-y-1">
+                            <span className="font-semibold text-slate-600 block">Detail Kebutuhan Khusus:</span>
+                            <p className="text-slate-800 whitespace-pre-line">{data.special_requirements || data.needs_description || data.special_notes}</p>
+                        </div>
+                    )}
+                </>
+            )}
+
+            {/* ── STANDARD FALLBACK ─────────────────────────────────────────── */}
+            {categoryKey === 'standard' && (
+                <>
+                    {renderHeader(
+                        'Informasi Umum Kebutuhan Sesi',
+                        'Detail kebutuhan khusus dokumentasi',
+                        <FileText className="w-4 h-4 text-slate-600" />,
+                        'bg-slate-100 text-slate-700'
+                    )}
+                    {renderItem('Catatan Sesi', data.notes || project?.notes)}
                 </>
             )}
         </div>

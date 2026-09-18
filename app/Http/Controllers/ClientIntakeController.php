@@ -32,7 +32,7 @@ class ClientIntakeController extends Controller
             ->get();
 
         $packages = Package::where('status', 'active')
-            ->select('id', 'name', 'category_id', 'base_price', 'duration_hours', 'description')
+            ->select('id', 'name', 'category_id', 'base_price', 'duration_hours', 'description', 'included_services', 'included_deliverables')
             ->orderBy('name')
             ->get();
 
@@ -49,8 +49,7 @@ class ClientIntakeController extends Controller
 
         $clientSources = ClientSource::where('status', 'active')
             ->select('id', 'name', 'type', 'avatar', 'is_primary')
-            ->orderByDesc('is_primary')
-            ->orderBy('name')
+            ->orderByDesc('created_at')
             ->get();
 
         return Inertia::render('Public/ClientIntakeForm', [

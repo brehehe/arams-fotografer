@@ -52,6 +52,7 @@ import { CategorySpecificView } from '@/components/projects/CategorySpecificView
 import {
     CategoryFormKey,
     resolveCategoryKey,
+    getProjectCategoryError,
     AnyCategorySpecificData,
 } from '@/types/category-forms';
 import {
@@ -285,7 +286,7 @@ export default function ProjectsEdit({
             partner_2: existing.partner_2 || cl?.groom_name || '',
             father_name: existing.father_name || cl?.father_name || '',
             mother_name: existing.mother_name || cl?.mother_name || '',
-            family_name: existing.family_name || (cl?.name ? `Keluarga ${cl.name}` : ''),
+            family_name: existing.family_name || (cl as any)?.category_data?.family_name || '',
             baby_name: existing.baby_name || cl?.child_name || '',
             contact_person: existing.contact_person || cl?.name || '',
             pic_name: existing.pic_name || cl?.name || '',
@@ -297,29 +298,29 @@ export default function ProjectsEdit({
                     ? cl.children.map((k: any) => ({ name: k.name || '', age: '' }))
                     : (cl?.child_name ? [{ name: cl.child_name, age: '' }] : [])),
             ...existing,
+            client_name: existing.client_name || cl?.name || '',
         };
     });
+    const categoryDrafts = React.useRef<Record<string, AnyCategorySpecificData>>({});
+    const [categoryError, setCategoryError] = useState<string | null>(null);
 
     const handleCategoryDataChange = (field: string, value: any) => {
-        setCategoryData((prev) => {
-            const next = { ...prev, [field]: value };
-            if (field === 'session_location' || field === 'location' || field === 'akad_location' || field === 'event_location') {
-                if (!projectLocation || projectLocation === prev[field]) {
-                    setProjectLocation(value);
-                }
-            }
-            if (field === 'session_date' || field === 'akad_date' || field === 'event_date' || field === 'departure_date') {
-                if (!projectDate || projectDate === prev[field]) {
-                    setProjectDate(value);
-                    setShootingEventDate(value);
-                }
-            }
-            return next;
-        });
+        setCategoryError(null);
+        setCategoryData((prev) => ({ ...prev, [field]: value }));
+
+        if (['session_location', 'location', 'akad_location', 'engagement_location', 'venue_location', 'activity_location', 'event_location'].includes(field)) {
+            setProjectLocation(value);
+        }
+
+        if (['session_date', 'akad_date', 'engagement_date', 'event_date', 'departure_date'].includes(field)) {
+            setProjectDate(value);
+            setShootingEventDate(value);
+        }
     };
 
     const handleClientChange = (newClientId: string) => {
         setClientId(newClientId);
+        setCategoryError(null);
         const cl = clients.find((c) => String(c.id) === String(newClientId));
         if (cl) {
             setCategoryData((prev) => ({
@@ -327,14 +328,14 @@ export default function ProjectsEdit({
                 client_name: cl.name || '',
                 name: cl.name || '',
                 company_name: (cl as any).company_name || cl.name || '',
-                community_name: cl.name || '',
+                community_name: (cl as any).category_data?.community_name || prev.community_name || '',
                 bride_name: prev.bride_name || cl.bride_name || '',
                 groom_name: prev.groom_name || cl.groom_name || '',
                 partner_1: prev.partner_1 || cl.bride_name || '',
                 partner_2: prev.partner_2 || cl.groom_name || '',
                 father_name: prev.father_name || cl.father_name || '',
                 mother_name: prev.mother_name || cl.mother_name || '',
-                family_name: prev.family_name || (cl.name ? `Keluarga ${cl.name}` : ''),
+                family_name: (cl as any).category_data?.family_name || prev.family_name || '',
                 baby_name: prev.baby_name || cl.child_name || '',
                 contact_person: prev.contact_person || cl.name || '',
                 pic_name: prev.pic_name || cl.name || '',
@@ -606,7 +607,7 @@ export default function ProjectsEdit({
     const availablePackages = useMemo(() => {
         if (!categoryId) return packages;
         const filtered = packages.filter((p) => String(p.category_id) === String(categoryId));
-        return filtered.length > 0 ? filtered : packages;
+        return filtered;
     }, [packages, categoryId]);
 
     const selectedPackage = useMemo(() => {
@@ -614,7 +615,7 @@ export default function ProjectsEdit({
             const found = availablePackages.find((p) => String(p.id) === String(packageId));
             if (found) return found;
         }
-        return availablePackages[0] || null;
+        return null;
     }, [availablePackages, packageId]);
 
     const packagePrice = useMemo(() => {
@@ -854,10 +855,16 @@ export default function ProjectsEdit({
     }, [client_sources]);
 
     const handleCategoryChange = (newCatId: string) => {
+        if (newCatId === categoryId) return;
+        setCategoryError(null);
+        categoryDrafts.current[categoryId] = categoryData;
+        setCategoryData(categoryDrafts.current[newCatId] || { client_name: clients.find((cl) => String(cl.id) === String(clientId))?.name || '' });
         setCategoryId(newCatId);
         const pkgs = packages.filter((p) => String(p.category_id) === String(newCatId));
         if (pkgs.length > 0) {
             setPackageId(String(pkgs[0].id));
+        } else {
+            setPackageId('');
         }
     };
 
@@ -1082,6 +1089,19 @@ export default function ProjectsEdit({
             toast.error('Silakan pilih Kategori Project');
             return false;
         }
+        if (!packageId || !availablePackages.some((pkg) => String(pkg.id) === String(packageId))) {
+            toast.error('Paket layanan wajib dipilih untuk kategori ini.');
+            return false;
+        }
+        const detailError = getProjectCategoryError(activeCategoryKey, categoryData);
+        if (detailError) {
+            setCategoryError(detailError);
+            setCurrentStep(1);
+            toast.error(detailError);
+            requestAnimationFrame(() => document.getElementById('project-category-error')?.focus());
+            return false;
+        }
+        setCategoryError(null);
         if (!projectName.trim()) {
             toast.error('Nama Project wajib diisi');
             return false;
@@ -1578,13 +1598,6 @@ export default function ProjectsEdit({
                                         if (!shootingEventDate || shootingEventDate === projectDate) {
                                             setShootingEventDate(newDate);
                                         }
-                                        setCategoryData((prev) => ({
-                                            ...prev,
-                                            event_date: newDate,
-                                            session_date: newDate,
-                                            akad_date: newDate,
-                                            departure_date: newDate,
-                                        }));
                                     }}
                                     className="w-full h-[42px] px-3 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:border-[#4F46E5] focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
                                 />
@@ -1614,14 +1627,6 @@ export default function ProjectsEdit({
                                     onChange={(e) => {
                                         const newLoc = e.target.value;
                                         setProjectLocation(newLoc);
-                                        setCategoryData((prev) => ({
-                                            ...prev,
-                                            location: newLoc,
-                                            event_location: newLoc,
-                                            session_location: newLoc,
-                                            akad_location: newLoc,
-                                            destination_city_country: newLoc,
-                                        }));
                                     }}
                                     placeholder="Contoh: Studio Arams, Jakarta Selatan atau Alamat Lengkap Venue"
                                     className="h-[42px]"
@@ -1636,13 +1641,7 @@ export default function ProjectsEdit({
                                 <SelectSearch
                                     options={shootingDurationOptions}
                                     value={shootingDuration}
-                                    onChange={(val) => {
-                                        setShootingDuration(val);
-                                        setCategoryData((prev) => ({
-                                            ...prev,
-                                            session_duration: val,
-                                        }));
-                                    }}
+                                    onChange={setShootingDuration}
                                     clearable={false}
                                 />
                             </div>
@@ -1697,13 +1696,16 @@ export default function ProjectsEdit({
                                         </div>
                                     </div>
                                 ) : (
-                                    <div
+                                    <button
+                                        type="button"
                                         onClick={() => thumbnailInputRef.current?.click()}
-                                        className="border-2 border-dashed border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30 rounded-xl p-3 text-center cursor-pointer transition-all flex items-center justify-center gap-3 group"
+                                        className="w-full border-2 border-dashed border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30 rounded-xl p-3 text-center cursor-pointer transition-colors flex items-center justify-center gap-3 group focus-visible:ring-2 focus-visible:ring-indigo-500"
                                     >
                                         <img
                                             src="/images/no-image.svg"
                                             alt="Belum Ada Cover"
+                                            width={48}
+                                            height={48}
                                             className="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0 opacity-80 group-hover:opacity-100 transition-opacity"
                                         />
                                         <div className="text-left">
@@ -1714,7 +1716,7 @@ export default function ProjectsEdit({
                                                 Belum ada cover • PNG, JPG, WebP hingga 5MB
                                             </p>
                                         </div>
-                                    </div>
+                                    </button>
                                 )}
                             </div>
                         </div>
@@ -1722,7 +1724,7 @@ export default function ProjectsEdit({
 
                     {/* ── CARD 2: INFORMASI KATEGORI KHUSUS ───────────── */}
                     <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs space-y-4">
-                        <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+                        <div className="border-b border-slate-100 pb-3 flex flex-wrap items-center justify-between gap-3">
                             <div className="flex items-center gap-2.5">
                                 <div className="w-8 h-8 rounded-lg bg-indigo-50 text-[#4F46E5] flex items-center justify-center shrink-0">
                                     <Sparkles className="w-4 h-4" />
@@ -1733,19 +1735,20 @@ export default function ProjectsEdit({
                                             2. Informasi {selectedCategory?.name || 'Kategori'}
                                         </h3>
                                         <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
-                                            Opsional
+                                            Sesuai Kategori
                                         </span>
                                     </div>
-                                    <p className="text-[11px] text-slate-400">
-                                        Form data spesifik untuk kebutuhan kategori {selectedCategory?.name || 'project'} (dapat dikosongkan jika belum tersedia)
+                                    <p className="text-xs text-slate-500">
+                                        Isi detail {selectedCategory?.name || 'kategori'}; tanggal dan lokasi khusus akan tersalin ke informasi project.
                                     </p>
                                 </div>
                             </div>
-                            <span className="text-[11px] font-bold px-2.5 py-1 rounded-full border bg-indigo-50 text-indigo-700 border-indigo-200">
+                            <span className="max-w-full break-words text-[11px] font-bold px-2.5 py-1 rounded-full border bg-indigo-50 text-indigo-700 border-indigo-200">
                                 {selectedCategory?.name || 'Kategori'}
                             </span>
                         </div>
 
+                        {categoryError && <div id="project-category-error" role="alert" tabIndex={-1} className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-800 outline-none focus-visible:ring-2 focus-visible:ring-rose-500">Detail {selectedCategory?.name || 'kategori'}: {categoryError}</div>}
                         <CategorySpecificForm
                             categoryKey={activeCategoryKey}
                             categoryName={selectedCategory?.name}
@@ -1783,12 +1786,13 @@ export default function ProjectsEdit({
                             </div>
                             <SelectSearch
                                 options={packageOptions}
-                                value={packageId || selectedPackage?.id}
+                                value={packageId}
                                 onChange={setPackageId}
                                 placeholder="Pilih Paket Layanan..."
                                 searchPlaceholder="Cari paket..."
                                 clearable={false}
                             />
+                            {availablePackages.length === 0 && <p role="status" className="text-xs text-amber-800">Belum ada paket untuk kategori ini. Tambahkan paket di Master Data sebelum menyimpan project.</p>}
                             {selectedPackage && (
                                 <div className="p-3.5 rounded-xl bg-indigo-50/70 border border-indigo-100 flex items-center justify-between text-xs mt-1.5">
                                     <div className="flex items-center gap-2.5 min-w-0">

@@ -54,8 +54,9 @@ class ClientController extends Controller
             ->select('id', 'name', 'phone', 'city', 'email', 'bride_name', 'groom_name', 'child_name', 'father_name', 'mother_name', 'children')
             ->orderBy('name')
             ->get();
-        $clientSources = ClientSource::orderBy('name')
+        $clientSources = ClientSource::where('status', 'active')
             ->select('id', 'name', 'type', 'status', 'is_primary', 'avatar')
+            ->orderByDesc('created_at')
             ->get();
         $workflows = \App\Http\Controllers\MasterData\WorkflowController::getWorkflowDefinitions();
 
@@ -78,14 +79,15 @@ class ClientController extends Controller
 
         $clientDetail = $this->clientService->getClientDetail($client);
         $categories = Category::where('status', 'active')->select('id', 'name', 'slug', 'description', 'color', 'form_type')->orderBy('sort_order')->orderBy('name')->get();
-        $packages = Package::where('status', 'active')->select('id', 'name', 'category_id', 'base_price', 'duration_hours', 'description')->get();
+        $packages = Package::where('status', 'active')->select('id', 'name', 'category_id', 'base_price', 'duration_hours', 'description', 'included_deliverables', 'included_services')->get();
         $weddingOrganizers = WeddingOrganizer::whereIn('status', ['partner', 'active'])->select('id', 'name', 'pic_name', 'phone', 'city', 'tier')->orderBy('name')->get();
         $allClients = Client::where('id', '!=', $client->id)
             ->select('id', 'name', 'phone', 'city', 'email', 'bride_name', 'groom_name', 'child_name', 'father_name', 'mother_name', 'children')
             ->orderBy('name')
             ->get();
-        $clientSources = ClientSource::orderBy('name')
+        $clientSources = ClientSource::where('status', 'active')
             ->select('id', 'name', 'type', 'status', 'is_primary', 'avatar')
+            ->orderByDesc('created_at')
             ->get();
 
         return Inertia::render('Clients/Edit', [

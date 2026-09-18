@@ -356,17 +356,15 @@ export default function ProjectDetail({
 
     const formattedReferral = useMemo(() => {
         let ref = parsedReferral;
-        if (!ref || ref === '-') return 'Langsung / Organik';
+        if (!ref || ref === '-') return 'Tanpa';
         // Clean out empty placeholders like ( - ) or (-)
         ref = ref.replace(/\s*\(\s*-\s*\)/g, '').replace(/\s*-\s*$/, '').trim();
-        return ref || 'Langsung / Organik';
+        return ref || 'Tanpa';
     }, [parsedReferral]);
 
     const cleanProjectDescription = useMemo(() => {
         const raw = project?.notes || project?.description || '';
-        if (!raw) {
-            return `Dokumentasi acara ${project?.name || ''} yang akan dilaksanakan pada ${formatDateIndo(project?.event_date)} di ${project?.location || 'lokasi yang telah disepakati'}.`;
-        }
+        if (!raw) return '';
 
         // Filter out technical metadata lines that are already displayed in dedicated cards
         const cleanedLines = raw
@@ -381,8 +379,8 @@ export default function ProjectDetail({
             });
 
         const result = cleanedLines.join('\n\n').trim();
-        return result || `Dokumentasi acara ${project?.name || ''} yang akan dilaksanakan pada ${formatDateIndo(project?.event_date)} di ${project?.location || 'lokasi yang telah disepakati'}.`;
-    }, [project?.notes, project?.description, project?.name, project?.event_date, project?.location]);
+        return result;
+    }, [project?.notes, project?.description]);
 
     // ── DYNAMIC FINANCIAL BREAKDOWN ──────────────────────────────────────────
     const addonsList = useMemo(() => {
@@ -1287,11 +1285,11 @@ export default function ProjectDetail({
                                         <FileText className="w-4 h-4" />
                                     </div>
                                     <h3 className="font-bold text-xs text-slate-900 truncate">
-                                        Deskripsi &amp; Konsep Acara
+                                        Catatan Project
                                     </h3>
                                 </div>
                                 <p className="text-xs text-slate-600 leading-relaxed break-words whitespace-normal line-clamp-4">
-                                    {cleanProjectDescription}
+                                    {cleanProjectDescription || 'Belum ada catatan tambahan untuk project ini.'}
                                 </p>
                             </div>
                             <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 gap-2 min-w-0">

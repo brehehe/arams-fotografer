@@ -1,56 +1,49 @@
 import {
-    Heart,
-    HeartHandshake,
-    Baby,
-    Users,
     Calendar,
-    Plane,
-    Sparkles,
-    User,
     Plus,
     X,
     Trash2,
     Check,
+    MapPin,
 } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { NativeSelect } from '@/components/ui/native-select';
 import { Textarea } from '@/components/ui/textarea';
 import type {
     CategoryFormKey,
     AnyCategorySpecificData,
-    ChildRepeaterItem,
     BabyItem,
 } from '@/types/category-forms';
 import {
+    calculateTripDuration,
+    getFamilyMemberCount,
+    WEDDING_CONCEPTS,
+    PREWEDDING_CONCEPTS,
+    ENGAGEMENT_CONCEPTS,
+    FAMILY_CONCEPTS,
+    FAMILY_LOCATIONS,
     MATERNITY_CONCEPTS,
     MATERNITY_LOCATIONS,
-    LAINNYA_NEEDS_TYPES,
+    MATERNITY_WARDROBES,
+    NEWBORN_CONCEPTS,
+    NEWBORN_GENDERS,
+    BIRTHDAY_EVENT_TYPES,
+    KOMUNITAS_TYPES,
+    KOMUNITAS_ACTIVITIES,
+    CORPORATE_EVENT_TYPES,
+    CORPORATE_DOC_PURPOSES,
+    COMMERCIAL_BACKGROUNDS,
+    COMMERCIAL_LIGHTING_STYLES,
+    COMMERCIAL_MOODS,
+    EVENT_TYPES,
+    TRAVELING_TRIP_TYPES,
+    TRAVELING_TRANSPORTS,
+    PERORANGAN_PURPOSES,
     PERORANGAN_SESSION_TYPES,
     PERORANGAN_DURATIONS,
     PERORANGAN_BACKDROPS,
-    PREWEDDING_CONCEPTS,
-    COMMERCIAL_PURPOSES,
-    COMMERCIAL_BACKGROUNDS,
-    COMMERCIAL_MOODS,
-    COMMERCIAL_USAGES,
-    TRAVELING_TRIP_TYPES,
-    TRAVELING_TRANSPORTS,
-    WEDDING_CONCEPTS,
-    BIRTHDAY_THEMES,
-    BIRTHDAY_EVENT_TYPES,
-    CORPORATE_EVENT_TYPES,
-    CORPORATE_SCALES,
-    CORPORATE_PURPOSES,
-    ENGAGEMENT_CONCEPTS,
-    EVENT_TYPES,
-    EVENT_NEEDS_TYPES,
-    LAINNYA_EVENT_TYPES,
-    FAMILY_CONCEPTS,
-    FAMILY_LOCATIONS,
-    FAMILY_DURATIONS,
-    KOMUNITAS_TYPES,
-    KOMUNITAS_ACTIVITIES,
+    LAINNYA_TRADITION_TYPES,
 } from '@/types/category-forms';
 
 interface CategorySpecificFormProps {
@@ -63,114 +56,22 @@ interface CategorySpecificFormProps {
     hideGeneralFields?: boolean;
 }
 
-export function CategorySpecificForm({
-    categoryKey,
-    data,
-    onChange,
-    errors = {},
-    hideGeneralFields = false,
-}: CategorySpecificFormProps) {
-    // Local state for Family session child repeater addition
-    const [newChildName, setNewChildName] = useState('');
-    const [newChildAge, setNewChildAge] = useState('');
-    const [isAddingChild, setIsAddingChild] = useState(false);
+// ── SUB-COMPONENT: Label Helper ───────────────────────────────────────────────
 
-    const handleAddChild = () => {
-        if (!newChildName.trim()) {
-            return;
-        }
-
-        const currentChildren: ChildRepeaterItem[] = Array.isArray(data.children) ? [...data.children] : [];
-        currentChildren.push({
-            name: newChildName.trim(),
-            age: newChildAge.trim() || undefined,
-        });
-        onChange('children', currentChildren);
-        setNewChildName('');
-        setNewChildAge('');
-        setIsAddingChild(false);
-    };
-
-    const handleRemoveChild = (index: number) => {
-        const currentChildren: ChildRepeaterItem[] = Array.isArray(data.children) ? [...data.children] : [];
-        currentChildren.splice(index, 1);
-        onChange('children', currentChildren);
-    };
-
-    const toggleCommercialUsage = (usage: string) => {
-        const currentUsages: string[] = Array.isArray(data.photo_usage) ? [...data.photo_usage] : [];
-        const index = currentUsages.indexOf(usage);
-
-        if (index > -1) {
-            currentUsages.splice(index, 1);
-        } else {
-            currentUsages.push(usage);
-        }
-
-        onChange('photo_usage', currentUsages);
-    };
-
-    // Baby repeater helpers for newborn session
-    const babiesList: BabyItem[] = (Array.isArray(data.babies) && data.babies.length > 0)
-        ? data.babies
-        : [{
-            name: data.baby_name || '',
-            nickname: data.baby_nickname || '',
-            birth_date: data.baby_birth_date || '',
-            gender: data.baby_gender || '',
-        }];
-
-    const handleBabyChange = (index: number, field: keyof BabyItem, val: string) => {
-        const updated = [...babiesList];
-        updated[index] = { ...updated[index], [field]: val };
-        onChange('babies', updated);
-
-        if (index === 0) {
-            if (field === 'name') {
-                onChange('baby_name', val);
-            }
-
-            if (field === 'nickname') {
-                onChange('baby_nickname', val);
-            }
-
-            if (field === 'birth_date') {
-                onChange('baby_birth_date', val);
-            }
-
-            if (field === 'gender') {
-                onChange('baby_gender', val);
-            }
-        }
-    };
-
-    const handleAddBaby = () => {
-        const updated = [...babiesList, { name: '', nickname: '', birth_date: '', gender: '' }];
-        onChange('babies', updated);
-    };
-
-    const handleRemoveBaby = (index: number) => {
-        if (babiesList.length <= 1) {
-            return;
-        }
-
-        const updated = babiesList.filter((_, i) => i !== index);
-        onChange('babies', updated);
-
-        if (updated[0]) {
-            onChange('baby_name', updated[0].name || '');
-            onChange('baby_nickname', updated[0].nickname || '');
-            onChange('baby_birth_date', updated[0].birth_date || '');
-            onChange('baby_gender', updated[0].gender || '');
-        }
-    };
-
-    // Helper for input labels — shows required asterisk (*) when required, or (Opsional) when optional
-    const renderLabel = (label: string, isRequired?: boolean, hint?: string) => (
+function FormLabel({
+    label,
+    required,
+    hint,
+}: {
+    label: string;
+    required?: boolean;
+    hint?: string;
+}) {
+    return (
         <div className="flex items-center justify-between mb-1">
             <label className="text-[11px] font-bold text-slate-700 inline-flex items-center gap-1">
                 <span>{label}</span>
-                {isRequired ? (
+                {required ? (
                     <span className="text-rose-500 font-bold text-xs ml-0.5" title="Wajib diisi">*</span>
                 ) : (
                     <span className="text-slate-400 font-normal text-[10px] ml-0.5">(Opsional)</span>
@@ -179,442 +80,607 @@ export function CategorySpecificForm({
             {hint && <span className="text-[10px] text-slate-400">{hint}</span>}
         </div>
     );
+}
+
+// ── SUB-COMPONENT: Select With "Lainnya" Input ────────────────────────────────
+
+function SelectWithOther({
+    label,
+    required = false,
+    options,
+    value = '',
+    otherValue = '',
+    onChangeValue,
+    onChangeOther,
+    placeholder = 'Pilih opsi...',
+    otherPlaceholder = 'Sebutkan lainnya...',
+    error,
+}: {
+    label: string;
+    required?: boolean;
+    options: string[];
+    value?: string;
+    otherValue?: string;
+    onChangeValue: (val: string) => void;
+    onChangeOther: (val: string) => void;
+    placeholder?: string;
+    otherPlaceholder?: string;
+    error?: string;
+}) {
+    const isOtherSelected = value === 'Lainnya';
+
+    return (
+        <div className="space-y-1.5">
+            <FormLabel label={label} required={required} />
+            <NativeSelect
+                value={value || ''}
+                onChange={(e) => onChangeValue(e.target.value)}
+                className="h-[38px] text-xs bg-white"
+            >
+                <option value="">{placeholder}</option>
+                {options.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                ))}
+            </NativeSelect>
+            {isOtherSelected && (
+                <div className="pt-1 animate-in fade-in duration-150">
+                    <Input
+                        value={otherValue || ''}
+                        onChange={(e) => onChangeOther(e.target.value)}
+                        placeholder={otherPlaceholder}
+                        className="h-[34px] text-xs bg-amber-50/50 border-amber-200 text-slate-800 focus:border-amber-400"
+                    />
+                </div>
+            )}
+            {error && <p className="text-[11px] text-rose-500 mt-1">{error}</p>}
+        </div>
+    );
+}
+
+// ── SUB-COMPONENT: Multi-Select Chips With "Lainnya" ──────────────────────────
+
+function MultiSelectWithOther({
+    label,
+    required = false,
+    options,
+    values = [],
+    otherValue = '',
+    onChangeValues,
+    onChangeOther,
+    error,
+}: {
+    label: string;
+    required?: boolean;
+    options: string[];
+    values?: string[];
+    otherValue?: string;
+    onChangeValues: (vals: string[]) => void;
+    onChangeOther: (val: string) => void;
+    error?: string;
+}) {
+    const safeValues = Array.isArray(values) ? values : [];
+    const isOtherSelected = safeValues.includes('Lainnya');
+
+    const handleToggle = (opt: string) => {
+        const next = safeValues.includes(opt)
+            ? safeValues.filter((v) => v !== opt)
+            : [...safeValues, opt];
+        onChangeValues(next);
+    };
+
+    return (
+        <div className="space-y-2">
+            <FormLabel label={label} required={required} hint="Bisa pilih lebih dari satu" />
+            <div className="flex flex-wrap gap-1.5">
+                {options.map((opt) => {
+                    const isChecked = safeValues.includes(opt);
+
+                    return (
+                        <button
+                            key={opt}
+                            type="button"
+                            onClick={() => handleToggle(opt)}
+                            className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer flex items-center gap-1.5 ${
+                                isChecked
+                                    ? 'bg-slate-900 border-slate-900 text-white shadow-2xs'
+                                    : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                            }`}
+                        >
+                            <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] ${isChecked ? 'bg-white text-slate-900 font-bold' : 'border border-slate-300'}`}>
+                                {isChecked && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                            </span>
+                            <span>{opt}</span>
+                        </button>
+                    );
+                })}
+            </div>
+            {isOtherSelected && (
+                <div className="pt-1 animate-in fade-in duration-150">
+                    <Input
+                        value={otherValue || ''}
+                        onChange={(e) => onChangeOther(e.target.value)}
+                        placeholder="Sebutkan opsi lainnya..."
+                        className="h-[34px] text-xs bg-amber-50/50 border-amber-200 text-slate-800 focus:border-amber-400"
+                    />
+                </div>
+            )}
+            {error && <p className="text-[11px] text-rose-500 mt-1">{error}</p>}
+        </div>
+    );
+}
+
+// ── SUB-COMPONENT: Modern Toggle Switch (Ya / Tidak) ──────────────────────────
+
+function ToggleSwitch({
+    label,
+    description,
+    checked,
+    onChange,
+}: {
+    label: string;
+    description?: string;
+    checked: boolean;
+    onChange: (val: boolean) => void;
+}) {
+    return (
+        <div className="flex items-center justify-between p-3 rounded-xl border border-slate-200/80 bg-slate-50/60">
+            <div className="space-y-0.5 pr-3">
+                <span className="text-xs font-bold text-slate-800 block">{label}</span>
+                {description && <p className="text-[11px] text-slate-500">{description}</p>}
+            </div>
+            <div className="flex items-center gap-1 bg-slate-200/80 p-1 rounded-lg">
+                <button
+                    type="button"
+                    onClick={() => onChange(false)}
+                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                        !checked
+                            ? 'bg-white text-slate-800 shadow-2xs'
+                            : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                >
+                    Tidak
+                </button>
+                <button
+                    type="button"
+                    onClick={() => onChange(true)}
+                    className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                        checked
+                            ? 'bg-[#0B1527] text-white shadow-2xs'
+                            : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                >
+                    Ya
+                </button>
+            </div>
+        </div>
+    );
+}
+
+// ── SUB-COMPONENT: Tags Input (Destinasi Traveling) ───────────────────────────
+
+function TagsInput({
+    label,
+    required = false,
+    tags = [],
+    onChangeTags,
+    placeholder = 'Ketik nama kota/negara lalu tekan Enter...',
+    error,
+}: {
+    label: string;
+    required?: boolean;
+    tags?: string[];
+    onChangeTags: (tags: string[]) => void;
+    placeholder?: string;
+    error?: string;
+}) {
+    const [inputVal, setInputVal] = useState('');
+    const safeTags = Array.isArray(tags) ? tags : [];
+
+    const handleAdd = () => {
+        const trimmed = inputVal.trim();
+
+        if (trimmed && !safeTags.includes(trimmed)) {
+            onChangeTags([...safeTags, trimmed]);
+            setInputVal('');
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleAdd();
+        }
+    };
+
+    const handleRemove = (tagToRemove: string) => {
+        onChangeTags(safeTags.filter((t) => t !== tagToRemove));
+    };
+
+    return (
+        <div className="space-y-2">
+            <FormLabel label={label} required={required} hint="Bisa masukkan lebih dari 1 destinasi" />
+            <div className="flex items-center gap-2">
+                <Input
+                    value={inputVal}
+                    onChange={(e) => setInputVal(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder={placeholder}
+                    className="h-[38px] text-xs bg-white flex-1"
+                />
+                <button
+                    type="button"
+                    onClick={handleAdd}
+                    className="px-3 h-[38px] rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Tambah</span>
+                </button>
+            </div>
+
+            {safeTags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                    {safeTags.map((tag) => (
+                        <span
+                            key={tag}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-50 text-sky-800 border border-sky-200 text-xs font-semibold"
+                        >
+                            <MapPin className="w-3 h-3 text-sky-600" />
+                            <span>{tag}</span>
+                            <button
+                                type="button"
+                                onClick={() => handleRemove(tag)}
+                                className="w-4 h-4 rounded-full hover:bg-sky-200/70 flex items-center justify-center cursor-pointer text-sky-700"
+                            >
+                                <X className="w-2.5 h-2.5" />
+                            </button>
+                        </span>
+                    ))}
+                </div>
+            )}
+            {error && <p className="text-[11px] text-rose-500 mt-1">{error}</p>}
+        </div>
+    );
+}
+
+// ── SUB-COMPONENT: Newborn Babies Repeater ─────────────────────────────────────
+
+function NewbornBabiesRepeater({
+    babies = [],
+    onChange,
+}: {
+    babies?: BabyItem[];
+    onChange: (babies: BabyItem[]) => void;
+}) {
+    const list = Array.isArray(babies) && babies.length > 0
+        ? babies
+        : [{ name: '', nickname: '', birth_date: '', gender: 'Laki-laki' }];
+
+    const handleUpdate = (idx: number, field: keyof BabyItem, val: any) => {
+        const next = [...list];
+        next[idx] = { ...next[idx], [field]: val };
+        onChange(next);
+    };
+
+    const handleAdd = () => {
+        onChange([...list, { name: '', nickname: '', birth_date: '', gender: 'Laki-laki' }]);
+    };
+
+    const handleRemove = (idx: number) => {
+        if (list.length <= 1) {
+            return;
+        }
+
+        onChange(list.filter((_, i) => i !== idx));
+    };
+
+    return (
+        <div className="space-y-3">
+            <div className="flex items-center justify-between">
+                <div>
+                    <span className="text-[11px] font-bold text-slate-700 block">Data Bayi yang Difoto</span>
+                    <span className="text-[10px] text-slate-400">Dapat menambahkan lebih dari satu (untuk bayi kembar)</span>
+                </div>
+                <button
+                    type="button"
+                    onClick={handleAdd}
+                    className="px-2.5 py-1 rounded-lg border border-slate-300 hover:bg-slate-100 text-[11px] font-bold text-slate-700 flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                    <Plus className="w-3 h-3 text-slate-600" />
+                    <span>Tambah Bayi Kembar</span>
+                </button>
+            </div>
+
+            <div className="space-y-2">
+                {list.map((b, idx) => (
+                    <div key={idx} className="p-3 bg-rose-50/40 rounded-xl border border-rose-200/70 space-y-2">
+                        <div className="flex items-center justify-between pb-1 border-b border-rose-100">
+                            <span className="text-[10.5px] font-extrabold uppercase text-rose-800">
+                                Bayi #{idx + 1}
+                            </span>
+                            {list.length > 1 && (
+                                <button
+                                    type="button"
+                                    onClick={() => handleRemove(idx)}
+                                    className="text-rose-500 hover:text-rose-700 text-[11px] font-bold flex items-center gap-1 cursor-pointer"
+                                >
+                                    <Trash2 className="w-3 h-3" />
+                                    <span>Hapus</span>
+                                </button>
+                            )}
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div>
+                                <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Nama Lengkap Bayi</label>
+                                <Input
+                                    value={b.name || ''}
+                                    onChange={(e) => handleUpdate(idx, 'name', e.target.value)}
+                                    placeholder="Nama bayi"
+                                    className="h-[34px] text-xs bg-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Nama Panggilan (Opsional)</label>
+                                <Input
+                                    value={b.nickname || ''}
+                                    onChange={(e) => handleUpdate(idx, 'nickname', e.target.value)}
+                                    placeholder="Panggilan"
+                                    className="h-[34px] text-xs bg-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Tanggal Lahir</label>
+                                <Input
+                                    type="date"
+                                    value={b.birth_date || ''}
+                                    onChange={(e) => handleUpdate(idx, 'birth_date', e.target.value)}
+                                    className="h-[34px] text-xs bg-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-semibold text-slate-500 block mb-0.5">Jenis Kelamin</label>
+                                <NativeSelect
+                                    value={b.gender || 'Laki-laki'}
+                                    onChange={(e) => handleUpdate(idx, 'gender', e.target.value)}
+                                    className="h-[34px] text-xs bg-white"
+                                >
+                                    {NEWBORN_GENDERS.map((g) => (
+                                        <option key={g} value={g}>{g}</option>
+                                    ))}
+                                </NativeSelect>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+// ── MAIN EXPORTED COMPONENT ───────────────────────────────────────────────────
+
+export function CategorySpecificForm({
+    categoryKey,
+    data,
+    onChange,
+    errors = {},
+}: CategorySpecificFormProps) {
+    // Traveling duration calculation
+    const tripDuration = useMemo(() => {
+        return calculateTripDuration(data.departure_date, data.return_date);
+    }, [data.departure_date, data.return_date]);
+
+    const coupleDetails = (isPrewedding: boolean) => (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {(['groom', 'bride'] as const).map((person) => {
+                const isGroom = person === 'groom';
+                const prefix = isGroom ? 'groom' : 'bride';
+                const partnerKey = isGroom ? 'partner_2' : 'partner_1';
+                const name = isPrewedding ? data[partnerKey] || data[`${prefix}_name`] : data[`${prefix}_name`];
+                const updateName = (value: string) => {
+                    onChange(`${prefix}_name`, value);
+                    if (isPrewedding) {
+                        onChange(partnerKey, value);
+                    }
+                };
+
+                return (
+                    <div key={person} className={`min-w-0 space-y-4 rounded-2xl border p-4 sm:p-5 ${isGroom ? 'border-blue-200 bg-blue-50/30' : 'border-rose-200 bg-rose-50/30'}`}>
+                        <h3 className={`border-b pb-3 text-sm font-bold ${isGroom ? 'border-blue-100 text-blue-950' : 'border-rose-100 text-rose-950'}`}>
+                            Informasi Calon Pengantin {isGroom ? 'Pria (CPP)' : 'Wanita (CPW)'}
+                        </h3>
+                        <div>
+                            <FormLabel label="Nama Lengkap" required />
+                            <Input value={name || ''} onChange={(e) => updateName(e.target.value)} placeholder={`Nama lengkap ${isGroom ? 'CPP' : 'CPW'}`} className="h-11 bg-white" />
+                            {errors[`${prefix}_name`] && <p className="mt-1 text-xs text-rose-600">{errors[`${prefix}_name`]}</p>}
+                        </div>
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div>
+                                <FormLabel label="Panggilan" required />
+                                <Input value={data[`${prefix}_nickname`] || ''} onChange={(e) => onChange(`${prefix}_nickname`, e.target.value)} placeholder={`Panggilan ${isGroom ? 'CPP' : 'CPW'}`} className="h-11 bg-white" />
+                            </div>
+                            <div>
+                                <FormLabel label="Pekerjaan" />
+                                <Input value={data[`${prefix}_occupation`] || ''} onChange={(e) => onChange(`${prefix}_occupation`, e.target.value)} placeholder="Pekerjaan" className="h-11 bg-white" />
+                            </div>
+                            <div>
+                                <FormLabel label="Tanggal Lahir" />
+                                <Input type="date" value={data[`${prefix}_birth_date`] || ''} onChange={(e) => onChange(`${prefix}_birth_date`, e.target.value)} className="h-11 bg-white" />
+                            </div>
+                            <div>
+                                <FormLabel label="Akun Instagram" />
+                                <Input value={data[`${prefix}_instagram`] || ''} onChange={(e) => onChange(`${prefix}_instagram`, e.target.value)} placeholder="@username" className="h-11 bg-white" />
+                            </div>
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
 
     return (
         <div className="space-y-4">
-            {hideGeneralFields && (
-                <div className="p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl text-[11px] text-slate-600 flex items-center gap-2">
-                    <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                    <span>Identitas pemesan, tanggal acara, dan lokasi diselaraskan secara otomatis dari Form Informasi Project di atas.</span>
+            {!['family', 'komunitas', 'perorangan', 'lainnya'].includes(categoryKey) && (
+                <div>
+                    <FormLabel label="Nama Pemesan" required />
+                    <Input aria-label="Nama Pemesan" value={data.client_name || ''} onChange={(e) => onChange('client_name', e.target.value)} placeholder="Nama lengkap orang yang memesan layanan" className="h-11 bg-white" />
+                    {errors.client_name && <p className="mt-1 text-xs text-rose-600">{errors.client_name}</p>}
                 </div>
             )}
-            {/* ── 1. MATERNITY ──────────────────────────────────────────────── */}
-            {categoryKey === 'maternity' && (
-                <div className="space-y-4">
-                    <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl text-xs text-amber-900 flex items-center gap-2">
-                        <Baby className="w-4 h-4 text-amber-600 shrink-0" />
-                        <span>Dokumentasi Maternity menghadirkan potret kehangatan calon ibu dan keluarga tercinta.</span>
+            {/* ── 1. WEDDING ────────────────────────────────────────────────── */}
+            {categoryKey === 'wedding' && (
+                <div className="space-y-5">
+                    {/* Section A: Data Pasangan */}
+                    {coupleDetails(false)}
+
+                    {/* Section B: Akad & Resepsi */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Akad */}
+                        <div className="p-4 bg-slate-50/70 border border-slate-200/80 rounded-2xl space-y-3">
+                            <span className="text-xs font-bold text-slate-800 block border-b border-slate-200/60 pb-1.5">
+                                Detail Akad / Pemberkatan
+                            </span>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <FormLabel label="Tanggal Akad" required />
+                                    <Input
+                                        type="date"
+                                        value={data.akad_date || ''}
+                                        onChange={(e) => onChange('akad_date', e.target.value)}
+                                        className="h-[38px] text-xs bg-white"
+                                    />
+                                </div>
+                                <div>
+                                    <FormLabel label="Waktu Akad" required />
+                                    <Input
+                                        type="time"
+                                        value={data.akad_time || ''}
+                                        onChange={(e) => onChange('akad_time', e.target.value)}
+                                        className="h-[38px] text-xs bg-white"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <FormLabel label="Lokasi Akad" required />
+                                <Input
+                                    value={data.akad_location || ''}
+                                    onChange={(e) => onChange('akad_location', e.target.value)}
+                                    placeholder="Nama masjid, gereja, atau venue akad"
+                                    className="h-[38px] text-xs bg-white"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Resepsi */}
+                        <div className="p-4 bg-slate-50/70 border border-slate-200/80 rounded-2xl space-y-3">
+                            <span className="text-xs font-bold text-slate-800 block border-b border-slate-200/60 pb-1.5">
+                                Detail Resepsi
+                            </span>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <FormLabel label="Tanggal Resepsi" required />
+                                    <Input
+                                        type="date"
+                                        value={data.reception_date || ''}
+                                        onChange={(e) => onChange('reception_date', e.target.value)}
+                                        className="h-[38px] text-xs bg-white"
+                                    />
+                                </div>
+                                <div>
+                                    <FormLabel label="Waktu Resepsi" required />
+                                    <Input
+                                        type="time"
+                                        value={data.reception_time || ''}
+                                        onChange={(e) => onChange('reception_time', e.target.value)}
+                                        className="h-[38px] text-xs bg-white"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <FormLabel label="Lokasi Resepsi" required />
+                                <Input
+                                    value={data.reception_location || ''}
+                                    onChange={(e) => onChange('reception_location', e.target.value)}
+                                    placeholder="Gedung, hotel, atau ballroom resepsi"
+                                    className="h-[38px] text-xs bg-white"
+                                />
+                            </div>
+                        </div>
                     </div>
 
+                    {/* Section C: Detail Acara */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            {renderLabel('Nama Ibu (Mom-to-be)', true)}
-                            <Input
-                                value={data.mom_name || ''}
-                                onChange={(e) => onChange('mom_name', e.target.value)}
-                                placeholder="Contoh: Putri Ayuningtyas"
-                                className="h-[38px] text-xs bg-white"
-                            />
-                            {errors['mom_name'] && <p className="text-[11px] text-rose-500 mt-1">{errors['mom_name']}</p>}
-                        </div>
-
-                        <div>
-                            {renderLabel('Nama Ayah / Pasangan', true)}
-                            <Input
-                                value={data.partner_name || ''}
-                                onChange={(e) => onChange('partner_name', e.target.value)}
-                                placeholder="Contoh: Dimas Setiawan"
-                                className="h-[38px] text-xs bg-white"
-                            />
-                            {errors['partner_name'] && <p className="text-[11px] text-rose-500 mt-1">{errors['partner_name']}</p>}
-                        </div>
-
-                        <div>
-                            {renderLabel('Usia Kehamilan Saat Sesi', true, 'Format: Angka')}
-                            <div className="relative">
-                                <Input
-                                    type="number"
-                                    min="1"
-                                    max="42"
-                                    value={data.gestational_age_weeks || ''}
-                                    onChange={(e) => onChange('gestational_age_weeks', e.target.value)}
-                                    placeholder="Contoh: 28"
-                                    className="h-[38px] text-xs bg-white pr-16"
-                                />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 pointer-events-none">
-                                    minggu
-                                </span>
-                            </div>
-                            {errors['gestational_age_weeks'] && <p className="text-[11px] text-rose-500 mt-1">{errors['gestational_age_weeks']}</p>}
-                        </div>
-
-                        <div>
-                            {renderLabel('HPL (Hari Perkiraan Lahir)', true)}
-                            <Input
-                                type="date"
-                                value={data.hpl_date || ''}
-                                onChange={(e) => onChange('hpl_date', e.target.value)}
-                                className="h-[38px] text-xs bg-white"
-                            />
-                            {errors['hpl_date'] && <p className="text-[11px] text-rose-500 mt-1">{errors['hpl_date']}</p>}
-                        </div>
-
-                        <div>
-                            {renderLabel('Konsep / Tema', false)}
-                            <NativeSelect
-                                value={data.concept_theme || ''}
-                                onChange={(e) => onChange('concept_theme', e.target.value)}
-                                className="h-[38px] text-xs bg-white"
-                            >
-                                <option value="">Pilih Konsep / Tema...</option>
-                                {MATERNITY_CONCEPTS.map((c) => (
-                                    <option key={c} value={c}>{c}</option>
-                                ))}
-                            </NativeSelect>
-                        </div>
-
-                        <div>
-                            {renderLabel('Lokasi Sesi', false)}
-                            <NativeSelect
-                                value={data.session_location_type || ''}
-                                onChange={(e) => onChange('session_location_type', e.target.value)}
-                                className="h-[38px] text-xs bg-white"
-                            >
-                                <option value="">Pilih Lokasi Sesi...</option>
-                                {MATERNITY_LOCATIONS.map((l) => (
-                                    <option key={l} value={l}>{l}</option>
-                                ))}
-                            </NativeSelect>
-                        </div>
-                    </div>
-
-                    <div>
-                        {renderLabel('Wardrobe / Outfit', false, 'Gaun, warna, jumlah pakaian')}
-                        <Textarea
-                            rows={2}
-                            value={data.wardrobe_notes || ''}
-                            onChange={(e) => onChange('wardrobe_notes', e.target.value)}
-                            placeholder="Contoh: Dress putih flowing untuk outdoor, knit cream untuk indoor studio."
-                            className="text-xs bg-white"
-                        />
-                    </div>
-                </div>
-            )}
-
-            {/* ── 2. LAINNYA / TRADISIONAL EVENT ────────────────────────────── */}
-            {categoryKey === 'lainnya' && (
-                <div className="space-y-4">
-                    <div className="p-3 bg-purple-50/70 border border-purple-200/80 rounded-xl text-xs text-purple-900 flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-purple-600 shrink-0" />
-                        <span>Dokumentasi rangkaian acara tradisional (Pengajian, Siraman, Midodareni) atau kebutuhan event khusus lainnya.</span>
-                    </div>
-
-                    {/* Informasi Event Tradisional */}
-                    <div className="p-4 bg-white border border-slate-200/80 rounded-xl space-y-3">
-                        <span className="text-[11px] font-extrabold text-purple-900 uppercase tracking-wider block">
-                            Informasi Tradisional Event (Pengajian, Siraman, Midodareni)
-                        </span>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="sm:col-span-2">
-                                {renderLabel('Nama Pemesan', true)}
-                                <Input
-                                    value={data.pic_name || data.client_name || data.name || data.contact_person || ''}
-                                    onChange={(e) => {
-                                        onChange('pic_name', e.target.value);
-                                        onChange('client_name', e.target.value);
-                                        onChange('name', e.target.value);
-                                    }}
-                                    placeholder="Nama pemesan"
-                                    className="h-[38px] text-xs bg-white"
-                                />
-                                {(errors['pic_name'] || errors['client_name'] || errors['name']) && (
-                                    <p className="text-[11px] text-rose-500 mt-1">{errors['pic_name'] || errors['client_name'] || errors['name']}</p>
-                                )}
-                            </div>
-
-                            <div>
-                                {renderLabel('Tanggal Event', true)}
-                                <Input
-                                    type="date"
-                                    value={data.event_date || ''}
-                                    onChange={(e) => onChange('event_date', e.target.value)}
-                                    className="h-[38px] text-xs bg-white"
-                                />
-                                {errors['event_date'] && <p className="text-[11px] text-rose-500 mt-1">{errors['event_date']}</p>}
-                            </div>
-
-                            <div>
-                                {renderLabel('Waktu Event (Time Range)', true)}
-                                <Input
-                                    value={data.event_time_range || data.event_time || ''}
-                                    onChange={(e) => {
-                                        onChange('event_time_range', e.target.value);
-                                        onChange('event_time', e.target.value);
-                                    }}
-                                    placeholder="Contoh: 09:00 - 16:00 WIB"
-                                    className="h-[38px] text-xs bg-white"
-                                />
-                                {errors['event_time_range'] && <p className="text-[11px] text-rose-500 mt-1">{errors['event_time_range']}</p>}
-                            </div>
-
-                            <div>
-                                {renderLabel('Jenis Event', true)}
-                                <NativeSelect
-                                    value={data.event_type || ''}
-                                    onChange={(e) => onChange('event_type', e.target.value)}
-                                    className="h-[38px] text-xs bg-white"
-                                >
-                                    <option value="">Pilih Jenis Event...</option>
-                                    {LAINNYA_EVENT_TYPES.map((t) => (
-                                        <option key={t} value={t}>{t}</option>
-                                    ))}
-                                </NativeSelect>
-                                {errors['event_type'] && <p className="text-[11px] text-rose-500 mt-1">{errors['event_type']}</p>}
-                            </div>
-
-                            <div>
-                                {renderLabel('Jenis Kebutuhan', true)}
-                                <NativeSelect
-                                    value={data.needs_type || ''}
-                                    onChange={(e) => onChange('needs_type', e.target.value)}
-                                    className="h-[38px] text-xs bg-white"
-                                >
-                                    <option value="">Pilih Jenis Kebutuhan...</option>
-                                    {LAINNYA_NEEDS_TYPES.map((t) => (
-                                        <option key={t} value={t}>{t}</option>
-                                    ))}
-                                </NativeSelect>
-                                {errors['needs_type'] && <p className="text-[11px] text-rose-500 mt-1">{errors['needs_type']}</p>}
-                            </div>
-
-                            <div className="sm:col-span-2">
-                                {renderLabel('Lokasi Event', true)}
-                                <Input
-                                    value={data.event_location || data.location || ''}
-                                    onChange={(e) => {
-                                        onChange('event_location', e.target.value);
-                                        onChange('location', e.target.value);
-                                    }}
-                                    placeholder="Contoh: Kediaman Mempelai / Gedung Serbaguna"
-                                    className="h-[38px] text-xs bg-white"
-                                />
-                                {(errors['event_location'] || errors['location']) && (
-                                    <p className="text-[11px] text-rose-500 mt-1">{errors['event_location'] || errors['location']}</p>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div>
-                        {renderLabel('Catatan Tambahan', false)}
-                        <Textarea
-                            rows={3}
-                            value={data.additional_notes || data.needs_description || ''}
-                            onChange={(e) => {
-                                onChange('additional_notes', e.target.value);
-                                onChange('needs_description', e.target.value);
-                            }}
-                            placeholder="Catatan khusus atau kebutuhan tambahan event..."
-                            className="text-xs bg-white"
-                        />
-                    </div>
-                </div>
-            )}
-
-            {/* ── 3. PERORANGAN ────────────────────────────────────────────── */}
-            {categoryKey === 'perorangan' && (
-                <div className="space-y-4">
-                    <div className="p-3 bg-indigo-50/70 border border-indigo-200/80 rounded-xl text-xs text-indigo-900 flex items-center gap-2">
-                        <User className="w-4 h-4 text-indigo-600 shrink-0" />
-                        <span>Sesi foto perorangan untuk portrait personal, wisuda, profesional headshot, atau branding diri.</span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {!hideGeneralFields && (
-                            <div>
-                                {renderLabel('Nama Lengkap Pemesan', true)}
-                                <Input
-                                    value={data.client_name || data.name || ''}
-                                    onChange={(e) => {
-                                        onChange('client_name', e.target.value);
-                                        onChange('name', e.target.value);
-                                    }}
-                                    placeholder="Nama lengkap pemesan"
-                                    className="h-[38px] text-xs bg-white"
-                                />
-                                {(errors['client_name'] || errors['name']) && (
-                                    <p className="text-[11px] text-rose-500 mt-1">{errors['client_name'] || errors['name']}</p>
-                                )}
-                            </div>
-                        )}
-
-                        <div className={hideGeneralFields ? 'sm:col-span-2' : ''}>
-                            {renderLabel('Nama Panggilan', false)}
-                            <Input
-                                value={data.nickname || ''}
-                                onChange={(e) => onChange('nickname', e.target.value)}
-                                placeholder="Contoh: Manda"
-                                className="h-[38px] text-xs bg-white"
-                            />
-                        </div>
-
-                        <div>
-                            {renderLabel('Jenis Sesi', false)}
-                            <NativeSelect
-                                value={data.session_type || ''}
-                                onChange={(e) => onChange('session_type', e.target.value)}
-                                className="h-[38px] text-xs bg-white"
-                            >
-                                <option value="">Pilih Jenis Sesi...</option>
-                                {PERORANGAN_SESSION_TYPES.map((s) => (
-                                    <option key={s} value={s}>{s}</option>
-                                ))}
-                            </NativeSelect>
-                            {errors['session_type'] && <p className="text-[11px] text-rose-500 mt-1">{errors['session_type']}</p>}
-                        </div>
-
-                        <div>
-                            {renderLabel('Jumlah Look / Outfit', false)}
+                            <FormLabel label="Estimasi Tamu Undangan" required />
                             <Input
                                 type="number"
-                                min="1"
-                                value={data.outfit_looks_count || ''}
-                                onChange={(e) => onChange('outfit_looks_count', e.target.value)}
-                                placeholder="Contoh: 2"
-                                className="h-[38px] text-xs bg-white"
-                            />
-                            {errors['outfit_looks_count'] && <p className="text-[11px] text-rose-500 mt-1">{errors['outfit_looks_count']}</p>}
-                        </div>
-
-                        {!hideGeneralFields && (
-                            <div>
-                                {renderLabel('Durasi Sesi', true)}
-                                <NativeSelect
-                                    value={data.session_duration || ''}
-                                    onChange={(e) => onChange('session_duration', e.target.value)}
-                                    className="h-[38px] text-xs bg-white"
-                                >
-                                    <option value="">Pilih Durasi Sesi...</option>
-                                    {PERORANGAN_DURATIONS.map((d) => (
-                                        <option key={d} value={d}>{d}</option>
-                                    ))}
-                                </NativeSelect>
-                                {errors['session_duration'] && <p className="text-[11px] text-rose-500 mt-1">{errors['session_duration']}</p>}
-                            </div>
-                        )}
-
-                        <div>
-                            {renderLabel('Backdrop / Tema', false)}
-                            <NativeSelect
-                                value={data.backdrop_theme || ''}
-                                onChange={(e) => onChange('backdrop_theme', e.target.value)}
-                                className="h-[38px] text-xs bg-white"
-                            >
-                                <option value="">Pilih Backdrop / Tema...</option>
-                                {PERORANGAN_BACKDROPS.map((b) => (
-                                    <option key={b} value={b}>{b}</option>
-                                ))}
-                            </NativeSelect>
-                        </div>
-
-                        <div>
-                            {renderLabel('Properti yang Diinginkan', false)}
-                            <Input
-                                value={data.desired_props || ''}
-                                onChange={(e) => onChange('desired_props', e.target.value)}
-                                placeholder="Contoh: Laptop, buku, kursi bar kayu"
+                                min="10"
+                                value={data.estimated_guests || ''}
+                                onChange={(e) => onChange('estimated_guests', e.target.value)}
+                                placeholder="Contoh: 500"
                                 className="h-[38px] text-xs bg-white"
                             />
                         </div>
-                    </div>
-
-                    <div>
-                        {renderLabel('Catatan Tambahan', false)}
-                        <Textarea
-                            rows={2}
-                            value={data.additional_notes || ''}
-                            onChange={(e) => onChange('additional_notes', e.target.value)}
-                            placeholder="Catatan pose referensi, preferensi angle terbaik..."
-                            className="text-xs bg-white"
+                        <SelectWithOther
+                            label="Konsep Acara"
+                            required
+                            options={WEDDING_CONCEPTS}
+                            value={data.concept_theme}
+                            otherValue={data.concept_theme_other}
+                            onChangeValue={(val) => onChange('concept_theme', val)}
+                            onChangeOther={(val) => onChange('concept_theme_other', val)}
+                            placeholder="Pilih konsep pernikahan..."
                         />
+                        <div>
+                            <FormLabel label="Wedding Organizer (WO)" />
+                            <Input
+                                value={data.wedding_organizer || ''}
+                                onChange={(e) => onChange('wedding_organizer', e.target.value)}
+                                placeholder="Nama WO yang menangani"
+                                className="h-[38px] text-xs bg-white"
+                            />
+                        </div>
+                        <div>
+                            <FormLabel label="Makeup Artist (MUA)" />
+                            <Input
+                                value={data.makeup_artist || ''}
+                                onChange={(e) => onChange('makeup_artist', e.target.value)}
+                                placeholder="Nama MUA pengantin"
+                                className="h-[38px] text-xs bg-white"
+                            />
+                        </div>
                     </div>
                 </div>
             )}
 
-            {/* ── 4. PREWEDDING ────────────────────────────────────────────── */}
+            {/* ── 2. PREWEDDING ─────────────────────────────────────────────── */}
             {categoryKey === 'prewedding' && (
                 <div className="space-y-4">
-                    <div className="p-3 bg-rose-50/70 border border-rose-200/80 rounded-xl text-xs text-rose-900 flex items-center gap-2">
-                        <Heart className="w-4 h-4 text-rose-600 shrink-0" />
-                        <span>Sesi Prewedding untuk mengabadikan kisah cinta Anda dalam visual yang sinematik & berkelas.</span>
-                    </div>
+                    {coupleDetails(true)}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            {renderLabel('Nama Pasangan Pria (CPP)', true)}
-                            <Input
-                                value={data.groom_name || ''}
-                                onChange={(e) => onChange('groom_name', e.target.value)}
-                                placeholder="Nama lengkap calon mempelai pria"
-                                className="h-[38px] text-xs bg-white"
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="sm:col-span-1">
+                            <SelectWithOther
+                                label="Konsep Prewedding"
+                                required
+                                options={PREWEDDING_CONCEPTS}
+                                value={data.concept_theme}
+                                otherValue={data.concept_theme_other}
+                                onChangeValue={(val) => onChange('concept_theme', val)}
+                                onChangeOther={(val) => onChange('concept_theme_other', val)}
+                                placeholder="Pilih konsep..."
                             />
-                            {errors['groom_name'] && <p className="text-[11px] text-rose-500 mt-1">{errors['groom_name']}</p>}
                         </div>
-
-                        <div>
-                            {renderLabel('Nama Pasangan Wanita (CPW)', true)}
+                        <div className="sm:col-span-1">
+                            <FormLabel label="Lokasi Sesi" required />
                             <Input
-                                value={data.bride_name || ''}
-                                onChange={(e) => onChange('bride_name', e.target.value)}
-                                placeholder="Nama lengkap calon mempelai wanita"
-                                className="h-[38px] text-xs bg-white"
-                            />
-                            {errors['bride_name'] && <p className="text-[11px] text-rose-500 mt-1">{errors['bride_name']}</p>}
-                        </div>
-
-                        {!hideGeneralFields && (
-                            <div>
-                                {renderLabel('Tanggal Sesi', true)}
-                                <Input
-                                    type="date"
-                                    value={data.session_date || ''}
-                                    onChange={(e) => onChange('session_date', e.target.value)}
-                                    className="h-[38px] text-xs bg-white"
-                                />
-                                {errors['session_date'] && <p className="text-[11px] text-rose-500 mt-1">{errors['session_date']}</p>}
-                            </div>
-                        )}
-
-                        <div className={hideGeneralFields ? 'sm:col-span-2' : ''}>
-                            {renderLabel('Konsep / Tema', true)}
-                            <NativeSelect
-                                value={data.concept_theme || ''}
-                                onChange={(e) => onChange('concept_theme', e.target.value)}
-                                className="h-[38px] text-xs bg-white"
-                            >
-                                <option value="">Pilih Konsep / Tema...</option>
-                                {PREWEDDING_CONCEPTS.map((c) => (
-                                    <option key={c} value={c}>{c}</option>
-                                ))}
-                            </NativeSelect>
-                            {errors['concept_theme'] && <p className="text-[11px] text-rose-500 mt-1">{errors['concept_theme']}</p>}
-                        </div>
-
-                        {!hideGeneralFields && (
-                            <div className="sm:col-span-2">
-                                {renderLabel('Lokasi Sesi', true)}
-                                <Input
-                                    value={data.session_location || ''}
-                                    onChange={(e) => onChange('session_location', e.target.value)}
-                                    placeholder="Contoh: Hutan Pinus Mangunan & Studio Arams"
-                                    className="h-[38px] text-xs bg-white"
-                                />
-                                {errors['session_location'] && <p className="text-[11px] text-rose-500 mt-1">{errors['session_location']}</p>}
-                            </div>
-                        )}
-
-                        <div>
-                            {renderLabel('Outfit / Wardrobe', false)}
-                            <Input
-                                value={data.outfit_wardrobe || ''}
-                                onChange={(e) => onChange('outfit_wardrobe', e.target.value)}
-                                placeholder="Contoh: 2 Outfit (Adat Jawa & Modern Suit/Gown)"
+                                value={data.session_location || ''}
+                                onChange={(e) => onChange('session_location', e.target.value)}
+                                placeholder="Contoh: Bromo / Studio Indoor"
                                 className="h-[38px] text-xs bg-white"
                             />
                         </div>
-
-                        <div>
-                            {renderLabel('Jumlah Lokasi', false)}
+                        <div className="sm:col-span-1">
+                            <FormLabel label="Jumlah Lokasi" required />
                             <Input
                                 type="number"
                                 min="1"
@@ -624,1034 +690,116 @@ export function CategorySpecificForm({
                                 className="h-[38px] text-xs bg-white"
                             />
                         </div>
-
-                        <div>
-                            {renderLabel('Makeup & Hairdo', false)}
-                            <Input
-                                value={data.makeup_hairdo || ''}
-                                onChange={(e) => onChange('makeup_hairdo', e.target.value)}
-                                placeholder="Nama MUA atau 'Disediakan Sendiri'"
-                                className="h-[38px] text-xs bg-white"
-                            />
-                        </div>
-
-                        <div>
-                            {renderLabel('Properti', false)}
-                            <Input
-                                value={data.props || ''}
-                                onChange={(e) => onChange('props', e.target.value)}
-                                placeholder="Contoh: Bouquet bunga, payung transparan, mobil klasik"
-                                className="h-[38px] text-xs bg-white"
-                            />
-                        </div>
                     </div>
 
-                    <div>
-                        {renderLabel('Catatan Tambahan', false)}
-                        <Textarea
-                            rows={2}
-                            value={data.additional_notes || ''}
-                            onChange={(e) => onChange('additional_notes', e.target.value)}
-                            placeholder="Catatan khusus, request khusus, atau moodboard..."
-                            className="text-xs bg-white"
-                        />
-                    </div>
-                </div>
-            )}
-
-            {/* ── 5. PRODUK / BRAND / COMMERCIAL ──────────────────────────── */}
-            {categoryKey === 'commercial' && (
-                <div className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {!hideGeneralFields && (
-                            <>
-                                <div>
-                                    {renderLabel('Nama Brand / Perusahaan', true)}
-                                    <Input
-                                        value={data.company_name || ''}
-                                        onChange={(e) => onChange('company_name', e.target.value)}
-                                        placeholder="Contoh: PT Beauty Glow Indonesia"
-                                        className="h-[38px] text-xs bg-white"
-                                    />
-                                    {errors['company_name'] && <p className="text-[11px] text-rose-500 mt-1">{errors['company_name']}</p>}
-                                </div>
-
-                                <div>
-                                    {renderLabel('Nama Pemesan', true)}
-                                    <Input
-                                        value={data.pic_name || data.client_name || ''}
-                                        onChange={(e) => {
-                                            onChange('pic_name', e.target.value);
-                                            onChange('client_name', e.target.value);
-                                            onChange('name', e.target.value);
-                                        }}
-                                        placeholder="Nama pemesan"
-                                        className="h-[38px] text-xs bg-white"
-                                    />
-                                    {(errors['pic_name'] || errors['client_name']) && (
-                                        <p className="text-[11px] text-rose-500 mt-1">{errors['pic_name'] || errors['client_name']}</p>
-                                    )}
-                                </div>
-                            </>
-                        )}
-
+                    <div className="max-w-sm">
                         <div>
-                            {renderLabel('Tujuan / Jenis Kebutuhan', true)}
-                            <NativeSelect
-                                value={data.commercial_purpose || ''}
-                                onChange={(e) => onChange('commercial_purpose', e.target.value)}
-                                className="h-[38px] text-xs bg-white"
-                            >
-                                <option value="">Pilih Tujuan Kebutuhan...</option>
-                                {COMMERCIAL_PURPOSES.map((p) => (
-                                    <option key={p} value={p}>{p}</option>
-                                ))}
-                            </NativeSelect>
-                            {errors['commercial_purpose'] && <p className="text-[11px] text-rose-500 mt-1">{errors['commercial_purpose']}</p>}
-                        </div>
-
-                        <div>
-                            {renderLabel('Jenis Produk / Brand', true)}
-                            <Input
-                                value={data.product_brand_type || ''}
-                                onChange={(e) => onChange('product_brand_type', e.target.value)}
-                                placeholder="Contoh: Skincare Serum & Face Wash / Fashion Batik"
-                                className="h-[38px] text-xs bg-white"
-                            />
-                            {errors['product_brand_type'] && <p className="text-[11px] text-rose-500 mt-1">{errors['product_brand_type']}</p>}
-                        </div>
-
-                        <div>
-                            {renderLabel('Jumlah Produk (SKU / Varian)', true)}
+                            <FormLabel label="Jumlah Look / Wardrobe" />
                             <Input
                                 type="number"
                                 min="1"
-                                value={data.products_count || ''}
-                                onChange={(e) => onChange('products_count', e.target.value)}
-                                placeholder="Contoh: 10"
-                                className="h-[38px] text-xs bg-white"
+                                value={data.wardrobe_looks_count || ''}
+                                onChange={(e) => onChange('wardrobe_looks_count', e.target.value)}
+                                placeholder="Contoh: 3 look"
+                                className="h-11 bg-white"
                             />
-                            {errors['products_count'] && <p className="text-[11px] text-rose-500 mt-1">{errors['products_count']}</p>}
-                        </div>
-
-                        <div>
-                            {renderLabel('Latar / Background', true)}
-                            <NativeSelect
-                                value={data.background_type || ''}
-                                onChange={(e) => onChange('background_type', e.target.value)}
-                                className="h-[38px] text-xs bg-white"
-                            >
-                                <option value="">Pilih Latar / Background...</option>
-                                {COMMERCIAL_BACKGROUNDS.map((b) => (
-                                    <option key={b} value={b}>{b}</option>
-                                ))}
-                            </NativeSelect>
-                            {errors['background_type'] && <p className="text-[11px] text-rose-500 mt-1">{errors['background_type']}</p>}
-                        </div>
-
-                        <div className="sm:col-span-2">
-                            {renderLabel('Gaya Foto / Mood', true)}
-                            <NativeSelect
-                                value={data.photo_style_mood || ''}
-                                onChange={(e) => onChange('photo_style_mood', e.target.value)}
-                                className="h-[38px] text-xs bg-white"
-                            >
-                                <option value="">Pilih Gaya Foto / Mood...</option>
-                                {COMMERCIAL_MOODS.map((m) => (
-                                    <option key={m} value={m}>{m}</option>
-                                ))}
-                            </NativeSelect>
-                            {errors['photo_style_mood'] && <p className="text-[11px] text-rose-500 mt-1">{errors['photo_style_mood']}</p>}
                         </div>
                     </div>
 
-                    {/* Penggunaan Foto (Multi Select Tag Badges) */}
                     <div>
-                        {renderLabel('Penggunaan Foto (Bisa Pilih Lebih Dari 1)', true)}
-                        <div className="flex flex-wrap gap-2 mt-1.5 p-3 rounded-xl border border-slate-200/80 bg-slate-50/50">
-                            {COMMERCIAL_USAGES.map((usage) => {
-                                const isSelected = Array.isArray(data.photo_usage) && data.photo_usage.includes(usage);
-
-                                return (
-                                    <button
-                                        type="button"
-                                        key={usage}
-                                        onClick={() => toggleCommercialUsage(usage)}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all flex items-center gap-1.5 cursor-pointer ${isSelected
-                                                ? 'bg-[#3C0E0E] text-white border-[#3C0E0E] shadow-2xs'
-                                                : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
-                                            }`}
-                                    >
-                                        {isSelected && <Check className="w-3 h-3" />}
-                                        <span>{usage}</span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                        {errors['photo_usage'] && <p className="text-[11px] text-rose-500 mt-1">{errors['photo_usage']}</p>}
-                    </div>
-
-                    <div>
-                        {renderLabel('Referensi / Brief', false)}
-                        <Textarea
-                            rows={3}
-                            value={data.reference_brief || ''}
-                            onChange={(e) => onChange('reference_brief', e.target.value)}
-                            placeholder="Link Google Drive moodboard, link referensi Pinterest/Instagram, atau brief format file..."
-                            className="text-xs bg-white"
-                        />
-                    </div>
-
-                    <div>
-                        {renderLabel('Catatan Tambahan', false)}
+                        <FormLabel label="Properti Khusus" />
                         <Textarea
                             rows={2}
-                            value={data.additional_notes || ''}
-                            onChange={(e) => onChange('additional_notes', e.target.value)}
-                            placeholder="Catatan pengiriman produk, jadwal return produk..."
+                            value={data.props_special || ''}
+                            onChange={(e) => onChange('props_special', e.target.value)}
+                            placeholder="Contoh: Bunga kering, mobil antik, payung transparan..."
                             className="text-xs bg-white"
                         />
                     </div>
                 </div>
             )}
 
-            {/* ── 6. TRAVELING ────────────────────────────────────────────── */}
-            {categoryKey === 'traveling' && (
-                <div className="space-y-4">
-                    <div className="p-3 bg-sky-50/70 border border-sky-200/80 rounded-xl text-xs text-sky-900 flex items-center gap-2">
-                        <Plane className="w-4 h-4 text-sky-600 shrink-0" />
-                        <span>Dokumentasi perjalanan traveling eksklusif bersama fotografer profesional Arams Pictures.</span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {!hideGeneralFields && (
-                            <div className="sm:col-span-2">
-                                {renderLabel('Nama Pemesan / Koordinator Trip', true)}
-                                <Input
-                                    value={data.client_name || data.name || data.contact_person || ''}
-                                    onChange={(e) => {
-                                        onChange('client_name', e.target.value);
-                                        onChange('name', e.target.value);
-                                    }}
-                                    placeholder="Contoh: Aditya Pratama"
-                                    className="h-[38px] text-xs bg-white"
-                                />
-                                {(errors['client_name'] || errors['name']) && (
-                                    <p className="text-[11px] text-rose-500 mt-1">{errors['client_name'] || errors['name']}</p>
-                                )}
-                            </div>
-                        )}
-
-                        {!hideGeneralFields && (
-                            <div>
-                                {renderLabel('Tanggal Berangkat (Mulai Trip)', true)}
-                                <Input
-                                    type="date"
-                                    value={data.departure_date || ''}
-                                    onChange={(e) => onChange('departure_date', e.target.value)}
-                                    className="h-[38px] text-xs bg-white"
-                                />
-                                {errors['departure_date'] && <p className="text-[11px] text-rose-500 mt-1">{errors['departure_date']}</p>}
-                            </div>
-                        )}
-
-                        <div className={hideGeneralFields ? 'sm:col-span-2' : ''}>
-                            {renderLabel('Tanggal Pulang (Selesai Trip)', true)}
-                            <Input
-                                type="date"
-                                value={data.return_date || ''}
-                                onChange={(e) => onChange('return_date', e.target.value)}
-                                className="h-[38px] text-xs bg-white"
-                            />
-                            {errors['return_date'] && <p className="text-[11px] text-rose-500 mt-1">{errors['return_date']}</p>}
-                        </div>
-
-                        {!hideGeneralFields && (
-                            <div className="sm:col-span-2">
-                                {renderLabel('Tujuan Destinasi (Negara / Kota)', true)}
-                                <Input
-                                    value={data.destination_city_country || ''}
-                                    onChange={(e) => onChange('destination_city_country', e.target.value)}
-                                    placeholder="Contoh: Kyoto & Tokyo, Jepang / Labuan Bajo, NTT"
-                                    className="h-[38px] text-xs bg-white"
-                                />
-                                {errors['destination_city_country'] && <p className="text-[11px] text-rose-500 mt-1">{errors['destination_city_country']}</p>}
-                            </div>
-                        )}
-
-                        <div>
-                            {renderLabel('Jumlah Traveler (Peserta)', true)}
-                            <Input
-                                type="number"
-                                min="1"
-                                value={data.travelers_count || ''}
-                                onChange={(e) => onChange('travelers_count', e.target.value)}
-                                placeholder="Contoh: 4"
-                                className="h-[38px] text-xs bg-white"
-                            />
-                            {errors['travelers_count'] && <p className="text-[11px] text-rose-500 mt-1">{errors['travelers_count']}</p>}
-                        </div>
-
-                        <div>
-                            {renderLabel('Jenis Trip', true)}
-                            <NativeSelect
-                                value={data.trip_type || ''}
-                                onChange={(e) => onChange('trip_type', e.target.value)}
-                                className="h-[38px] text-xs bg-white"
-                            >
-                                <option value="">Pilih Jenis Trip...</option>
-                                {TRAVELING_TRIP_TYPES.map((t) => (
-                                    <option key={t} value={t}>{t}</option>
-                                ))}
-                            </NativeSelect>
-                            {errors['trip_type'] && <p className="text-[11px] text-rose-500 mt-1">{errors['trip_type']}</p>}
-                        </div>
-
-                        <div>
-                            {renderLabel('Durasi Trip', true)}
-                            <div className="relative">
-                                <Input
-                                    type="number"
-                                    min="1"
-                                    value={data.trip_duration_days || ''}
-                                    onChange={(e) => onChange('trip_duration_days', e.target.value)}
-                                    placeholder="Contoh: 5"
-                                    className="h-[38px] text-xs bg-white pr-14"
-                                />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 pointer-events-none">
-                                    hari
-                                </span>
-                            </div>
-                            {errors['trip_duration_days'] && <p className="text-[11px] text-rose-500 mt-1">{errors['trip_duration_days']}</p>}
-                        </div>
-
-                        <div>
-                            {renderLabel('Transportasi Selama Trip', false)}
-                            <NativeSelect
-                                value={data.trip_transportation || ''}
-                                onChange={(e) => onChange('trip_transportation', e.target.value)}
-                                className="h-[38px] text-xs bg-white"
-                            >
-                                <option value="">Pilih Transportasi...</option>
-                                {TRAVELING_TRANSPORTS.map((t) => (
-                                    <option key={t} value={t}>{t}</option>
-                                ))}
-                            </NativeSelect>
-                        </div>
-
-                        <div>
-                            {renderLabel('Maskapai Penerbangan', false)}
-                            <Input
-                                value={data.airline || ''}
-                                onChange={(e) => onChange('airline', e.target.value)}
-                                placeholder="Contoh: Garuda Indonesia / Singapore Airlines"
-                                className="h-[38px] text-xs bg-white"
-                            />
-                        </div>
-
-                        <div>
-                            {renderLabel('Akomodasi / Hotel', false)}
-                            <Input
-                                value={data.accommodation_hotel || ''}
-                                onChange={(e) => onChange('accommodation_hotel', e.target.value)}
-                                placeholder="Contoh: Hoshinoya Kyoto & Shinjuku Prince Hotel"
-                                className="h-[38px] text-xs bg-white"
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                        {renderLabel('Aktivitas / Agenda Utama', false)}
-                        <Textarea
-                            rows={2}
-                            value={data.main_agenda_activity || ''}
-                            onChange={(e) => onChange('main_agenda_activity', e.target.value)}
-                            placeholder="Contoh: Hari 1: Arashiyama Bamboo & Kimono Walk, Hari 2: Fushimi Inari Sunrise..."
-                            className="text-xs bg-white"
-                        />
-                    </div>
-
-                    <div>
-                        {renderLabel('Catatan Tambahan', false)}
-                        <Textarea
-                            rows={2}
-                            value={data.additional_notes || ''}
-                            onChange={(e) => onChange('additional_notes', e.target.value)}
-                            placeholder="Kebutuhan drone, gear khusus, atau preferensi bahasa fotografer..."
-                            className="text-xs bg-white"
-                        />
-                    </div>
-                </div>
-            )}
-
-            {/* ── 7. WEDDING ──────────────────────────────────────────────── */}
-            {categoryKey === 'wedding' && (
-                <div className="space-y-4">
-                    {/* Informasi Calon Pengantin Pria (CPP) & Calon Pengantin Wanita (CPW) */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        {/* CPP Card */}
-                        <div className="p-4 bg-gradient-to-br from-slate-50 to-blue-50/40 border border-slate-200/80 rounded-xl space-y-3 shadow-xs">
-                            <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
-                                <div className="flex items-center gap-2 font-semibold text-xs text-slate-900">
-                                    <div className="w-6 h-6 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-[11px]">
-                                        CPP
-                                    </div>
-                                    <span>Informasi Calon Pengantin Pria (CPP)</span>
-                                </div>
-                            </div>
-
-                            <div className="space-y-3">
-                                <div>
-                                    {renderLabel('Nama Lengkap', true)}
-                                    <Input
-                                        value={data.groom_name || ''}
-                                        onChange={(e) => onChange('groom_name', e.target.value)}
-                                        placeholder="Nama lengkap CPP"
-                                        className="h-[38px] text-xs bg-white"
-                                    />
-                                    {errors['groom_name'] && <p className="text-[11px] text-rose-500 mt-1">{errors['groom_name']}</p>}
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div>
-                                        {renderLabel('Panggilan', true)}
-                                        <Input
-                                            value={data.groom_nickname || ''}
-                                            onChange={(e) => onChange('groom_nickname', e.target.value)}
-                                            placeholder="Nama panggilan CPP"
-                                            className="h-[38px] text-xs bg-white"
-                                        />
-                                        {errors['groom_nickname'] && <p className="text-[11px] text-rose-500 mt-1">{errors['groom_nickname']}</p>}
-                                    </div>
-
-                                    <div>
-                                        {renderLabel('Pekerjaan', false)}
-                                        <Input
-                                            value={data.groom_occupation || ''}
-                                            onChange={(e) => onChange('groom_occupation', e.target.value)}
-                                            placeholder="Pekerjaan CPP"
-                                            className="h-[38px] text-xs bg-white"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div>
-                                        {renderLabel('Tanggal Lahir', false)}
-                                        <Input
-                                            type="date"
-                                            value={data.groom_birth_date || ''}
-                                            onChange={(e) => onChange('groom_birth_date', e.target.value)}
-                                            className="h-[38px] text-xs bg-white"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        {renderLabel('Akun Instagram', false)}
-                                        <Input
-                                            value={data.groom_instagram || ''}
-                                            onChange={(e) => onChange('groom_instagram', e.target.value)}
-                                            placeholder="@username"
-                                            className="h-[38px] text-xs bg-white"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* CPW Card */}
-                        <div className="p-4 bg-gradient-to-br from-rose-50/40 to-pink-50/40 border border-rose-200/80 rounded-xl space-y-3 shadow-xs">
-                            <div className="flex items-center justify-between pb-2 border-b border-rose-200/60">
-                                <div className="flex items-center gap-2 font-semibold text-xs text-rose-950">
-                                    <div className="w-6 h-6 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-[11px]">
-                                        CPW
-                                    </div>
-                                    <span>Informasi Calon Pengantin Wanita (CPW)</span>
-                                </div>
-                            </div>
-
-                            <div className="space-y-3">
-                                <div>
-                                    {renderLabel('Nama Lengkap', true)}
-                                    <Input
-                                        value={data.bride_name || ''}
-                                        onChange={(e) => onChange('bride_name', e.target.value)}
-                                        placeholder="Nama lengkap CPW"
-                                        className="h-[38px] text-xs bg-white"
-                                    />
-                                    {errors['bride_name'] && <p className="text-[11px] text-rose-500 mt-1">{errors['bride_name']}</p>}
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div>
-                                        {renderLabel('Panggilan', true)}
-                                        <Input
-                                            value={data.bride_nickname || ''}
-                                            onChange={(e) => onChange('bride_nickname', e.target.value)}
-                                            placeholder="Nama panggilan CPW"
-                                            className="h-[38px] text-xs bg-white"
-                                        />
-                                        {errors['bride_nickname'] && <p className="text-[11px] text-rose-500 mt-1">{errors['bride_nickname']}</p>}
-                                    </div>
-
-                                    <div>
-                                        {renderLabel('Pekerjaan', false)}
-                                        <Input
-                                            value={data.bride_occupation || ''}
-                                            onChange={(e) => onChange('bride_occupation', e.target.value)}
-                                            placeholder="Pekerjaan CPW"
-                                            className="h-[38px] text-xs bg-white"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div>
-                                        {renderLabel('Tanggal Lahir', false)}
-                                        <Input
-                                            type="date"
-                                            value={data.bride_birth_date || ''}
-                                            onChange={(e) => onChange('bride_birth_date', e.target.value)}
-                                            className="h-[38px] text-xs bg-white"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        {renderLabel('Akun Instagram', false)}
-                                        <Input
-                                            value={data.bride_instagram || ''}
-                                            onChange={(e) => onChange('bride_instagram', e.target.value)}
-                                            placeholder="@username"
-                                            className="h-[38px] text-xs bg-white"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Akad */}
-                    <div className="p-4 bg-white border border-slate-200/80 rounded-xl space-y-3">
-                        <div className="flex items-center gap-2 font-bold text-xs text-slate-800">
-                            <Calendar className="w-4 h-4 text-indigo-600" />
-                            <span>Informasi Sesi Akad / Pemberkatan</span>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <div>
-                                {renderLabel('Tanggal Akad', true)}
-                                <Input
-                                    type="date"
-                                    value={data.akad_date || ''}
-                                    onChange={(e) => onChange('akad_date', e.target.value)}
-                                    className="h-[38px] text-xs bg-white"
-                                />
-                                {errors['akad_date'] && <p className="text-[11px] text-rose-500 mt-1">{errors['akad_date']}</p>}
-                            </div>
-
-                            <div>
-                                {renderLabel('Waktu Akad', true)}
-                                <Input
-                                    type="time"
-                                    value={data.akad_time || ''}
-                                    onChange={(e) => onChange('akad_time', e.target.value)}
-                                    className="h-[38px] text-xs bg-white"
-                                />
-                                {errors['akad_time'] && <p className="text-[11px] text-rose-500 mt-1">{errors['akad_time']}</p>}
-                            </div>
-
-                            <div>
-                                {renderLabel('Lokasi Akad', true)}
-                                <Input
-                                    value={data.akad_location || ''}
-                                    onChange={(e) => onChange('akad_location', e.target.value)}
-                                    placeholder="Masjid / Gereja / Venue Akad"
-                                    className="h-[38px] text-xs bg-white"
-                                />
-                                {errors['akad_location'] && <p className="text-[11px] text-rose-500 mt-1">{errors['akad_location']}</p>}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Resepsi */}
-                    <div className="p-4 bg-white border border-slate-200/80 rounded-xl space-y-3">
-                        <div className="flex items-center gap-2 font-bold text-xs text-slate-800">
-                            <Sparkles className="w-4 h-4 text-amber-600" />
-                            <span>Informasi Sesi Resepsi</span>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <div>
-                                {renderLabel('Tanggal Resepsi', true)}
-                                <Input
-                                    type="date"
-                                    value={data.reception_date || ''}
-                                    onChange={(e) => onChange('reception_date', e.target.value)}
-                                    className="h-[38px] text-xs bg-white"
-                                />
-                                {errors['reception_date'] && <p className="text-[11px] text-rose-500 mt-1">{errors['reception_date']}</p>}
-                            </div>
-
-                            <div>
-                                {renderLabel('Waktu Resepsi', true)}
-                                <Input
-                                    type="time"
-                                    value={data.reception_time || ''}
-                                    onChange={(e) => onChange('reception_time', e.target.value)}
-                                    className="h-[38px] text-xs bg-white"
-                                />
-                                {errors['reception_time'] && <p className="text-[11px] text-rose-500 mt-1">{errors['reception_time']}</p>}
-                            </div>
-
-                            <div>
-                                {renderLabel('Lokasi Resepsi', true)}
-                                <Input
-                                    value={data.reception_location || ''}
-                                    onChange={(e) => onChange('reception_location', e.target.value)}
-                                    placeholder="Ballroom / Gedung Resepsi"
-                                    className="h-[38px] text-xs bg-white"
-                                />
-                                {errors['reception_location'] && <p className="text-[11px] text-rose-500 mt-1">{errors['reception_location']}</p>}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Vendor & Detail Pendukung */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div>
-                            {renderLabel('Wedding Organizer', false)}
-                            <Input
-                                value={data.wedding_organizer || ''}
-                                onChange={(e) => onChange('wedding_organizer', e.target.value)}
-                                placeholder="Nama WO & Kontak"
-                                className="h-[38px] text-xs bg-white"
-                            />
-                        </div>
-
-                        <div>
-                            {renderLabel('Estimasi Jumlah Tamu', false)}
-                            <Input
-                                type="number"
-                                min="0"
-                                value={data.estimated_guests || ''}
-                                onChange={(e) => onChange('estimated_guests', e.target.value)}
-                                placeholder="Contoh: 500"
-                                className="h-[38px] text-xs bg-white"
-                            />
-                        </div>
-
-                        <div>
-                            {renderLabel('Konsep / Tema', false)}
-                            <NativeSelect
-                                value={data.concept_theme || ''}
-                                onChange={(e) => onChange('concept_theme', e.target.value)}
-                                className="h-[38px] text-xs bg-white"
-                            >
-                                <option value="">Pilih Konsep Wedding...</option>
-                                {WEDDING_CONCEPTS.map((c) => (
-                                    <option key={c} value={c}>{c}</option>
-                                ))}
-                            </NativeSelect>
-                        </div>
-
-                        <div>
-                            {renderLabel('Venue / Gedung', false)}
-                            <Input
-                                value={data.venue_building || ''}
-                                onChange={(e) => onChange('venue_building', e.target.value)}
-                                placeholder="Contoh: Grand Ballroom Hotel Mulia"
-                                className="h-[38px] text-xs bg-white"
-                            />
-                        </div>
-
-                        <div>
-                            {renderLabel('Dekorasi', false)}
-                            <Input
-                                value={data.decoration || ''}
-                                onChange={(e) => onChange('decoration', e.target.value)}
-                                placeholder="Nama vendor dekorasi"
-                                className="h-[38px] text-xs bg-white"
-                            />
-                        </div>
-
-                        <div>
-                            {renderLabel('Dress & MUA', false)}
-                            <Input
-                                value={data.mua_dress || ''}
-                                onChange={(e) => onChange('mua_dress', e.target.value)}
-                                placeholder="Nama MUA & Desainer gaun"
-                                className="h-[38px] text-xs bg-white"
-                            />
-                        </div>
-
-                        <div className="sm:col-span-3">
-                            {renderLabel('Entertainment & Sound', false)}
-                            <Input
-                                value={data.entertainment || ''}
-                                onChange={(e) => onChange('entertainment', e.target.value)}
-                                placeholder="Band akustik, orchestra, MC kondang..."
-                                className="h-[38px] text-xs bg-white"
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                        {renderLabel('Catatan Tambahan', false)}
-                        <Textarea
-                            rows={2}
-                            value={data.additional_notes || ''}
-                            onChange={(e) => onChange('additional_notes', e.target.value)}
-                            placeholder="Catatan khusus prosesi adat, susunan VIP, atau preferensi pose..."
-                            className="text-xs bg-white"
-                        />
-                    </div>
-                </div>
-            )}
-
-            {/* ── 8. BIRTHDAY ─────────────────────────────────────────────── */}
-            {categoryKey === 'birthday' && (
-                <div className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div className="sm:col-span-2">
-                            {renderLabel('Nama yang Berulang Tahun', true)}
-                            <Input
-                                value={data.celebrant_name || ''}
-                                onChange={(e) => onChange('celebrant_name', e.target.value)}
-                                placeholder="Nama yang merayakan ulang tahun"
-                                className="h-[38px] text-xs bg-white"
-                            />
-                            {errors['celebrant_name'] && <p className="text-[11px] text-rose-500 mt-1">{errors['celebrant_name']}</p>}
-                        </div>
-
-                        <div>
-                            {renderLabel('Usia yang Dirayakan', true)}
-                            <div className="relative">
-                                <Input
-                                    type="number"
-                                    min="1"
-                                    value={data.celebrant_age || ''}
-                                    onChange={(e) => onChange('celebrant_age', e.target.value)}
-                                    placeholder="Contoh: 17"
-                                    className="h-[38px] text-xs bg-white pr-14"
-                                />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 pointer-events-none">
-                                    tahun
-                                </span>
-                            </div>
-                            {errors['celebrant_age'] && <p className="text-[11px] text-rose-500 mt-1">{errors['celebrant_age']}</p>}
-                        </div>
-
-                        <div>
-                            {renderLabel('Tema Ulang Tahun', true)}
-                            <NativeSelect
-                                value={data.birthday_theme || ''}
-                                onChange={(e) => onChange('birthday_theme', e.target.value)}
-                                className="h-[38px] text-xs bg-white"
-                            >
-                                <option value="">Pilih Tema Ulang Tahun...</option>
-                                {BIRTHDAY_THEMES.map((t) => (
-                                    <option key={t} value={t}>{t}</option>
-                                ))}
-                            </NativeSelect>
-                            {errors['birthday_theme'] && <p className="text-[11px] text-rose-500 mt-1">{errors['birthday_theme']}</p>}
-                        </div>
-
-                        <div>
-                            {renderLabel('Jenis Acara', true)}
-                            <NativeSelect
-                                value={data.event_type || ''}
-                                onChange={(e) => onChange('event_type', e.target.value)}
-                                className="h-[38px] text-xs bg-white"
-                            >
-                                <option value="">Pilih Jenis Acara...</option>
-                                {BIRTHDAY_EVENT_TYPES.map((t) => (
-                                    <option key={t} value={t}>{t}</option>
-                                ))}
-                            </NativeSelect>
-                            {errors['event_type'] && <p className="text-[11px] text-rose-500 mt-1">{errors['event_type']}</p>}
-                        </div>
-
-                        <div>
-                            {renderLabel('Jumlah Tamu Undangan', true)}
-                            <Input
-                                type="number"
-                                min="1"
-                                value={data.estimated_guests || ''}
-                                onChange={(e) => onChange('estimated_guests', e.target.value)}
-                                placeholder="Contoh: 100"
-                                className="h-[38px] text-xs bg-white"
-                            />
-                            {errors['estimated_guests'] && <p className="text-[11px] text-rose-500 mt-1">{errors['estimated_guests']}</p>}
-                        </div>
-
-                        <div>
-                            {renderLabel('Venue / Tempat', false)}
-                            <Input
-                                value={data.venue_location || ''}
-                                onChange={(e) => onChange('venue_location', e.target.value)}
-                                placeholder="Restoran, cafe, atau hall pesta"
-                                className="h-[38px] text-xs bg-white"
-                            />
-                        </div>
-
-                        <div>
-                            {renderLabel('Dekorasi / Warna Tema', false)}
-                            <Input
-                                value={data.decoration_color_theme || ''}
-                                onChange={(e) => onChange('decoration_color_theme', e.target.value)}
-                                placeholder="Contoh: Rose Gold & White Pastel"
-                                className="h-[38px] text-xs bg-white"
-                            />
-                        </div>
-
-                        <div>
-                            {renderLabel('Aktivitas / Hiburan', false)}
-                            <Input
-                                value={data.activity_entertainment || ''}
-                                onChange={(e) => onChange('activity_entertainment', e.target.value)}
-                                placeholder="Magic show, games, candle ceremony..."
-                                className="h-[38px] text-xs bg-white"
-                            />
-                        </div>
-                    </div>
-
-                    <div>
-                        {renderLabel('Catatan Tambahan', false)}
-                        <Textarea
-                            rows={2}
-                            value={data.additional_notes || ''}
-                            onChange={(e) => onChange('additional_notes', e.target.value)}
-                            placeholder="Momen surprise, rundown tiup lilin..."
-                            className="text-xs bg-white"
-                        />
-                    </div>
-                </div>
-            )}
-
-            {/* ── 9. CORPORATE ────────────────────────────────────────────── */}
-            {categoryKey === 'corporate' && (
-                <div className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {!hideGeneralFields && (
-                            <div>
-                                {renderLabel('Nama Perusahaan / Organisasi', true)}
-                                <Input
-                                    value={data.company_name || ''}
-                                    onChange={(e) => onChange('company_name', e.target.value)}
-                                    placeholder="Contoh: PT Telkom Indonesia"
-                                    className="h-[38px] text-xs bg-white"
-                                />
-                                {errors['company_name'] && <p className="text-[11px] text-rose-500 mt-1">{errors['company_name']}</p>}
-                            </div>
-                        )}
-
-                        <div className={hideGeneralFields ? 'sm:col-span-2' : ''}>
-                            {renderLabel('Departemen / Divisi', false)}
-                            <Input
-                                value={data.department_division || ''}
-                                onChange={(e) => onChange('department_division', e.target.value)}
-                                placeholder="Contoh: Corporate Communications & HR"
-                                className="h-[38px] text-xs bg-white"
-                            />
-                        </div>
-
-                        <div>
-                            {renderLabel('Jenis Acara', true)}
-                            <NativeSelect
-                                value={data.event_type || ''}
-                                onChange={(e) => onChange('event_type', e.target.value)}
-                                className="h-[38px] text-xs bg-white"
-                            >
-                                <option value="">Pilih Jenis Acara...</option>
-                                {CORPORATE_EVENT_TYPES.map((t) => (
-                                    <option key={t} value={t}>{t}</option>
-                                ))}
-                            </NativeSelect>
-                            {errors['event_type'] && <p className="text-[11px] text-rose-500 mt-1">{errors['event_type']}</p>}
-                        </div>
-
-                        <div>
-                            {renderLabel('Skala Acara', true)}
-                            <NativeSelect
-                                value={data.event_scale || ''}
-                                onChange={(e) => onChange('event_scale', e.target.value)}
-                                className="h-[38px] text-xs bg-white"
-                            >
-                                <option value="">Pilih Skala Acara...</option>
-                                {CORPORATE_SCALES.map((s) => (
-                                    <option key={s} value={s}>{s}</option>
-                                ))}
-                            </NativeSelect>
-                            {errors['event_scale'] && <p className="text-[11px] text-rose-500 mt-1">{errors['event_scale']}</p>}
-                        </div>
-
-                        <div className="sm:col-span-2">
-                            {renderLabel('Tujuan Dokumentasi', true)}
-                            <NativeSelect
-                                value={data.documentation_purpose || ''}
-                                onChange={(e) => onChange('documentation_purpose', e.target.value)}
-                                className="h-[38px] text-xs bg-white"
-                            >
-                                <option value="">Pilih Tujuan Dokumentasi...</option>
-                                {CORPORATE_PURPOSES.map((p) => (
-                                    <option key={p} value={p}>{p}</option>
-                                ))}
-                            </NativeSelect>
-                            {errors['documentation_purpose'] && <p className="text-[11px] text-rose-500 mt-1">{errors['documentation_purpose']}</p>}
-                        </div>
-
-                        {!hideGeneralFields && (
-                            <>
-                                <div>
-                                    {renderLabel('Nama Pemesan', true)}
-                                    <Input
-                                        value={data.pic_name || ''}
-                                        onChange={(e) => onChange('pic_name', e.target.value)}
-                                        placeholder="Nama pemesan"
-                                        className="h-[38px] text-xs bg-white"
-                                    />
-                                    {errors['pic_name'] && <p className="text-[11px] text-rose-500 mt-1">{errors['pic_name']}</p>}
-                                </div>
-
-                                <div>
-                                    {renderLabel('No. Telepon PIC', true)}
-                                    <Input
-                                        value={data.pic_phone || ''}
-                                        onChange={(e) => onChange('pic_phone', e.target.value)}
-                                        placeholder="Contoh: 081234567890"
-                                        className="h-[38px] text-xs bg-white"
-                                    />
-                                    {errors['pic_phone'] && <p className="text-[11px] text-rose-500 mt-1">{errors['pic_phone']}</p>}
-                                </div>
-
-                                <div className="sm:col-span-2">
-                                    {renderLabel('Email PIC', false)}
-                                    <Input
-                                        type="email"
-                                        value={data.pic_email || ''}
-                                        onChange={(e) => onChange('pic_email', e.target.value)}
-                                        placeholder="pic@perusahaan.com"
-                                        className="h-[38px] text-xs bg-white"
-                                    />
-                                </div>
-                            </>
-                        )}
-                    </div>
-
-                    <div>
-                        {renderLabel('Kebutuhan Khusus / SOP Keamanan', false)}
-                        <Textarea
-                            rows={2}
-                            value={data.special_requirements || ''}
-                            onChange={(e) => onChange('special_requirements', e.target.value)}
-                            placeholder="SOP dress code formal/batik, ID card visitor, embargo publikasi..."
-                            className="text-xs bg-white"
-                        />
-                    </div>
-
-                    <div>
-                        {renderLabel('Referensi / Brief Rundown', false)}
-                        <Textarea
-                            rows={2}
-                            value={data.reference_brief || ''}
-                            onChange={(e) => onChange('reference_brief', e.target.value)}
-                            placeholder="Link susunan acara, rundown timeline, VIP tamu kehormatan..."
-                            className="text-xs bg-white"
-                        />
-                    </div>
-                </div>
-            )}
-
-            {/* ── 10. ENGAGEMENT ──────────────────────────────────────────── */}
+            {/* ── 3. ENGAGEMENT ─────────────────────────────────────────────── */}
             {categoryKey === 'engagement' && (
                 <div className="space-y-4">
-                    <div className="p-3 bg-rose-50/70 border border-rose-200/80 rounded-xl text-xs text-rose-900 flex items-center gap-2">
-                        <HeartHandshake className="w-4 h-4 text-rose-600 shrink-0" />
-                        <span>Dokumentasi prosesi pertunangan dan lamaran penuh kehangatan antar keluarga.</span>
-                    </div>
-
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            {renderLabel('Nama Calon Pria (CPP)', true)}
+                            <FormLabel label="Nama Calon Mempelai Pria" required />
                             <Input
                                 value={data.groom_name || ''}
                                 onChange={(e) => onChange('groom_name', e.target.value)}
                                 placeholder="Nama calon mempelai pria"
                                 className="h-[38px] text-xs bg-white"
                             />
-                            {errors['groom_name'] && <p className="text-[11px] text-rose-500 mt-1">{errors['groom_name']}</p>}
                         </div>
-
                         <div>
-                            {renderLabel('Nama Calon Wanita (CPW)', true)}
+                            <FormLabel label="Nama Calon Mempelai Wanita" required />
                             <Input
                                 value={data.bride_name || ''}
                                 onChange={(e) => onChange('bride_name', e.target.value)}
                                 placeholder="Nama calon mempelai wanita"
                                 className="h-[38px] text-xs bg-white"
                             />
-                            {errors['bride_name'] && <p className="text-[11px] text-rose-500 mt-1">{errors['bride_name']}</p>}
                         </div>
+                    </div>
 
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
-                            {renderLabel('Tanggal Lamaran', true)}
+                            <FormLabel label="Tanggal Acara" required />
                             <Input
                                 type="date"
                                 value={data.engagement_date || ''}
                                 onChange={(e) => onChange('engagement_date', e.target.value)}
                                 className="h-[38px] text-xs bg-white"
                             />
-                            {errors['engagement_date'] && <p className="text-[11px] text-rose-500 mt-1">{errors['engagement_date']}</p>}
                         </div>
-
                         <div>
-                            {renderLabel('Waktu Lamaran', true)}
+                            <FormLabel label="Waktu Acara" required />
                             <Input
                                 type="time"
                                 value={data.engagement_time || ''}
                                 onChange={(e) => onChange('engagement_time', e.target.value)}
                                 className="h-[38px] text-xs bg-white"
                             />
-                            {errors['engagement_time'] && <p className="text-[11px] text-rose-500 mt-1">{errors['engagement_time']}</p>}
                         </div>
-
-                        <div className="sm:col-span-2">
-                            {renderLabel('Lokasi Lamaran', true)}
-                            <Input
-                                value={data.engagement_location || ''}
-                                onChange={(e) => onChange('engagement_location', e.target.value)}
-                                placeholder="Contoh: Rumah Kediaman CPW / Plataran Menteng"
-                                className="h-[38px] text-xs bg-white"
-                            />
-                            {errors['engagement_location'] && <p className="text-[11px] text-rose-500 mt-1">{errors['engagement_location']}</p>}
-                        </div>
-
                         <div>
-                            {renderLabel('Estimasi Jumlah Tamu', false)}
+                            <FormLabel label="Estimasi Tamu" required />
                             <Input
                                 type="number"
-                                min="1"
+                                min="10"
                                 value={data.estimated_guests || ''}
                                 onChange={(e) => onChange('estimated_guests', e.target.value)}
-                                placeholder="Contoh: 60"
+                                placeholder="Contoh: 100"
                                 className="h-[38px] text-xs bg-white"
                             />
                         </div>
+                    </div>
 
-                        <div>
-                            {renderLabel('Konsep / Tema', false)}
-                            <NativeSelect
-                                value={data.concept_theme || ''}
-                                onChange={(e) => onChange('concept_theme', e.target.value)}
-                                className="h-[38px] text-xs bg-white"
-                            >
-                                <option value="">Pilih Konsep Lamaran...</option>
-                                {ENGAGEMENT_CONCEPTS.map((c) => (
-                                    <option key={c} value={c}>{c}</option>
-                                ))}
-                            </NativeSelect>
+                    <div>
+                        <FormLabel label="Lokasi Acara" required />
+                        <Input
+                            value={data.engagement_location || ''}
+                            onChange={(e) => onChange('engagement_location', e.target.value)}
+                            placeholder="Alamat / nama venue acara lamaran"
+                            className="h-[38px] text-xs bg-white"
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="sm:col-span-1">
+                            <SelectWithOther
+                                label="Konsep / Tema Acara"
+                                required
+                                options={ENGAGEMENT_CONCEPTS}
+                                value={data.concept_theme}
+                                otherValue={data.concept_theme_other}
+                                onChangeValue={(val) => onChange('concept_theme', val)}
+                                onChangeOther={(val) => onChange('concept_theme_other', val)}
+                                placeholder="Pilih konsep..."
+                            />
                         </div>
-
-                        <div>
-                            {renderLabel('Warna Tema / Palette', false)}
+                        <div className="sm:col-span-1">
+                            <FormLabel label="Tema Warna" />
                             <Input
                                 value={data.theme_color || ''}
                                 onChange={(e) => onChange('theme_color', e.target.value)}
@@ -1659,480 +807,340 @@ export function CategorySpecificForm({
                                 className="h-[38px] text-xs bg-white"
                             />
                         </div>
-
-                        <div>
-                            {renderLabel('Vendor / WO', false)}
+                        <div className="sm:col-span-1">
+                            <FormLabel label="Wedding Organizer (WO)" />
                             <Input
-                                value={data.vendor_wo || ''}
-                                onChange={(e) => onChange('vendor_wo', e.target.value)}
-                                placeholder="Nama WO atau Dekorasi"
+                                value={data.wedding_organizer || ''}
+                                onChange={(e) => onChange('wedding_organizer', e.target.value)}
+                                placeholder="Nama WO jika ada"
+                                className="h-[38px] text-xs bg-white"
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── 4. FAMILY ─────────────────────────────────────────────────── */}
+            {categoryKey === 'family' && (
+                <div className="space-y-4">
+                    <div>
+                        <FormLabel label="Nama Pemesan" required />
+                        <Input aria-label="Nama Pemesan" value={data.client_name || ''} onChange={(e) => onChange('client_name', e.target.value)} placeholder="Nama lengkap pemesan" className="h-11 bg-white" />
+                        {errors.client_name && <p className="mt-1 text-xs text-rose-600">{errors.client_name}</p>}
+                    </div>
+                    <div>
+                        <FormLabel label="Nama Keluarga" required hint="Contoh: Keluarga Wijaya" />
+                        <Input
+                            value={data.family_name || ''}
+                            onChange={(e) => onChange('family_name', e.target.value)}
+                            placeholder="Contoh: Keluarga Wijaya"
+                            className="h-[38px] text-xs bg-white"
+                        />
+                    </div>
+
+                    <div className="max-w-sm">
+                        <FormLabel label="Jumlah Anggota Keluarga yang Difoto" required hint="Termasuk pemesan jika ikut sesi" />
+                        <Input
+                            aria-label="Jumlah Anggota Keluarga yang Difoto"
+                            type="number"
+                            min="1"
+                            value={data.members_count ?? (getFamilyMemberCount(data) || '')}
+                            onChange={(e) => onChange('members_count', e.target.value)}
+                            placeholder="Contoh: 4 orang"
+                            className="h-11 bg-white"
+                        />
+                        {errors.members_count && <p className="mt-1 text-xs text-rose-600">{errors.members_count}</p>}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                        <SelectWithOther
+                            label="Konsep Sesi"
+                            required
+                            options={FAMILY_CONCEPTS}
+                            value={data.concept_theme}
+                            otherValue={data.concept_theme_other}
+                            onChangeValue={(val) => onChange('concept_theme', val)}
+                            onChangeOther={(val) => onChange('concept_theme_other', val)}
+                            placeholder="Pilih konsep keluarga..."
+                        />
+
+                        <div className="space-y-1.5">
+                            <FormLabel label="Lokasi Sesi" required />
+                            <NativeSelect
+                                value={data.session_location_type || ''}
+                                onChange={(e) => onChange('session_location_type', e.target.value)}
+                                className="h-[38px] text-xs bg-white"
+                            >
+                                <option value="">Pilih lokasi sesi...</option>
+                                {FAMILY_LOCATIONS.map((loc) => (
+                                    <option key={loc} value={loc}>{loc}</option>
+                                ))}
+                            </NativeSelect>
+                            {data.session_location_type === 'Lainnya' && (
+                                <div className="pt-1 animate-in fade-in duration-150">
+                                    <Input
+                                        value={data.session_location || ''}
+                                        onChange={(e) => onChange('session_location', e.target.value)}
+                                        placeholder="Sebutkan lokasi sesi foto..."
+                                        className="h-[34px] text-xs bg-amber-50/50 border-amber-200"
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── 5. MATERNITY ──────────────────────────────────────────────── */}
+            {categoryKey === 'maternity' && (
+                <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <FormLabel label="Nama Calon Ibu" required />
+                            <Input
+                                value={data.mom_name || ''}
+                                onChange={(e) => onChange('mom_name', e.target.value)}
+                                placeholder="Nama lengkap calon ibu"
+                                className="h-[38px] text-xs bg-white"
+                            />
+                        </div>
+                        <div>
+                            <FormLabel label="Usia Kandungan (Minggu)" required />
+                            <Input
+                                type="number"
+                                min="1"
+                                max="42"
+                                value={data.gestational_age_weeks || ''}
+                                onChange={(e) => onChange('gestational_age_weeks', e.target.value)}
+                                placeholder="Contoh: 30"
+                                className="h-[38px] text-xs bg-white"
+                            />
+                        </div>
+                        <div>
+                            <FormLabel label="Hari Perkiraan Lahir (HPL)" required />
+                            <Input
+                                type="date"
+                                value={data.hpl_date || ''}
+                                onChange={(e) => onChange('hpl_date', e.target.value)}
                                 className="h-[38px] text-xs bg-white"
                             />
                         </div>
                     </div>
 
-                    <div>
-                        {renderLabel('Catatan Tambahan', false)}
-                        <Textarea
-                            rows={2}
-                            value={data.additional_notes || ''}
-                            onChange={(e) => onChange('additional_notes', e.target.value)}
-                            placeholder="Prosesi seserahan, pertukaran cincin, atau susunan acara..."
-                            className="text-xs bg-white"
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <SelectWithOther
+                            label="Konsep / Tema"
+                            required
+                            options={MATERNITY_CONCEPTS}
+                            value={data.concept_theme}
+                            otherValue={data.concept_theme_other}
+                            onChangeValue={(val) => onChange('concept_theme', val)}
+                            onChangeOther={(val) => onChange('concept_theme_other', val)}
+                            placeholder="Pilih konsep..."
                         />
-                    </div>
-                </div>
-            )}
 
-            {/* ── 11. EVENT ───────────────────────────────────────────────── */}
-            {categoryKey === 'event' && (
-                <div className="space-y-4">
-                    <div className="p-3 bg-indigo-50/70 border border-indigo-200/80 rounded-xl text-xs text-indigo-900 flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
-                        <span>Dokumentasi event, festival, seminar, konser, dan perhelatan publik dinamis.</span>
-                    </div>
-
-                    {/* Informasi Event Publik */}
-                    <div className="p-4 bg-white border border-slate-200/80 rounded-xl space-y-3">
-                        <span className="text-[11px] font-extrabold text-indigo-900 uppercase tracking-wider block">
-                            Informasi Event Publik / Panggung
-                        </span>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="sm:col-span-2">
-                                {renderLabel('Nama Event / Acara', true)}
-                                <Input
-                                    value={data.event_name || ''}
-                                    onChange={(e) => onChange('event_name', e.target.value)}
-                                    placeholder="Contoh: Soundrenaline Fest 2026 / National Tech Seminar"
-                                    className="h-[38px] text-xs bg-white"
-                                />
-                                {errors['event_name'] && <p className="text-[11px] text-rose-500 mt-1">{errors['event_name']}</p>}
-                            </div>
-
-                            <div className="sm:col-span-2">
-                                {renderLabel('Nama Penanggung Jawab / Pemesan', true)}
-                                <Input
-                                    value={data.pic_name || data.client_name || data.name || ''}
-                                    onChange={(e) => {
-                                        onChange('pic_name', e.target.value);
-                                        onChange('client_name', e.target.value);
-                                        onChange('name', e.target.value);
-                                    }}
-                                    placeholder="Nama pemesan / PIC event"
-                                    className="h-[38px] text-xs bg-white"
-                                />
-                                {(errors['pic_name'] || errors['client_name'] || errors['name']) && (
-                                    <p className="text-[11px] text-rose-500 mt-1">{errors['pic_name'] || errors['client_name'] || errors['name']}</p>
-                                )}
-                            </div>
-
-                            <div>
-                                {renderLabel('Tanggal Event', true)}
-                                <Input
-                                    type="date"
-                                    value={data.event_date || ''}
-                                    onChange={(e) => onChange('event_date', e.target.value)}
-                                    className="h-[38px] text-xs bg-white"
-                                />
-                                {errors['event_date'] && <p className="text-[11px] text-rose-500 mt-1">{errors['event_date']}</p>}
-                            </div>
-
-                            <div>
-                                {renderLabel('Waktu Event (Time Range)', true)}
-                                <Input
-                                    value={data.event_time_range || ''}
-                                    onChange={(e) => onChange('event_time_range', e.target.value)}
-                                    placeholder="Contoh: 09:00 - 16:00 WIB"
-                                    className="h-[38px] text-xs bg-white"
-                                />
-                                {errors['event_time_range'] && <p className="text-[11px] text-rose-500 mt-1">{errors['event_time_range']}</p>}
-                            </div>
-
-                            <div>
-                                {renderLabel('Jenis Event', true)}
-                                <NativeSelect
-                                    value={data.event_type || ''}
-                                    onChange={(e) => onChange('event_type', e.target.value)}
-                                    className="h-[38px] text-xs bg-white"
-                                >
-                                    <option value="">Pilih Jenis Event...</option>
-                                    {EVENT_TYPES.map((t) => (
-                                        <option key={t} value={t}>{t}</option>
-                                    ))}
-                                </NativeSelect>
-                                {errors['event_type'] && <p className="text-[11px] text-rose-500 mt-1">{errors['event_type']}</p>}
-                            </div>
-
-                            <div>
-                                {renderLabel('Jenis Kebutuhan', true)}
-                                <NativeSelect
-                                    value={data.needs_type || ''}
-                                    onChange={(e) => onChange('needs_type', e.target.value)}
-                                    className="h-[38px] text-xs bg-white"
-                                >
-                                    <option value="">Pilih Jenis Kebutuhan...</option>
-                                    {EVENT_NEEDS_TYPES.map((t) => (
-                                        <option key={t} value={t}>{t}</option>
-                                    ))}
-                                </NativeSelect>
-                                {errors['needs_type'] && <p className="text-[11px] text-rose-500 mt-1">{errors['needs_type']}</p>}
-                            </div>
-
-                            <div className="sm:col-span-2">
-                                {renderLabel('Lokasi Event', true)}
-                                <Input
-                                    value={data.event_location || data.location || ''}
-                                    onChange={(e) => {
-                                        onChange('event_location', e.target.value);
-                                        onChange('location', e.target.value);
-                                    }}
-                                    placeholder="Contoh: JCC Senayan Hall B, Jakarta Pusat"
-                                    className="h-[38px] text-xs bg-white"
-                                />
-                                {(errors['event_location'] || errors['location']) && (
-                                    <p className="text-[11px] text-rose-500 mt-1">{errors['event_location'] || errors['location']}</p>
-                                )}
-                            </div>
+                        <div className="space-y-1.5">
+                            <FormLabel label="Lokasi Sesi" required />
+                            <NativeSelect
+                                value={data.session_location_type || ''}
+                                onChange={(e) => onChange('session_location_type', e.target.value)}
+                                className="h-[38px] text-xs bg-white"
+                            >
+                                <option value="">Pilih lokasi sesi...</option>
+                                {MATERNITY_LOCATIONS.map((loc) => (
+                                    <option key={loc} value={loc}>{loc}</option>
+                                ))}
+                            </NativeSelect>
+                            {data.session_location_type === 'Lainnya' && (
+                                <div className="pt-1 animate-in fade-in duration-150">
+                                    <Input
+                                        value={data.session_location || ''}
+                                        onChange={(e) => onChange('session_location', e.target.value)}
+                                        placeholder="Sebutkan lokasi sesi foto..."
+                                        className="h-[34px] text-xs bg-amber-50/50 border-amber-200"
+                                    />
+                                </div>
+                            )}
                         </div>
                     </div>
 
+                    <MultiSelectWithOther
+                        label="Pilihan Wardrobe"
+                        options={MATERNITY_WARDROBES}
+                        values={data.wardrobe}
+                        otherValue={data.wardrobe_other}
+                        onChangeValues={(vals) => onChange('wardrobe', vals)}
+                        onChangeOther={(val) => onChange('wardrobe_other', val)}
+                    />
+                </div>
+            )}
+
+            {/* ── 6. NEWBORN ────────────────────────────────────────────────── */}
+            {categoryKey === 'newborn' && (
+                <div className="space-y-4">
+                    {/* Repeater Bayi (Mendukung Kembar) */}
+                    <NewbornBabiesRepeater
+                        babies={data.babies}
+                        onChange={(babies) => onChange('babies', babies)}
+                    />
+
+                    <MultiSelectWithOther
+                        label="Konsep Sesi Foto Bayi"
+                        options={NEWBORN_CONCEPTS}
+                        values={data.concept_theme}
+                        otherValue={data.concept_theme_other}
+                        onChangeValues={(vals) => onChange('concept_theme', vals)}
+                        onChangeOther={(val) => onChange('concept_theme_other', val)}
+                    />
+
                     <div>
-                        {renderLabel('Catatan Tambahan', false)}
+                        <FormLabel label="Preferensi Pose / Request Khusus" />
                         <Textarea
-                            rows={2}
-                            value={data.additional_notes || ''}
-                            onChange={(e) => onChange('additional_notes', e.target.value)}
-                            placeholder="Catatan khusus atau kebutuhan tambahan event..."
+                            rows={3}
+                            value={data.pose_special_requests || ''}
+                            onChange={(e) => onChange('pose_special_requests', e.target.value)}
+                            placeholder="Catatan kondisi si kecil, preferensi warna wrap/bedong, properti bawaan sendiri..."
                             className="text-xs bg-white"
                         />
                     </div>
                 </div>
             )}
 
-            {/* ── 12. FAMILY SESSION ──────────────────────────────────────── */}
-            {categoryKey === 'family' && (
+            {/* ── 7. BIRTHDAY ───────────────────────────────────────────────── */}
+            {categoryKey === 'birthday' && (
                 <div className="space-y-4">
-                    <div className="p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl text-xs text-amber-900 flex items-center gap-2">
-                        <Users className="w-4 h-4 text-amber-600 shrink-0" />
-                        <span>Sesi potret keluarga hangat bersama orang tua dan anak-anak tercinta.</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <FormLabel label="Nama yang Berulang Tahun" required />
+                            <Input
+                                value={data.celebrant_name || ''}
+                                onChange={(e) => onChange('celebrant_name', e.target.value)}
+                                placeholder="Nama lengkap celebrant"
+                                className="h-[38px] text-xs bg-white"
+                            />
+                        </div>
+                        <div>
+                            <FormLabel label="Usia yang Dirayakan" required />
+                            <Input
+                                type="number"
+                                min="1"
+                                value={data.celebrant_age || ''}
+                                onChange={(e) => onChange('celebrant_age', e.target.value)}
+                                placeholder="Contoh: 17"
+                                className="h-[38px] text-xs bg-white"
+                            />
+                        </div>
+                        <SelectWithOther
+                            label="Jenis Acara"
+                            required
+                            options={BIRTHDAY_EVENT_TYPES}
+                            value={data.event_type}
+                            otherValue={data.event_type_other}
+                            onChangeValue={(val) => onChange('event_type', val)}
+                            onChangeOther={(val) => onChange('event_type_other', val)}
+                            placeholder="Pilih jenis acara..."
+                        />
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
-                            {renderLabel('Nama Keluarga', true)}
-                            <Input
-                                value={data.family_name || ''}
-                                onChange={(e) => onChange('family_name', e.target.value)}
-                                placeholder="Contoh: Keluarga Pratama"
-                                className="h-[38px] text-xs bg-white"
-                            />
-                            {errors['family_name'] && <p className="text-[11px] text-rose-500 mt-1">{errors['family_name']}</p>}
-                        </div>
-
-                        <div>
-                            {renderLabel('Nama Ayah', true)}
-                            <Input
-                                value={data.father_name || ''}
-                                onChange={(e) => onChange('father_name', e.target.value)}
-                                placeholder="Nama lengkap Ayah"
-                                className="h-[38px] text-xs bg-white"
-                            />
-                            {errors['father_name'] && <p className="text-[11px] text-rose-500 mt-1">{errors['father_name']}</p>}
-                        </div>
-
-                        <div>
-                            {renderLabel('Nama Ibu', true)}
-                            <Input
-                                value={data.mother_name || ''}
-                                onChange={(e) => onChange('mother_name', e.target.value)}
-                                placeholder="Nama lengkap Ibu"
-                                className="h-[38px] text-xs bg-white"
-                            />
-                            {errors['mother_name'] && <p className="text-[11px] text-rose-500 mt-1">{errors['mother_name']}</p>}
-                        </div>
-                    </div>
-
-                    {/* REPEATER NAMA ANAK: [ Alea (6 th) ] × [ Raka (3 th) ] × + Tambah Anak */}
-                    <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-xl space-y-3">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <label className="text-[11px] font-bold text-slate-800 block">
-                                    Nama Anak <span className="text-slate-400 font-normal text-[10px]">(Opsional - Tanpa Batasan)</span>
-                                </label>
-                                <p className="text-[10px] text-slate-500">Tambahkan daftar anak yang ikut dalam sesi pemotretan</p>
-                            </div>
-                        </div>
-
-                        {/* List of Children as Badges */}
-                        <div className="flex flex-wrap items-center gap-2">
-                            {Array.isArray(data.children) && data.children.length > 0 ? (
-                                data.children.map((child: ChildRepeaterItem, idx: number) => (
-                                    <div
-                                        key={idx}
-                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-amber-300 shadow-2xs text-xs font-semibold text-slate-800 animate-in fade-in"
-                                    >
-                                        <span>
-                                            {child.name} {child.age ? `(${child.age}${String(child.age).toLowerCase().includes('th') ? '' : ' th'})` : ''}
-                                        </span>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleRemoveChild(idx)}
-                                            className="w-4 h-4 rounded-full hover:bg-rose-100 text-slate-400 hover:text-rose-600 flex items-center justify-center transition-colors cursor-pointer"
-                                            title="Hapus anak ini"
-                                        >
-                                            <X className="w-3 h-3" />
-                                        </button>
-                                    </div>
-                                ))
-                            ) : (
-                                <span className="text-xs text-slate-400 italic">Belum ada data anak ditambahkan</span>
-                            )}
-                        </div>
-
-                        {/* Inline Add Child Form */}
-                        {isAddingChild ? (
-                            <div className="p-3 bg-white border border-amber-200 rounded-lg flex flex-col sm:flex-row items-stretch sm:items-center gap-2 animate-in fade-in duration-150">
-                                <Input
-                                    value={newChildName}
-                                    onChange={(e) => setNewChildName(e.target.value)}
-                                    placeholder="Nama anak (contoh: Alea)"
-                                    className="h-[34px] text-xs flex-1"
-                                    autoFocus
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            handleAddChild();
-                                        }
-                                    }}
-                                />
-                                <Input
-                                    value={newChildAge}
-                                    onChange={(e) => setNewChildAge(e.target.value)}
-                                    placeholder="Usia (contoh: 6 th)"
-                                    className="h-[34px] text-xs w-full sm:w-28"
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            handleAddChild();
-                                        }
-                                    }}
-                                />
-                                <div className="flex items-center gap-1.5">
-                                    <button
-                                        type="button"
-                                        onClick={handleAddChild}
-                                        disabled={!newChildName.trim()}
-                                        className="h-[34px] px-3 rounded-lg bg-[#3C0E0E] hover:bg-[#2A0A0A] text-white text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
-                                    >
-                                        Simpan
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setIsAddingChild(false);
-                                            setNewChildName('');
-                                            setNewChildAge('');
-                                        }}
-                                        className="h-[34px] px-2.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs transition-all cursor-pointer"
-                                    >
-                                        Batal
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={() => setIsAddingChild(true)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-amber-400 bg-amber-50/50 hover:bg-amber-100/60 text-amber-900 text-xs font-bold transition-all cursor-pointer"
-                            >
-                                <Plus className="w-3.5 h-3.5 text-amber-700" />
-                                <span>Tambah Anak</span>
-                            </button>
-                        )}
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            {renderLabel('Jumlah Anggota Keluarga', true)}
+                            <FormLabel label="Estimasi Tamu" required />
                             <Input
                                 type="number"
-                                min="2"
-                                value={data.members_count || ''}
-                                onChange={(e) => onChange('members_count', e.target.value)}
-                                placeholder="Contoh: 4"
+                                min="5"
+                                value={data.estimated_guests || ''}
+                                onChange={(e) => onChange('estimated_guests', e.target.value)}
+                                placeholder="Contoh: 50"
                                 className="h-[38px] text-xs bg-white"
                             />
-                            {errors['members_count'] && <p className="text-[11px] text-rose-500 mt-1">{errors['members_count']}</p>}
                         </div>
-
                         <div>
-                            {renderLabel('Lokasi Sesi', true)}
-                            <NativeSelect
-                                value={data.session_location || ''}
-                                onChange={(e) => onChange('session_location', e.target.value)}
+                            <FormLabel label="Venue / Lokasi Acara" required />
+                            <Input
+                                value={data.venue_location || ''}
+                                onChange={(e) => onChange('venue_location', e.target.value)}
+                                placeholder="Nama cafe, resto, atau ballroom"
                                 className="h-[38px] text-xs bg-white"
-                            >
-                                <option value="">Pilih Lokasi Sesi...</option>
-                                {FAMILY_LOCATIONS.map((l) => (
-                                    <option key={l} value={l}>{l}</option>
-                                ))}
-                            </NativeSelect>
-                            {errors['session_location'] && <p className="text-[11px] text-rose-500 mt-1">{errors['session_location']}</p>}
+                            />
                         </div>
-
                         <div>
-                            {renderLabel('Konsep / Tema', false)}
-                            <NativeSelect
-                                value={data.concept_theme || ''}
-                                onChange={(e) => onChange('concept_theme', e.target.value)}
+                            <FormLabel label="Tema Acara" required />
+                            <Input
+                                value={data.birthday_theme || ''}
+                                onChange={(e) => onChange('birthday_theme', e.target.value)}
+                                placeholder="Contoh: Vintage Floral / Neon Party"
                                 className="h-[38px] text-xs bg-white"
-                            >
-                                <option value="">Pilih Konsep...</option>
-                                {FAMILY_CONCEPTS.map((c) => (
-                                    <option key={c} value={c}>{c}</option>
-                                ))}
-                            </NativeSelect>
-                        </div>
-
-                        <div>
-                            {renderLabel('Durasi Sesi', false)}
-                            <NativeSelect
-                                value={data.session_duration || ''}
-                                onChange={(e) => onChange('session_duration', e.target.value)}
-                                className="h-[38px] text-xs bg-white"
-                            >
-                                <option value="">Pilih Durasi Sesi...</option>
-                                {FAMILY_DURATIONS.map((d) => (
-                                    <option key={d} value={d}>{d}</option>
-                                ))}
-                            </NativeSelect>
+                            />
                         </div>
                     </div>
 
                     <div>
-                        {renderLabel('Catatan Tambahan', false)}
-                        <Textarea
-                            rows={2}
-                            value={data.additional_notes || ''}
-                            onChange={(e) => onChange('additional_notes', e.target.value)}
-                            placeholder="Catatan pakaian keluarga seragam, anak yang masih bayi/balita..."
-                            className="text-xs bg-white"
+                        <FormLabel label="Konsep Dekorasi" />
+                        <Input
+                            value={data.decoration_concept || ''}
+                            onChange={(e) => onChange('decoration_concept', e.target.value)}
+                            placeholder="Kombinasi warna balon, backdrop, lighting..."
+                            className="h-[38px] text-xs bg-white"
                         />
                     </div>
+
                 </div>
             )}
 
-            {/* ── 13. KOMUNITAS ───────────────────────────────────────────── */}
+            {/* ── 8. KOMUNITAS ──────────────────────────────────────────────── */}
             {categoryKey === 'komunitas' && (
                 <div className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {!hideGeneralFields && (
-                            <div>
-                                {renderLabel('Nama Komunitas', true)}
-                                <Input
-                                    value={data.community_name || ''}
-                                    onChange={(e) => onChange('community_name', e.target.value)}
-                                    placeholder="Contoh: Jakarta Running Club"
-                                    className="h-[38px] text-xs bg-white"
-                                />
-                                {errors['community_name'] && <p className="text-[11px] text-rose-500 mt-1">{errors['community_name']}</p>}
-                            </div>
-                        )}
-
-                        <div className={hideGeneralFields ? 'sm:col-span-2' : ''}>
-                            {renderLabel('Jenis Komunitas', true)}
-                            <NativeSelect
-                                value={data.community_type || ''}
-                                onChange={(e) => onChange('community_type', e.target.value)}
-                                className="h-[38px] text-xs bg-white"
-                            >
-                                <option value="">Pilih Jenis Komunitas...</option>
-                                {KOMUNITAS_TYPES.map((t) => (
-                                    <option key={t} value={t}>{t}</option>
-                                ))}
-                            </NativeSelect>
-                            {errors['community_type'] && <p className="text-[11px] text-rose-500 mt-1">{errors['community_type']}</p>}
-                        </div>
-
+                    <div>
+                        <FormLabel label="Nama Pemesan" required />
+                        <Input aria-label="Nama Pemesan" value={data.client_name || ''} onChange={(e) => onChange('client_name', e.target.value)} placeholder="Nama lengkap pemesan komunitas" className="h-11 bg-white" />
+                        {errors.client_name && <p className="mt-1 text-xs text-rose-600">{errors.client_name}</p>}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
-                            {renderLabel('Tahun Berdiri', false)}
+                            <FormLabel label="Nama Komunitas" required />
                             <Input
-                                type="number"
-                                min="1950"
-                                max="2030"
-                                value={data.established_year || ''}
-                                onChange={(e) => onChange('established_year', e.target.value)}
-                                placeholder="Contoh: 2020"
+                                value={data.community_name || ''}
+                                onChange={(e) => onChange('community_name', e.target.value)}
+                                placeholder="Contoh: Jakarta Running Club"
                                 className="h-[38px] text-xs bg-white"
                             />
                         </div>
-
+                        <SelectWithOther
+                            label="Jenis Komunitas"
+                            required
+                            options={KOMUNITAS_TYPES}
+                            value={data.community_type}
+                            otherValue={data.community_type_other}
+                            onChangeValue={(val) => onChange('community_type', val)}
+                            onChangeOther={(val) => onChange('community_type_other', val)}
+                            placeholder="Pilih jenis komunitas..."
+                        />
                         <div>
-                            {renderLabel('Jumlah Anggota', false)}
+                            <FormLabel label="Jumlah Peserta Kegiatan" required />
                             <Input
                                 type="number"
                                 min="1"
-                                value={data.members_count || ''}
-                                onChange={(e) => onChange('members_count', e.target.value)}
+                                value={data.participants_count || ''}
+                                onChange={(e) => onChange('participants_count', e.target.value)}
                                 placeholder="Contoh: 150"
                                 className="h-[38px] text-xs bg-white"
                             />
                         </div>
+                    </div>
 
-                        {!hideGeneralFields && (
-                            <>
-                                <div>
-                                    {renderLabel('Nama Pemesan', true)}
-                                    <Input
-                                        value={data.pic_name || ''}
-                                        onChange={(e) => onChange('pic_name', e.target.value)}
-                                        placeholder="Nama lengkap pemesan"
-                                        className="h-[38px] text-xs bg-white"
-                                    />
-                                    {errors['pic_name'] && <p className="text-[11px] text-rose-500 mt-1">{errors['pic_name']}</p>}
-                                </div>
-
-                                <div>
-                                    {renderLabel('No. Telepon PIC', true)}
-                                    <Input
-                                        value={data.pic_phone || ''}
-                                        onChange={(e) => onChange('pic_phone', e.target.value)}
-                                        placeholder="Contoh: 081234567890"
-                                        className="h-[38px] text-xs bg-white"
-                                    />
-                                    {errors['pic_phone'] && <p className="text-[11px] text-rose-500 mt-1">{errors['pic_phone']}</p>}
-                                </div>
-                            </>
-                        )}
-
-                        <div className="sm:col-span-2">
-                            {renderLabel('Email Komunitas', false)}
-                            <Input
-                                type="email"
-                                value={data.pic_email || ''}
-                                onChange={(e) => onChange('pic_email', e.target.value)}
-                                placeholder="info@komunitas.com"
-                                className="h-[38px] text-xs bg-white"
-                            />
-                        </div>
-
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <SelectWithOther
+                            label="Jenis Kegiatan"
+                            required
+                            options={KOMUNITAS_ACTIVITIES}
+                            value={data.activity_type}
+                            otherValue={data.activity_type_other}
+                            onChangeValue={(val) => onChange('activity_type', val)}
+                            onChangeOther={(val) => onChange('activity_type_other', val)}
+                            placeholder="Pilih jenis kegiatan..."
+                        />
                         <div>
-                            {renderLabel('Jenis Kegiatan', true)}
-                            <NativeSelect
-                                value={data.activity_type || ''}
-                                onChange={(e) => onChange('activity_type', e.target.value)}
-                                className="h-[38px] text-xs bg-white"
-                            >
-                                <option value="">Pilih Jenis Kegiatan...</option>
-                                {KOMUNITAS_ACTIVITIES.map((a) => (
-                                    <option key={a} value={a}>{a}</option>
-                                ))}
-                            </NativeSelect>
-                            {errors['activity_type'] && <p className="text-[11px] text-rose-500 mt-1">{errors['activity_type']}</p>}
-                        </div>
-
-                        <div>
-                            {renderLabel('Tema Kegiatan', false)}
+                            <FormLabel label="Tema Kegiatan" required />
                             <Input
                                 value={data.activity_theme || ''}
                                 onChange={(e) => onChange('activity_theme', e.target.value)}
@@ -2140,177 +1148,505 @@ export function CategorySpecificForm({
                                 className="h-[38px] text-xs bg-white"
                             />
                         </div>
+                        <div>
+                            <FormLabel label="Lokasi Kegiatan" required />
+                            <Input
+                                value={data.activity_location || ''}
+                                onChange={(e) => onChange('activity_location', e.target.value)}
+                                placeholder="Contoh: Gelora Bung Karno"
+                                className="h-[38px] text-xs bg-white"
+                            />
+                        </div>
                     </div>
 
                     <div>
-                        {renderLabel('Deskripsi Kegiatan', false)}
+                        <FormLabel label="Deskripsi / Agenda Kegiatan" />
                         <Textarea
                             rows={3}
                             value={data.activity_description || ''}
                             onChange={(e) => onChange('activity_description', e.target.value)}
-                            placeholder="Rute perjalanan, agenda acara utama, dokumentasi grup & individu..."
+                            placeholder="Rute perjalanan, agenda acara utama, sesi foto grup & individu..."
                             className="text-xs bg-white"
                         />
                     </div>
                 </div>
             )}
 
-            {/* ── 14. NEWBORN ─────────────────────────────────────────────── */}
-            {categoryKey === 'newborn' && (
+            {/* ── 9. CORPORATE ──────────────────────────────────────────────── */}
+            {categoryKey === 'corporate' && (
                 <div className="space-y-4">
-                    <div className="p-3 bg-rose-50/70 border border-rose-200/80 rounded-xl text-xs text-rose-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                        <div className="flex items-center gap-2">
-                            <Baby className="w-4 h-4 text-rose-600 shrink-0" />
-                            <span>Sesi foto newborn mengabadikan hari-hari awal si kecil dengan perlengkapan higienis & aman.</span>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={handleAddBaby}
-                            className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-rose-700 hover:text-rose-800 bg-rose-100/90 hover:bg-rose-200/90 px-3 py-1.5 rounded-lg transition-colors shrink-0 cursor-pointer shadow-2xs self-start sm:self-auto"
-                        >
-                            <Plus className="w-3.5 h-3.5" />
-                            <span>Tambah Bayi (Kembar)</span>
-                        </button>
-                    </div>
-
-                    {/* Baby List Repeater */}
-                    <div className="space-y-3">
-                        {babiesList.map((baby, idx) => (
-                            <div key={idx} className="p-4 bg-white border border-slate-200/80 rounded-xl space-y-3 relative shadow-2xs">
-                                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                                    <div className="flex items-center gap-2 font-semibold text-xs text-slate-800">
-                                        <div className="w-5 h-5 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center font-bold text-[10px]">
-                                            {idx + 1}
-                                        </div>
-                                        <span>Data Bayi {babiesList.length > 1 ? `#${idx + 1}` : ''}</span>
-                                        {babiesList.length > 1 && (
-                                            <span className="text-[10px] font-medium text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100">
-                                                Kembar
-                                            </span>
-                                        )}
-                                    </div>
-                                    {babiesList.length > 1 && (
-                                        <button
-                                            type="button"
-                                            onClick={() => handleRemoveBaby(idx)}
-                                            className="text-slate-400 hover:text-rose-600 p-1 rounded-md transition-colors cursor-pointer"
-                                            title="Hapus bayi"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    )}
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div>
-                                        {renderLabel('Nama Lengkap', idx === 0)}
-                                        <Input
-                                            value={baby.name || ''}
-                                            onChange={(e) => handleBabyChange(idx, 'name', e.target.value)}
-                                            placeholder="Nama lengkap si kecil"
-                                            className="h-[38px] text-xs bg-white"
-                                        />
-                                        {idx === 0 && errors['baby_name'] && (
-                                            <p className="text-[11px] text-rose-500 mt-1">{errors['baby_name']}</p>
-                                        )}
-                                    </div>
-
-                                    <div>
-                                        {renderLabel('Nama Panggilan', false)}
-                                        <Input
-                                            value={baby.nickname || ''}
-                                            onChange={(e) => handleBabyChange(idx, 'nickname', e.target.value)}
-                                            placeholder="Nama panggilan bayi"
-                                            className="h-[38px] text-xs bg-white"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        {renderLabel('Tanggal Lahir', false)}
-                                        <Input
-                                            type="date"
-                                            value={baby.birth_date || ''}
-                                            onChange={(e) => handleBabyChange(idx, 'birth_date', e.target.value)}
-                                            className="h-[38px] text-xs bg-white"
-                                        />
-                                        {idx === 0 && errors['baby_birth_date'] && (
-                                            <p className="text-[11px] text-rose-500 mt-1">{errors['baby_birth_date']}</p>
-                                        )}
-                                    </div>
-
-                                    <div>
-                                        {renderLabel('Jenis Kelamin', false)}
-                                        <NativeSelect
-                                            value={baby.gender || ''}
-                                            onChange={(e) => handleBabyChange(idx, 'gender', e.target.value)}
-                                            className="h-[38px] text-xs bg-white"
-                                        >
-                                            <option value="">Pilih Jenis Kelamin...</option>
-                                            <option value="Laki-laki">Laki-laki</option>
-                                            <option value="Perempuan">Perempuan</option>
-                                        </NativeSelect>
-                                        {idx === 0 && errors['baby_gender'] && (
-                                            <p className="text-[11px] text-rose-500 mt-1">{errors['baby_gender']}</p>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            {renderLabel('Nama Ayah', false)}
+                            <FormLabel label="Nama Perusahaan" required />
                             <Input
-                                value={data.father_name || ''}
-                                onChange={(e) => onChange('father_name', e.target.value)}
-                                placeholder="Nama lengkap Ayah"
+                                value={data.company_name || ''}
+                                onChange={(e) => onChange('company_name', e.target.value)}
+                                placeholder="PT Contoh Sukses Mandiri"
                                 className="h-[38px] text-xs bg-white"
                             />
                         </div>
-
                         <div>
-                            {renderLabel('Nama Ibu', false)}
+                            <FormLabel label="Divisi / Departemen" />
                             <Input
-                                value={data.mother_name || ''}
-                                onChange={(e) => onChange('mother_name', e.target.value)}
-                                placeholder="Nama lengkap Ibu"
+                                value={data.department_division || ''}
+                                onChange={(e) => onChange('department_division', e.target.value)}
+                                placeholder="Contoh: Human Capital / Corporate Secretary"
                                 className="h-[38px] text-xs bg-white"
                             />
                         </div>
                     </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <SelectWithOther
+                            label="Jenis Acara"
+                            required
+                            options={CORPORATE_EVENT_TYPES}
+                            value={data.event_type}
+                            otherValue={data.event_type_other}
+                            onChangeValue={(val) => onChange('event_type', val)}
+                            onChangeOther={(val) => onChange('event_type_other', val)}
+                            placeholder="Pilih jenis acara..."
+                        />
+                        <div>
+                            <FormLabel label="Jumlah Peserta" required />
+                            <Input
+                                type="number"
+                                min="1"
+                                value={data.participants_count || ''}
+                                onChange={(e) => onChange('participants_count', e.target.value)}
+                                placeholder="Contoh: 200"
+                                className="h-[38px] text-xs bg-white"
+                            />
+                        </div>
+                    </div>
+
+                    <MultiSelectWithOther
+                        label="Tujuan Dokumentasi"
+                        required
+                        options={CORPORATE_DOC_PURPOSES}
+                        values={data.documentation_purpose}
+                        otherValue={data.documentation_purpose_other}
+                        onChangeValues={(vals) => onChange('documentation_purpose', vals)}
+                        onChangeOther={(val) => onChange('documentation_purpose_other', val)}
+                    />
 
                     <div>
-                        {renderLabel('Catatan Tambahan', false)}
+                        <FormLabel label="Aturan / SOP Khusus" />
                         <Textarea
-                            rows={2}
-                            value={data.additional_notes || ''}
-                            onChange={(e) => onChange('additional_notes', e.target.value)}
-                            placeholder="Kondisi si kecil, request properti/warna kostum khusus, dll..."
+                            rows={3}
+                            value={data.special_rules_sop || ''}
+                            onChange={(e) => onChange('special_rules_sop', e.target.value)}
+                            placeholder="Contoh: Dress code tim dokumentasi formal hitam, NDA sebelum publikasi..."
                             className="text-xs bg-white"
                         />
                     </div>
                 </div>
             )}
 
-            {/* ── STANDARD FALLBACK ────────────────────────────────────────── */}
-            {categoryKey === 'standard' && (
-                <div className="p-4 bg-white border border-slate-200/80 rounded-xl space-y-3">
+            {/* ── 10. COMMERCIAL / BRAND ────────────────────────────────────── */}
+            {categoryKey === 'commercial' && (
+                <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <FormLabel label="Nama Brand / Bisnis" required />
+                            <Input
+                                value={data.brand_name || ''}
+                                onChange={(e) => onChange('brand_name', e.target.value)}
+                                placeholder="Nama brand / produk"
+                                className="h-[38px] text-xs bg-white"
+                            />
+                        </div>
+                        <div>
+                            <FormLabel label="Jenis Produk" required />
+                            <Input
+                                value={data.product_type || ''}
+                                onChange={(e) => onChange('product_type', e.target.value)}
+                                placeholder="Contoh: Skincare, Fashion, F&B"
+                                className="h-[38px] text-xs bg-white"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <SelectWithOther
+                            label="Background"
+                            required
+                            options={COMMERCIAL_BACKGROUNDS}
+                            value={data.background_type}
+                            otherValue={data.background_type_other}
+                            onChangeValue={(val) => onChange('background_type', val)}
+                            onChangeOther={(val) => onChange('background_type_other', val)}
+                            placeholder="Pilih background..."
+                        />
+                        <SelectWithOther
+                            label="Lighting Style"
+                            required
+                            options={COMMERCIAL_LIGHTING_STYLES}
+                            value={data.lighting_style}
+                            otherValue={data.lighting_style_other}
+                            onChangeValue={(val) => onChange('lighting_style', val)}
+                            onChangeOther={(val) => onChange('lighting_style_other', val)}
+                            placeholder="Pilih lighting style..."
+                        />
+                    </div>
+
+                    <MultiSelectWithOther
+                        label="Mood / Style Foto"
+                        required
+                        options={COMMERCIAL_MOODS}
+                        values={data.mood_style}
+                        otherValue={data.mood_style_other}
+                        onChangeValues={(vals) => onChange('mood_style', vals)}
+                        onChangeOther={(val) => onChange('mood_style_other', val)}
+                    />
+
+                </div>
+            )}
+
+            {/* ── 11. EVENT PUBLIK ──────────────────────────────────────────── */}
+            {categoryKey === 'event' && (
+                <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <FormLabel label="Nama Event" required />
+                            <Input
+                                value={data.event_name || ''}
+                                onChange={(e) => onChange('event_name', e.target.value)}
+                                placeholder="Contoh: Java Jazz Festival / Tech Summit"
+                                className="h-[38px] text-xs bg-white"
+                            />
+                        </div>
+                        <div>
+                            <FormLabel label="Penyelenggara / EO" required />
+                            <Input
+                                value={data.organizer || ''}
+                                onChange={(e) => onChange('organizer', e.target.value)}
+                                placeholder="Nama lembaga / event organizer"
+                                className="h-[38px] text-xs bg-white"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <SelectWithOther
+                            label="Jenis Event"
+                            required
+                            options={EVENT_TYPES}
+                            value={data.event_type}
+                            otherValue={data.event_type_other}
+                            onChangeValue={(val) => onChange('event_type', val)}
+                            onChangeOther={(val) => onChange('event_type_other', val)}
+                            placeholder="Pilih jenis event..."
+                        />
+                        <div>
+                            <FormLabel label="Estimasi Peserta" required />
+                            <Input
+                                type="number"
+                                min="10"
+                                value={data.estimated_participants || ''}
+                                onChange={(e) => onChange('estimated_participants', e.target.value)}
+                                placeholder="Contoh: 1000"
+                                className="h-[38px] text-xs bg-white"
+                            />
+                        </div>
+                        <div>
+                            <FormLabel label="Dress Code" />
+                            <Input
+                                value={data.dress_code || ''}
+                                onChange={(e) => onChange('dress_code', e.target.value)}
+                                placeholder="Contoh: Batik / Smart Casual"
+                                className="h-[38px] text-xs bg-white"
+                            />
+                        </div>
+                    </div>
+
                     <div>
-                        {renderLabel('Nama Lengkap Pemesan', true)}
+                        <FormLabel label="Lokasi Event" required />
                         <Input
-                            value={data.client_name || data.name || ''}
-                            onChange={(e) => {
-                                onChange('client_name', e.target.value);
-                                onChange('name', e.target.value);
-                            }}
-                            placeholder="Nama lengkap pemesan"
+                            value={data.event_location || ''}
+                            onChange={(e) => onChange('event_location', e.target.value)}
+                            placeholder="Nama venue / gedung / arena acara"
                             className="h-[38px] text-xs bg-white"
                         />
-                        {(errors['client_name'] || errors['name']) && (
-                            <p className="text-[11px] text-rose-500 mt-1">{errors['client_name'] || errors['name']}</p>
-                        )}
                     </div>
+
+                </div>
+            )}
+
+            {/* ── 12. TRAVELING ─────────────────────────────────────────────── */}
+            {categoryKey === 'traveling' && (
+                <div className="space-y-4">
+                    {/* Tags Input Destinasi */}
+                    <TagsInput
+                        label="Destinasi Perjalanan"
+                        required
+                        tags={data.destinations}
+                        onChangeTags={(tags) => onChange('destinations', tags)}
+                        placeholder="Contoh: Labuan Bajo, Bali, Tokyo (tekan Enter)"
+                    />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <FormLabel label="Jumlah Peserta" required />
+                            <Input
+                                type="number"
+                                min="1"
+                                value={data.participants_count || ''}
+                                onChange={(e) => onChange('participants_count', e.target.value)}
+                                placeholder="Contoh: 8"
+                                className="h-[38px] text-xs bg-white"
+                            />
+                        </div>
+                        <SelectWithOther
+                            label="Jenis Perjalanan"
+                            required
+                            options={TRAVELING_TRIP_TYPES}
+                            value={data.trip_type}
+                            otherValue={data.trip_type_other}
+                            onChangeValue={(val) => onChange('trip_type', val)}
+                            onChangeOther={(val) => onChange('trip_type_other', val)}
+                            placeholder="Pilih jenis trip..."
+                        />
+                    </div>
+
+                    {/* Jadwal dengan kalkulasi durasi otomatis */}
+                    <div className="p-4 bg-sky-50/50 border border-sky-200/80 rounded-2xl space-y-3">
+                        <div className="flex items-center justify-between border-b border-sky-100 pb-1.5">
+                            <span className="text-xs font-bold text-sky-900 flex items-center gap-1.5">
+                                <Calendar className="w-3.5 h-3.5 text-sky-600" />
+                                <span>Jadwal Perjalanan</span>
+                            </span>
+                            {tripDuration && (
+                                <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-sky-600 text-white shadow-2xs">
+                                    Durasi: {tripDuration}
+                                </span>
+                            )}
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <FormLabel label="Tanggal Berangkat" required />
+                                <Input
+                                    type="date"
+                                    value={data.departure_date || ''}
+                                    onChange={(e) => onChange('departure_date', e.target.value)}
+                                    className="h-[38px] text-xs bg-white"
+                                />
+                            </div>
+                            <div>
+                                <FormLabel label="Tanggal Pulang" required />
+                                <Input
+                                    type="date"
+                                    value={data.return_date || ''}
+                                    onChange={(e) => onChange('return_date', e.target.value)}
+                                    className="h-[38px] text-xs bg-white"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <SelectWithOther
+                            label="Transportasi Utama"
+                            required
+                            options={TRAVELING_TRANSPORTS}
+                            value={data.transportation_mode}
+                            otherValue={data.transportation_other}
+                            onChangeValue={(val) => onChange('transportation_mode', val)}
+                            onChangeOther={(val) => onChange('transportation_other', val)}
+                            placeholder="Pilih transportasi..."
+                        />
+                        <div>
+                            <FormLabel label="Maskapai / Detail Kendaraan" />
+                            <Input
+                                value={data.airline_transport_detail || ''}
+                                onChange={(e) => onChange('airline_transport_detail', e.target.value)}
+                                placeholder="Contoh: Garuda Indonesia / Hiace"
+                                className="h-[38px] text-xs bg-white"
+                            />
+                        </div>
+                        <div>
+                            <FormLabel label="Hotel / Akomodasi" />
+                            <Input
+                                value={data.accommodation_hotel || ''}
+                                onChange={(e) => onChange('accommodation_hotel', e.target.value)}
+                                placeholder="Nama hotel / villa"
+                                className="h-[38px] text-xs bg-white"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <FormLabel label="Agenda Utama Perjalanan" required />
+                        <Textarea
+                            rows={3}
+                            value={data.main_agenda || ''}
+                            onChange={(e) => onChange('main_agenda', e.target.value)}
+                            placeholder="Hari 1: Island Hopping, Hari 2: Snorkeling, Hari 3: Sunset Dinner..."
+                            className="text-xs bg-white"
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* ── 13. PERORANGAN ────────────────────────────────────────────── */}
+            {categoryKey === 'perorangan' && (
+                <div className="space-y-4">
+                    <div>
+                        <FormLabel label="Nama Pemesan" required />
+                        <Input aria-label="Nama Pemesan" value={data.client_name || ''} onChange={(e) => onChange('client_name', e.target.value)} placeholder="Nama lengkap pemesan" className="h-11 bg-white" />
+                        {errors.client_name && <p className="mt-1 text-xs text-rose-600">{errors.client_name}</p>}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <SelectWithOther
+                            label="Tujuan Foto"
+                            required
+                            options={PERORANGAN_PURPOSES}
+                            value={data.photo_purpose}
+                            otherValue={data.photo_purpose_other}
+                            onChangeValue={(val) => onChange('photo_purpose', val)}
+                            onChangeOther={(val) => onChange('photo_purpose_other', val)}
+                            placeholder="Pilih tujuan foto..."
+                        />
+                        <SelectWithOther
+                            label="Jenis Sesi"
+                            required
+                            options={PERORANGAN_SESSION_TYPES}
+                            value={data.session_type}
+                            otherValue={data.session_type_other}
+                            onChangeValue={(val) => onChange('session_type', val)}
+                            onChangeOther={(val) => onChange('session_type_other', val)}
+                            placeholder="Pilih jenis sesi..."
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <FormLabel label="Jumlah Look / Outfit" required />
+                            <Input
+                                type="number"
+                                min="1"
+                                value={data.outfit_looks_count || ''}
+                                onChange={(e) => onChange('outfit_looks_count', e.target.value)}
+                                placeholder="Contoh: 2"
+                                className="h-[38px] text-xs bg-white"
+                            />
+                        </div>
+                        <div>
+                            <FormLabel label="Durasi Sesi" required />
+                            <NativeSelect
+                                value={data.session_duration || ''}
+                                onChange={(e) => onChange('session_duration', e.target.value)}
+                                className="h-[38px] text-xs bg-white"
+                            >
+                                <option value="">Pilih durasi sesi...</option>
+                                {PERORANGAN_DURATIONS.map((dur) => (
+                                    <option key={dur} value={dur}>{dur}</option>
+                                ))}
+                            </NativeSelect>
+                        </div>
+                        <SelectWithOther
+                            label="Backdrop / Background"
+                            required
+                            options={PERORANGAN_BACKDROPS}
+                            value={data.backdrop}
+                            otherValue={data.backdrop_other}
+                            onChangeValue={(val) => onChange('backdrop', val)}
+                            onChangeOther={(val) => onChange('backdrop_other', val)}
+                            placeholder="Pilih backdrop..."
+                        />
+                    </div>
+
+                    <div>
+                        <FormLabel label="Properti Khusus Pribadi" />
+                        <Textarea
+                            rows={2}
+                            value={data.special_props || ''}
+                            onChange={(e) => onChange('special_props', e.target.value)}
+                            placeholder="Buket bunga wisuda, toga, gitar, laptop, buku..."
+                            className="text-xs bg-white"
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* ── 14. LAINNYA / TRADISIONAL ──────────────────────────────────── */}
+            {categoryKey === 'lainnya' && (
+                <div className="space-y-4">
+                    <h3 className="border-b border-slate-200 pb-2 text-sm font-semibold text-slate-900">Informasi Event Utama</h3>
+                    <div>
+                        <FormLabel label="Nama Pemesan" required />
+                        <Input aria-label="Nama Pemesan" value={data.client_name || ''} onChange={(e) => onChange('client_name', e.target.value)} placeholder="Nama lengkap penanggung jawab pemesanan" className="h-11 bg-white" />
+                        {errors.client_name && <p className="mt-1 text-xs text-rose-600">{errors.client_name}</p>}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <FormLabel label="Tanggal Event" required />
+                            <Input aria-label="Tanggal Event" type="date" value={data.event_date || ''} onChange={(e) => onChange('event_date', e.target.value)} className="h-11 bg-white" />
+                        </div>
+                        <div>
+                            <FormLabel label="Waktu Event (Time Range)" required hint="Contoh: 09:00 - 16:00" />
+                            <Input aria-label="Waktu Event (Time Range)" value={data.event_time_range || ''} onChange={(e) => onChange('event_time_range', e.target.value)} placeholder="09:00 - 16:00" className="h-11 bg-white" />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <SelectWithOther
+                            label="Jenis Event"
+                            required
+                            options={LAINNYA_TRADITION_TYPES}
+                            value={data.event_type || data.event_tradition_type}
+                            otherValue={data.event_tradition_other}
+                            onChangeValue={(val) => {
+                                onChange('event_tradition_type', val);
+                                onChange('event_type', val);
+                            }}
+                            onChangeOther={(val) => onChange('event_tradition_other', val)}
+                            placeholder="Pilih jenis event..."
+                        />
+                        <div>
+                            <FormLabel label="Jenis Kebutuhan" required />
+                            <NativeSelect aria-label="Jenis Kebutuhan" value={data.needs_type || ''} onChange={(e) => onChange('needs_type', e.target.value)} className="h-11 bg-white">
+                                <option value="">Pilih jenis kebutuhan...</option>
+                                <option value="Foto Only">Foto Only</option>
+                                <option value="Video Only">Video Only</option>
+                                <option value="Foto & Video">Foto &amp; Video</option>
+                            </NativeSelect>
+                        </div>
+                    </div>
+                    <div>
+                        <FormLabel label="Lokasi Event" required />
+                        <Input
+                            aria-label="Lokasi Event"
+                            value={data.event_location || data.location || ''}
+                            onChange={(e) => onChange('event_location', e.target.value)}
+                            placeholder="Alamat atau nama venue event"
+                            className="h-11 bg-white"
+                        />
+                    </div>
+
+                    <div>
+                        <FormLabel label="Detail Kebutuhan Khusus" />
+                        <Textarea
+                            rows={4}
+                            value={data.special_requirements || ''}
+                            onChange={(e) => onChange('special_requirements', e.target.value)}
+                            placeholder="Jelaskan kebutuhan dokumentasi dan hal khusus yang perlu diperhatikan tim..."
+                            className="text-xs bg-white"
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* ── STANDARD FALLBACK ─────────────────────────────────────────── */}
+            {categoryKey === 'standard' && (
+                <div className="space-y-3">
+                    <FormLabel label="Catatan / Kebutuhan Sesi" />
+                    <Textarea
+                        rows={4}
+                        value={data.notes || ''}
+                        onChange={(e) => onChange('notes', e.target.value)}
+                        placeholder="Tuliskan kebutuhan dokumentasi Anda secara lengkap..."
+                        className="text-xs bg-white"
+                    />
                 </div>
             )}
         </div>
