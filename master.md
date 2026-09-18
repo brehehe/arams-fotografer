@@ -262,7 +262,7 @@ Clients
 
 Projects / WO
 
-Calendar / Schedule
+Jadwal & Sesi
 
 Finance
     Payments

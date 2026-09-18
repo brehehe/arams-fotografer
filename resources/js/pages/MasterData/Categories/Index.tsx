@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import { toast } from 'sonner';
 import { Pagination } from '@/components/ui/pagination';
@@ -33,6 +33,10 @@ import {
     GitBranch,
     Box,
     Upload,
+    GripVertical,
+    ArrowUp,
+    ArrowDown,
+    Loader2,
 } from 'lucide-react';
 
 interface CategoryItem {
@@ -46,6 +50,7 @@ interface CategoryItem {
     workflow_type?: string;
     form_type?: 'wedding' | 'newborn' | 'standard' | string;
     status?: string;
+    sort_order?: number;
     projects_count?: number;
     packages_count?: number;
     services_count?: number;
@@ -109,11 +114,10 @@ export default function CategoriesIndex({
 }: CategoriesIndexProps) {
     const [searchQuery, setSearchQuery] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState('all');
-    const [perPage, setPerPage] = useState(filters?.per_page || 10);
+    const [perPage, setPerPage] = useState(filters?.per_page || 50);
     const [createModalOpen, setCreateModalOpen] = useState(false);
     const [editItem, setEditItem] = useState<CategoryItem | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
-
     const [imagePreview, setImagePreview] = useState('');
 
     // Form state
@@ -130,10 +134,20 @@ export default function CategoriesIndex({
         status: 'active',
     });
 
-    const categoryList = categories.data || [];
+    const [items, setItems] = useState<CategoryItem[]>(categories.data || []);
+    const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+    const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+    const [isReordering, setIsReordering] = useState(false);
+
+    useEffect(() => {
+        setItems(categories.data || []);
+    }, [categories.data]);
+
+    const isReorderEnabled = !searchQuery.trim() && statusFilter === 'all';
+    const categoryList = items;
 
     const filteredData = useMemo(() => {
-        return categoryList.filter((cat) => {
+        return items.filter((cat) => {
             if (searchQuery) {
                 const q = searchQuery.toLowerCase();
                 if (!cat.name.toLowerCase().includes(q) && !(cat.description || '').toLowerCase().includes(q)) {
@@ -146,7 +160,88 @@ export default function CategoriesIndex({
             }
             return true;
         });
-    }, [categoryList, searchQuery, statusFilter]);
+    }, [items, searchQuery, statusFilter]);
+
+    const saveReorder = (newItems: CategoryItem[]) => {
+        setIsReordering(true);
+        const ids = newItems.map((c) => String(c.id));
+        router.post('/master-data/categories/reorder', { ids }, {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                toast.success('Urutan kategori berhasil disimpan!');
+            },
+            onError: () => {
+                toast.error('Gagal menyimpan urutan kategori');
+                setItems(categories.data || []);
+            },
+            onFinish: () => {
+                setIsReordering(false);
+            },
+        });
+    };
+
+    const handleDragStart = (e: React.DragEvent, index: number) => {
+        if (!isReorderEnabled) return;
+        setDraggedIndex(index);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(index));
+    };
+
+    const handleDragOver = (e: React.DragEvent, index: number) => {
+        if (!isReorderEnabled || draggedIndex === null) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (dragOverIndex !== index) {
+            setDragOverIndex(index);
+        }
+    };
+
+    const handleDragEnd = () => {
+        setDraggedIndex(null);
+        setDragOverIndex(null);
+    };
+
+    const handleDrop = (e: React.DragEvent, targetIndex: number) => {
+        if (!isReorderEnabled) return;
+        e.preventDefault();
+        if (draggedIndex === null || draggedIndex === targetIndex) {
+            setDraggedIndex(null);
+            setDragOverIndex(null);
+            return;
+        }
+
+        const newItems = [...items];
+        const [moved] = newItems.splice(draggedIndex, 1);
+        newItems.splice(targetIndex, 0, moved);
+
+        setItems(newItems);
+        setDraggedIndex(null);
+        setDragOverIndex(null);
+        saveReorder(newItems);
+    };
+
+    const handleMoveUp = (index: number) => {
+        if (index <= 0 || !isReorderEnabled || isReordering) return;
+        const newItems = [...items];
+        const temp = newItems[index];
+        newItems[index] = newItems[index - 1];
+        newItems[index - 1] = temp;
+
+        setItems(newItems);
+        saveReorder(newItems);
+    };
+
+    const handleMoveDown = (index: number) => {
+        if (index >= items.length - 1 || !isReorderEnabled || isReordering) return;
+        const newItems = [...items];
+        const temp = newItems[index];
+        newItems[index] = newItems[index + 1];
+        newItems[index + 1] = temp;
+
+        setItems(newItems);
+        saveReorder(newItems);
+    };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -451,6 +546,17 @@ export default function CategoriesIndex({
                         </div>
                     </form>
 
+                    {isReorderEnabled ? (
+                        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50/80 border border-indigo-100 rounded-xl text-[11px] font-semibold text-indigo-700 shadow-2xs">
+                            <GripVertical className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                            <span>Tahan &amp; geser baris atau gunakan tombol (↑↓) untuk atur urutan</span>
+                        </div>
+                    ) : (
+                        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-amber-50/80 border border-amber-200 rounded-xl text-[11px] font-semibold text-amber-700 shadow-2xs">
+                            <span>Fitur urutkan aktif saat menampilkan semua data (tanpa filter/pencarian)</span>
+                        </div>
+                    )}
+
                     <button
                         type="button"
                         onClick={handleExport}
@@ -466,7 +572,14 @@ export default function CategoriesIndex({
                     <table className="w-full text-left text-xs border-collapse">
                         <thead>
                             <tr className="border-b border-slate-200/80 bg-slate-50/70 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                                <th className="py-3 px-4 w-12 text-center">#</th>
+                                <th className="py-3 px-3 w-24 text-center">
+                                    <div className="flex items-center justify-center gap-1.5">
+                                        <span>Urutan</span>
+                                        {isReordering && (
+                                            <Loader2 className="w-3.5 h-3.5 text-indigo-600 animate-spin" />
+                                        )}
+                                    </div>
+                                </th>
                                 <th className="py-3 px-4">Kategori</th>
                                 <th className="py-3 px-4">Alur Workflow</th>
                                 <th className="py-3 px-4">Tipe Input Form</th>
@@ -485,9 +598,61 @@ export default function CategoriesIndex({
                                     const isActive = cat.status === 'active';
 
                                     return (
-                                        <tr key={cat.id} className="hover:bg-slate-50/60 transition-colors">
-                                            <td className="py-3.5 px-5 font-bold text-slate-400">
-                                                {((categories.current_page || 1) - 1) * 10 + idx + 1}
+                                        <tr
+                                            key={cat.id}
+                                            onDragOver={(e) => handleDragOver(e, idx)}
+                                            onDrop={(e) => handleDrop(e, idx)}
+                                            onDragEnd={handleDragEnd}
+                                            className={`transition-all duration-150 ${
+                                                draggedIndex === idx
+                                                    ? 'opacity-40 bg-indigo-50/80 border-dashed border-2 border-indigo-400 select-none'
+                                                    : dragOverIndex === idx
+                                                    ? 'bg-indigo-50/40 border-t-2 border-indigo-600'
+                                                    : 'hover:bg-slate-50/60'
+                                            }`}
+                                        >
+                                            <td className="py-3.5 px-3 text-center">
+                                                <div className="flex items-center justify-center gap-1.5">
+                                                    {isReorderEnabled ? (
+                                                        <div
+                                                            draggable
+                                                            onDragStart={(e) => handleDragStart(e, idx)}
+                                                            className="cursor-grab active:cursor-grabbing p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors touch-none"
+                                                            title="Tahan &amp; geser untuk mengubah urutan"
+                                                        >
+                                                            <GripVertical className="w-4 h-4" />
+                                                        </div>
+                                                    ) : (
+                                                        <span className="p-1 text-slate-300" title="Urutan hanya dapat diubah saat menampilkan semua data">
+                                                            <GripVertical className="w-4 h-4 opacity-30" />
+                                                        </span>
+                                                    )}
+                                                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-slate-100 font-extrabold text-slate-700 text-xs shadow-2xs">
+                                                        {idx + 1}
+                                                    </span>
+                                                    {isReorderEnabled && (
+                                                        <div className="flex flex-col -space-y-0.5 ml-0.5">
+                                                            <button
+                                                                type="button"
+                                                                disabled={idx === 0 || isReordering}
+                                                                onClick={() => handleMoveUp(idx)}
+                                                                className="p-0.5 text-slate-400 hover:text-indigo-600 disabled:opacity-20 disabled:hover:text-slate-400 rounded cursor-pointer transition-colors"
+                                                                title="Pindah ke atas"
+                                                            >
+                                                                <ArrowUp className="w-3 h-3" />
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                disabled={idx === items.length - 1 || isReordering}
+                                                                onClick={() => handleMoveDown(idx)}
+                                                                className="p-0.5 text-slate-400 hover:text-indigo-600 disabled:opacity-20 disabled:hover:text-slate-400 rounded cursor-pointer transition-colors"
+                                                                title="Pindah ke bawah"
+                                                            >
+                                                                <ArrowDown className="w-3 h-3" />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </td>
 
                                             <td className="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">
@@ -593,7 +758,7 @@ export default function CategoriesIndex({
                                 })
                             ) : (
                                 <tr>
-                                    <td colSpan={8} className="py-12 text-center text-slate-400">
+                                    <td colSpan={9} className="py-12 text-center text-slate-400">
                                         <Folder className="w-8 h-8 text-slate-300 mx-auto mb-2" />
                                         <p className="text-xs font-semibold text-slate-600">Tidak ada kategori yang sesuai.</p>
                                     </td>

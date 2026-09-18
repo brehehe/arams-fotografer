@@ -405,10 +405,11 @@ export default function ClientsIndex({
     };
 
     // Create / Edit Form State
+    const firstCat = categories?.[0];
     const initialFormData = {
         name: '',
-        client_type: 'wedding',
-        category_id: '',
+        client_type: firstCat?.slug || 'standard',
+        category_id: firstCat?.id ? String(firstCat.id) : '',
         primary_contact: 'cpw',
         partner_name: '',
         bride_name: '',
@@ -705,9 +706,9 @@ export default function ClientsIndex({
                 (c: any) => String(c.id) === String(formData.category_id) || c.slug === formData.client_type || c.slug === formData.category_id
             ) ||
             categories[0] || {
-                id: 'wedding',
-                name: 'Wedding',
-                form_type: 'wedding',
+                id: '',
+                name: 'Kategori',
+                form_type: 'standard',
             }
         );
     }, [categories, formData.category_id, formData.client_type]);
@@ -925,12 +926,12 @@ export default function ClientsIndex({
     };
 
     const handleOpenCreateModal = () => {
-        const defaultCat = categories?.find((c: any) => c.slug === 'wedding' || c.name?.toLowerCase().includes('wedding')) || categories?.[0];
+        const defaultCat = categories?.[0];
         setFormData({
             ...initialFormData,
             category_id: defaultCat ? String(defaultCat.id) : '',
-            client_type: defaultCat?.slug || 'wedding',
-            event_type: defaultCat?.name || 'Pernikahan',
+            client_type: defaultCat?.slug || 'standard',
+            event_type: defaultCat?.name || 'Dokumentasi',
         });
         setCategoryData({});
         setCreateCurrentStep(1);

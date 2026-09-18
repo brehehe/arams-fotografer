@@ -28,6 +28,7 @@ class ClientIntakeController extends Controller
         $categories = Category::where('status', 'active')
             ->select('id', 'name', 'slug', 'description', 'color', 'form_type', 'image')
             ->orderBy('sort_order')
+            ->orderBy('name')
             ->get();
 
         $packages = Package::where('status', 'active')

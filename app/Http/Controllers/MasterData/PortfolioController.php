@@ -67,16 +67,35 @@ class PortfolioController extends Controller
             'image_url' => 'nullable|string|max:1000',
             'image_file' => 'nullable|image|max:10240', // max 10MB
             'media_type' => 'nullable|string|in:photo,video',
+            'video_url' => 'nullable|string|max:1000',
             'is_active' => 'boolean',
             'sort_order' => 'nullable|integer',
         ]);
 
+        $mediaType = $validated['media_type'] ?? 'photo';
+        $videoUrl = $validated['video_url'] ?? null;
         $imagePath = $request->input('image_url');
+
         if ($request->hasFile('image_file')) {
             $imagePath = $this->uploadAsWebp($request->file('image_file'), 'portfolios', 85, 1920, 1920);
         }
 
+        // If video_url is provided, automatically set media_type to 'video' if not specified
+        if (!empty($videoUrl)) {
+            $mediaType = 'video';
+            // Auto-fetch high-quality YouTube thumbnail if no custom cover was uploaded/specified
+            if (empty($imagePath)) {
+                $ytId = Portfolio::extractYoutubeId($videoUrl);
+                if ($ytId) {
+                    $imagePath = "https://img.youtube.com/vi/{$ytId}/hqdefault.jpg";
+                }
+            }
+        }
+
         if (empty($imagePath)) {
+            if ($mediaType === 'video') {
+                return redirect()->back()->withErrors(['video_url' => 'Wajib memasukkan link YouTube yang valid atau mengunggah cover video.']);
+            }
             return redirect()->back()->withErrors(['image_file' => 'Wajib mengunggah foto atau memasukkan URL gambar karya portofolio.']);
         }
 
@@ -85,7 +104,8 @@ class PortfolioController extends Controller
             'title' => $validated['title'],
             'caption' => $validated['caption'] ?? '',
             'image_url' => $imagePath,
-            'media_type' => $validated['media_type'] ?? 'photo',
+            'media_type' => $mediaType,
+            'video_url' => $videoUrl,
             'is_active' => $request->boolean('is_active', true),
             'sort_order' => (int) ($validated['sort_order'] ?? 0),
             'likes_count' => rand(80, 260),
@@ -104,15 +124,29 @@ class PortfolioController extends Controller
             'image_url' => 'nullable|string|max:1000',
             'image_file' => 'nullable|image|max:10240',
             'media_type' => 'nullable|string|in:photo,video',
+            'video_url' => 'nullable|string|max:1000',
             'is_active' => 'boolean',
             'sort_order' => 'nullable|integer',
         ]);
+
+        $mediaType = $validated['media_type'] ?? $portfolio->media_type;
+        $videoUrl = $request->has('video_url') ? $validated['video_url'] : $portfolio->video_url;
+
+        if (!empty($videoUrl)) {
+            $mediaType = 'video';
+        }
 
         $imagePath = $portfolio->image_url;
         if ($request->hasFile('image_file')) {
             $imagePath = $this->uploadAsWebp($request->file('image_file'), 'portfolios', 85, 1920, 1920, $portfolio->image_url);
         } elseif (!empty($request->input('image_url'))) {
             $imagePath = $request->input('image_url');
+        } elseif ($mediaType === 'video' && !empty($videoUrl) && (empty($imagePath) || str_contains($imagePath, 'img.youtube.com'))) {
+            // Update YouTube thumbnail if video URL changed
+            $ytId = Portfolio::extractYoutubeId($videoUrl);
+            if ($ytId) {
+                $imagePath = "https://img.youtube.com/vi/{$ytId}/hqdefault.jpg";
+            }
         }
 
         $portfolio->update([
@@ -120,7 +154,8 @@ class PortfolioController extends Controller
             'title' => $validated['title'],
             'caption' => $validated['caption'] ?? '',
             'image_url' => $imagePath,
-            'media_type' => $validated['media_type'] ?? $portfolio->media_type,
+            'media_type' => $mediaType,
+            'video_url' => $videoUrl,
             'is_active' => $request->has('is_active') ? $request->boolean('is_active') : $portfolio->is_active,
             'sort_order' => (int) ($validated['sort_order'] ?? $portfolio->sort_order),
         ]);

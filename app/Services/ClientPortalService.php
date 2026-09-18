@@ -215,6 +215,8 @@ class ClientPortalService
                     'likes' => (int) $p->likes_count,
                     'comments' => (int) $p->comments_count,
                     'type' => $p->media_type ?: 'photo',
+                    'video_url' => $p->video_url,
+                    'youtube_id' => $p->youtube_id,
                 ];
             });
 
@@ -1178,6 +1180,8 @@ class ClientPortalService
                     'comments' => (int) $p->comments_count,
                     'post_url' => null,
                     'type' => $p->media_type ?: 'photo',
+                    'video_url' => $p->video_url,
+                    'youtube_id' => $p->youtube_id,
                     'is_cover' => false,
                 ];
             });

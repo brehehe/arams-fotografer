@@ -9,6 +9,7 @@ use App\Models\Category;
 use App\Traits\HasWebpUpload;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -26,8 +27,8 @@ class CategoryController extends Controller
                 ->orWhere('description', 'ilike', "%{$search}%");
         }
 
-        $perPage = (int) $request->input('per_page', 10);
-        $categories = $query->orderBy('sort_order')->paginate($perPage)->withQueryString();
+        $perPage = (int) $request->input('per_page', 50);
+        $categories = $query->orderBy('sort_order')->orderBy('name')->paginate($perPage)->withQueryString();
 
         $stats = [
             'total'            => Category::count(),
@@ -104,5 +105,26 @@ class CategoryController extends Controller
         $category->delete();
 
         return redirect()->back()->with('success', 'Kategori berhasil dihapus.');
+    }
+
+    public function reorder(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids'   => ['required', 'array'],
+            'ids.*' => ['required', 'uuid', 'exists:categories,id'],
+        ]);
+
+        DB::transaction(function () use ($validated) {
+            foreach ($validated['ids'] as $index => $id) {
+                Category::where('id', $id)->update(['sort_order' => $index + 1]);
+            }
+        });
+
+        activity()
+            ->causedBy($request->user())
+            ->event('reordered')
+            ->log('Urutan kategori project diperbarui');
+
+        return redirect()->back()->with('success', 'Urutan kategori project berhasil diperbarui.');
     }
 }

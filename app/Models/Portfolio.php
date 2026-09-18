@@ -19,6 +19,7 @@ class Portfolio extends Model
         'caption',
         'image_url',
         'media_type',
+        'video_url',
         'is_active',
         'sort_order',
         'likes_count',
@@ -30,6 +31,11 @@ class Portfolio extends Model
         'sort_order' => 'integer',
         'likes_count' => 'integer',
         'comments_count' => 'integer',
+    ];
+
+    protected $appends = [
+        'youtube_id',
+        'youtube_embed_url',
     ];
 
     public function category(): BelongsTo
@@ -45,5 +51,44 @@ class Portfolio extends Model
     public function scopeWithImage(Builder $query): Builder
     {
         return $query->whereNotNull('image_url')->where('image_url', '!=', '');
+    }
+
+    /**
+     * Extract 11-character YouTube video ID from various URL formats.
+     */
+    public static function extractYoutubeId(?string $url): ?string
+    {
+        if (empty($url)) {
+            return null;
+        }
+
+        // Match watch?v=, youtu.be/, embed/, shorts/, etc.
+        if (preg_match('/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|youtube\.com\/shorts\/)([^"&?\/\s]{11})/i', $url, $matches)) {
+            return $matches[1];
+        }
+
+        // If string is directly the 11-char ID
+        if (preg_match('/^[a-zA-Z0-9_-]{11}$/', trim($url))) {
+            return trim($url);
+        }
+
+        return null;
+    }
+
+    public function getYoutubeIdAttribute(): ?string
+    {
+        return self::extractYoutubeId($this->video_url);
+    }
+
+    public function getYoutubeEmbedUrlAttribute(): ?string
+    {
+        $id = $this->youtube_id;
+        return $id ? "https://www.youtube-nocookie.com/embed/{$id}" : null;
+    }
+
+    public function getYoutubeThumbnailUrlAttribute(): ?string
+    {
+        $id = $this->youtube_id;
+        return $id ? "https://img.youtube.com/vi/{$id}/hqdefault.jpg" : null;
     }
 }

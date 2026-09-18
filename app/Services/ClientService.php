@@ -75,6 +75,7 @@ class ClientService
         $categories = \App\Models\Category::where('status', 'active')
             ->select('id', 'name', 'slug', 'description', 'color', 'form_type')
             ->orderBy('sort_order')
+            ->orderBy('name')
             ->get();
         $packages = \App\Models\Package::where('status', 'active')->select('id', 'name', 'category_id', 'base_price', 'duration_hours', 'description')->get();
         $weddingOrganizers = \App\Models\WeddingOrganizer::whereIn('status', ['partner', 'active'])

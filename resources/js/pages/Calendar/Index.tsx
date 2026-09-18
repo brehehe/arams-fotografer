@@ -424,7 +424,7 @@ export default function CalendarIndex({
             {/* ── 1. PAGE HEADER ── */}
             <div>
                 <h1 className="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">
-                    Calendar / Schedule
+                    Jadwal & Sesi
                 </h1>
                 <p className="text-slate-500 text-xs sm:text-sm mt-1">
                     Kelola dan lihat semua jadwal kegiatan, meeting, deadline, dan event penting.

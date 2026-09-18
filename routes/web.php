@@ -132,6 +132,7 @@ Route::middleware(['auth'])->group(function () {
 
     // 4. Master Data
     Route::prefix('master-data')->name('master-data.')->group(function () {
+        Route::post('categories/reorder', [CategoryController::class, 'reorder'])->name('categories.reorder');
         Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
         Route::resource('services', ServiceController::class)->except(['create', 'edit', 'show']);
         Route::resource('packages', PackageController::class)->except(['create', 'edit', 'show']);

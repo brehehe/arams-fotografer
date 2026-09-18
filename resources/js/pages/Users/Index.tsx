@@ -528,7 +528,7 @@ export default function UsersIndex({
                                 </li>
                                 <li className="flex items-center gap-2.5">
                                     <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
-                                    <span>Kelola calendar / schedule</span>
+                                    <span>Kelola Jadwal & Sesi</span>
                                 </li>
                                 <li className="flex items-center gap-2.5">
                                     <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
@@ -615,8 +615,8 @@ export default function UsersIndex({
                                 {formData.role &&
                                     formData.role.toLowerCase() !== 'client' &&
                                     !roles.some((r) => r.name.toLowerCase() === formData.role.toLowerCase()) && (
-                                    <option value={formData.role}>{formData.role}</option>
-                                )}
+                                        <option value={formData.role}>{formData.role}</option>
+                                    )}
                             </select>
                         </div>
 

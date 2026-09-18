@@ -50,16 +50,16 @@ export default function AramsSidebar({ isOpen = true, onClose }: AramsSidebarPro
 
     const isCurrent = (path: string) => {
         if (path === '/dashboard') {
-return currentPath === '/dashboard' || currentPath === '/';
-}
+            return currentPath === '/dashboard' || currentPath === '/';
+        }
 
         if (path === '/wedding-organizer') {
-return currentPath.startsWith('/wedding-organizer') || currentPath.startsWith('/wedding-organizers') || currentPath.startsWith('/weeding-organizer');
-}
+            return currentPath.startsWith('/wedding-organizer') || currentPath.startsWith('/wedding-organizers') || currentPath.startsWith('/weeding-organizer');
+        }
 
         if (path === '/client-sources') {
-return currentPath.startsWith('/client-sources') || currentPath.startsWith('/sumber-klien');
-}
+            return currentPath.startsWith('/client-sources') || currentPath.startsWith('/sumber-klien');
+        }
 
         return currentPath === path || currentPath.startsWith(path + '/');
     };
@@ -106,7 +106,7 @@ return currentPath.startsWith('/client-sources') || currentPath.startsWith('/sum
         { name: 'Clients', href: '/clients', icon: Users, show: canAccessClients },
         { name: 'Projects & Orders', href: '/projects', icon: Briefcase, show: true },
         { name: 'Finance', href: '/finance', icon: DollarSign, show: canAccessFinance },
-        { name: 'Calendar / Schedule', href: '/calendar', icon: Calendar, show: true },
+        { name: 'Jadwal & Sesi', href: '/calendar', icon: Calendar, show: true },
     ].filter((item) => item.show !== false);
 
     const masterDataNav = [

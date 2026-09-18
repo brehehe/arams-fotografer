@@ -266,10 +266,28 @@ export default function ClientIntakeForm({
         });
     };
 
+    const getInitialCategoryId = () => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const queryCatId = params.get('category_id') || params.get('category');
+            if (queryCatId) {
+                const found = categories.find((c) => String(c.id) === String(queryCatId) || c.slug === queryCatId);
+                if (found) return String(found.id);
+            }
+        }
+        return categories[0]?.id ? String(categories[0].id) : '';
+    };
+
+    const initialCatId = getInitialCategoryId();
+    const initialCat = categories.find((c) => String(c.id) === String(initialCatId)) || categories[0] || null;
+    const initialCatPackages = initialCat
+        ? packages.filter((p) => String(p.category_id) === String(initialCat.id))
+        : [];
+
     // Form Data State matching 4 steps
     const [formData, setFormData] = useState({
         // DATA KATEGORI PROYEK (Langkah Awal)
-        category_id: categories.find((c) => c.slug === 'wedding' || c.name.toLowerCase().includes('wedding'))?.id || categories[0]?.id || '',
+        category_id: initialCatId,
 
         // STEP 1: Identitas Klien / Data Diri
         // 1.1 Data Diri Umum / Standar
@@ -329,8 +347,8 @@ export default function ClientIntakeForm({
         other_social_media: '',
 
         // STEP 3: Informasi Acara/Project & Informasi Tambahan
-        event_type: 'Pernikahan',
-        package_id: packages[0]?.id || '',
+        event_type: initialCat?.name || 'Dokumentasi',
+        package_id: initialCatPackages[0]?.id || packages[0]?.id || '',
         event_date: '',
         event_time: '',
         location: '',
@@ -456,9 +474,9 @@ export default function ClientIntakeForm({
         return (
             categories.find((c) => String(c.id) === String(formData.category_id) || c.slug === formData.category_id) ||
             categories[0] || {
-                id: 'wedding',
-                name: 'Wedding',
-                form_type: 'wedding',
+                id: '',
+                name: 'Kategori',
+                form_type: 'standard',
             }
         );
     }, [categories, formData.category_id]);

@@ -352,7 +352,7 @@ export default function ClientDetail({
     const [editFormData, setEditFormData] = useState({
         category_id: (client.category_id ? String(client.category_id) : '') || categories[0]?.id || '',
         name: client.name || '',
-        client_type: client.client_type || 'wedding',
+        client_type: client.client_type || categories[0]?.slug || 'standard',
         partner_name: client.partner_name || '',
         bride_name: client.bride_name || '',
         bride_nickname: client.bride_nickname || '',
@@ -657,7 +657,7 @@ export default function ClientDetail({
         return (categories || []).find((c) => String(c.id) === String(editFormData.category_id)) ||
                (categories || []).find((c) => c.slug === editFormData.client_type || c.name.toLowerCase() === (editFormData.client_type || '').toLowerCase()) ||
                categories[0] ||
-               { name: 'Wedding', form_type: 'wedding' };
+               { name: 'Kategori', form_type: 'standard' };
     }, [categories, editFormData.category_id, editFormData.client_type]);
 
     const editActiveCategoryKey: CategoryFormKey = useMemo(() => {
@@ -1701,7 +1701,7 @@ export default function ClientDetail({
         setEditFormData({
             category_id: (client.category_id ? String(client.category_id) : '') || activeCat?.id || categories[0]?.id || '',
             name: client.name || '',
-            client_type: client.client_type || activeCat?.slug || 'wedding',
+            client_type: client.client_type || activeCat?.slug || categories[0]?.slug || 'standard',
             partner_name: client.partner_name || '',
             bride_name: client.bride_name || '',
             bride_nickname: client.bride_nickname || '',

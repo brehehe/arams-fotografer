@@ -20,6 +20,8 @@ import {
     FolderKanban,
     ArrowRight,
     Check,
+    Play,
+    Video,
 } from 'lucide-react';
 
 interface PortfolioItem {
@@ -32,12 +34,22 @@ interface PortfolioItem {
     comments?: number;
     post_url?: string | null;
     type?: string;
+    video_url?: string | null;
+    youtube_id?: string | null;
     category?: string;
     category_slug?: string;
     category_id?: string;
     project_id?: string;
     is_cover?: boolean;
 }
+
+export const extractYoutubeId = (url?: string | null): string | null => {
+    if (!url) return null;
+    const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|youtube\.com\/shorts\/)([^"&?\/\s]{11})/i);
+    if (match) return match[1];
+    if (/^[a-zA-Z0-9_-]{11}$/.test(url.trim())) return url.trim();
+    return null;
+};
 
 interface ClientPortfolioCategory {
     id: string;
@@ -452,6 +464,7 @@ export default function ClientPortfolio({
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
                         {filteredItems.map((item, idx) => {
                             const imgSrc = item.image || item.image_url || '/images/wedding-couple.jpg';
+                            const isVideo = item.type === 'video' || Boolean(item.video_url);
 
                             return (
                                 <div
@@ -471,22 +484,37 @@ export default function ClientPortfolio({
                                             className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500 ease-out"
                                         />
 
+                                        {/* Centered Play Button Overlay for Videos */}
+                                        {isVideo && (
+                                            <div className="absolute inset-0 m-auto w-12 h-12 rounded-full bg-black/55 backdrop-blur-md text-white border border-white/30 flex items-center justify-center shadow-xl group-hover:scale-115 group-hover:bg-rose-600 group-hover:border-rose-400 transition-all duration-300 z-10">
+                                                <Play className="w-5 h-5 fill-current ml-0.5" />
+                                            </div>
+                                        )}
+
                                         {/* Hover Overlay with Action Icon */}
                                         <div className="absolute inset-0 bg-gradient-to-t from-[#3C0E0E]/80 via-[#3C0E0E]/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-between p-3.5 text-white">
                                             <div className="flex justify-end">
                                                 <div className="w-8 h-8 rounded-full bg-white/25 backdrop-blur-xs flex items-center justify-center text-white">
-                                                    <Eye className="w-4 h-4" />
+                                                    {isVideo ? <Play className="w-4 h-4 fill-current ml-0.5" /> : <Eye className="w-4 h-4" />}
                                                 </div>
                                             </div>
 
                                             <div className="space-y-1">
-                                                {item.category && (
-                                                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-white/20 backdrop-blur-xs inline-block">
-                                                        {item.category}
-                                                    </span>
-                                                )}
+                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                    {item.category && (
+                                                        <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-white/20 backdrop-blur-xs inline-block">
+                                                            {item.category}
+                                                        </span>
+                                                    )}
+                                                    {isVideo && (
+                                                        <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-rose-600 text-white inline-flex items-center gap-1">
+                                                            <Play className="w-2 h-2 fill-current" />
+                                                            Video
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <p className="text-xs font-bold leading-snug line-clamp-2 drop-shadow-xs">
-                                                    {item.title || item.caption || 'Lihat Foto'}
+                                                    {item.title || item.caption || (isVideo ? 'Tonton Video' : 'Lihat Foto')}
                                                 </p>
                                             </div>
                                         </div>
@@ -501,14 +529,22 @@ export default function ClientPortfolio({
                                             >
                                                 {item.title || 'Dokumentasi Arams Pictures'}
                                             </h4>
-                                            {item.category && (
-                                                <span className="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-[#F4EBE4] text-[#3C0E0E] shrink-0">
-                                                    {item.category}
-                                                </span>
-                                            )}
+                                            <div className="flex items-center gap-1 shrink-0">
+                                                {isVideo && (
+                                                    <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-700 flex items-center gap-0.5">
+                                                        <Play className="w-2 h-2 fill-current" />
+                                                        Video
+                                                    </span>
+                                                )}
+                                                {item.category && (
+                                                    <span className="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-[#F4EBE4] text-[#3C0E0E]">
+                                                        {item.category}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                         <p className="text-[11px] text-slate-500 line-clamp-1 leading-relaxed">
-                                            {item.caption || 'Karya dokumentasi visual elegan dan berkesan.'}
+                                            {item.caption || (isVideo ? 'Highlight sinematik karya Arams Pictures.' : 'Karya dokumentasi visual elegan dan berkesan.')}
                                         </p>
                                     </div>
                                 </div>
@@ -517,124 +553,174 @@ export default function ClientPortfolio({
                     </div>
                 )}
 
-                {/* ── 4. LIGHTBOX IMAGE VIEWER MODAL (FIT SCREEN - NO SCROLL) ──── */}
-                {lightboxIndex !== null && currentLightboxItem && (
-                    <div 
-                        className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col justify-between animate-in fade-in duration-200 select-none overflow-hidden"
-                        onClick={closeLightbox}
-                    >
-                        {/* Top Lightbox Toolbar */}
-                        <div 
-                            className="flex items-center justify-between px-4 sm:px-6 py-3 bg-black/60 text-white border-b border-white/10 z-20 shrink-0"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <div className="flex items-center gap-3 min-w-0">
-                                <span className="text-xs font-bold tracking-wider uppercase text-white/75">
-                                    Foto {lightboxIndex + 1} dari {filteredItems.length}
-                                </span>
-                                {currentLightboxItem.category && (
-                                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-white/15 text-white">
-                                        {currentLightboxItem.category}
-                                    </span>
-                                )}
-                            </div>
+                {/* ── 4. LIGHTBOX IMAGE & VIDEO VIEWER MODAL ──── */}
+                {lightboxIndex !== null && currentLightboxItem && (() => {
+                    const isVideo = currentLightboxItem.type === 'video' || Boolean(currentLightboxItem.video_url);
+                    const ytId = currentLightboxItem.youtube_id || extractYoutubeId(currentLightboxItem.video_url);
+                    const ytWatchUrl = currentLightboxItem.video_url || (ytId ? `https://www.youtube.com/watch?v=${ytId}` : null);
 
-                            <div className="flex items-center gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setZoomLevel((z) => (z === 1 ? 1.5 : 1))}
-                                    className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
-                                    title={zoomLevel === 1 ? 'Perbesar (Zoom In)' : 'Perkecil (Zoom Out)'}
-                                >
-                                    {zoomLevel === 1 ? <ZoomIn className="w-4 h-4" /> : <ZoomOut className="w-4 h-4" />}
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={closeLightbox}
-                                    className="p-2 rounded-lg bg-white/10 hover:bg-rose-600 text-white transition-colors cursor-pointer"
-                                    title="Tutup (Esc)"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Center Image Container with Navigation Arrows */}
+                    return (
                         <div 
-                            className="relative flex-1 min-h-0 w-full flex items-center justify-center px-2 sm:px-14 py-2 overflow-hidden"
+                            className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col justify-between animate-in fade-in duration-200 select-none overflow-hidden"
                             onClick={closeLightbox}
                         >
-                            {/* Prev Arrow */}
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    prevImage();
-                                }}
-                                className="absolute left-3 sm:left-6 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/40 hover:bg-white/30 text-white backdrop-blur-xs flex items-center justify-center transition-all cursor-pointer shadow-lg border border-white/10"
-                                title="Foto Sebelumnya (Panah Kiri)"
-                            >
-                                <ChevronLeft className="w-6 h-6" />
-                            </button>
-
-                            {/* Main Active Image - Fitted to 100% available container height & width without scrolling */}
+                            {/* Top Lightbox Toolbar */}
                             <div 
-                                className="w-full h-full flex items-center justify-center overflow-hidden p-1 sm:p-2"
+                                className="flex items-center justify-between px-4 sm:px-6 py-3 bg-black/60 text-white border-b border-white/10 z-20 shrink-0"
                                 onClick={(e) => e.stopPropagation()}
                             >
-                                <img
-                                    src={currentLightboxItem.image || currentLightboxItem.image_url || '/images/wedding-couple.jpg'}
-                                    alt={currentLightboxItem.title || 'Foto Portofolio'}
-                                    style={{ transform: `scale(${zoomLevel})` }}
-                                    className="max-h-full max-w-full w-auto h-auto object-contain rounded-lg shadow-2xl transition-transform duration-300 cursor-zoom-in select-none"
-                                    onClick={() => setZoomLevel((z) => (z === 1 ? 1.5 : 1))}
-                                />
-                            </div>
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <span className="text-xs font-bold tracking-wider uppercase text-white/75">
+                                        {isVideo ? 'Video' : 'Foto'} {lightboxIndex + 1} dari {filteredItems.length}
+                                    </span>
+                                    {currentLightboxItem.category && (
+                                        <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-white/15 text-white">
+                                            {currentLightboxItem.category}
+                                        </span>
+                                    )}
+                                    {isVideo && (
+                                        <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-rose-600 text-white flex items-center gap-1">
+                                            <Play className="w-2.5 h-2.5 fill-current" />
+                                            YouTube Video
+                                        </span>
+                                    )}
+                                </div>
 
-                            {/* Next Arrow */}
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    nextImage();
-                                }}
-                                className="absolute right-3 sm:right-6 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/40 hover:bg-white/30 text-white backdrop-blur-xs flex items-center justify-center transition-all cursor-pointer shadow-lg border border-white/10"
-                                title="Foto Selanjutnya (Panah Kanan)"
-                            >
-                                <ChevronRight className="w-6 h-6" />
-                            </button>
-                        </div>
-
-                        {/* Bottom Caption & Instagram Link */}
-                        <div 
-                            className="p-3 sm:p-4 bg-black/60 text-white border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left z-20 shrink-0"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <div className="space-y-0.5 max-w-2xl min-w-0">
-                                <h4 className="text-sm font-bold text-white truncate">
-                                    {currentLightboxItem.title || 'Dokumentasi Arams Pictures'}
-                                </h4>
-                                <p className="text-xs text-white/80 line-clamp-1 sm:line-clamp-2">
-                                    {currentLightboxItem.caption || 'Karya dokumentasi visual eksklusif dan abadi.'}
-                                </p>
-                            </div>
-
-                            <div className="flex items-center gap-2 shrink-0">
-                                {currentLightboxItem.post_url && (
-                                    <a
-                                        href={currentLightboxItem.post_url}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-colors"
+                                <div className="flex items-center gap-2">
+                                    {!isVideo && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setZoomLevel((z) => (z === 1 ? 1.5 : 1))}
+                                            className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+                                            title={zoomLevel === 1 ? 'Perbesar (Zoom In)' : 'Perkecil (Zoom Out)'}
+                                        >
+                                            {zoomLevel === 1 ? <ZoomIn className="w-4 h-4" /> : <ZoomOut className="w-4 h-4" />}
+                                        </button>
+                                    )}
+                                    {ytWatchUrl && (
+                                        <a
+                                            href={ytWatchUrl}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors cursor-pointer"
+                                        >
+                                            <Play className="w-3 h-3 fill-current" />
+                                            <span className="hidden sm:inline">Tonton di YouTube</span>
+                                            <span className="sm:hidden">YouTube</span>
+                                            <ExternalLink className="w-3 h-3" />
+                                        </a>
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={closeLightbox}
+                                        className="p-2 rounded-lg bg-white/10 hover:bg-rose-600 text-white transition-colors cursor-pointer"
+                                        title="Tutup (Esc)"
                                     >
-                                        <Instagram className="w-3.5 h-3.5" />
-                                        <span>Lihat di Instagram</span>
-                                    </a>
-                                )}
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Center Container with Navigation Arrows */}
+                            <div 
+                                className="relative flex-1 min-h-0 w-full flex items-center justify-center px-2 sm:px-14 py-2 overflow-hidden"
+                                onClick={closeLightbox}
+                            >
+                                {/* Prev Arrow */}
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        prevImage();
+                                    }}
+                                    className="absolute left-3 sm:left-6 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/40 hover:bg-white/30 text-white backdrop-blur-xs flex items-center justify-center transition-all cursor-pointer shadow-lg border border-white/10"
+                                    title="Sebelumnya (Panah Kiri)"
+                                >
+                                    <ChevronLeft className="w-6 h-6" />
+                                </button>
+
+                                {/* Main Active Media */}
+                                <div 
+                                    className="w-full h-full flex items-center justify-center overflow-hidden p-1 sm:p-2"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    {isVideo && ytId ? (
+                                        <div className="w-full max-w-4xl aspect-video rounded-2xl overflow-hidden shadow-2xl bg-black border border-white/10">
+                                            <iframe
+                                                src={`https://www.youtube-nocookie.com/embed/${ytId}?autoplay=1`}
+                                                title={currentLightboxItem.title || 'Video Portofolio Arams Pictures'}
+                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                allowFullScreen
+                                                className="w-full h-full border-0"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <img
+                                            src={currentLightboxItem.image || currentLightboxItem.image_url || '/images/wedding-couple.jpg'}
+                                            alt={currentLightboxItem.title || 'Foto Portofolio'}
+                                            style={{ transform: `scale(${zoomLevel})` }}
+                                            className="max-h-full max-w-full w-auto h-auto object-contain rounded-lg shadow-2xl transition-transform duration-300 cursor-zoom-in select-none"
+                                            onClick={() => setZoomLevel((z) => (z === 1 ? 1.5 : 1))}
+                                        />
+                                    )}
+                                </div>
+
+                                {/* Next Arrow */}
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        nextImage();
+                                    }}
+                                    className="absolute right-3 sm:right-6 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/40 hover:bg-white/30 text-white backdrop-blur-xs flex items-center justify-center transition-all cursor-pointer shadow-lg border border-white/10"
+                                    title="Selanjutnya (Panah Kanan)"
+                                >
+                                    <ChevronRight className="w-6 h-6" />
+                                </button>
+                            </div>
+
+                            {/* Bottom Caption & External Links */}
+                            <div 
+                                className="p-3 sm:p-4 bg-black/60 text-white border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left z-20 shrink-0"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className="space-y-0.5 max-w-2xl min-w-0">
+                                    <h4 className="text-sm font-bold text-white truncate">
+                                        {currentLightboxItem.title || 'Dokumentasi Arams Pictures'}
+                                    </h4>
+                                    <p className="text-xs text-white/80 line-clamp-1 sm:line-clamp-2">
+                                        {currentLightboxItem.caption || (isVideo ? 'Karya video sinematik eksklusif dan abadi.' : 'Karya dokumentasi visual eksklusif dan abadi.')}
+                                    </p>
+                                </div>
+
+                                <div className="flex items-center gap-2 shrink-0">
+                                    {currentLightboxItem.post_url && (
+                                        <a
+                                            href={currentLightboxItem.post_url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-colors"
+                                        >
+                                            <Instagram className="w-3.5 h-3.5" />
+                                            <span>Lihat di Instagram</span>
+                                        </a>
+                                    )}
+                                    {ytWatchUrl && (
+                                        <a
+                                            href={ytWatchUrl}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-rose-600/90 hover:bg-rose-600 text-white text-xs font-bold transition-colors"
+                                        >
+                                            <Play className="w-3.5 h-3.5 fill-current" />
+                                            <span>Buka di YouTube</span>
+                                        </a>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    );
+                })()}
             </div>
         </ClientLayout>
     );

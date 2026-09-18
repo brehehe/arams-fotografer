@@ -2512,7 +2512,7 @@ export default function ProjectsCreate({
                     </div>
 
                     {/* Row 2: Diskon & Pengaturan DP / Pembayaran */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch text-slate-900">
+                    <div className="grid grid-cols-1 gap-6 items-stretch text-slate-900">
                         {/* Left Summary: Ringkasan Tambahan Biaya & Diskon Paket */}
                         <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200/80 shadow-xs flex flex-col justify-between h-full space-y-4">
                             <div className="space-y-4">

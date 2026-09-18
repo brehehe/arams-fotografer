@@ -171,7 +171,7 @@ class ProjectService
             });
         }
 
-        $categories = Category::where('status', 'active')->select('id', 'name', 'color', 'form_type')->orderBy('sort_order')->get();
+        $categories = Category::where('status', 'active')->select('id', 'name', 'color', 'form_type')->orderBy('sort_order')->orderBy('name')->get();
         $clients = Client::select('id', 'name', 'email', 'phone', 'child_name', 'bride_name', 'groom_name', 'father_name', 'mother_name', 'children')->get();
         $packages = Package::where('status', 'active')->select('id', 'name', 'category_id', 'base_price', 'duration_hours')->get();
         $teamMembers = User::where('status', 'active')->select('id', 'name', 'email', 'avatar')->get();
@@ -236,7 +236,7 @@ class ProjectService
         ]);
 
         $teamMembers = User::where('status', 'active')->select('id', 'name', 'email', 'avatar')->get();
-        $categories = Category::where('status', 'active')->select('id', 'name', 'color', 'workflow_type', 'form_type')->get();
+        $categories = Category::where('status', 'active')->select('id', 'name', 'color', 'workflow_type', 'form_type')->orderBy('sort_order')->orderBy('name')->get();
         $packages = Package::where('status', 'active')->select('id', 'name', 'category_id', 'base_price', 'duration_hours')->get();
         $paymentMethods = \App\Models\PaymentMethod::where('status', 'active')
             ->select('id', 'name', 'code', 'account_number', 'account_holder', 'icon')
@@ -776,7 +776,7 @@ class ProjectService
     public function getProjectFormData(): array
     {
         $clients = Client::select('id', 'name', 'email', 'phone', 'city', 'instagram', 'bride_name', 'bride_nickname', 'groom_name', 'groom_nickname', 'child_name', 'child_birth_date', 'child_gender', 'father_name', 'mother_name', 'children', 'client_type', 'client_source_id', 'source')->orderBy('name')->get();
-        $categories = Category::where('status', 'active')->select('id', 'name', 'slug', 'color', 'workflow_type', 'form_type')->orderBy('sort_order')->get();
+        $categories = Category::where('status', 'active')->select('id', 'name', 'slug', 'color', 'workflow_type', 'form_type')->orderBy('sort_order')->orderBy('name')->get();
         $packages = Package::where('status', 'active')->select('id', 'name', 'category_id', 'base_price', 'duration_hours', 'description', 'included_services', 'included_deliverables')->get();
         $weddingOrganizers = \App\Models\WeddingOrganizer::whereIn('status', ['partner', 'active'])->select('id', 'name', 'pic_name', 'phone', 'city', 'tier')->orderBy('name')->get();
         $addons = \App\Models\Addon::where('status', 'active')->with('category:id,name')->select('id', 'name', 'type', 'category_id', 'price', 'unit', 'description')->orderBy('name')->get();

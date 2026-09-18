@@ -42,7 +42,7 @@ class ClientController extends Controller
         $this->authorize('view', $client);
 
         $clientDetail = $this->clientService->getClientDetail($client);
-        $categories = Category::where('status', 'active')->select('id', 'name', 'slug', 'description', 'color', 'workflow_type', 'form_type')->orderBy('sort_order')->get();
+        $categories = Category::where('status', 'active')->select('id', 'name', 'slug', 'description', 'color', 'workflow_type', 'form_type')->orderBy('sort_order')->orderBy('name')->get();
         $packages = Package::where('status', 'active')->select('id', 'name', 'category_id', 'base_price', 'duration_hours', 'description', 'included_deliverables', 'included_services')->get();
         $teamMembers = User::where('status', 'active')->select('id', 'name', 'email', 'avatar')->get();
         $paymentMethods = PaymentMethod::where('status', 'active')->select('id', 'name', 'account_number', 'account_holder')->get();
@@ -74,7 +74,7 @@ class ClientController extends Controller
         $this->authorize('update', $client);
 
         $clientDetail = $this->clientService->getClientDetail($client);
-        $categories = Category::where('status', 'active')->select('id', 'name', 'slug', 'description', 'color', 'form_type')->orderBy('sort_order')->get();
+        $categories = Category::where('status', 'active')->select('id', 'name', 'slug', 'description', 'color', 'form_type')->orderBy('sort_order')->orderBy('name')->get();
         $packages = Package::where('status', 'active')->select('id', 'name', 'category_id', 'base_price', 'duration_hours', 'description')->get();
         $weddingOrganizers = WeddingOrganizer::whereIn('status', ['partner', 'active'])->select('id', 'name', 'pic_name', 'phone', 'city', 'tier')->orderBy('name')->get();
         $allClients = Client::where('id', '!=', $client->id)

@@ -239,12 +239,12 @@ export default function AramsHeader({
     // Filtered Notifications
     const filteredNotifications = notifications.filter((item) => {
         if (notifFilter === 'files') {
-return item.category === 'files';
-}
+            return item.category === 'files';
+        }
 
         if (notifFilter === 'schedule_finance') {
-return item.category === 'schedule' || item.category === 'finance';
-}
+            return item.category === 'schedule' || item.category === 'finance';
+        }
 
         return true;
     });
@@ -297,7 +297,7 @@ return item.category === 'schedule' || item.category === 'finance';
         } else if (pageUrl.startsWith('/calendar')) {
             effectiveBreadcrumbs = [
                 { label: 'Dashboard', href: '/dashboard' },
-                { label: 'Calendar / Schedule' },
+                { label: 'Jadwal & Sesi' },
             ];
         } else if (pageUrl.startsWith('/clients/') && pageUrl !== '/clients') {
             effectiveBreadcrumbs = [
@@ -536,8 +536,8 @@ return item.category === 'schedule' || item.category === 'finance';
                             value={searchQuery}
                             onFocus={() => {
                                 if (searchQuery.trim().length >= 2) {
-setSearchOpen(true);
-}
+                                    setSearchOpen(true);
+                                }
                             }}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Search project, client, photographer..."
@@ -748,8 +748,8 @@ setSearchOpen(true);
                             setNotifDropdownOpen(!notifDropdownOpen);
 
                             if (!notifDropdownOpen) {
-fetchNotifications();
-}
+                                fetchNotifications();
+                            }
                         }}
                         style={{ color: headerTextColor }}
                         className="relative p-2 rounded-xl hover:bg-white/10 transition-colors cursor-pointer"
