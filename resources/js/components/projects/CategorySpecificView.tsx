@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import React from 'react';
 import { formatDate } from '@/lib/formatters';
+import { extractProjectNoteText } from '@/lib/project-note-display';
 import type {
     CategoryFormKey,
     AnyCategorySpecificData,
@@ -53,6 +54,7 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
         community_name: rawData.community_name || '',
         location: rawData.location || project?.location || '',
     };
+    const activityDescription = extractProjectNoteText(data.activity_description);
 
     const renderItem = (label: string, value: any, icon?: React.ReactNode, fallback: string = '-', hideIfEmpty: boolean = true) => {
         const hasVal = value !== null && value !== undefined && String(value).trim() !== '' && String(value).trim() !== 'null' && String(value).trim() !== '-';
@@ -376,10 +378,10 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
                         {renderItem('Tema Kegiatan', data.activity_theme || data.concept_theme)}
                         {renderItem('Lokasi Kegiatan', data.activity_location || data.session_location || data.location, <MapPin className="w-3.5 h-3.5" />)}
                     </div>
-                    {(data.activity_description || project?.notes) && (
+                    {activityDescription && (
                         <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs space-y-1">
                             <span className="font-semibold text-slate-600 block">Deskripsi / Agenda Kegiatan:</span>
-                            <p className="text-slate-800 whitespace-pre-line">{data.activity_description || project?.notes}</p>
+                            <p className="text-slate-800 leading-5 whitespace-pre-line [overflow-wrap:anywhere]">{activityDescription}</p>
                         </div>
                     )}
                 </>
@@ -552,7 +554,7 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
                         <FileText className="w-4 h-4 text-slate-600" />,
                         'bg-slate-100 text-slate-700'
                     )}
-                    {renderItem('Catatan Sesi', data.notes || project?.notes)}
+                    {renderItem('Catatan Sesi', extractProjectNoteText(data.notes))}
                 </>
             )}
         </div>

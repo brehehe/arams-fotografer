@@ -67,6 +67,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Modal, AlertConfirmation } from '@/components/ui';
 import { formatRupiah, formatDate } from '@/lib/formatters';
+import { extractProjectNoteText } from '@/lib/project-note-display';
+import { resolveCategoryKey } from '@/types/category-forms';
 import {
     RecordPaymentModal,
     ProofViewerModal,
@@ -326,8 +328,6 @@ export default function ProjectDetail({
 
     // Assigned Team
     const supervisorName = project?.supervisor?.name || 'Belum Ditentukan';
-    const supervisorPhone = project?.supervisor?.phone || '-';
-    const supervisorEmail = project?.supervisor?.email || '-';
 
     const parsedPhotographer =
         project?.photographer?.name ||
@@ -341,13 +341,21 @@ export default function ProjectDetail({
         project?.notes?.match(/Editor:\s*([^|\n]+)/i)?.[1]?.trim() ||
         '-';
 
-    const structuredTeamAssignments: Array<{ type: string; name: string; notes?: string }> = useMemo(() => {
+    const assignedTeamMembers: Array<{ type: string; name: string; notes?: string }> = useMemo(() => {
         const raw = (project?.category_data as any)?.team_assignments;
-        if (Array.isArray(raw) && raw.length > 0) {
-            return raw.filter((t: any) => t && t.name && typeof t.name === 'string' && t.name.trim().length > 0);
+
+        if (Array.isArray(raw)) {
+            return raw
+                .filter((member: any) => typeof member?.name === 'string' && member.name.trim().length > 0)
+                .map((member: any) => ({ ...member, name: member.name.trim() }));
         }
-        return [];
-    }, [project?.category_data]);
+
+        // Older projects predate the role-based team list; retain their saved lead names.
+        return [
+            { type: 'Photografer', name: parsedPhotographer },
+            { type: 'Editor Foto', name: parsedEditor },
+        ].filter((member) => member.name && member.name !== '-');
+    }, [project?.category_data, parsedPhotographer, parsedEditor]);
 
     const parsedReferral =
         project?.client?.referral_name ||
@@ -364,23 +372,16 @@ export default function ProjectDetail({
 
     const cleanProjectDescription = useMemo(() => {
         const raw = project?.notes || project?.description || '';
-        if (!raw) return '';
+        const notes = extractProjectNoteText(raw);
+        const key = resolveCategoryKey(project?.category);
+        const categoryNote = key === 'komunitas'
+            ? extractProjectNoteText(project?.category_data?.activity_description)
+            : key === 'standard' ? extractProjectNoteText(project?.category_data?.notes) : '';
 
-        // Filter out technical metadata lines that are already displayed in dedicated cards
-        const cleanedLines = raw
-            .split('\n')
-            .map((line: string) => line.trim())
-            .filter((line: string) => {
-                if (!line) return false;
-                if (/^Photographer:\s*[^|]+(\s*\|\s*Editor:|$)/i.test(line)) return false;
-                if (/^Editor:\s*/i.test(line)) return false;
-                if (/^Sumber Referensi:\s*/i.test(line)) return false;
-                return true;
-            });
+        const categoryLines = new Set(categoryNote.split('\n').filter(Boolean));
 
-        const result = cleanedLines.join('\n\n').trim();
-        return result;
-    }, [project?.notes, project?.description]);
+        return notes.split('\n').filter((line) => !categoryLines.has(line)).join('\n').trim();
+    }, [project?.notes, project?.description, project?.category, project?.category_data]);
 
     // ── DYNAMIC FINANCIAL BREAKDOWN ──────────────────────────────────────────
     const addonsList = useMemo(() => {
@@ -1276,9 +1277,9 @@ export default function ProjectDetail({
             {activeTab === 'overview' && (
                 <div className="space-y-6">
                     {/* ── ROW 1: DESKRIPSI PROJECT, STATUS PROJECT, PIC & TIM PRODUKSI ─ */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 items-stretch">
+                    <div className={`grid grid-cols-1 md:grid-cols-2 ${cleanProjectDescription ? 'xl:grid-cols-3 items-start' : 'xl:grid-cols-2 items-stretch'} gap-4`}>
                         {/* 1. Deskripsi Project */}
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between h-full min-w-0 overflow-hidden">
+                        {cleanProjectDescription && <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all min-w-0 overflow-hidden">
                             <div className="space-y-2.5 min-w-0">
                                 <div className="flex items-center gap-2">
                                     <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
@@ -1288,27 +1289,14 @@ export default function ProjectDetail({
                                         Catatan Project
                                     </h3>
                                 </div>
-                                <p className="text-xs text-slate-600 leading-relaxed break-words whitespace-normal line-clamp-4">
-                                    {cleanProjectDescription || 'Belum ada catatan tambahan untuk project ini.'}
+                                <p className="text-xs text-slate-600 leading-5 whitespace-pre-line break-words [overflow-wrap:anywhere]">
+                                    {cleanProjectDescription}
                                 </p>
                             </div>
-                            <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 gap-2 min-w-0">
-                                <span className="truncate flex-1 min-w-0" title={formattedReferral}>
-                                    <strong className="font-semibold text-slate-600">Ref:</strong> {formattedReferral}
-                                </span>
-                            </div>
-                            <div className="pt-2 mt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 gap-2 min-w-0">
-                                <span
-                                    className="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md text-[10px] truncate shrink-0 border border-slate-200/60"
-                                    title={project?.category?.name || 'Umum'}
-                                >
-                                    {project?.category?.name || 'Umum'}
-                                </span>
-                            </div>
-                        </div>
+                        </div>}
 
                         {/* 2. Status & Riwayat Project */}
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between h-full">
+                        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between">
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between gap-2">
                                     <div className="flex items-center gap-2">
@@ -1363,6 +1351,12 @@ export default function ProjectDetail({
                                         <span className="text-slate-500">Tanggal Dibuat</span>
                                         <span className="font-medium text-slate-900">{formatDateTimeIndo(project?.created_at)}</span>
                                     </div>
+                                    {formattedReferral !== 'Tanpa' && (
+                                        <div className="flex justify-between items-start gap-3">
+                                            <span className="text-slate-500 shrink-0">Referensi</span>
+                                            <span className="font-medium text-slate-900 text-right break-words [overflow-wrap:anywhere]">{formattedReferral}</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                             <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
@@ -1372,7 +1366,7 @@ export default function ProjectDetail({
                         </div>
 
                         {/* 3. PIC & Tim Produksi Assigned */}
-                        <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between h-full md:col-span-2 xl:col-span-1 min-w-0">
+                        <div className={`bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between min-w-0 ${cleanProjectDescription ? 'md:col-span-2 xl:col-span-1' : 'md:col-span-1'}`}>
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
@@ -1383,62 +1377,64 @@ export default function ProjectDetail({
                                             Tim Produksi &amp; PIC
                                         </h3>
                                     </div>
-                                    {structuredTeamAssignments.length > 0 && (
+                                    {assignedTeamMembers.length > 0 && (
                                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                                            {structuredTeamAssignments.length + (supervisorName !== 'Belum Ditentukan' ? 1 : 0)} Personil
+                                            {assignedTeamMembers.length} Personil
                                         </span>
                                     )}
                                 </div>
                                 <div className="space-y-2 text-xs">
                                     <div className="flex justify-between items-center">
-                                        <span className="text-slate-500">Supervisor (PIC)</span>
+                                        <span className="text-slate-500">Supervisor Project</span>
                                         <span className="font-bold text-slate-900">{supervisorName}</span>
                                     </div>
 
-                                    {structuredTeamAssignments.length > 0 ? (
-                                        <div className="pt-2 border-t border-slate-100 space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                                            {structuredTeamAssignments.map((member, idx) => {
-                                                const typeColor =
-                                                    member.type === 'Photografer'
-                                                        ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                                        : member.type === 'Videografer'
-                                                            ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                                            : member.type === 'Editor Foto'
-                                                                ? 'bg-purple-50 text-purple-700 border-purple-200'
-                                                                : member.type === 'Editor Video'
-                                                                    ? 'bg-violet-50 text-violet-700 border-violet-200'
-                                                                    : 'bg-emerald-50 text-emerald-700 border-emerald-200';
-                                                return (
-                                                    <div key={idx} className="flex justify-between items-center gap-2 py-0.5">
-                                                        <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-md border shrink-0 ${typeColor}`}>
-                                                            {member.type || 'Personil'}
-                                                        </span>
-                                                        <span className="font-semibold text-slate-800 text-right truncate">
-                                                            {member.name}
-                                                        </span>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-slate-500">Lead Photographer</span>
-                                                <span className="font-semibold text-slate-800">{parsedPhotographer}</span>
+                                    <div className="pt-2 border-t border-slate-100 space-y-1.5">
+                                        <span className="text-[11px] font-semibold text-slate-600">Personil Tim Bertugas</span>
+                                        {assignedTeamMembers.length > 0 ? (
+                                            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                                                {assignedTeamMembers.map((member, idx) => {
+                                                    const typeColor =
+                                                        member.type === 'Photografer'
+                                                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                                            : member.type === 'Videografer'
+                                                                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                                                : member.type === 'Editor Foto'
+                                                                    ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                                                    : member.type === 'Editor Video'
+                                                                        ? 'bg-violet-50 text-violet-700 border-violet-200'
+                                                                        : 'bg-emerald-50 text-emerald-700 border-emerald-200';
+
+                                                    return (
+                                                        <div key={idx} className="flex justify-between items-center gap-2 py-0.5">
+                                                            <span className={`inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-md border shrink-0 ${typeColor}`}>
+                                                                {member.type || 'Personil'}
+                                                            </span>
+                                                            <span className="font-semibold text-slate-800 text-right min-w-0 break-words [overflow-wrap:anywhere]">
+                                                                {member.name}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-slate-500">Lead Editor</span>
-                                                <span className="font-semibold text-slate-800">{parsedEditor}</span>
-                                            </div>
-                                        </>
-                                    )}
+                                        ) : (
+                                            <p className="rounded-lg bg-slate-50 px-3 py-2 text-[11px] text-slate-500">
+                                                Belum ada personil yang ditugaskan.
+                                                {!isSupervisor && <Link href={`/projects/${project?.id}/edit`} className="ml-1 font-semibold text-indigo-700 hover:underline focus-visible:outline-2 focus-visible:outline-indigo-500">Isi di Edit Project</Link>}
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                            <div className="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                                <span>Kontak PIC</span>
-                                <span className="font-mono font-medium text-slate-800">
-                                    {supervisorPhone && supervisorPhone !== '-' ? supervisorPhone : 'Belum diisi'}
-                                </span>
+                            <div className="pt-3 mt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
+                                <span>Kontak PIC Klien</span>
+                                {clientPhone && clientPhone !== '-' ? (
+                                    <a href={`tel:${String(clientPhone).replace(/[^\d+]/g, '')}`} className="inline-flex min-h-11 items-center font-mono font-semibold text-indigo-700 hover:underline focus-visible:outline-2 focus-visible:outline-indigo-500 [overflow-wrap:anywhere]" aria-label={`Hubungi PIC klien di ${clientPhone}`}>
+                                        {clientPhone}
+                                    </a>
+                                ) : (
+                                    <span className="font-medium text-slate-500">Nomor klien belum diisi</span>
+                                )}
                             </div>
                         </div>
                     </div>
