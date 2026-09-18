@@ -272,7 +272,7 @@ export default function ProjectsEdit({
     const [projectLocation, setProjectLocation] = useState<string>(project.location || '');
     const [projectNotes, setProjectNotes] = useState<string>(project.notes || '');
     const [referralSourceId, setReferralSourceId] = useState<string>((project as any).client_source_id || (project.client as any)?.client_source_id || client_sources[0]?.id || '');
-    const [referralName, setReferralName] = useState<string>('');
+    const [referralName, setReferralName] = useState<string>((project.client as any)?.referral_name || '');
     const [referralLink, setReferralLink] = useState<string>('');
 
     const [categoryData, setCategoryData] = useState<AnyCategorySpecificData>(() => {
@@ -1264,6 +1264,7 @@ export default function ProjectsEdit({
                 } : {}),
                 client_source_id: referralSourceId || null,
                 source: sourceName || null,
+                referral_name: referralName || null,
             },
         };
 
@@ -1698,17 +1699,19 @@ export default function ProjectsEdit({
                                 ) : (
                                     <div
                                         onClick={() => thumbnailInputRef.current?.click()}
-                                        className="border-2 border-dashed border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30 rounded-xl p-3 text-center cursor-pointer transition-all flex items-center justify-center gap-2.5 group"
+                                        className="border-2 border-dashed border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30 rounded-xl p-3 text-center cursor-pointer transition-all flex items-center justify-center gap-3 group"
                                     >
-                                        <div className="w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-indigo-100 text-slate-500 group-hover:text-indigo-600 flex items-center justify-center transition-colors">
-                                            <ImageIcon className="w-4 h-4" />
-                                        </div>
+                                        <img
+                                            src="/images/no-image.svg"
+                                            alt="Belum Ada Cover"
+                                            className="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0 opacity-80 group-hover:opacity-100 transition-opacity"
+                                        />
                                         <div className="text-left">
                                             <p className="text-[11px] font-bold text-slate-700 group-hover:text-indigo-900">
                                                 Pilih atau unggah foto cover project
                                             </p>
                                             <p className="text-[10px] text-slate-400">
-                                                PNG, JPG, atau WebP hingga 5MB
+                                                Belum ada cover • PNG, JPG, WebP hingga 5MB
                                             </p>
                                         </div>
                                     </div>
@@ -1833,27 +1836,36 @@ export default function ProjectsEdit({
                             </div>
 
                             <div className="space-y-2 sm:col-span-2 pt-1 border-t border-slate-100 min-w-0">
-                                <label className="text-[11px] font-bold text-slate-600 block">Referensi / Sumber Klien</label>
-                                <SelectSearch
-                                    options={referralSourceOptions}
-                                    value={referralSourceId}
-                                    onChange={setReferralSourceId}
-                                    placeholder="Pilih Sumber Referensi..."
-                                    clearable={true}
-                                />
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    <Input
-                                        value={referralName}
-                                        onChange={(e) => setReferralName(e.target.value)}
-                                        placeholder="Nama perujuk"
-                                        className="h-[38px] text-[11px]"
+                                <label className="text-[11px] font-bold text-slate-700 block">Referensi / Sumber Klien &amp; Rekomendasi WO</label>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-semibold text-slate-500 block">Sumber Referensi</label>
+                                    <SelectSearch
+                                        options={referralSourceOptions}
+                                        value={referralSourceId}
+                                        onChange={setReferralSourceId}
+                                        placeholder="Pilih Sumber Referensi..."
+                                        clearable={true}
                                     />
-                                    <Input
-                                        value={referralLink}
-                                        onChange={(e) => setReferralLink(e.target.value)}
-                                        placeholder="Link referensi"
-                                        className="h-[38px] text-[11px]"
-                                    />
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-semibold text-slate-500 block">Nama WO / Rekomendasi</label>
+                                        <Input
+                                            value={referralName}
+                                            onChange={(e) => setReferralName(e.target.value)}
+                                            placeholder="Contoh: WO Harmoni, Rekan..."
+                                            className="h-[38px] text-[11px]"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-semibold text-slate-500 block">Link Referensi / Medsos (Opsional)</label>
+                                        <Input
+                                            value={referralLink}
+                                            onChange={(e) => setReferralLink(e.target.value)}
+                                            placeholder="Link medsos/portofolio"
+                                            className="h-[38px] text-[11px]"
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
@@ -2479,26 +2491,24 @@ export default function ProjectsEdit({
                         <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs space-y-2 text-xs flex flex-col justify-between">
                             <h4 className="font-bold text-sm text-slate-900 border-b border-slate-100 pb-2 flex items-center justify-between">
                                 <span>Informasi Project</span>
-                                {projectThumbnail && (
-                                    <span className="text-[9px] font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md">
-                                        Ada Cover
-                                    </span>
-                                )}
+                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md ${projectThumbnail ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-500'}`}>
+                                    {projectThumbnail ? 'Ada Cover' : 'Tanpa Cover'}
+                                </span>
                             </h4>
                             <div className="space-y-2 pt-1 text-[11px]">
-                                {projectThumbnail && (
-                                    <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100">
-                                        <img
-                                            src={projectThumbnail}
-                                            alt="Cover Project"
-                                            className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0"
-                                        />
-                                        <div className="min-w-0">
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase block">Cover Project</span>
-                                            <span className="text-[11px] font-semibold text-slate-800 truncate block">Foto Terpasang</span>
-                                        </div>
+                                <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100">
+                                    <img
+                                        src={projectThumbnail || '/images/no-image.svg'}
+                                        alt="Cover Project"
+                                        className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0 bg-slate-50"
+                                    />
+                                    <div className="min-w-0">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase block">Cover Project</span>
+                                        <span className="text-[11px] font-semibold text-slate-800 truncate block">
+                                            {projectThumbnail ? 'Foto Terpasang' : 'Belum Ada Cover'}
+                                        </span>
                                     </div>
-                                )}
+                                </div>
                                 <div className="flex items-start justify-between gap-2.5">
                                     <span className="text-slate-400 shrink-0">Nama:</span>
                                     <span className="font-bold text-slate-800 text-right min-w-0 break-words leading-tight">

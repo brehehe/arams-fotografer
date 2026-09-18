@@ -60,6 +60,9 @@ class UpdateProjectRequest extends FormRequest
             'selected_addons.*.unit_price' => 'required_with:selected_addons|numeric|min:0',
             'selected_addons.*.total_price' => 'required_with:selected_addons|numeric|min:0',
             'client_overrides' => 'nullable|array',
+            'client_overrides.referral_name' => 'nullable|string|max:255',
+            'client_overrides.client_source_id' => 'nullable',
+            'client_overrides.source' => 'nullable|string|max:255',
         ];
     }
 }

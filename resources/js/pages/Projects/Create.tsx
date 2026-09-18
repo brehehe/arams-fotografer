@@ -935,6 +935,9 @@ export default function ProjectsCreate({
             if ((cl as any).client_source_id) {
                 setReferralSourceId((cl as any).client_source_id);
             }
+            if ((cl as any).referral_name) {
+                setReferralName((cl as any).referral_name);
+            }
         }
     };
 
@@ -1455,6 +1458,7 @@ export default function ProjectsCreate({
                 } : {}),
                 client_source_id: referralSourceId || null,
                 source: sourceName || null,
+                referral_name: referralName || null,
             },
         };
 
@@ -1899,14 +1903,24 @@ export default function ProjectsCreate({
                                         </button>
                                     </div>
                                 ) : (
-                                    <button
-                                        type="button"
+                                    <div
                                         onClick={() => thumbnailInputRef.current?.click()}
-                                        className="w-full h-14 border border-dashed border-slate-300 hover:border-[#4F46E5] hover:bg-indigo-50/20 rounded-xl flex items-center justify-center gap-2 text-slate-500 hover:text-[#4F46E5] transition-all cursor-pointer bg-slate-50/50"
+                                        className="w-full border-2 border-dashed border-slate-200 hover:border-[#4F46E5] hover:bg-indigo-50/20 rounded-xl p-3 text-center cursor-pointer transition-all flex items-center justify-center gap-3 group bg-slate-50/50"
                                     >
-                                        <Upload className="w-4 h-4" />
-                                        <span className="text-xs font-bold">Pilih Foto Cover / Moodboard Project</span>
-                                    </button>
+                                        <img
+                                            src="/images/no-image.svg"
+                                            alt="Belum Ada Cover"
+                                            className="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0 opacity-80 group-hover:opacity-100 transition-opacity"
+                                        />
+                                        <div className="text-left">
+                                            <p className="text-[11px] font-bold text-slate-700 group-hover:text-indigo-900">
+                                                Pilih Foto Cover / Moodboard Project
+                                            </p>
+                                            <p className="text-[10px] text-slate-400">
+                                                Belum ada cover • PNG, JPG, WebP hingga 5MB
+                                            </p>
+                                        </div>
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -2058,27 +2072,36 @@ export default function ProjectsCreate({
 
                             {/* Referensi / Sumber Klien */}
                             <div className="space-y-2 pt-2 border-t border-slate-100 min-w-0 sm:col-span-2">
-                                <label className="text-[11px] font-bold text-slate-600 block">Referensi / Sumber Klien</label>
+                                <label className="text-[11px] font-bold text-slate-700 block">Referensi / Sumber Klien &amp; Rekomendasi WO</label>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                    <SelectSearch
-                                        options={referralSourceOptions}
-                                        value={referralSourceId}
-                                        onChange={setReferralSourceId}
-                                        placeholder="Pilih Sumber Referensi..."
-                                        clearable={true}
-                                    />
-                                    <Input
-                                        value={referralName}
-                                        onChange={(e) => setReferralName(e.target.value)}
-                                        placeholder="Nama perujuk"
-                                        className="h-[40px] text-xs"
-                                    />
-                                    <Input
-                                        value={referralLink}
-                                        onChange={(e) => setReferralLink(e.target.value)}
-                                        placeholder="Link referensi"
-                                        className="h-[40px] text-xs"
-                                    />
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-semibold text-slate-500 block">Sumber Referensi</label>
+                                        <SelectSearch
+                                            options={referralSourceOptions}
+                                            value={referralSourceId}
+                                            onChange={setReferralSourceId}
+                                            placeholder="Pilih Sumber Referensi..."
+                                            clearable={true}
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-semibold text-slate-500 block">Nama WO / Rekomendasi</label>
+                                        <Input
+                                            value={referralName}
+                                            onChange={(e) => setReferralName(e.target.value)}
+                                            placeholder="Contoh: WO Harmoni, Teman..."
+                                            className="h-[40px] text-xs"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-semibold text-slate-500 block">Link Referensi / Medsos (Opsional)</label>
+                                        <Input
+                                            value={referralLink}
+                                            onChange={(e) => setReferralLink(e.target.value)}
+                                            placeholder="Link referensi medsos/portofolio"
+                                            className="h-[40px] text-xs"
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
@@ -2701,26 +2724,24 @@ export default function ProjectsCreate({
                         <div className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs space-y-2 text-xs flex flex-col justify-between">
                             <h4 className="font-bold text-sm text-slate-900 border-b border-slate-100 pb-2 flex items-center justify-between">
                                 <span>Informasi Project</span>
-                                {projectThumbnail && (
-                                    <span className="text-[9px] font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md">
-                                        Ada Cover
-                                    </span>
-                                )}
+                                <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md ${projectThumbnail ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-500'}`}>
+                                    {projectThumbnail ? 'Ada Cover' : 'Tanpa Cover'}
+                                </span>
                             </h4>
                             <div className="space-y-2 pt-1 text-[11px]">
-                                {projectThumbnail && (
-                                    <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100">
-                                        <img
-                                            src={projectThumbnail}
-                                            alt="Cover Project"
-                                            className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0"
-                                        />
-                                        <div className="min-w-0">
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase block">Cover Project</span>
-                                            <span className="text-[11px] font-semibold text-slate-800 truncate block">Foto Terpasang</span>
-                                        </div>
+                                <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100">
+                                    <img
+                                        src={projectThumbnail || '/images/no-image.svg'}
+                                        alt="Cover Project"
+                                        className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0 bg-slate-50"
+                                    />
+                                    <div className="min-w-0">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase block">Cover Project</span>
+                                        <span className="text-[11px] font-semibold text-slate-800 truncate block">
+                                            {projectThumbnail ? 'Foto Terpasang' : 'Belum Ada Cover'}
+                                        </span>
                                     </div>
-                                )}
+                                </div>
                                 <div className="flex items-start justify-between gap-2.5">
                                     <span className="text-slate-400 shrink-0">Tanggal:</span>
                                     <span className="font-bold text-slate-800 text-right">{formattedProjectDate}</span>

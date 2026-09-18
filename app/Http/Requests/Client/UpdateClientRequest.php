@@ -71,6 +71,8 @@ class UpdateClientRequest extends FormRequest
             'status' => [$isPartial ? 'sometimes' : 'required', 'string', Rule::in(ClientStatus::values())],
             'notes' => 'nullable|string',
             'tags' => 'nullable|array',
+            'avatar' => 'nullable|string',
+            'avatar_file' => 'nullable|image|max:5120',
         ];
     }
 }

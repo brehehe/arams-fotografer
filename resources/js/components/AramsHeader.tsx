@@ -20,8 +20,10 @@ import {
     Sparkles,
     ArrowRight,
     Loader2,
+    UserCircle,
 } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
+import EditProfileModal from '@/components/EditProfileModal';
 
 interface AramsHeaderProps {
     onMenuToggle?: () => void;
@@ -63,7 +65,7 @@ export default function AramsHeader({
     const user = auth?.user || {
         name: 'Admin Arams',
         email: 'admin@gmail.com',
-        avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+        avatar: '/images/default-avatar.png',
         roles: [{ name: 'Administrator' }],
     };
 
@@ -74,6 +76,7 @@ export default function AramsHeader({
     const canAccessSettingsAndUsers = !isSupervisor && (userRoles.includes('Super Admin') || userRoles.includes('Owner') || userRoles.includes('Admin'));
 
     const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
     const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
     const [notifFilter, setNotifFilter] = useState<'all' | 'files' | 'schedule_finance'>('all');
 
@@ -912,7 +915,7 @@ export default function AramsHeader({
                         <img
                             src={
                                 user.avatar ||
-                                'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80'
+                                '/images/default-avatar.png'
                             }
                             alt={user.name}
                             className="w-8 h-8 rounded-full object-cover ring-2 ring-white/20 group-hover:ring-[#C89445]/40 transition-all"
@@ -946,24 +949,37 @@ export default function AramsHeader({
                                     <p className="text-xs font-semibold text-slate-900">{user.name}</p>
                                     <p className="text-[11px] text-slate-500 truncate">{user.email}</p>
                                 </div>
-                                {canAccessSettingsAndUsers && (
-                                    <div className="py-1">
-                                        <Link
-                                            href="/setting/admin"
-                                            className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
-                                        >
-                                            <SettingsIcon className="w-4 h-4 text-slate-400" />
-                                            <span>Pengaturan Sistem</span>
-                                        </Link>
-                                        <Link
-                                            href="/users"
-                                            className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
-                                        >
-                                            <UserIcon className="w-4 h-4 text-slate-400" />
-                                            <span>Manajemen User</span>
-                                        </Link>
-                                    </div>
-                                )}
+                                <div className="py-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setUserDropdownOpen(false);
+                                            setIsProfileModalOpen(true);
+                                        }}
+                                        className="flex items-center gap-2.5 w-full px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors text-left cursor-pointer"
+                                    >
+                                        <UserCircle className="w-4 h-4 text-slate-400" />
+                                        <span>Profil Saya</span>
+                                    </button>
+                                    {canAccessSettingsAndUsers && (
+                                        <>
+                                            <Link
+                                                href="/setting/admin"
+                                                className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
+                                            >
+                                                <SettingsIcon className="w-4 h-4 text-slate-400" />
+                                                <span>Pengaturan Sistem</span>
+                                            </Link>
+                                            <Link
+                                                href="/users"
+                                                className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
+                                            >
+                                                <UserIcon className="w-4 h-4 text-slate-400" />
+                                                <span>Manajemen User</span>
+                                            </Link>
+                                        </>
+                                    )}
+                                </div>
                                 <div className="pt-1 border-t border-slate-100">
                                     <Link
                                         href="/logout"
@@ -980,6 +996,13 @@ export default function AramsHeader({
                     )}
                 </div>
             </div>
+
+            {/* Modal Edit Profil (Tanpa Ubah Password) */}
+            <EditProfileModal
+                isOpen={isProfileModalOpen}
+                onClose={() => setIsProfileModalOpen(false)}
+                user={user}
+            />
         </header>
     );
 }

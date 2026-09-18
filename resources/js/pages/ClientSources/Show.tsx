@@ -43,6 +43,7 @@ interface ReferralHistoryItem {
     event_date: string;
     amount: number;
     status: string;
+    referral_name?: string | null;
 }
 
 interface PaymentMethodItem {
@@ -557,17 +558,27 @@ export default function ClientSourceShow({
                                                     {idx + 1}
                                                 </td>
                                                 <td className="py-3 px-3.5 font-bold text-slate-900">
-                                                    {item.client_id ? (
-                                                        <Link
-                                                            href={`/clients/${item.client_id}`}
-                                                            className="text-slate-900 hover:text-purple-600 hover:underline transition-colors"
-                                                            title="Lihat profil detail klien"
-                                                        >
-                                                            {item.client}
-                                                        </Link>
-                                                    ) : (
-                                                        item.client
-                                                    )}
+                                                    <div>
+                                                        {item.client_id ? (
+                                                            <Link
+                                                                href={`/clients/${item.client_id}`}
+                                                                className="text-slate-900 hover:text-purple-600 hover:underline transition-colors block"
+                                                                title="Lihat profil detail klien"
+                                                            >
+                                                                {item.client}
+                                                            </Link>
+                                                        ) : (
+                                                            <span className="block">{item.client}</span>
+                                                        )}
+                                                        {item.referral_name && (
+                                                            <span
+                                                                className="inline-flex items-center gap-1 text-[10px] font-bold text-purple-700 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded-md mt-0.5"
+                                                                title={`WO / Rekomendasi: ${item.referral_name}`}
+                                                            >
+                                                                WO/Ref: {item.referral_name}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="py-3 px-3.5">
                                                     {item.project_id ? (

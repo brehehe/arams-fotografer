@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { toast } from 'sonner';
 import {
@@ -72,6 +72,7 @@ import {
     ChevronDown,
     Baby,
     Upload,
+    Loader2,
 } from 'lucide-react';
 import { formatRupiah, formatDate, formatCurrencyShort } from '@/lib/formatters';
 import { FormattedNumberInput } from '@/components/ui/formatted-number-input';
@@ -275,6 +276,61 @@ export default function ClientDetail({
     const isSupervisor = Boolean(user?.is_supervisor || userRoles.includes('Supervisor'));
 
     const primaryProject = client.projects?.[0];
+
+    // Client Avatar Upload State
+    const clientAvatarInputRef = useRef<HTMLInputElement | null>(null);
+    const [isUploadingClientAvatar, setIsUploadingClientAvatar] = useState(false);
+
+    const handleClientAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('Ukuran foto maksimal adalah 5MB');
+            return;
+        }
+
+        setIsUploadingClientAvatar(true);
+        const formData = new FormData();
+        formData.append('_method', 'put');
+        formData.append('avatar_file', file);
+
+        router.post(`/clients/${client.id}`, formData, {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsUploadingClientAvatar(false);
+                toast.success('Foto avatar klien berhasil diperbarui');
+                if (clientAvatarInputRef.current) clientAvatarInputRef.current.value = '';
+            },
+            onError: () => {
+                setIsUploadingClientAvatar(false);
+                toast.error('Gagal memperbarui foto avatar klien');
+            },
+        });
+    };
+
+    const handleRemoveClientAvatar = () => {
+        if (!confirm('Hapus foto avatar klien dan gunakan gambar default?')) return;
+        setIsUploadingClientAvatar(true);
+        const formData = new FormData();
+        formData.append('_method', 'put');
+        formData.append('avatar', '');
+
+        router.post(`/clients/${client.id}`, formData, {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsUploadingClientAvatar(false);
+                toast.success('Foto avatar klien direset ke default');
+                if (clientAvatarInputRef.current) clientAvatarInputRef.current.value = '';
+            },
+            onError: () => {
+                setIsUploadingClientAvatar(false);
+                toast.error('Gagal mereset foto avatar klien');
+            },
+        });
+    };
 
     // Active Main Tab
     const [mainTab, setMainTab] = useState<
@@ -959,9 +1015,7 @@ export default function ClientDetail({
                     project_number: p.project_number || 'PRJ-AUTO',
                     event_date: p.event_date ? formatDate(p.event_date) : '-',
                     location: p.location || '-',
-                    thumbnail: p.thumbnail || (p.category?.name?.toLowerCase().includes('prewed')
-                        ? 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=600&auto=format&fit=crop&q=80'
-                        : 'https://images.unsplash.com/photo-1519741497674-611481863552?w=600&auto=format&fit=crop&q=80'),
+                    thumbnail: p.thumbnail || '/images/no-image.svg',
                     total_amount: total,
                     paid_amount: paid,
                     progress: progress,
@@ -2974,16 +3028,56 @@ export default function ClientDetail({
                     <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5">
                         {/* Left: Avatar + Identity + 6 Info Chips */}
                         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 flex-1 min-w-0">
-                            {/* Avatar */}
-                            <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-full overflow-hidden bg-slate-100 ring-4 ring-slate-100/80 shadow-xs shrink-0">
-                                <img
-                                    src={
-                                        client.avatar ||
-                                        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80'
-                                    }
-                                    alt={client.name}
-                                    className="w-full h-full object-cover"
+                            {/* Avatar with Quick Edit Overlay */}
+                            <div className="relative group/avatar shrink-0">
+                                <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-full overflow-hidden bg-slate-100 ring-4 ring-slate-100/80 shadow-xs relative">
+                                    <img
+                                        src={
+                                            client.avatar ||
+                                            '/images/default-avatar.png'
+                                        }
+                                        alt={client.name}
+                                        className="w-full h-full object-cover"
+                                    />
+                                    {isUploadingClientAvatar && (
+                                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white">
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Hidden file input for client avatar */}
+                                <input
+                                    ref={clientAvatarInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={handleClientAvatarUpload}
                                 />
+
+                                {/* Floating Quick Action Buttons */}
+                                <div className="absolute -bottom-1 -right-1 flex items-center gap-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => clientAvatarInputRef.current?.click()}
+                                        disabled={isUploadingClientAvatar}
+                                        className="w-7 h-7 rounded-full bg-white border border-slate-200 shadow-sm hover:bg-slate-50 text-slate-700 flex items-center justify-center cursor-pointer transition-transform hover:scale-110"
+                                        title="Ubah Foto Avatar Klien"
+                                    >
+                                        <Camera className="w-3.5 h-3.5 text-[#3C0E0E]" />
+                                    </button>
+                                    {client.avatar && (
+                                        <button
+                                            type="button"
+                                            onClick={handleRemoveClientAvatar}
+                                            disabled={isUploadingClientAvatar}
+                                            className="w-7 h-7 rounded-full bg-white border border-slate-200 shadow-sm hover:bg-rose-50 text-rose-600 flex items-center justify-center cursor-pointer transition-transform hover:scale-110"
+                                            title="Reset Foto Avatar ke Default"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Identity Header & 6 Chips */}
@@ -3159,6 +3253,14 @@ export default function ClientDetail({
                                                     title={client.source || '-'}
                                                 >
                                                     {client.source || '-'}
+                                                </span>
+                                            )}
+                                            {client.referral_name && (
+                                                <span
+                                                    className="text-[10px] font-bold text-purple-700 bg-purple-100/90 px-1.5 py-0.5 rounded inline-block leading-tight truncate mt-0.5 max-w-[150px]"
+                                                    title={`WO / Rekomendasi: ${client.referral_name}`}
+                                                >
+                                                    WO: {client.referral_name}
                                                 </span>
                                             )}
                                         </div>
@@ -3932,12 +4034,15 @@ export default function ClientDetail({
 
                                                 {client.referral_name && (
                                                     <div className="flex flex-col sm:flex-row sm:items-baseline p-3 gap-1 sm:gap-4 hover:bg-slate-50/50 transition-colors">
-                                                        <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Nama Kerabat / Rekan</span>
+                                                        <span className="text-slate-500 w-44 sm:w-52 shrink-0 text-[11.5px]">Nama WO / Rekomendasi</span>
                                                         <div className="flex items-baseline gap-2 flex-1 min-w-0">
                                                             <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
-                                                            <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">
-                                                                {client.referral_name}
-                                                            </span>
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs">
+                                                                    <Users className="w-3.5 h-3.5 text-purple-600" />
+                                                                    <span>{client.referral_name}</span>
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 )}
@@ -6827,6 +6932,36 @@ Terima kasih!`}
                                                 <option value="blocked">Diblokir (Nonaktif)</option>
                                             </select>
                                         </div>
+
+                                        {(() => {
+                                            const selectedCs = client_sources?.find((cs) => cs.id === editFormData.client_source_id);
+                                            const isLainnya = (selectedCs && (
+                                                selectedCs.type === 'other' ||
+                                                selectedCs.name.toLowerCase().includes('lainnya') ||
+                                                selectedCs.name.toLowerCase().includes('rekomendasi') ||
+                                                selectedCs.name.toLowerCase().includes('wo')
+                                            )) || editFormData.source === 'Lainnya' || editFormData.source?.toLowerCase().includes('lainnya');
+
+                                            if (!isLainnya) return null;
+
+                                            return (
+                                                <div className="sm:col-span-2 p-3 rounded-xl bg-purple-50/70 border border-purple-200/90 space-y-1 animate-in fade-in duration-200">
+                                                    <label className="block text-[11px] font-bold text-purple-900">
+                                                        Nama WO / Orang yang Merekomendasikan <span className="text-purple-500 font-normal">(Opsional)</span>
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        value={editFormData.referral_name || ''}
+                                                        onChange={(e) => setEditFormData({ ...editFormData, referral_name: e.target.value })}
+                                                        placeholder="Contoh: WO Harmoni, Rekan Fotografer, Teman (Siti)..."
+                                                        className="w-full bg-white border border-purple-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 transition-all placeholder:text-slate-400"
+                                                    />
+                                                    <p className="text-[10px] text-purple-700/80">
+                                                        Masukkan nama Wedding Organizer atau kerabat/teman yang merekomendasikan klien ini.
+                                                    </p>
+                                                </div>
+                                            );
+                                        })()}
 
                                         {editFormData.source === 'Wedding Organizer' && (
                                             <div className="sm:col-span-2">

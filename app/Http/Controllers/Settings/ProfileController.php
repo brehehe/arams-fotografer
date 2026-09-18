@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Traits\HasWebpUpload;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,6 +15,8 @@ use Inertia\Response;
 
 class ProfileController extends Controller
 {
+    use HasWebpUpload;
+
     /**
      * Show the user's profile settings page.
      */
@@ -33,17 +36,50 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $user = $request->user();
+        $validated = $request->validated();
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        if ($request->hasFile('avatar_file')) {
+            $avatarUrl = $this->uploadThumbnailAsWebp(
+                $request->file('avatar_file'),
+                'avatars',
+                400,
+                400,
+                85,
+                $user->avatar
+            );
+            $validated['avatar'] = $avatarUrl;
+        } elseif ($request->has('avatar') && empty($request->input('avatar'))) {
+            if ($user->avatar) {
+                $this->deleteWebpImage($user->avatar);
+            }
+            $validated['avatar'] = null;
         }
 
-        $request->user()->save();
+        $user->fill($validated);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile updated.')]);
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
+        }
 
-        return to_route('profile.edit');
+        $user->save();
+
+        // If user has a linked Client record, synchronize name, email, phone, avatar
+        if ($user->client_id && $user->client) {
+            $clientUpdates = [];
+            if (isset($validated['name'])) $clientUpdates['name'] = $validated['name'];
+            if (isset($validated['email'])) $clientUpdates['email'] = $validated['email'];
+            if (isset($validated['phone'])) $clientUpdates['phone'] = $validated['phone'];
+            if (array_key_exists('avatar', $validated)) $clientUpdates['avatar'] = $validated['avatar'];
+
+            if (!empty($clientUpdates)) {
+                $user->client->update($clientUpdates);
+            }
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Profil berhasil diperbarui.']);
+
+        return redirect()->back()->with('success', 'Profil berhasil diperbarui.');
     }
 
     /**

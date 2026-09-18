@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <!-- Circular Background -->
+  <circle cx="100" cy="100" r="100" fill="#CBD5E1"/>
+  <!-- Head -->
+  <circle cx="100" cy="80" r="36" fill="#F8FAFC"/>
+  <!-- Shoulders / Body -->
+  <path d="M40 180 c0 -35 25 -60 60 -60 s60 25 60 60 c0 5 -5 10 -10 10 H50 c-5 0 -10 -5 -10 -10 z" fill="#F8FAFC"/>
+</svg>

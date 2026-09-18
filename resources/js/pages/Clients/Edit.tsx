@@ -2073,6 +2073,36 @@ export default function ClientEdit({
                                         </select>
                                     </div>
 
+                                    {(() => {
+                                        const selectedCs = client_sources?.find((cs) => cs.id === formData.client_source_id);
+                                        const isLainnya = (selectedCs && (
+                                            selectedCs.type === 'other' ||
+                                            selectedCs.name.toLowerCase().includes('lainnya') ||
+                                            selectedCs.name.toLowerCase().includes('rekomendasi') ||
+                                            selectedCs.name.toLowerCase().includes('wo')
+                                        )) || formData.source === 'Lainnya' || formData.source?.toLowerCase().includes('lainnya');
+
+                                        if (!isLainnya) return null;
+
+                                        return (
+                                            <div className="sm:col-span-2 p-3.5 rounded-xl bg-purple-50/70 border border-purple-200/90 space-y-1.5 animate-in fade-in duration-200">
+                                                <label className="block text-xs font-bold text-purple-900">
+                                                    Nama WO / Orang yang Merekomendasikan <span className="text-purple-500 font-normal">(Opsional)</span>
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.referral_name || ''}
+                                                    onChange={(e) => setFormData({ ...formData, referral_name: e.target.value })}
+                                                    placeholder="Contoh: WO Harmoni, Rekan Fotografer, Teman (Siti)..."
+                                                    className="w-full bg-white border border-purple-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 transition-all placeholder:text-slate-400"
+                                                />
+                                                <p className="text-[10px] text-purple-700/80">
+                                                    Masukkan nama Wedding Organizer atau kerabat/teman yang merekomendasikan klien ini.
+                                                </p>
+                                            </div>
+                                        );
+                                    })()}
+
                                     {formData.source === 'Wedding Organizer' && (
                                         <div className="sm:col-span-2">
                                             <label className="block text-xs font-bold text-slate-700 mb-1.5">

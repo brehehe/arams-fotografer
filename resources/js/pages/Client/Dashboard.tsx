@@ -300,7 +300,7 @@ export default function ClientDashboard({
                 description: 'Promo spesial untuk setiap momen berharga Anda. Dapatkan penawaran terbaik untuk paket pernikahan & prewedding pilihan.',
                 button_text: 'Lihat Promo Selengkapnya',
                 button_url: '/form-klien',
-                image: '/images/wedding-couple.jpg',
+                image: '/images/no-image.svg',
             },
         ];
 
@@ -324,7 +324,7 @@ export default function ClientDashboard({
     const portfolioPhotos = (portfolios && portfolios.length > 0)
         ? portfolios.slice(0, 4).map((item, idx) => ({
             id: item.id || String(idx + 1),
-            image: item.image || item.image_url || '/images/wedding-couple.jpg',
+            image: item.image || item.image_url || '/images/no-image.svg',
             isOverlay: idx === 3 && totalPortfoliosCount > 4,
             count: `+${Math.max(1, totalPortfoliosCount - 3)}`,
         }))
@@ -964,7 +964,7 @@ export default function ClientDashboard({
                                                 <div className="flex items-center gap-2.5">
                                                     <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-200 shrink-0 ring-1 ring-slate-200">
                                                         <img
-                                                            src={activeTestimonial.avatar || '/images/wedding-couple.jpg'}
+                                                            src={activeTestimonial.avatar || '/images/default-avatar.png'}
                                                             alt={activeTestimonial.client_name}
                                                             className="w-full h-full object-cover"
                                                         />

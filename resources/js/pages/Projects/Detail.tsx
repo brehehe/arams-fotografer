@@ -2986,7 +2986,7 @@ export default function ProjectDetail({
                                 description: 'Momen berharga dan karya visual eksklusif Anda telah siap. Klik tombol di bawah untuk meninjau dokumentasi lengkap.',
                                 button_text: 'Lihat Detail Project',
                                 button_url: `/client/projects/${project?.id || ''}`,
-                                image: project?.thumbnail || '/images/wedding-couple.jpg',
+                                image: project?.thumbnail || '/images/no-image.svg',
                                 is_active: true,
                             };
 
@@ -3027,7 +3027,7 @@ export default function ProjectDetail({
                                 {/* Banner Stage */}
                                 <div className="relative rounded-xl overflow-hidden min-h-[220px] sm:min-h-[280px] flex items-center bg-slate-950 border border-slate-800 shadow-inner group">
                                     <img
-                                        src={activeSlide.image || project?.thumbnail || '/images/wedding-couple.jpg'}
+                                        src={activeSlide.image || project?.thumbnail || '/images/no-image.svg'}
                                         alt={activeSlide.title}
                                         className="absolute inset-0 w-full h-full object-cover object-center filter brightness-90 contrast-[1.05]"
                                     />
@@ -3103,7 +3103,7 @@ export default function ProjectDetail({
                                             {/* Thumbnail & Badges */}
                                             <div className="aspect-[16/9] bg-slate-900 relative overflow-hidden group">
                                                 <img
-                                                    src={slide.image || '/images/wedding-couple.jpg'}
+                                                    src={slide.image || '/images/no-image.svg'}
                                                     alt={slide.title}
                                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                                 />

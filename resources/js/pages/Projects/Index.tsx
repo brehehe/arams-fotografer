@@ -638,9 +638,7 @@ export default function ProjectsIndex({
                                             const supervisorName = p.supervisor?.name || '-';
                                             const supervisorAvatar =
                                                 p.supervisor?.avatar ||
-                                                (supervisorName.includes('Rizky')
-                                                    ? 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80'
-                                                    : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80');
+                                                '/images/default-avatar.png';
 
                                             return (
                                                 <tr key={p.id} className="hover:bg-slate-50/70 transition-colors group">
@@ -650,7 +648,7 @@ export default function ProjectsIndex({
                                                             <img
                                                                 src={
                                                                     p.thumbnail ||
-                                                                    'https://images.unsplash.com/photo-1519741497674-611481863552?w=100&auto=format&fit=crop&q=80'
+                                                                    '/images/no-image.svg'
                                                                 }
                                                                 alt={p.name}
                                                                 className="w-10 h-10 rounded-xl object-cover ring-1 ring-slate-200 shrink-0 shadow-2xs"

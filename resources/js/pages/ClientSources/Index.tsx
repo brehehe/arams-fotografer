@@ -27,6 +27,8 @@ import {
     Sparkles,
     Eye,
     Tag,
+    Youtube,
+    Facebook,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -241,6 +243,13 @@ export default function ClientSourcesIndex({
                     color: 'text-amber-600 bg-amber-50',
                     defaultDate: '12 Mei 2026',
                 };
+            case 'other':
+                return {
+                    label: 'Lainnya / Rekomendasi',
+                    icon: HeartHandshake,
+                    color: 'text-purple-600 bg-purple-50',
+                    defaultDate: '1 Mei 2026',
+                };
             case 'social_media':
                 if (name.toLowerCase().includes('instagram')) {
                     return {
@@ -248,6 +257,22 @@ export default function ClientSourcesIndex({
                         icon: InstagramIcon,
                         color: 'text-pink-600 bg-pink-50',
                         defaultDate: '29 Mei 2026',
+                    };
+                }
+                if (name.toLowerCase().includes('facebook')) {
+                    return {
+                        label: 'Media Sosial / Online',
+                        icon: Facebook,
+                        color: 'text-blue-600 bg-blue-50',
+                        defaultDate: '28 Mei 2026',
+                    };
+                }
+                if (name.toLowerCase().includes('youtube')) {
+                    return {
+                        label: 'Media Sosial / Online',
+                        icon: Youtube,
+                        color: 'text-red-600 bg-red-50',
+                        defaultDate: '27 Mei 2026',
                     };
                 }
                 if (name.toLowerCase().includes('tiktok')) {

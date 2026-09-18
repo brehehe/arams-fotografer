@@ -363,6 +363,7 @@ export default function ClientIntakeForm({
         special_requests: '',
         client_source_id: '',
         source_info: '',
+        referral_name: '',
         custom_price: '',
     });
 
@@ -2214,12 +2215,47 @@ export default function ClientIntakeForm({
                                                     const selected = client_sources.find((cs) => cs.id === val);
                                                     handleFieldChange('client_source_id', val);
                                                     handleFieldChange('source_info', selected?.name || '');
+                                                    if (selected && !(selected.type === 'other' || selected.name.toLowerCase().includes('lainnya') || selected.name.toLowerCase().includes('rekomendasi') || selected.name.toLowerCase().includes('wo'))) {
+                                                        handleFieldChange('referral_name', '');
+                                                    }
                                                 }}
                                                 placeholder="Pilih sumber referensi..."
                                                 searchPlaceholder="Cari sumber referensi..."
                                                 clearable={true}
                                             />
                                         </div>
+
+                                        {(() => {
+                                            const selectedCs = client_sources.find((cs) => cs.id === formData.client_source_id);
+                                            const isOther = selectedCs && (
+                                                selectedCs.type === 'other' ||
+                                                selectedCs.type === 'wedding_organizer' ||
+                                                selectedCs.type === 'individual' ||
+                                                selectedCs.name.toLowerCase().includes('lainnya') ||
+                                                selectedCs.name.toLowerCase().includes('rekomendasi') ||
+                                                selectedCs.name.toLowerCase().includes('wo')
+                                            );
+
+                                            if (!isOther) return null;
+
+                                            return (
+                                                <div className="p-3.5 rounded-xl bg-purple-50/70 border border-purple-200/80 space-y-1.5 transition-all animate-in fade-in duration-200">
+                                                    <label className="block text-[11px] font-bold text-purple-900">
+                                                        Nama WO / Orang yang Merekomendasikan <span className="text-purple-500 font-normal">(Opsional)</span>
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        value={formData.referral_name}
+                                                        onChange={(e) => handleFieldChange('referral_name', e.target.value)}
+                                                        placeholder="Contoh: WO Harmoni, Rekan Fotografer, Teman (Siti)..."
+                                                        className="w-full px-3.5 py-2.5 rounded-xl border border-purple-200 bg-white text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 transition-all placeholder:text-slate-400"
+                                                    />
+                                                    <p className="text-[10px] text-purple-700/80">
+                                                        Tuliskan nama Wedding Organizer atau nama kerabat/teman yang merekomendasikan layanan kami.
+                                                    </p>
+                                                </div>
+                                            );
+                                        })()}
 
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div>
@@ -2509,6 +2545,11 @@ export default function ClientIntakeForm({
                                                 <span className="text-slate-400 block text-[10px] mb-1">Sumber Referensi / Mengetahui Arams</span>
                                                 <p className="font-semibold text-slate-800">
                                                     {formData.source_info || client_sources.find((cs) => cs.id === formData.client_source_id)?.name || '-'}
+                                                    {formData.referral_name ? (
+                                                        <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-100 text-purple-700">
+                                                            WO / Rekomendasi: {formData.referral_name}
+                                                        </span>
+                                                    ) : null}
                                                 </p>
                                             </div>
                                             <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-100">

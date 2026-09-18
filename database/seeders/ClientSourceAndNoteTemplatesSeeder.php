@@ -125,36 +125,6 @@ class ClientSourceAndNoteTemplatesSeeder extends Seeder
 
         $sources = [
             [
-                'name' => 'Rina Safitri',
-                'type' => 'individual',
-                'phone' => '0812-3456-7890',
-                'email' => 'rina.safitri@gmail.com',
-                'description' => 'Referensi dari teman dekat yang merekomendasikan Arams Pictures ke kolega dan kerabatnya.',
-                'status' => 'active',
-                'is_primary' => true,
-                'created_at' => Carbon::parse('2026-05-27 14:32:00'),
-            ],
-            [
-                'name' => 'Wedding Organizer Indah',
-                'type' => 'wedding_organizer',
-                'phone' => '0813-8899-0011',
-                'email' => 'indah.wo@gmail.com',
-                'description' => 'Partner WO premium area Jabodetabek & Bandung.',
-                'status' => 'active',
-                'is_primary' => true,
-                'created_at' => Carbon::parse('2026-05-24 10:00:00'),
-            ],
-            [
-                'name' => 'Andi Setiawan',
-                'type' => 'individual',
-                'phone' => '0811-2233-4455',
-                'email' => 'andi.setiawan@yahoo.com',
-                'description' => 'Klien lama tahun 2025 yang sering merekomendasikan teman kantor.',
-                'status' => 'active',
-                'is_primary' => true,
-                'created_at' => Carbon::parse('2026-05-20 16:15:00'),
-            ],
-            [
                 'name' => 'Instagram',
                 'type' => 'social_media',
                 'phone' => null,
@@ -165,34 +135,24 @@ class ClientSourceAndNoteTemplatesSeeder extends Seeder
                 'created_at' => Carbon::parse('2026-05-29 09:30:00'),
             ],
             [
-                'name' => 'Google / Website',
+                'name' => 'Facebook',
                 'type' => 'social_media',
                 'phone' => null,
-                'email' => 'web@arams.com',
-                'description' => 'Organic search Google & Landing page official website',
+                'email' => 'facebook@arams.com',
+                'description' => 'Official Facebook Page & Meta Ads Campaign',
                 'status' => 'active',
                 'is_primary' => true,
-                'created_at' => Carbon::parse('2026-05-28 11:20:00'),
+                'created_at' => Carbon::parse('2026-05-28 10:00:00'),
             ],
             [
-                'name' => 'Budi Santoso',
-                'type' => 'individual',
-                'phone' => '0812-9876-5432',
-                'email' => 'budi.santoso@gmail.com',
-                'description' => 'Rekomendasi dari fotografer rekanan.',
+                'name' => 'YouTube',
+                'type' => 'social_media',
+                'phone' => null,
+                'email' => 'youtube@arams.com',
+                'description' => 'Channel video & portfolio resmi YouTube @aramspictures',
                 'status' => 'active',
                 'is_primary' => true,
-                'created_at' => Carbon::parse('2026-05-18 15:45:00'),
-            ],
-            [
-                'name' => 'Lina Marlina',
-                'type' => 'individual',
-                'phone' => '0812-5555-1234',
-                'email' => 'lina.marlina@gmail.com',
-                'description' => 'Klien maternity & newborn referral.',
-                'status' => 'active',
-                'is_primary' => true,
-                'created_at' => Carbon::parse('2026-05-16 13:10:00'),
+                'created_at' => Carbon::parse('2026-05-27 15:00:00'),
             ],
             [
                 'name' => 'TikTok',
@@ -205,42 +165,26 @@ class ClientSourceAndNoteTemplatesSeeder extends Seeder
                 'created_at' => Carbon::parse('2026-05-14 10:05:00'),
             ],
             [
-                'name' => 'Vendor Dekorasi Mutiara',
-                'type' => 'vendor',
-                'phone' => '0821-4455-6677',
-                'email' => 'mutiara.decor@gmail.com',
-                'description' => 'Vendor rekanan dekorasi pelaminan wedding.',
+                'name' => 'Google / Website',
+                'type' => 'social_media',
+                'phone' => null,
+                'email' => 'web@arams.com',
+                'description' => 'Organic search Google & Landing page official website',
                 'status' => 'active',
                 'is_primary' => true,
-                'created_at' => Carbon::parse('2026-05-12 17:00:00'),
+                'created_at' => Carbon::parse('2026-05-28 11:20:00'),
             ],
             [
-                'name' => 'Iklan Facebook',
-                'type' => 'ads',
+                'name' => 'Lainnya (Rekomendasi WO / Teman / Vendor)',
+                'type' => 'other',
                 'phone' => null,
                 'email' => null,
-                'description' => 'Meta Sponsored Ads Campaign',
+                'description' => 'Rekomendasi dari Wedding Organizer (WO), rekanan fotografer, kerabat, atau vendor rekanan',
                 'status' => 'active',
                 'is_primary' => true,
-                'created_at' => Carbon::parse('2026-05-10 08:30:00'),
+                'created_at' => Carbon::parse('2026-05-01 08:00:00'),
             ],
         ];
-
-        // Add more sources to reach 28 total matching stats in Gambar 2
-        for ($i = 11; $i <= 28; $i++) {
-            $types = ['individual', 'wedding_organizer', 'vendor', 'social_media', 'ads', 'other'];
-            $type = $types[($i % count($types))];
-            $sources[] = [
-                'name' => $type === 'individual' ? "Kolega Referral {$i}" : "Partner Mitra {$i}",
-                'type' => $type,
-                'phone' => '0812-'.rand(1000, 9999).'-'.rand(1000, 9999),
-                'email' => "partner{$i}@example.com",
-                'description' => "Sumber mitra referral ke-{$i} untuk klien studio.",
-                'status' => rand(0, 10) > 1 ? 'active' : 'inactive',
-                'is_primary' => rand(0, 10) > 3,
-                'created_at' => Carbon::parse('2026-05-01')->addDays($i % 25),
-            ];
-        }
 
         $createdRina = null;
         foreach ($sources as $idx => $s) {

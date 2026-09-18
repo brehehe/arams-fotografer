@@ -63,7 +63,7 @@ export function Modal({
       <>
         {/* Scrollable Body with comfortable max width container */}
         <div className={cn("flex-1 overflow-y-auto bg-slate-50/50 p-4 sm:p-6 md:p-8 overscroll-contain text-xs", bodyClassName)}>
-          <div className="max-w-5xl mx-auto w-full">
+          <div className="max-w-full mx-auto w-full">
             {children}
           </div>
         </div>
@@ -71,7 +71,7 @@ export function Modal({
         {/* Fixed Footer */}
         {footer && (
           <div className="border-t border-slate-200/90 bg-white px-5 sm:px-8 py-3.5 sm:py-4 shrink-0 shadow-xs z-10">
-            <div className="max-w-5xl mx-auto w-full">
+            <div className="max-w-full mx-auto w-full">
               {footer}
             </div>
           </div>
@@ -91,7 +91,7 @@ export function Modal({
         {/* Fixed Header */}
         {(title || subtitle || icon) && (
           <div className="px-5 sm:px-8 py-4 border-b border-slate-200/90 bg-white flex items-center justify-between shrink-0 shadow-2xs z-10">
-            <div className="max-w-5xl mx-auto w-full flex items-center justify-between">
+            <div className="max-w-full mx-auto w-full flex items-center justify-between">
               <div className="flex items-center gap-3 min-w-0">
                 {icon && (
                   <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-2xs shrink-0 bg-slate-100 text-slate-700">

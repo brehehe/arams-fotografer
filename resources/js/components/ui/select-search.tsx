@@ -92,11 +92,11 @@ return
     const spaceAbove = rect.top - 10
     const minDesiredHeight = 220
     const isUpward = spaceBelow < minDesiredHeight && spaceAbove > spaceBelow
-    const maxHeight = Math.min(320, Math.max(160, isUpward ? spaceAbove : spaceBelow))
+    const maxHeight = Math.min(380, Math.max(200, isUpward ? spaceAbove : spaceBelow))
 
-    // Ensure left position doesn't overflow screen horizontally
+    // Ensure popup has comfortable reading width so descriptions don't get cramped
+    const width = Math.max(rect.width, Math.min(viewportWidth - 20, 360))
     let left = rect.left
-    const width = rect.width
 
     if (left + width > viewportWidth - 10) {
       left = Math.max(10, viewportWidth - width - 10)
@@ -364,26 +364,36 @@ return
                     type="button"
                     onClick={() => handleSelect(opt.value)}
                     className={cn(
-                      "w-full px-3 py-2.5 rounded-xl text-left flex items-center justify-between transition-colors cursor-pointer text-xs",
+                      "w-full px-3.5 py-2.5 rounded-xl text-left flex items-start justify-between gap-3 transition-colors cursor-pointer text-xs group",
                       isSelected
-                        ? "bg-[#C89445]/20 text-[#C89445] font-bold"
+                        ? "bg-[#C89445]/15 text-[#C89445] font-bold"
                         : variant === 'dark'
                           ? "hover:bg-white/10 text-slate-200 font-medium"
                           : "hover:bg-slate-50 text-slate-700 font-medium"
                     )}
                   >
-                    <div className="flex items-center gap-2.5 truncate min-w-0 flex-1">
-                      {opt.icon}
+                    <div className="flex items-start gap-2.5 min-w-0 flex-1 py-0.5">
+                      {opt.icon && <div className="shrink-0 mt-0.5">{opt.icon}</div>}
                       <div className="min-w-0 flex-1">
-                        <span className="block truncate font-bold text-xs">{opt.label}</span>
+                        <span className={cn(
+                          "block font-bold text-xs leading-snug break-words whitespace-normal",
+                          isSelected
+                            ? "text-[#A86B1E] dark:text-[#E5B56A]"
+                            : (variant === 'dark' ? "text-white" : "text-slate-900")
+                        )}>
+                          {opt.label}
+                        </span>
                         {opt.subtitle && (
-                          <span className={cn("text-[11px] block font-normal truncate mt-0.5", variant === 'dark' ? "text-slate-400" : "text-slate-500")}>
+                          <span className={cn(
+                            "text-[11px] block font-normal mt-1 leading-relaxed break-words whitespace-normal",
+                            variant === 'dark' ? "text-slate-400" : "text-slate-500"
+                          )}>
                             {opt.subtitle}
                           </span>
                         )}
                       </div>
                     </div>
-                    {isSelected && <Check className="w-3.5 h-3.5 text-[#C89445] shrink-0 ml-2" />}
+                    {isSelected && <Check className="w-4 h-4 text-[#C89445] shrink-0 mt-0.5 ml-1.5" />}
                   </button>
                 )
               })

@@ -87,6 +87,9 @@ class StoreProjectRequest extends FormRequest
             'client_overrides.children.*.nickname' => 'nullable|string|max:255',
             'client_overrides.children.*.birth_date' => 'nullable|date',
             'client_overrides.children.*.gender' => 'nullable|string|max:10',
+            'client_overrides.referral_name' => 'nullable|string|max:255',
+            'client_overrides.client_source_id' => 'nullable',
+            'client_overrides.source' => 'nullable|string|max:255',
         ];
     }
 }

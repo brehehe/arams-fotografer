@@ -601,7 +601,7 @@ export default function ClientProjectDetail({
                                 project?.thumbnail ||
                                 highlightPhotos.find((h) => h.is_cover)?.image_url ||
                                 highlightPhotos[0]?.image_url ||
-                                'https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=1920&auto=format&fit=crop&q=85'
+                                '/images/no-image.svg'
                             }
                             alt={project.name}
                             className="w-full h-full object-cover object-center sm:object-right opacity-85 sm:opacity-95 filter brightness-95 contrast-[1.05]"

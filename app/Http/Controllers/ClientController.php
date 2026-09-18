@@ -21,9 +21,12 @@ use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\Permission\Models\Role;
+use App\Traits\HasWebpUpload;
 
 class ClientController extends Controller
 {
+    use HasWebpUpload;
+
     public function __construct(
         protected ClientService $clientService
     ) {}
@@ -108,7 +111,34 @@ class ClientController extends Controller
     {
         $this->authorize('update', $client);
 
-        $this->clientService->updateClient($client, $request->validated(), $request->user());
+        $data = $request->validated();
+
+        if ($request->hasFile('avatar_file')) {
+            $avatarUrl = $this->uploadThumbnailAsWebp(
+                $request->file('avatar_file'),
+                'clients/avatars',
+                400,
+                400,
+                85,
+                $client->avatar
+            );
+            $data['avatar'] = $avatarUrl;
+        } elseif ($request->has('avatar') && empty($request->input('avatar'))) {
+            if ($client->avatar) {
+                $this->deleteWebpImage($client->avatar);
+            }
+            $data['avatar'] = null;
+        }
+
+        $this->clientService->updateClient($client, $data, $request->user());
+
+        // Sync avatar to portal user if linked
+        if (array_key_exists('avatar', $data)) {
+            $portalUser = User::where('client_id', $client->id)->first();
+            if ($portalUser) {
+                $portalUser->update(['avatar' => $data['avatar']]);
+            }
+        }
 
         return redirect()->back()->with('success', 'Data klien berhasil diperbarui.');
     }

@@ -161,7 +161,7 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                     {/* Background Overlay */}
                     <div className="absolute inset-0 z-0">
                         <img
-                            src={displayProjects[0]?.thumbnail || 'https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=1920&auto=format&fit=crop&q=85'}
+                            src={displayProjects[0]?.thumbnail || '/images/no-image.svg'}
                             alt="Project Saya Arams Pictures"
                             className="w-full h-full object-cover object-center sm:object-right opacity-85 sm:opacity-95 filter brightness-95 contrast-[1.05]"
                         />
@@ -355,7 +355,7 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
                                     {/* Left Thumbnail with Badge */}
                                     <div className="relative w-full sm:w-44 md:w-48 lg:w-44 xl:w-48 h-36 sm:h-auto min-h-[135px] max-h-[170px] rounded-xl overflow-hidden bg-slate-100 shrink-0 shadow-2xs">
                                         <img
-                                            src={p.thumbnail || '/images/wedding-couple.jpg'}
+                                            src={p.thumbnail || '/images/no-image.svg'}
                                             alt={p.name}
                                             className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500 ease-out"
                                         />

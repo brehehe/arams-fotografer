@@ -56,7 +56,7 @@ class ClientSourceController extends Controller
         $totalSources = ClientSource::count();
 
         $stats = [
-            'total_sources' => $totalSources > 0 ? $totalSources : 28,
+            'total_sources' => $totalSources,
             'total_projects' => 76,
             'total_sales' => 185450000,
             'average_project_value' => 2439474,
@@ -151,6 +151,7 @@ class ClientSourceController extends Controller
                 'project_id' => $project->id,
                 'client_id' => $project->client?->id,
                 'client' => $clientName,
+                'referral_name' => $project->client?->referral_name ?? null,
                 'project' => $project->name,
                 'project_category' => strtolower($project->category?->name ?? 'wedding'),
                 'event_date' => $project->event_date ? Carbon::parse($project->event_date)->isoFormat('D MMM YYYY') : '-',
@@ -171,6 +172,7 @@ class ClientSourceController extends Controller
                 'project_id' => null,
                 'client_id' => $client->id,
                 'client' => $clientName,
+                'referral_name' => $client->referral_name ?? null,
                 'project' => 'Lead Klien (Belum ada project)',
                 'project_category' => 'lead',
                 'event_date' => $client->created_at ? Carbon::parse($client->created_at)->isoFormat('D MMM YYYY') : '-',

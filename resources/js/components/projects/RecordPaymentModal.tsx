@@ -90,9 +90,9 @@ export default function RecordPaymentModal({
             const defaultMethodId = paymentMethods.length > 0 ? String(paymentMethods[0].id) : '';
             const initInvId = invoiceId ? String(invoiceId) : (project?.invoices?.[0]?.id ? String(project.invoices[0].id) : '');
             setCurrentInvoiceId(initInvId);
-            
-            let defaultAmount = initialAmount !== undefined && initialAmount !== null && Number(initialAmount) > 0 
-                ? String(Math.round(Number(initialAmount))) 
+
+            let defaultAmount = initialAmount !== undefined && initialAmount !== null && Number(initialAmount) > 0
+                ? String(Math.round(Number(initialAmount)))
                 : '';
             let defaultNote = initialNotes || '';
 
@@ -191,14 +191,14 @@ export default function RecordPaymentModal({
     };
 
     return (
-        <div 
+        <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200"
             role="dialog"
             aria-modal="true"
             aria-labelledby="payment-modal-title"
         >
             <div
-                className="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-slate-200/80 overflow-hidden flex flex-col my-auto max-h-[92vh] transition-all animate-in zoom-in-95 duration-200"
+                className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl border border-slate-200/80 overflow-hidden flex flex-col my-auto max-h-[92vh] transition-all animate-in zoom-in-95 duration-200"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* ── HEADER MODAL ────────────────────────────────────────────── */}
@@ -332,11 +332,10 @@ export default function RecordPaymentModal({
                                 <button
                                     type="button"
                                     onClick={() => handleShortcut(dp30Amount, 'dp30')}
-                                    className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border flex items-center gap-1.5 ${
-                                        Number(formData.amount) === dp30Amount
-                                            ? 'bg-indigo-50 text-[#3B46F1] border-indigo-300 ring-2 ring-indigo-200/80 shadow-2xs'
-                                            : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/90'
-                                    }`}
+                                    className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border flex items-center gap-1.5 ${Number(formData.amount) === dp30Amount
+                                        ? 'bg-indigo-50 text-[#3B46F1] border-indigo-300 ring-2 ring-indigo-200/80 shadow-2xs'
+                                        : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/90'
+                                        }`}
                                 >
                                     <span>DP 30%</span>
                                     <span className="font-mono text-[11px] font-normal opacity-90">({formatRupiah(dp30Amount)})</span>
@@ -348,11 +347,10 @@ export default function RecordPaymentModal({
                                 <button
                                     type="button"
                                     onClick={() => handleShortcut(dp50Amount, 'dp50')}
-                                    className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border flex items-center gap-1.5 ${
-                                        Number(formData.amount) === dp50Amount
-                                            ? 'bg-indigo-50 text-[#3B46F1] border-indigo-300 ring-2 ring-indigo-200/80 shadow-2xs'
-                                            : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/90'
-                                    }`}
+                                    className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border flex items-center gap-1.5 ${Number(formData.amount) === dp50Amount
+                                        ? 'bg-indigo-50 text-[#3B46F1] border-indigo-300 ring-2 ring-indigo-200/80 shadow-2xs'
+                                        : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/90'
+                                        }`}
                                 >
                                     <span>DP 50%</span>
                                     <span className="font-mono text-[11px] font-normal opacity-90">({formatRupiah(dp50Amount)})</span>
@@ -364,11 +362,10 @@ export default function RecordPaymentModal({
                                 <button
                                     type="button"
                                     onClick={() => handleShortcut(sisaPelunasan, 'sisa')}
-                                    className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border flex items-center gap-1.5 ${
-                                        Number(formData.amount) === sisaPelunasan
-                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300 ring-2 ring-emerald-200/80 shadow-2xs'
-                                            : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/90'
-                                    }`}
+                                    className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border flex items-center gap-1.5 ${Number(formData.amount) === sisaPelunasan
+                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-300 ring-2 ring-emerald-200/80 shadow-2xs'
+                                        : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/90'
+                                        }`}
                                 >
                                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                                     <span>Pelunasan Sisa</span>
@@ -381,11 +378,10 @@ export default function RecordPaymentModal({
                                 <button
                                     type="button"
                                     onClick={() => handleShortcut(totalProject, 'lunas')}
-                                    className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border flex items-center gap-1.5 ${
-                                        Number(formData.amount) === totalProject
-                                            ? 'bg-purple-50 text-purple-700 border-purple-300 ring-2 ring-purple-200/80 shadow-2xs'
-                                            : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/90'
-                                    }`}
+                                    className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border flex items-center gap-1.5 ${Number(formData.amount) === totalProject
+                                        ? 'bg-purple-50 text-purple-700 border-purple-300 ring-2 ring-purple-200/80 shadow-2xs'
+                                        : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200/90'
+                                        }`}
                                 >
                                     <span>Lunas Penuh (100%)</span>
                                     <span className="font-mono text-[11px] font-normal opacity-90">({formatRupiah(totalProject)})</span>
@@ -418,7 +414,7 @@ export default function RecordPaymentModal({
                     </div>
 
                     {/* 4. Tanggal Pembayaran & Rekening Bank */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3">
                         <div className="space-y-1.5">
                             <label className="font-bold text-slate-700 flex items-center gap-1.5 text-xs">
                                 <Calendar className="w-3.5 h-3.5 text-slate-400" />
@@ -458,7 +454,7 @@ export default function RecordPaymentModal({
                     </div>
 
                     {/* 5. Nomor Referensi & Catatan */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3">
                         <div className="space-y-1.5">
                             <label className="font-bold text-slate-700 block text-xs">
                                 No. Referensi Transfer <span className="text-slate-400 font-normal">(Opsional)</span>
