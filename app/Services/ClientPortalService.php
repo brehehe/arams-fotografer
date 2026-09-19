@@ -54,6 +54,7 @@ class ClientPortalService
                     'payments' => fn ($q) => $q->with('paymentMethod')->latest('payment_date')->limit(10),
                     'invoices' => fn ($q) => $q->latest()->limit(10),
                     'highlights' => fn ($q) => $q->orderBy('sort_order')->limit(12),
+                    'projectAddons.addon',
                 ]);
 
             if ($isClientUser && $client) {
@@ -76,6 +77,7 @@ class ClientPortalService
                     'payments' => fn ($q) => $q->with('paymentMethod')->latest('payment_date')->limit(10),
                     'invoices' => fn ($q) => $q->latest()->limit(10),
                     'highlights' => fn ($q) => $q->orderBy('sort_order')->limit(12),
+                    'projectAddons.addon',
                 ])
                 ->latest('event_date')
                 ->first();
@@ -90,6 +92,7 @@ class ClientPortalService
                 'payments' => fn ($q) => $q->with('paymentMethod')->latest('payment_date')->limit(10),
                 'invoices' => fn ($q) => $q->latest()->limit(10),
                 'highlights' => fn ($q) => $q->orderBy('sort_order')->limit(12),
+                'projectAddons.addon',
             ])->latest()->first();
         }
 
@@ -309,6 +312,22 @@ class ClientPortalService
                 'location' => $activeProject->location ?: 'Studio Arams Pictures',
                 'category_name' => $activeProject->category?->name ?? 'Wedding Photography',
                 'package_name' => $activeProject->package?->name ?? 'Custom Package',
+                'package' => $activeProject->package ? [
+                    'id' => $activeProject->package->id,
+                    'name' => $activeProject->package->name,
+                    'description' => $activeProject->package->description,
+                    'base_price' => (float) $activeProject->package->base_price,
+                    'duration_hours' => $activeProject->package->duration_hours,
+                    'included_services' => $activeProject->package->included_services ?? [],
+                    'included_deliverables' => $activeProject->package->included_deliverables ?? [],
+                ] : null,
+                'addons' => $activeProject->projectAddons ? $activeProject->projectAddons->map(fn($pa) => [
+                    'name' => $pa->addon?->name ?? $pa->custom_name ?? 'Add-on Item',
+                    'qty' => $pa->qty,
+                    'unit' => $pa->unit,
+                    'price' => (float) $pa->unit_price,
+                    'total' => (float) $pa->total_price,
+                ]) : [],
                 'total_amount' => (float) $activeProject->total_amount,
                 'paid_amount' => (float) $activeProject->paid_amount,
                 'payment_status' => $activeProject->payment_status,
@@ -625,6 +644,15 @@ class ClientPortalService
                 'notes' => $project->notes,
                 'category_name' => $project->category?->name ?? 'Photography',
                 'package_name' => $project->package?->name ?? 'Custom Package',
+                'package' => $project->package ? [
+                    'id' => $project->package->id,
+                    'name' => $project->package->name,
+                    'description' => $project->package->description,
+                    'base_price' => (float) $project->package->base_price,
+                    'duration_hours' => $project->package->duration_hours,
+                    'included_services' => $project->package->included_services ?? [],
+                    'included_deliverables' => $project->package->included_deliverables ?? [],
+                ] : null,
                 'total_amount' => (float) $project->total_amount,
                 'paid_amount' => (float) $project->paid_amount,
                 'payment_status' => $project->payment_status,

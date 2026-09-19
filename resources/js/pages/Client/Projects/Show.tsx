@@ -59,6 +59,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { ClientLayout } from '@/layouts/ClientLayout';
 import { formatRupiah } from '@/lib/formatters';
+import { PackageDeliverablesCard } from '@/components/PackageDeliverablesCard';
 
 interface FileLinkItem {
     id: string;
@@ -180,8 +181,17 @@ interface ClientProjectDetailProps {
         name: string;
         category?: { id: string; name: string } | null;
         category_name?: string;
-        package?: { id: string; name: string; description?: string } | null;
+        package?: {
+            id: string;
+            name: string;
+            description?: string;
+            base_price?: number;
+            duration_hours?: number;
+            included_services?: any[];
+            included_deliverables?: any[];
+        } | null;
         package_name?: string;
+        addons?: Array<{ name: string; qty?: number; unit?: string; price?: number; total?: number }>;
         status: string;
         workflow_step: string;
         progress: number;
@@ -1437,6 +1447,18 @@ export default function ClientProjectDetail({
                                     </div>
                                 </div>
                             </section>
+
+                            {/* Layanan & Deliverables Paket */}
+                            <PackageDeliverablesCard
+                                packageData={project.package}
+                                packageName={packageDisplayName}
+                                addons={project.addons || []}
+                                cardBg={portalCardBg}
+                                cardBorder={portalCardBorder}
+                                fontHeading={portalFontHeading}
+                                headingColor={portalHeadingColor}
+                                className="shadow-xs hover:shadow-xl hover:shadow-[#3C0E0E]/8 hover:-translate-y-1 hover:border-[#3C0E0E]/25 transition-all duration-300"
+                            />
 
                             {/* 6. ULASAN & PENILAIAN PROJECT (Hanya untuk Project Ini) */}
                             <section

@@ -315,6 +315,9 @@ export default function AdminSettingsPage({
             portal_recommended_packages_subtitle: getVal('portal_recommended_packages_subtitle', 'Pilihan paket menarik lainnya yang mungkin Anda sukai.'),
             portal_show_testimonials: getVal('portal_show_testimonials', '1') !== '0',
         });
+        if (settingsMap?.login_bg_photo !== undefined) {
+            setThemeForm((prev) => ({ ...prev, login_bg_photo: settingsMap.login_bg_photo }));
+        }
     }, [settingsMap]);
 
     const handleSaveRecommendedPackages = () => {
@@ -718,6 +721,38 @@ export default function AdminSettingsPage({
             login_tagline: preset.login_tagline,
         });
         toast.info(`Preset Login "${preset.name}" Dipilih. Klik Simpan untuk menerapkan.`);
+    };
+
+    const handleResetLoginTheme = () => {
+        const defaultPreset = loginPresets[0];
+        const defaults = {
+            login_preset: defaultPreset.id,
+            login_bg_color: defaultPreset.login_bg_color,
+            login_bg_gradient: defaultPreset.login_bg_gradient,
+            login_card_bg: defaultPreset.login_card_bg,
+            login_card_bg_gradient: defaultPreset.login_card_bg_gradient,
+            login_accent_color: defaultPreset.login_accent_color,
+            login_tagline: defaultPreset.login_tagline,
+            login_bg_photo: '',
+            login_headline: 'Abadikan Setiap Momen Berharga Anda',
+            login_description: 'Terima kasih telah mempercayakan momen spesial Anda kepada kami.',
+            login_welcome_text: 'Welcome Back!',
+            login_pillar_1_title: 'Kualitas Terbaik',
+            login_pillar_1_desc: 'Peralatan profesional & editing berkualitas tinggi.',
+            login_pillar_2_title: '100% Aman',
+            login_pillar_2_desc: 'Data & file Anda aman bersama kami.',
+            login_pillar_3_title: 'Layanan Personal',
+            login_pillar_3_desc: 'Kami mendengar & mewujudkan visi Anda.',
+        };
+        setThemeForm((prev) => ({ ...prev, ...defaults }));
+        router.post('/settings', {
+            settings: defaults,
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success('Pengaturan Tampilan Login Berhasil Direset ke Default');
+            },
+        });
     };
 
     const fileInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -2999,7 +3034,7 @@ export default function AdminSettingsPage({
                                 <div className="flex items-center justify-between pt-2">
                                     <button
                                         type="button"
-                                        onClick={handleResetTheme}
+                                        onClick={handleResetLoginTheme}
                                         className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
                                     >
                                         Kembalikan ke Default

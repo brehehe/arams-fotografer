@@ -46,6 +46,7 @@ import {
     Receipt,
 } from 'lucide-react';
 import { formatRupiah, formatDate } from '@/lib/formatters';
+import { PackageDeliverablesCard } from '@/components/PackageDeliverablesCard';
 
 interface FileLinkItem {
     id: string;
@@ -129,6 +130,16 @@ interface ClientDashboardProps {
         name: string;
         category_name: string;
         package_name: string;
+        package?: {
+            id: string;
+            name: string;
+            description?: string;
+            base_price?: number;
+            duration_hours?: number;
+            included_services?: any[];
+            included_deliverables?: any[];
+        } | null;
+        addons?: Array<{ name: string; qty?: number; unit?: string; price?: number; total?: number }>;
         status: string;
         status_label?: string;
         last_updated?: string;
@@ -564,6 +575,22 @@ export default function ClientDashboard({
                         </div>
                     </div>
                 </section>
+
+                {/* ── 2.5. LAYANAN & DELIVERABLES PAKET ──────────────────── */}
+                {active_project && (
+                    <section className="space-y-4">
+                        <PackageDeliverablesCard
+                            packageData={active_project.package}
+                            packageName={active_project.package_name}
+                            addons={active_project.addons || []}
+                            cardBg="#FFFFFF"
+                            cardBorder={COLOR_WARM_CREAM}
+                            fontHeading={portalFontHeading}
+                            headingColor={COLOR_BURGUNDY}
+                            className="shadow-xs hover:shadow-xl hover:shadow-[#3C0E0E]/8 hover:border-[#3C0E0E]/25 transition-all duration-300"
+                        />
+                    </section>
+                )}
 
                 {/* ── 3. THREE-COLUMN ROW (FILE TERBARU, PEMBAYARAN, HIGHLIGHT) ── */}
                 <section className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 items-stretch">

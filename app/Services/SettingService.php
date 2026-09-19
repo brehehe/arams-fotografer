@@ -29,8 +29,13 @@ class SettingService
     /**
      * Update settings and upload company logo and signature converted to WebP.
      */
-    public function updateSettings(array $settings, ?UploadedFile $logoFile = null, ?User $causer = null, ?UploadedFile $signatureFile = null): void
-    {
+    public function updateSettings(
+        array $settings,
+        ?UploadedFile $logoFile = null,
+        ?User $causer = null,
+        ?UploadedFile $signatureFile = null,
+        ?UploadedFile $loginBgFile = null
+    ): void {
         if ($logoFile) {
             $oldLogo = Setting::get('company_logo');
             $settings['company_logo'] = $this->uploadAsWebp(
@@ -87,6 +92,48 @@ class SettingService
             }
             $settings['invoice_signature_image'] = '';
             $settings['company_signature'] = '';
+        }
+
+        // Handle login background photo from direct file upload or base64
+        if ($loginBgFile) {
+            $oldPhoto = Setting::get('login_bg_photo');
+            $settings['login_bg_photo'] = $this->uploadAsWebp(
+                $loginBgFile,
+                'login',
+                quality: 85,
+                maxWidth: 1920,
+                oldPath: $oldPhoto && !str_starts_with($oldPhoto, 'data:image') ? $oldPhoto : null
+            );
+        } elseif (isset($settings['login_bg_photo']) && str_starts_with($settings['login_bg_photo'], 'data:image')) {
+            $base64Photo = $settings['login_bg_photo'];
+            $oldPhoto = Setting::get('login_bg_photo');
+
+            $photoData = preg_replace('#^data:image/\w+;base64,#i', '', $base64Photo);
+            $photoBinary = base64_decode($photoData);
+            if ($photoBinary !== false) {
+                $tmpPhotoPath = tempnam(sys_get_temp_dir(), 'login_bg_') . '.png';
+                file_put_contents($tmpPhotoPath, $photoBinary);
+                try {
+                    $bgPath = $this->uploadAsWebp(
+                        $tmpPhotoPath,
+                        'login',
+                        quality: 85,
+                        maxWidth: 1920,
+                        oldPath: $oldPhoto && !str_starts_with($oldPhoto, 'data:image') ? $oldPhoto : null
+                    );
+                    $settings['login_bg_photo'] = $bgPath;
+                } finally {
+                    if (file_exists($tmpPhotoPath)) {
+                        @unlink($tmpPhotoPath);
+                    }
+                }
+            }
+        } elseif (array_key_exists('login_bg_photo', $settings) && empty($settings['login_bg_photo'])) {
+            $oldPhoto = Setting::get('login_bg_photo');
+            if ($oldPhoto && !str_starts_with($oldPhoto, 'data:image')) {
+                $this->deleteWebpImage($oldPhoto, 'public');
+            }
+            $settings['login_bg_photo'] = '';
         }
 
         foreach ($settings as $key => $val) {

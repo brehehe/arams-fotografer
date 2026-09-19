@@ -111,7 +111,9 @@ class SettingController extends Controller
             ? $request->file('invoice_signature_image')
             : ($request->hasFile('company_signature') ? $request->file('company_signature') : null);
 
-        $this->settingService->updateSettings($settings, $logoFile, auth()->user(), $signatureFile);
+        $loginBgFile = $request->hasFile('login_bg_photo') ? $request->file('login_bg_photo') : null;
+
+        $this->settingService->updateSettings($settings, $logoFile, auth()->user(), $signatureFile, $loginBgFile);
 
         return redirect()->back()->with('success', 'Pengaturan berhasil disimpan.');
     }
