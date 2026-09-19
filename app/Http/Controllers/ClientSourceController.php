@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Client;
+use App\Http\Requests\ClientSource\StoreClientSourceAppreciationRequest;
+use App\Http\Requests\ClientSource\StoreClientSourceRequest;
+use App\Http\Requests\ClientSource\UpdateClientSourceAppreciationRequest;
+use App\Http\Requests\ClientSource\UpdateClientSourceRequest;
 use App\Models\ClientSource;
 use App\Models\ClientSourceAppreciation;
-use App\Models\PaymentMethod;
-use App\Models\Project;
-use App\Models\WeddingOrganizer;
-use App\Traits\HasWebpUpload;
-use Carbon\Carbon;
+use App\Services\ClientSourceService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -17,305 +16,35 @@ use Inertia\Response;
 
 class ClientSourceController extends Controller
 {
-    use HasWebpUpload;
+    public function __construct(
+        protected ClientSourceService $clientSourceService
+    ) {}
+
     public function index(Request $request): Response
     {
-        $query = ClientSource::query()->with('appreciations');
+        $data = $this->clientSourceService->getSourcesPaginated($request);
 
-        if ($search = $request->input('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'ilike', "%{$search}%")
-                    ->orWhere('phone', 'ilike', "%{$search}%")
-                    ->orWhere('email', 'ilike', "%{$search}%")
-                    ->orWhere('type', 'ilike', "%{$search}%");
-            });
-        }
-
-        if ($isPrimary = $request->input('is_primary')) {
-            if ($isPrimary === 'yes' || $isPrimary === '1') {
-                $query->where('is_primary', true);
-            } elseif ($isPrimary === 'no' || $isPrimary === '0') {
-                $query->where('is_primary', false);
-            }
-        }
-
-        if ($type = $request->input('type')) {
-            if ($type !== 'all') {
-                $query->where('type', $type);
-            }
-        }
-
-        if ($status = $request->input('status')) {
-            if ($status !== 'all') {
-                $query->where('status', $status);
-            }
-        }
-
-        $sources = $query->latest('created_at')->paginate(10)->withQueryString();
-
-        // Dynamically compute real last_referral_date for each source
-        $sources->getCollection()->transform(function ($source) {
-            $latestProjectDate = Project::where('client_source_id', $source->id)
-                ->whereNotNull('event_date')
-                ->latest('event_date')
-                ->value('event_date')
-                ?? Project::where('client_source_id', $source->id)->latest('created_at')->value('created_at');
-
-            $latestClientDate = Client::where('client_source_id', $source->id)->latest('created_at')->value('created_at');
-
-            $dates = array_filter([$latestProjectDate, $latestClientDate]);
-            if (!empty($dates)) {
-                rsort($dates);
-                $source->last_referral_date = Carbon::parse($dates[0])->isoFormat('D MMM YYYY');
-            } else {
-                $source->last_referral_date = '-';
-            }
-
-            return $source;
-        });
-
-        $totalSources = ClientSource::count();
-
-        // Dynamic stats from real project & client data
-        $sourceProjectsQuery = Project::query()->where(function ($q) {
-            $q->whereNotNull('client_source_id')
-                ->orWhereHas('client', fn($cq) => $cq->whereNotNull('client_source_id'));
-        });
-
-        $totalProjects = $sourceProjectsQuery->count();
-        $totalSales = (float) $sourceProjectsQuery->sum('total_amount');
-        $averageProjectValue = $totalProjects > 0 ? (int) round($totalSales / $totalProjects) : 0;
-
-        $stats = [
-            'total_sources' => $totalSources,
-            'total_projects' => $totalProjects,
-            'total_sales' => $totalSales,
-            'average_project_value' => $averageProjectValue,
-        ];
-
-        return Inertia::render('ClientSources/Index', [
-            'sources' => $sources,
-            'filters' => $request->only(['search', 'is_primary', 'type', 'status', 'start_date', 'end_date']),
-            'stats' => $stats,
-        ]);
+        return Inertia::render('ClientSources/Index', $data);
     }
 
     public function show(string $id): Response
     {
-        $source = ClientSource::with(['appreciations' => function ($q) {
-            $q->with('paymentMethod')->latest('date');
-        }])->findOrFail($id);
+        $data = $this->clientSourceService->getSourceDetail($id);
 
-        // Cari klien berdasarkan FK client_source_id (prioritas utama)
-        $clientsByFk = Client::where('client_source_id', $source->id);
-
-        // Fallback: string match untuk data lama yang belum punya FK
-        $clientsQuery = Client::query()->where(function ($q) use ($source, $clientsByFk) {
-            // Exclude clients already found by FK to avoid duplicates
-            $fkIds = $clientsByFk->pluck('id');
-
-            $q->where('client_source_id', $source->id)
-                ->orWhere(function ($inner) use ($source, $fkIds) {
-                    $inner->whereNull('client_source_id')
-                        ->whereNotIn('id', $fkIds)
-                        ->where(function ($str) use ($source) {
-                            $str->where('source', $source->name)
-                                ->orWhere('referral_name', $source->name);
-
-                            if ($source->type === 'wedding_organizer') {
-                                $wo = WeddingOrganizer::where('name', $source->name)->first();
-                                if ($wo) {
-                                    $str->orWhere('wedding_organizer_id', $wo->id);
-                                }
-                            }
-                        });
-                });
-        });
-
-        $clients = $clientsQuery->with([
-            'projects' => function ($pq) {
-                $pq->with('category')->latest('event_date');
-            },
-        ])->get();
-
-        // Cari juga project yang terhubung langsung via FK projects.client_source_id
-        $directProjects = Project::where('client_source_id', $source->id)
-            ->with(['client', 'category'])
-            ->get();
-
-        // Kumpulkan semua project dari klien-klien tersebut dan project langsung
-        $allProjects = $clients->flatMap(function ($client) {
-            return $client->projects->map(function ($project) use ($client) {
-                $project->setRelation('client', $client);
-                return $project;
-            });
-        })
-        ->concat($directProjects)
-        ->unique('id')
-        ->sortByDesc(function ($p) {
-            return $p->event_date ?? $p->created_at;
-        })->values();
-
-        // Klien-klien yang belum memiliki project sama sekali
-        $clientsWithProjectIds = $allProjects->pluck('client_id')->filter()->unique()->all();
-        $clientsWithoutProject = $clients->filter(function ($client) use ($clientsWithProjectIds) {
-            return !in_array($client->id, $clientsWithProjectIds);
-        });
-
-        // Bentuk riwayat referral dari data project riil
-        $projectHistory = $allProjects->map(function ($project) {
-            $clientName = $project->client?->bride_name && $project->client?->groom_name
-                ? "{$project->client->bride_name} & {$project->client->groom_name}"
-                : ($project->client?->name ?? 'Klien');
-
-            $statusLabel = match ($project->status) {
-                'completed' => 'Selesai',
-                'confirmed' => 'Dikonfirmasi',
-                'in_progress' => 'Sedang Berjalan',
-                'draft' => 'Draft',
-                'cancelled' => 'Dibatalkan',
-                default => ucfirst((string) $project->status),
-            };
-
-            return [
-                'id' => $project->id,
-                'project_id' => $project->id,
-                'client_id' => $project->client?->id,
-                'client' => $clientName,
-                'referral_name' => $project->client?->referral_name ?? null,
-                'project' => $project->name,
-                'project_category' => strtolower($project->category?->name ?? 'wedding'),
-                'event_date' => $project->event_date ? Carbon::parse($project->event_date)->isoFormat('D MMM YYYY') : '-',
-                'raw_date' => $project->event_date ?? $project->created_at,
-                'amount' => (float) $project->total_amount,
-                'status' => $statusLabel,
-            ];
-        });
-
-        // Tambahkan klien yang belum memiliki project sebagai lead referral
-        $clientLeadHistory = $clientsWithoutProject->map(function ($client) {
-            $clientName = $client->bride_name && $client->groom_name
-                ? "{$client->bride_name} & {$client->groom_name}"
-                : $client->name;
-
-            return [
-                'id' => 'client-' . $client->id,
-                'project_id' => null,
-                'client_id' => $client->id,
-                'client' => $clientName,
-                'referral_name' => $client->referral_name ?? null,
-                'project' => 'Lead Klien (Belum ada project)',
-                'project_category' => 'lead',
-                'event_date' => $client->created_at ? Carbon::parse($client->created_at)->isoFormat('D MMM YYYY') : '-',
-                'raw_date' => $client->created_at,
-                'amount' => 0,
-                'status' => 'Lead Klien',
-            ];
-        });
-
-        $referralHistory = $projectHistory->concat($clientLeadHistory)
-            ->sortByDesc(fn ($item) => $item['raw_date'])
-            ->values()
-            ->all();
-
-        $totalProjectValue = (float) $allProjects->sum('total_amount');
-        $latestProject = $allProjects->first();
-        $latestClient = $clients->sortByDesc('created_at')->first();
-
-        $lastReferralDate = $latestProject?->event_date
-            ? Carbon::parse($latestProject->event_date)->isoFormat('D MMMM YYYY')
-            : ($latestClient ? Carbon::parse($latestClient->created_at)->isoFormat('D MMMM YYYY') : '-');
-
-        $lastReferralProject = $latestProject
-            ? (($latestProject->client?->name ?? 'Project') . ' (' . ($latestProject->category?->name ?? 'Project') . ')')
-            : '-';
-
-        $metrics = [
-            'total_referral_clients' => $clients->count(),
-            'total_projects' => $allProjects->count(),
-            'total_project_value' => $totalProjectValue,
-            'last_referral_date' => $lastReferralDate,
-            'last_referral_project' => $lastReferralProject,
-        ];
-
-        // Total pengeluaran komisi/apresiasi yang sudah diberikan / tercatat di finance
-        $referralExpensesTotal = (float) $source->appreciations
-            ->where('status', 'given')
-            ->sum('amount');
-
-        $pendingAppreciationTotal = (float) $source->appreciations
-            ->where('status', 'pending')
-            ->sum('amount');
-
-        $paymentMethods = PaymentMethod::where('status', 'active')
-            ->select('id', 'name', 'code', 'account_number', 'account_holder')
-            ->get();
-
-        $appreciations = $source->appreciations()
-            ->with('paymentMethod')
-            ->latest('date')
-            ->latest('created_at')
-            ->get();
-
-        return Inertia::render('ClientSources/Show', [
-            'source' => $source,
-            'metrics' => $metrics,
-            'referral_history' => $referralHistory,
-            'total_amount' => $totalProjectValue,
-            'appreciations' => $appreciations,
-            'payment_methods' => $paymentMethods,
-            'finance_summary' => [
-                'total_expenses' => $referralExpensesTotal,
-                'pending_expenses' => $pendingAppreciationTotal,
-                'connected_to_finance' => true,
-            ],
-        ]);
+        return Inertia::render('ClientSources/Show', $data);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreClientSourceRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'type' => 'required|string|in:individual,wedding_organizer,vendor,social_media,ads,other',
-            'phone' => 'nullable|string|max:50',
-            'email' => 'nullable|email|max:255',
-            'description' => 'nullable|string',
-            'status' => 'required|string|in:active,inactive',
-            'is_primary' => 'required|boolean',
-        ]);
-
-        $source = ClientSource::create($validated);
-
-        activity()
-            ->causedBy($request->user())
-            ->performedOn($source)
-            ->event('created')
-            ->log("Sumber klien {$source->name} berhasil ditambahkan");
+        $source = $this->clientSourceService->createSource($request->validated(), $request->user());
 
         return redirect()->back()->with('success', "Sumber klien {$source->name} berhasil ditambahkan.");
     }
 
-    public function update(Request $request, string $id): RedirectResponse
+    public function update(UpdateClientSourceRequest $request, string $id): RedirectResponse
     {
         $source = ClientSource::findOrFail($id);
-
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'type' => 'required|string|in:individual,wedding_organizer,vendor,social_media,ads,other',
-            'phone' => 'nullable|string|max:50',
-            'email' => 'nullable|email|max:255',
-            'description' => 'nullable|string',
-            'status' => 'required|string|in:active,inactive',
-            'is_primary' => 'required|boolean',
-        ]);
-
-        $source->update($validated);
-
-        activity()
-            ->causedBy($request->user())
-            ->performedOn($source)
-            ->event('updated')
-            ->log("Sumber klien {$source->name} berhasil diperbarui");
+        $this->clientSourceService->updateSource($source, $request->validated(), $request->user());
 
         return redirect()->back()->with('success', "Data sumber klien {$source->name} berhasil diperbarui.");
     }
@@ -324,119 +53,36 @@ class ClientSourceController extends Controller
     {
         $source = ClientSource::findOrFail($id);
         $name = $source->name;
-        $source->delete();
-
-        activity()
-            ->causedBy(auth()->user())
-            ->performedOn($source)
-            ->event('deleted')
-            ->log("Sumber klien {$name} berhasil dihapus");
+        $this->clientSourceService->deleteSource($source, auth()->user());
 
         return redirect()->route('client-sources.index')->with('success', "Sumber klien {$name} berhasil dihapus.");
     }
 
-    public function storeAppreciation(Request $request, string $id): RedirectResponse
+    public function storeAppreciation(StoreClientSourceAppreciationRequest $request, string $id): RedirectResponse
     {
         $source = ClientSource::findOrFail($id);
+        $result = $this->clientSourceService->storeAppreciation(
+            $source,
+            $request->validated(),
+            $request->file('proof_image'),
+            $request->user()
+        );
 
-        $validated = $request->validate([
-            'status' => 'required|string|in:given,pending',
-            'date' => 'required|date',
-            'type' => 'required|string|max:255',
-            'amount' => 'nullable|numeric|min:0',
-            'payment_method_id' => 'nullable|uuid|exists:payment_methods,id',
-            'is_recorded_in_finance' => 'nullable|boolean',
-            'notes' => 'nullable|string',
-            'proof_image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:5120',
-        ]);
-
-        $isRecorded = $request->boolean('is_recorded_in_finance', true);
-        $amount = (float) ($validated['amount'] ?? 0);
-
-        // Buat nomor referensi pengeluaran kas otomatis jika dicatat di finance
-        $financeReference = null;
-        if ($isRecorded && $amount > 0) {
-            $count = ClientSourceAppreciation::whereNotNull('finance_reference')->count() + 1;
-            $financeReference = 'EXP-REF-' . date('ym') . '-' . str_pad((string) $count, 4, '0', STR_PAD_LEFT);
-        }
-
-        // Handle proof image upload
-        $proofImagePath = null;
-        if ($request->hasFile('proof_image')) {
-            $proofImagePath = $this->uploadAsWebp($request->file('proof_image'), 'appreciations/proof');
-        }
-
-        $appreciation = $source->appreciations()->create([
-            'status' => $validated['status'],
-            'date' => $validated['date'],
-            'type' => $validated['type'],
-            'amount' => $amount,
-            'payment_method_id' => $validated['payment_method_id'] ?? null,
-            'finance_reference' => $financeReference,
-            'is_recorded_in_finance' => $isRecorded,
-            'notes' => $validated['notes'] ?? null,
-            'proof_image' => $proofImagePath,
-        ]);
-
-        $financeMsg = $financeReference ? " dan tercatat di Finance ({$financeReference})" : "";
-
-        activity()
-            ->causedBy($request->user())
-            ->performedOn($appreciation)
-            ->event('created')
-            ->log("Apresiasi referral untuk {$source->name} sebesar Rp " . number_format($amount, 0, ',', '.') . " berhasil disimpan{$financeMsg}");
-
-        return redirect()->back()->with('success', "Apresiasi referral berhasil disimpan{$financeMsg}.");
+        return redirect()->back()->with('success', "Apresiasi referral berhasil disimpan{$result['finance_message']}.");
     }
 
-    public function updateAppreciation(Request $request, string $sourceId, string $appreciationId): RedirectResponse
+    public function updateAppreciation(UpdateClientSourceAppreciationRequest $request, string $sourceId, string $appreciationId): RedirectResponse
     {
         $source = ClientSource::findOrFail($sourceId);
         $appreciation = ClientSourceAppreciation::where('client_source_id', $sourceId)->findOrFail($appreciationId);
 
-        $validated = $request->validate([
-            'status' => 'required|string|in:given,pending',
-            'date' => 'required|date',
-            'type' => 'required|string|max:255',
-            'amount' => 'nullable|numeric|min:0',
-            'payment_method_id' => 'nullable|uuid|exists:payment_methods,id',
-            'is_recorded_in_finance' => 'nullable|boolean',
-            'notes' => 'nullable|string',
-            'proof_image' => 'nullable|image|mimes:jpeg,jpg,png,webp|max:5120',
-        ]);
-
-        $isRecorded = $request->boolean('is_recorded_in_finance', true);
-        $amount = (float) ($validated['amount'] ?? 0);
-
-        $financeReference = $appreciation->finance_reference;
-        if ($isRecorded && $amount > 0 && !$financeReference) {
-            $count = ClientSourceAppreciation::whereNotNull('finance_reference')->count() + 1;
-            $financeReference = 'EXP-REF-' . date('ym') . '-' . str_pad((string) $count, 4, '0', STR_PAD_LEFT);
-        }
-
-        // Handle proof image upload
-        $proofImagePath = $appreciation->proof_image;
-        if ($request->hasFile('proof_image')) {
-            $proofImagePath = $this->uploadAsWebp($request->file('proof_image'), 'appreciations/proof');
-        }
-
-        $appreciation->update([
-            'status' => $validated['status'],
-            'date' => $validated['date'],
-            'type' => $validated['type'],
-            'amount' => $amount,
-            'payment_method_id' => $validated['payment_method_id'] ?? null,
-            'finance_reference' => $financeReference,
-            'is_recorded_in_finance' => $isRecorded,
-            'notes' => $validated['notes'] ?? null,
-            'proof_image' => $proofImagePath,
-        ]);
-
-        activity()
-            ->causedBy($request->user())
-            ->performedOn($appreciation)
-            ->event('updated')
-            ->log("Apresiasi referral untuk {$source->name} berhasil diperbarui");
+        $this->clientSourceService->updateAppreciation(
+            $source,
+            $appreciation,
+            $request->validated(),
+            $request->file('proof_image'),
+            $request->user()
+        );
 
         return redirect()->back()->with('success', 'Data apresiasi referral berhasil diperbarui.');
     }
@@ -444,7 +90,7 @@ class ClientSourceController extends Controller
     public function destroyAppreciation(string $sourceId, string $appreciationId): RedirectResponse
     {
         $appreciation = ClientSourceAppreciation::where('client_source_id', $sourceId)->findOrFail($appreciationId);
-        $appreciation->delete();
+        $this->clientSourceService->destroyAppreciation($appreciation, auth()->user());
 
         return redirect()->back()->with('success', 'Apresiasi berhasil dibatalkan.');
     }

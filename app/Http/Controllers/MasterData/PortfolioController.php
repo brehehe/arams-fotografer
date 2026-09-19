@@ -99,20 +99,29 @@ class PortfolioController extends Controller
             return redirect()->back()->withErrors(['image_file' => 'Wajib mengunggah foto atau memasukkan URL gambar karya portofolio.']);
         }
 
-        Portfolio::create([
-            'portfolio_category_id' => $validated['portfolio_category_id'] ?? null,
-            'title' => $validated['title'],
-            'caption' => $validated['caption'] ?? '',
-            'image_url' => $imagePath,
-            'media_type' => $mediaType,
-            'video_url' => $videoUrl,
-            'is_active' => $request->boolean('is_active', true),
-            'sort_order' => (int) ($validated['sort_order'] ?? 0),
-            'likes_count' => rand(80, 260),
-            'comments_count' => rand(5, 35),
-        ]);
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            Portfolio::create([
+                'portfolio_category_id' => $validated['portfolio_category_id'] ?? null,
+                'title' => $validated['title'],
+                'caption' => $validated['caption'] ?? '',
+                'image_url' => $imagePath,
+                'media_type' => $mediaType,
+                'video_url' => $videoUrl,
+                'is_active' => $request->boolean('is_active', true),
+                'sort_order' => (int) ($validated['sort_order'] ?? 0),
+                'likes_count' => rand(80, 260),
+                'comments_count' => rand(5, 35),
+            ]);
 
-        return redirect()->back()->with('success', 'Karya portofolio berhasil ditambahkan.');
+            \Illuminate\Support\Facades\DB::commit();
+
+            return redirect()->back()->with('success', 'Karya portofolio berhasil ditambahkan.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to create portfolio: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     public function update(Request $request, Portfolio $portfolio): RedirectResponse
@@ -149,34 +158,59 @@ class PortfolioController extends Controller
             }
         }
 
-        $portfolio->update([
-            'portfolio_category_id' => $validated['portfolio_category_id'] ?? $portfolio->portfolio_category_id,
-            'title' => $validated['title'],
-            'caption' => $validated['caption'] ?? '',
-            'image_url' => $imagePath,
-            'media_type' => $mediaType,
-            'video_url' => $videoUrl,
-            'is_active' => $request->has('is_active') ? $request->boolean('is_active') : $portfolio->is_active,
-            'sort_order' => (int) ($validated['sort_order'] ?? $portfolio->sort_order),
-        ]);
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $portfolio->update([
+                'portfolio_category_id' => $validated['portfolio_category_id'] ?? $portfolio->portfolio_category_id,
+                'title' => $validated['title'],
+                'caption' => $validated['caption'] ?? '',
+                'image_url' => $imagePath,
+                'media_type' => $mediaType,
+                'video_url' => $videoUrl,
+                'is_active' => $request->has('is_active') ? $request->boolean('is_active') : $portfolio->is_active,
+                'sort_order' => (int) ($validated['sort_order'] ?? $portfolio->sort_order),
+            ]);
 
-        return redirect()->back()->with('success', 'Karya portofolio berhasil diperbarui.');
+            \Illuminate\Support\Facades\DB::commit();
+
+            return redirect()->back()->with('success', 'Karya portofolio berhasil diperbarui.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to update portfolio {$portfolio->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     public function toggleActive(Portfolio $portfolio): RedirectResponse
     {
-        $newStatus = !$portfolio->is_active;
-        $portfolio->update(['is_active' => $newStatus]);
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $newStatus = !$portfolio->is_active;
+            $portfolio->update(['is_active' => $newStatus]);
+            \Illuminate\Support\Facades\DB::commit();
 
-        $statusText = $newStatus ? 'ditampilkan (Show)' : 'disembunyikan (Hide)';
-        return redirect()->back()->with('success', "Karya '{$portfolio->title}' berhasil {$statusText}.");
+            $statusText = $newStatus ? 'ditampilkan (Show)' : 'disembunyikan (Hide)';
+            return redirect()->back()->with('success', "Karya '{$portfolio->title}' berhasil {$statusText}.");
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to toggle portfolio active {$portfolio->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     public function destroy(Portfolio $portfolio): RedirectResponse
     {
-        $title = $portfolio->title;
-        $portfolio->delete();
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $title = $portfolio->title;
+            $portfolio->delete();
+            \Illuminate\Support\Facades\DB::commit();
 
-        return redirect()->back()->with('success', "Karya '{$title}' berhasil dihapus.");
+            return redirect()->back()->with('success', "Karya '{$title}' berhasil dihapus.");
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to delete portfolio {$portfolio->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 }

@@ -21,23 +21,27 @@ class ReportService
     {
         $year = $year ?? (int) now()->year;
         // 0. Dynamic Available Years from Projects, Payments, and Clients
+        $isPgsql = \Illuminate\Support\Facades\DB::getDriverName() === 'pgsql';
+        $createdYearSql = $isPgsql ? 'DISTINCT EXTRACT(YEAR FROM created_at)::int as yr' : "DISTINCT cast(strftime('%Y', created_at) as integer) as yr";
+        $paymentYearSql = $isPgsql ? 'DISTINCT EXTRACT(YEAR FROM payment_date)::int as yr' : "DISTINCT cast(strftime('%Y', payment_date) as integer) as yr";
+
         $projectYears = \Illuminate\Support\Facades\DB::table('projects')
             ->whereNotNull('created_at')
             ->whereNull('deleted_at')
-            ->selectRaw('DISTINCT EXTRACT(YEAR FROM created_at)::int as yr')
+            ->selectRaw($createdYearSql)
             ->pluck('yr')
             ->toArray();
 
         $paymentYears = \Illuminate\Support\Facades\DB::table('payments')
             ->whereNotNull('payment_date')
-            ->selectRaw('DISTINCT EXTRACT(YEAR FROM payment_date)::int as yr')
+            ->selectRaw($paymentYearSql)
             ->pluck('yr')
             ->toArray();
 
         $clientYears = \Illuminate\Support\Facades\DB::table('clients')
             ->whereNotNull('created_at')
             ->whereNull('deleted_at')
-            ->selectRaw('DISTINCT EXTRACT(YEAR FROM created_at)::int as yr')
+            ->selectRaw($createdYearSql)
             ->pluck('yr')
             ->toArray();
 
@@ -251,22 +255,28 @@ class ReportService
             })
             ->sum('total_amount');
 
-        $woReport = $woSources->map(function ($wo) use ($year, $totalWoRevenue) {
-            $matchingWo = WeddingOrganizer::where('name', $wo->name)->first();
+        $allMatchingWos = WeddingOrganizer::all()->keyBy('name');
+        $allYearProjectsForWo = Project::with('client:id,client_source_id')
+            ->whereYear('created_at', $year)
+            ->get(['id', 'client_id', 'client_source_id', 'wedding_organizer_id', 'total_amount', 'paid_amount']);
+
+        $woReport = $woSources->map(function ($wo) use ($allMatchingWos, $allYearProjectsForWo, $totalWoRevenue) {
+            $matchingWo = $allMatchingWos->get($wo->name);
             $matchingWoId = $matchingWo?->id;
 
-            $projectsQuery = Project::whereYear('created_at', $year)
-                ->where(function ($q) use ($wo, $matchingWoId) {
-                    $q->where('client_source_id', $wo->id)
-                      ->orWhereHas('client', fn ($cq) => $cq->where('client_source_id', $wo->id));
-                    if ($matchingWoId) {
-                        $q->orWhere('wedding_organizer_id', $matchingWoId);
-                    }
-                });
+            $filteredProjects = $allYearProjectsForWo->filter(function ($p) use ($wo, $matchingWoId) {
+                if ($p->client_source_id === $wo->id || $p->client?->client_source_id === $wo->id) {
+                    return true;
+                }
+                if ($matchingWoId && $p->wedding_organizer_id === $matchingWoId) {
+                    return true;
+                }
+                return false;
+            });
 
-            $projectsCount = (clone $projectsQuery)->count();
-            $totalVal = (float) (clone $projectsQuery)->sum('total_amount');
-            $totalPaid = (float) (clone $projectsQuery)->sum('paid_amount');
+            $projectsCount = $filteredProjects->count();
+            $totalVal = (float) $filteredProjects->sum('total_amount');
+            $totalPaid = (float) $filteredProjects->sum('paid_amount');
 
             $picName = '-';
             if (!empty($wo->description) && str_contains($wo->description, 'PIC:')) {

@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\Project;
 use App\Models\WeddingOrganizer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class WeddingOrganizerService
 {
@@ -82,16 +84,26 @@ class WeddingOrganizerService
      */
     public function createWeddingOrganizer(array $data, $user = null): WeddingOrganizer
     {
-        $wo = WeddingOrganizer::create($data);
+        DB::beginTransaction();
 
-        if ($user) {
-            activity()
-                ->performedOn($wo)
-                ->causedBy($user)
-                ->log('Menambahkan data Wedding Organizer: ' . $wo->name);
+        try {
+            $wo = WeddingOrganizer::create($data);
+
+            if ($user) {
+                activity()
+                    ->performedOn($wo)
+                    ->causedBy($user)
+                    ->log('Menambahkan data Wedding Organizer: ' . $wo->name);
+            }
+
+            DB::commit();
+
+            return $wo;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Failed to create wedding organizer: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
         }
-
-        return $wo;
     }
 
     /**
@@ -99,16 +111,26 @@ class WeddingOrganizerService
      */
     public function updateWeddingOrganizer(WeddingOrganizer $weddingOrganizer, array $data, $user = null): WeddingOrganizer
     {
-        $weddingOrganizer->update($data);
+        DB::beginTransaction();
 
-        if ($user) {
-            activity()
-                ->performedOn($weddingOrganizer)
-                ->causedBy($user)
-                ->log('Memperbarui data Wedding Organizer: ' . $weddingOrganizer->name);
+        try {
+            $weddingOrganizer->update($data);
+
+            if ($user) {
+                activity()
+                    ->performedOn($weddingOrganizer)
+                    ->causedBy($user)
+                    ->log('Memperbarui data Wedding Organizer: ' . $weddingOrganizer->name);
+            }
+
+            DB::commit();
+
+            return $weddingOrganizer;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Failed to update wedding organizer {$weddingOrganizer->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
         }
-
-        return $weddingOrganizer;
     }
 
     /**
@@ -116,13 +138,23 @@ class WeddingOrganizerService
      */
     public function deleteWeddingOrganizer(WeddingOrganizer $weddingOrganizer, $user = null): void
     {
-        $name = $weddingOrganizer->name;
-        $weddingOrganizer->delete();
+        DB::beginTransaction();
 
-        if ($user) {
-            activity()
-                ->causedBy($user)
-                ->log("Menghapus data Wedding Organizer: {$name}");
+        try {
+            $name = $weddingOrganizer->name;
+            $weddingOrganizer->delete();
+
+            if ($user) {
+                activity()
+                    ->causedBy($user)
+                    ->log("Menghapus data Wedding Organizer: {$name}");
+            }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Failed to delete wedding organizer {$weddingOrganizer->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
         }
     }
 }

@@ -33,13 +33,21 @@ class SettingController extends Controller
             return redirect()->route('setting.portal-klien');
         }
 
-        $params = [];
         if ($tab === 'portfolio_categories' || $request->input('sub') === 'portfolio_categories') {
             return redirect()->route('master-data.portfolio-categories.index');
         }
         if ($tab === 'portfolios' || $request->input('sub') === 'portfolios') {
             return redirect()->route('master-data.portfolios.index');
         }
+
+        if ($request->routeIs('settings.index')) {
+            if (in_array($tab, ['company', 'general', 'appearance', 'login_theme', 'backup', 'recommended_packages'])) {
+                $request->merge(['sub' => $tab]);
+            }
+            return $this->admin($request);
+        }
+
+        $params = [];
         if (in_array($tab, ['company', 'general', 'appearance', 'login_theme', 'backup', 'recommended_packages'])) {
             $params['sub'] = $tab;
         } elseif ($request->has('sub')) {

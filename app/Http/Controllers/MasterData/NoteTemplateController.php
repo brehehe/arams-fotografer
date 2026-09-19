@@ -71,41 +71,68 @@ class NoteTemplateController extends Controller
 
     public function store(StoreNoteTemplateRequest $request): RedirectResponse
     {
-        $template = NoteTemplate::create($request->validated());
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $template = NoteTemplate::create($request->validated());
 
-        activity()
-            ->causedBy($request->user())
-            ->performedOn($template)
-            ->event('created')
-            ->log("Template catatan {$template->title} berhasil ditambahkan");
+            activity()
+                ->causedBy($request->user())
+                ->performedOn($template)
+                ->event('created')
+                ->log("Template catatan {$template->title} berhasil ditambahkan");
 
-        return redirect()->back()->with('success', 'Template catatan berhasil ditambahkan.');
+            \Illuminate\Support\Facades\DB::commit();
+
+            return redirect()->back()->with('success', 'Template catatan berhasil ditambahkan.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to create note template: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     public function update(UpdateNoteTemplateRequest $request, NoteTemplate $note): RedirectResponse
     {
-        $note->update($request->validated());
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $note->update($request->validated());
 
-        activity()
-            ->causedBy($request->user())
-            ->performedOn($note)
-            ->event('updated')
-            ->log("Template catatan {$note->title} diperbarui");
+            activity()
+                ->causedBy($request->user())
+                ->performedOn($note)
+                ->event('updated')
+                ->log("Template catatan {$note->title} diperbarui");
 
-        return redirect()->back()->with('success', 'Template catatan berhasil diperbarui.');
+            \Illuminate\Support\Facades\DB::commit();
+
+            return redirect()->back()->with('success', 'Template catatan berhasil diperbarui.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to update note template {$note->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     public function destroy(NoteTemplate $note): RedirectResponse
     {
-        $title = $note->title;
-        $note->delete();
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $title = $note->title;
+            $note->delete();
 
-        activity()
-            ->causedBy(auth()->user())
-            ->performedOn($note)
-            ->event('deleted')
-            ->log("Template catatan {$title} berhasil dihapus");
+            activity()
+                ->causedBy(auth()->user())
+                ->performedOn($note)
+                ->event('deleted')
+                ->log("Template catatan {$title} berhasil dihapus");
 
-        return redirect()->back()->with('success', 'Template catatan berhasil dihapus.');
+            \Illuminate\Support\Facades\DB::commit();
+
+            return redirect()->back()->with('success', 'Template catatan berhasil dihapus.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to delete note template {$note->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 }

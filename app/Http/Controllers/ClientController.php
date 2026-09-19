@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Client\StoreClientAccountRequest;
 use App\Http\Requests\Client\StoreClientRequest;
 use App\Http\Requests\Client\UpdateClientRequest;
 use App\Models\Category;
@@ -11,21 +12,14 @@ use App\Models\Package;
 use App\Models\PaymentMethod;
 use App\Models\User;
 use App\Models\WeddingOrganizer;
-use App\Mail\ClientAccountCreatedMail;
 use App\Services\ClientService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response;
-use Spatie\Permission\Models\Role;
-use App\Traits\HasWebpUpload;
 
 class ClientController extends Controller
 {
-    use HasWebpUpload;
 
     public function __construct(
         protected ClientService $clientService
@@ -113,34 +107,13 @@ class ClientController extends Controller
     {
         $this->authorize('update', $client);
 
-        $data = $request->validated();
-
-        if ($request->hasFile('avatar_file')) {
-            $avatarUrl = $this->uploadThumbnailAsWebp(
-                $request->file('avatar_file'),
-                'clients/avatars',
-                400,
-                400,
-                85,
-                $client->avatar
-            );
-            $data['avatar'] = $avatarUrl;
-        } elseif ($request->has('avatar') && empty($request->input('avatar'))) {
-            if ($client->avatar) {
-                $this->deleteWebpImage($client->avatar);
-            }
-            $data['avatar'] = null;
-        }
-
-        $this->clientService->updateClient($client, $data, $request->user());
-
-        // Sync avatar to portal user if linked
-        if (array_key_exists('avatar', $data)) {
-            $portalUser = User::where('client_id', $client->id)->first();
-            if ($portalUser) {
-                $portalUser->update(['avatar' => $data['avatar']]);
-            }
-        }
+        $this->clientService->updateClient(
+            $client,
+            $request->validated(),
+            $request->file('avatar_file'),
+            $request->has('avatar') && empty($request->input('avatar')),
+            $request->user()
+        );
 
         return redirect()->back()->with('success', 'Data klien berhasil diperbarui.');
     }
@@ -158,122 +131,18 @@ class ClientController extends Controller
     {
         $this->authorize('update', $client);
 
-        $newStatus = $client->status === 'blocked' ? 'active' : 'blocked';
-        $client->update(['status' => $newStatus]);
+        $result = $this->clientService->toggleBlock($client, auth()->user());
 
-        // If client has an associated portal user account, also update user status
-        $portalUser = User::where('client_id', $client->id)->first();
-        if ($portalUser) {
-            $portalUser->update([
-                'status' => $newStatus === 'blocked' ? 'suspended' : 'active',
-            ]);
-        }
-
-        $logMsg = $newStatus === 'blocked'
-            ? "Klien {$client->name} telah diblokir."
-            : "Blokir klien {$client->name} telah dibuka.";
-
-        activity()
-            ->causedBy(auth()->user())
-            ->performedOn($client)
-            ->event($newStatus === 'blocked' ? 'client_blocked' : 'client_unblocked')
-            ->log($logMsg);
-
-        return redirect()->back()->with('success', $newStatus === 'blocked'
-            ? "Klien {$client->name} berhasil diblokir."
-            : "Blokir klien {$client->name} berhasil dibuka.");
+        return redirect()->back()->with('success', $result['message']);
     }
 
-    public function storeAccount(Request $request, Client $client): RedirectResponse
+    public function storeAccount(StoreClientAccountRequest $request, Client $client): RedirectResponse
     {
-        $this->authorize('update', $client);
-
-        $validated = $request->validate([
-            'email' => 'required|email|max:255',
-            'username' => 'nullable|string|max:100',
-            'password' => 'required|string|min:6',
-            'send_method' => 'nullable|in:email,whatsapp,both',
-            'message' => 'nullable|string',
-        ]);
-
-        $user = User::where('client_id', $client->id)
-            ->orWhere('email', $validated['email'])
-            ->first();
-
-        if ($user) {
-            $user->update([
-                'name' => $client->name,
-                'email' => $validated['email'],
-                'password' => Hash::make($validated['password']),
-                'client_id' => $client->id,
-                'status' => 'active',
-                'phone' => $client->phone ?? $user->phone,
-            ]);
-        } else {
-            $user = User::create([
-                'name' => $client->name,
-                'email' => $validated['email'],
-                'password' => Hash::make($validated['password']),
-                'client_id' => $client->id,
-                'status' => 'active',
-                'phone' => $client->phone,
-                'email_verified_at' => now(),
-            ]);
-        }
-
-        $clientRole = Role::findOrCreate('Client');
-        if (!$user->hasRole('Client')) {
-            $user->assignRole($clientRole);
-        }
-
-        if ($client->email !== $validated['email']) {
-            $client->update(['email' => $validated['email']]);
-        }
-
-        activity()
-            ->causedBy(auth()->user())
-            ->performedOn($client)
-            ->event('account_created')
-            ->log("Akun portal klien dibuat/diperbarui untuk {$client->name} ({$user->email})");
-
-        // Format WhatsApp URL with structured account credentials
-        $cleanPhone = preg_replace('/[^0-9]/', '', $client->phone ?? '');
-        if (str_starts_with($cleanPhone, '0')) {
-            $cleanPhone = '62' . substr($cleanPhone, 1);
-        }
-
-        $portalUrl = url('/login');
-        $notes = !empty($validated['message']) ? trim($validated['message']) : 'Silakan login untuk memantau progress project, review foto, dan download file dokumentasi Anda.';
-
-        $finalMsg = "Halo Kak {$client->name},\n\n"
-            . "Berikut informasi akun akses Portal Klien Arams Photography Anda:\n\n"
-            . "🌐 Link Login : {$portalUrl}\n"
-            . "👤 Nama Klien : {$client->name}\n"
-            . "📧 Email      : {$validated['email']}\n"
-            . "🔑 Password   : {$validated['password']}\n\n"
-            . "📝 Keterangan:\n{$notes}\n\n"
-            . "Terima kasih!";
-
-        $waUrl = !empty($cleanPhone) ? "https://wa.me/{$cleanPhone}?text=" . urlencode($finalMsg) : null;
-
-        // Dispatch email notification via Laravel Queue
-        if (in_array($validated['send_method'] ?? 'email', ['email', 'both'])) {
-            try {
-                Mail::to($validated['email'])->queue(new ClientAccountCreatedMail(
-                    clientName: $client->name,
-                    email: $validated['email'],
-                    password: $validated['password'],
-                    portalUrl: $portalUrl,
-                    notes: $validated['message'] ?? null,
-                ));
-            } catch (\Throwable $e) {
-                Log::error("Gagal antrekan email akun klien: " . $e->getMessage());
-            }
-        }
+        $result = $this->clientService->createOrUpdateClientAccount($client, $request->validated(), $request->user());
 
         return redirect()->back()->with([
             'success' => 'Akun klien berhasil disimpan dan diaktifkan!',
-            'whatsapp_url' => in_array($validated['send_method'] ?? 'both', ['whatsapp', 'both']) ? $waUrl : null,
+            'whatsapp_url' => $result['whatsapp_url'],
         ]);
     }
 }

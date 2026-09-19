@@ -39,6 +39,13 @@ class FinanceController extends Controller
         return redirect()->back()->with('success', 'Invoice berhasil diterbitkan.');
     }
 
+    public function updateInvoice(\App\Models\Invoice $invoice, \App\Http\Requests\Finance\UpdateInvoiceRequest $request): RedirectResponse
+    {
+        $this->financeService->updateInvoice($invoice, $request->validated(), $request->user());
+
+        return redirect()->back()->with('success', 'Data invoice berhasil diperbarui.');
+    }
+
     public function storeTransaction(StoreFinanceTransactionRequest $request): RedirectResponse
     {
         $transaction = $this->financeService->recordTransaction($request->validated(), $request->user());

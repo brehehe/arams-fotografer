@@ -171,20 +171,21 @@ class DashboardService
         }
         $totalCategoryProjects = $categoryProjectsQuery->count();
 
-        $allCategories = Category::select('id', 'name', 'color')->get();
-        $categoriesWithCounts = $allCategories->map(function ($cat) use ($categoryPeriod) {
-            $q = Project::where('category_id', $cat->id);
-            if ($categoryPeriod !== 'all_time' && $categoryPeriod !== 'Semua Waktu') {
-                $this->applyDateFilter($q, $categoryPeriod, 'created_at');
-            }
-            $count = $q->count();
-            return [
-                'id' => $cat->id,
-                'name' => $cat->name,
-                'color' => $cat->color ?: '#3B82F6',
-                'count' => $count,
-            ];
-        })->filter(fn($c) => $c['count'] > 0)->sortByDesc('count')->values();
+        $categoriesWithCounts = Category::select('id', 'name', 'color')
+            ->withCount(['projects' => function ($q) use ($categoryPeriod) {
+                if ($categoryPeriod !== 'all_time' && $categoryPeriod !== 'Semua Waktu') {
+                    $this->applyDateFilter($q, $categoryPeriod, 'created_at');
+                }
+            }])
+            ->get()
+            ->map(function ($cat) {
+                return [
+                    'id' => $cat->id,
+                    'name' => $cat->name,
+                    'color' => $cat->color ?: '#3B82F6',
+                    'count' => (int) $cat->projects_count,
+                ];
+            })->filter(fn($c) => $c['count'] > 0)->sortByDesc('count')->values();
 
         $top6 = $categoriesWithCounts->take(6);
         $remaining = $categoriesWithCounts->slice(6);
@@ -320,9 +321,19 @@ class DashboardService
             ->get();
 
         $totalSourceClients = $rawSources->sum('client_count') ?: 1;
-        $leadSources = $rawSources->map(function ($s) use ($totalSourceClients) {
-            $clientIds = Client::where('source', $s->source)->pluck('id');
-            $projSum = (float) Project::whereIn('client_id', $clientIds)->sum('total_amount');
+        $sourceNames = $rawSources->pluck('source')->filter()->toArray();
+        $sourceRevenues = [];
+        if (!empty($sourceNames)) {
+            $sourceRevenues = Project::join('clients', 'projects.client_id', '=', 'clients.id')
+                ->whereIn('clients.source', $sourceNames)
+                ->groupBy('clients.source')
+                ->selectRaw('clients.source, SUM(projects.total_amount) as total_rev')
+                ->pluck('total_rev', 'clients.source')
+                ->toArray();
+        }
+
+        $leadSources = $rawSources->map(function ($s) use ($totalSourceClients, $sourceRevenues) {
+            $projSum = (float) ($sourceRevenues[$s->source] ?? 0);
 
             return [
                 'source' => $s->source,

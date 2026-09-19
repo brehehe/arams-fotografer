@@ -11,6 +11,8 @@ use App\Models\Project;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class FinanceService
 {
@@ -56,37 +58,43 @@ class FinanceService
             ? round((($thisMonthTotal - $lastMonthTotal) / $lastMonthTotal) * 100, 1)
             : ($thisMonthTotal > 0 ? 100 : 0);
 
-        // ── Monthly Revenue (12 months of selected year from DB) ──
-        $monthlyRevenue = collect(range(1, 12))->map(function ($m) use ($currentYear) {
+        // ── Monthly Revenue (Pre-fetch year data in 4 batch queries to eliminate 60 queries in loop) ──
+        $yearStart = Carbon::create($currentYear, 1, 1)->startOfYear();
+        $yearEnd   = Carbon::create($currentYear, 12, 31)->endOfYear();
+
+        $paymentsByMonth = Payment::where('status', 'completed')
+            ->whereDate('payment_date', '>=', $yearStart)
+            ->whereDate('payment_date', '<=', $yearEnd)
+            ->get(['payment_date', 'amount'])
+            ->groupBy(fn($p) => (int) Carbon::parse($p->payment_date)->month);
+
+        $transactionsByMonth = FinanceTransaction::where('status', 'completed')
+            ->whereDate('date', '>=', $yearStart)
+            ->whereDate('date', '<=', $yearEnd)
+            ->get(['type', 'date', 'amount'])
+            ->groupBy(fn($t) => (int) Carbon::parse($t->date)->month);
+
+        $invoicesByMonth = Invoice::whereDate('issue_date', '>=', $yearStart)
+            ->whereDate('issue_date', '<=', $yearEnd)
+            ->get(['issue_date', 'total'])
+            ->groupBy(fn($i) => (int) Carbon::parse($i->issue_date)->month);
+
+        $projectsByMonth = Project::whereNotNull('event_date')
+            ->whereDate('event_date', '>=', $yearStart)
+            ->whereDate('event_date', '<=', $yearEnd)
+            ->get(['event_date', 'total_amount'])
+            ->groupBy(fn($p) => (int) Carbon::parse($p->event_date)->month);
+
+        $monthlyRevenue = collect(range(1, 12))->map(function ($m) use ($currentYear, $paymentsByMonth, $transactionsByMonth, $invoicesByMonth, $projectsByMonth) {
             $start = Carbon::create($currentYear, $m, 1)->startOfMonth();
-            $end   = $start->copy()->endOfMonth();
 
-            $received = (float) Payment::where('status', 'completed')
-                ->whereDate('payment_date', '>=', $start)
-                ->whereDate('payment_date', '<=', $end)
-                ->sum('amount');
+            $received    = (float) ($paymentsByMonth->get($m)?->sum('amount') ?? 0);
+            $miscIncome  = (float) ($transactionsByMonth->get($m)?->where('type', 'income')->sum('amount') ?? 0);
+            $miscExpense = (float) ($transactionsByMonth->get($m)?->where('type', 'expense')->sum('amount') ?? 0);
+            $invoiced    = (float) ($invoicesByMonth->get($m)?->sum('total') ?? 0);
+            $projectVal  = (float) ($projectsByMonth->get($m)?->sum('total_amount') ?? 0);
 
-            $miscIncome = (float) FinanceTransaction::where('type', 'income')
-                ->where('status', 'completed')
-                ->whereDate('date', '>=', $start)
-                ->whereDate('date', '<=', $end)
-                ->sum('amount');
-
-            $miscExpense = (float) FinanceTransaction::where('type', 'expense')
-                ->where('status', 'completed')
-                ->whereDate('date', '>=', $start)
-                ->whereDate('date', '<=', $end)
-                ->sum('amount');
-
-            $invoiced = (float) Invoice::whereDate('issue_date', '>=', $start)
-                ->whereDate('issue_date', '<=', $end)
-                ->sum('total');
-
-            $projectValue = (float) Project::whereDate('event_date', '>=', $start)
-                ->whereDate('event_date', '<=', $end)
-                ->sum('total_amount');
-
-            $totalVal = max($invoiced, $projectValue, $received + $miscIncome);
+            $totalVal = max($invoiced, $projectVal, $received + $miscIncome);
 
             return [
                 'month'       => $start->isoFormat('MMM'),
@@ -550,7 +558,7 @@ class FinanceService
         [$prefixPart, $suffixPart] = explode('{NUMBER}', $resolved, 2);
 
         $allMatching = Payment::withTrashed()
-            ->where('payment_number', 'ilike', "{$prefixPart}%")
+            ->where('payment_number', 'like', "{$prefixPart}%")
             ->pluck('payment_number')
             ->map(function ($num) use ($prefixPart, $suffixPart) {
                 $mid = substr((string) $num, strlen($prefixPart));
@@ -594,7 +602,7 @@ class FinanceService
         [$prefixPart, $suffixPart] = explode('{NUMBER}', $resolved, 2);
 
         $allMatching = Invoice::withTrashed()
-            ->where('invoice_number', 'ilike', "{$prefixPart}%")
+            ->where('invoice_number', 'like', "{$prefixPart}%")
             ->pluck('invoice_number')
             ->map(function ($num) use ($prefixPart, $suffixPart) {
                 $mid = substr((string) $num, strlen($prefixPart));
@@ -618,108 +626,229 @@ class FinanceService
     }
 
     /**
-     * Record a new payment and update project financials.
+     * Record a new payment and update project financials with DB transaction.
      */
     public function recordPayment(array $data, ?User $causer = null): Payment
     {
-        $project          = Project::findOrFail($data['project_id']);
-        $data['client_id'] = $project->client_id;
+        DB::beginTransaction();
+        try {
+            $project          = Project::findOrFail($data['project_id']);
+            $data['client_id'] = $project->client_id;
 
-        if (empty($data['payment_number'])) {
-            $data['payment_number'] = $this->generatePaymentNumber();
-        }
-        $data['status']     = 'completed';
-        $data['created_by'] = $causer ? $causer->id : auth()->id();
-
-        $invoice = null;
-        if (!empty($data['invoice_id'])) {
-            $invoice = Invoice::where('project_id', $project->id)->find($data['invoice_id']);
-        }
-        if (!$invoice) {
-            $invoice = $project->invoices()->where('status', '!=', 'paid')->latest('created_at')->first()
-                ?? $project->invoices()->latest('created_at')->first();
-        }
-
-        if ($invoice) {
-            $data['invoice_id'] = $invoice->id;
-        }
-
-        if (isset($data['proof_file']) && $data['proof_file'] instanceof \Illuminate\Http\UploadedFile) {
-            $proofPath = $data['proof_file']->store('payments/proofs', 'public');
-            $data['proof_file'] = '/storage/' . $proofPath;
-        }
-
-        $payment = Payment::create($data);
-
-        $newPaidAmount  = (float) $project->paid_amount + (float) $data['amount'];
-        $paymentStatus  = $newPaidAmount >= (float) $project->total_amount ? 'paid' : 'partial';
-
-        $projectUpdates = [
-            'paid_amount'    => $newPaidAmount,
-            'payment_status' => $paymentStatus,
-        ];
-
-        // If project was in draft, booking, or pending, advance status upon receiving DP / payment
-        if (in_array($project->status, ['draft', 'booking', 'pending'])) {
-            $projectUpdates['status'] = 'in_progress';
-            if (empty($project->workflow_step) || in_array(strtolower((string) $project->workflow_step), ['booking', 'draft', 'pending'])) {
-                $projectUpdates['workflow_step'] = 'Sesi Foto & Dokumentasi';
+            if (empty($data['payment_number'])) {
+                $data['payment_number'] = $this->generatePaymentNumber();
             }
-            if ((int) $project->progress < 25) {
-                $projectUpdates['progress'] = 25;
+            $data['status']     = 'completed';
+            $data['created_by'] = $causer ? $causer->id : auth()->id();
+
+            $invoice = null;
+            if (!empty($data['invoice_id'])) {
+                $invoice = Invoice::where('project_id', $project->id)->find($data['invoice_id']);
             }
+            if (!$invoice) {
+                $invoice = $project->invoices()->where('status', '!=', 'paid')->latest('created_at')->first()
+                    ?? $project->invoices()->latest('created_at')->first();
+            }
+
+            if ($invoice) {
+                $data['invoice_id'] = $invoice->id;
+            }
+
+            if (isset($data['proof_file']) && $data['proof_file'] instanceof \Illuminate\Http\UploadedFile) {
+                $proofPath = $data['proof_file']->store('payments/proofs', 'public');
+                $data['proof_file'] = '/storage/' . $proofPath;
+            }
+
+            $payment = Payment::create($data);
+
+            $newPaidAmount  = (float) $project->paid_amount + (float) $data['amount'];
+            $paymentStatus  = $newPaidAmount >= (float) $project->total_amount ? 'paid' : 'partial';
+
+            $projectUpdates = [
+                'paid_amount'    => $newPaidAmount,
+                'payment_status' => $paymentStatus,
+            ];
+
+            // If project was in draft, booking, or pending, advance status upon receiving DP / payment
+            if (in_array($project->status, ['draft', 'booking', 'pending'])) {
+                $projectUpdates['status'] = 'in_progress';
+                if (empty($project->workflow_step) || in_array(strtolower((string) $project->workflow_step), ['booking', 'draft', 'pending'])) {
+                    $projectUpdates['workflow_step'] = 'Sesi Foto & Dokumentasi';
+                }
+                if ((int) $project->progress < 25) {
+                    $projectUpdates['progress'] = 25;
+                }
+            }
+
+            $project->update($projectUpdates);
+
+            // Synchronize Invoice status and paid amount
+            if ($invoice) {
+                $invPaid = (float) $invoice->paid_amount + (float) $data['amount'];
+                $invStatus = $invPaid >= (float) $invoice->total ? 'paid' : 'partial';
+                $invoice->update([
+                    'paid_amount'      => $invPaid,
+                    'remaining_amount' => max(0, (float) $invoice->total - $invPaid),
+                    'status'           => $invStatus,
+                ]);
+            }
+
+            activity()
+                ->causedBy($causer ?? auth()->user())
+                ->performedOn($payment)
+                ->event('payment_recorded')
+                ->log("Pembayaran sebesar Rp " . number_format($payment->amount, 0, ',', '.') . " dicatat untuk project {$project->name}");
+
+            DB::commit();
+            return $payment;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal mencatat pembayaran: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
         }
-
-        $project->update($projectUpdates);
-
-        // Synchronize Invoice status and paid amount
-        if ($invoice) {
-            $invPaid = (float) $invoice->paid_amount + (float) $data['amount'];
-            $invStatus = $invPaid >= (float) $invoice->total ? 'paid' : 'partial';
-            $invoice->update([
-                'paid_amount'      => $invPaid,
-                'remaining_amount' => max(0, (float) $invoice->total - $invPaid),
-                'status'           => $invStatus,
-            ]);
-        }
-
-        activity()
-            ->causedBy($causer ?? auth()->user())
-            ->performedOn($payment)
-            ->event('payment_recorded')
-            ->log("Pembayaran sebesar Rp " . number_format($payment->amount, 0, ',', '.') . " dicatat untuk project {$project->name}");
-
-        return $payment;
     }
 
     /**
-     * Generate a new invoice and log activity.
+     * Generate a new invoice and log activity with DB transaction.
      */
     public function generateInvoice(array $data, ?User $causer = null): Invoice
     {
-        $project = Project::findOrFail($data['project_id']);
+        DB::beginTransaction();
+        try {
+            $project = Project::findOrFail($data['project_id']);
 
-        $invoice = Invoice::create([
-            'invoice_number'   => $this->generateInvoiceNumber(),
-            'project_id'       => $project->id,
-            'client_id'        => $project->client_id,
-            'issue_date'       => $data['issue_date'],
-            'due_date'         => $data['due_date'],
-            'subtotal'         => $project->total_amount,
-            'total'            => $project->total_amount,
-            'paid_amount'      => $project->paid_amount,
-            'remaining_amount' => max(0, (float) $project->total_amount - (float) $project->paid_amount),
-            'status'           => ((float) $project->paid_amount >= (float) $project->total_amount) ? 'paid' : 'sent',
-            'notes'            => $data['notes'] ?? null,
-        ]);
+            $invoice = Invoice::create([
+                'invoice_number'   => $this->generateInvoiceNumber(),
+                'project_id'       => $project->id,
+                'client_id'        => $project->client_id,
+                'issue_date'       => $data['issue_date'],
+                'due_date'         => $data['due_date'],
+                'subtotal'         => $project->total_amount,
+                'total'            => $project->total_amount,
+                'paid_amount'      => $project->paid_amount,
+                'remaining_amount' => max(0, (float) $project->total_amount - (float) $project->paid_amount),
+                'status'           => ((float) $project->paid_amount >= (float) $project->total_amount) ? 'paid' : 'sent',
+                'notes'            => $data['notes'] ?? null,
+            ]);
 
-        activity()
-            ->causedBy($causer ?? auth()->user())
-            ->performedOn($invoice)
-            ->event('created')
-            ->log("Invoice {$invoice->invoice_number} diterbitkan untuk {$project->name}");
+            activity()
+                ->causedBy($causer ?? auth()->user())
+                ->performedOn($invoice)
+                ->event('created')
+                ->log("Invoice {$invoice->invoice_number} diterbitkan untuk {$project->name}");
 
-        return $invoice;
+            DB::commit();
+            return $invoice;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal menerbitkan invoice: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Update existing invoice details, items, notes, and dates with DB transaction.
+     */
+    public function updateInvoice(Invoice $invoice, array $data, ?User $causer = null): Invoice
+    {
+        DB::beginTransaction();
+        try {
+            $subtotal = isset($data['subtotal']) ? (float) $data['subtotal'] : (float) $invoice->subtotal;
+            $discount = isset($data['discount']) ? (float) $data['discount'] : (float) $invoice->discount;
+            $tax = isset($data['tax']) ? (float) $data['tax'] : (float) $invoice->tax;
+            $total = isset($data['total']) ? (float) $data['total'] : max(0, $subtotal - $discount + $tax);
+            $paid = isset($data['paid_amount']) ? (float) $data['paid_amount'] : (float) $invoice->paid_amount;
+            $rem = max(0, $total - $paid);
+
+            $status = $data['status'] ?? $invoice->status;
+            if (empty($data['status'])) {
+                if ($paid >= $total && $total > 0) {
+                    $status = 'paid';
+                } elseif ($paid > 0) {
+                    $status = 'partial';
+                }
+            }
+
+            $invoice->update([
+                'invoice_number'   => !empty($data['invoice_number']) ? trim($data['invoice_number']) : $invoice->invoice_number,
+                'issue_date'       => !empty($data['issue_date']) ? $data['issue_date'] : $invoice->issue_date,
+                'due_date'         => !empty($data['due_date']) ? $data['due_date'] : $invoice->due_date,
+                'subtotal'         => $subtotal,
+                'discount'         => $discount,
+                'tax'              => $tax,
+                'total'            => $total,
+                'paid_amount'      => $paid,
+                'remaining_amount' => $rem,
+                'status'           => $status,
+                'notes'            => array_key_exists('notes', $data) ? $data['notes'] : $invoice->notes,
+            ]);
+
+            // Sync or update invoice items if provided
+            if (isset($data['items']) && is_array($data['items'])) {
+                $existingItemIds = [];
+                foreach ($data['items'] as $itemData) {
+                    $description = trim($itemData['description'] ?? '');
+                    if (empty($description)) continue;
+                    $qty = max(1, (int) ($itemData['qty'] ?? 1));
+                    $unitPrice = (float) ($itemData['unit_price'] ?? 0);
+                    $itemTotal = (float) ($itemData['total'] ?? ($qty * $unitPrice));
+
+                    if (!empty($itemData['id']) && $item = \App\Models\InvoiceItem::where('invoice_id', $invoice->id)->find($itemData['id'])) {
+                        $item->update([
+                            'description' => $description,
+                            'qty' => $qty,
+                            'unit_price' => $unitPrice,
+                            'total' => $itemTotal,
+                        ]);
+                        $existingItemIds[] = $item->id;
+                    } else {
+                        $newItem = \App\Models\InvoiceItem::create([
+                            'invoice_id' => $invoice->id,
+                            'description' => $description,
+                            'qty' => $qty,
+                            'unit_price' => $unitPrice,
+                            'total' => $itemTotal,
+                        ]);
+                        $existingItemIds[] = $newItem->id;
+                    }
+                }
+                if (!empty($existingItemIds)) {
+                    \App\Models\InvoiceItem::where('invoice_id', $invoice->id)->whereNotIn('id', $existingItemIds)->delete();
+                }
+            }
+
+            // Optional: update client contact/identity info if provided (for correcting typos)
+            if (!empty($data['client']) && is_array($data['client']) && $invoice->client_id) {
+                $clientUpdates = array_filter([
+                    'name' => isset($data['client']['name']) ? trim($data['client']['name']) : null,
+                    'phone' => isset($data['client']['phone']) ? trim($data['client']['phone']) : null,
+                    'email' => isset($data['client']['email']) ? trim($data['client']['email']) : null,
+                    'address' => isset($data['client']['address']) ? trim($data['client']['address']) : null,
+                ], fn($v) => !is_null($v) && $v !== '');
+
+                if (!empty($clientUpdates)) {
+                    \App\Models\Client::where('id', $invoice->client_id)->update($clientUpdates);
+                }
+            }
+
+            // Optional: update project name if provided
+            if (!empty($data['project_name']) && $invoice->project_id) {
+                Project::where('id', $invoice->project_id)->update(['name' => trim($data['project_name'])]);
+            }
+
+            activity()
+                ->causedBy($causer ?? auth()->user())
+                ->performedOn($invoice)
+                ->event('updated')
+                ->log("Invoice {$invoice->invoice_number} berhasil diperbarui");
+
+            DB::commit();
+            return $invoice->fresh(['items', 'project', 'client']);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal memperbarui invoice: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
     }
 
     /**
@@ -745,38 +874,58 @@ class FinanceService
     }
 
     /**
-     * Record a miscellaneous finance transaction (income or expense).
+     * Record a miscellaneous finance transaction (income or expense) with DB transaction.
      */
     public function recordTransaction(array $data, ?User $causer = null): FinanceTransaction
     {
-        if (empty($data['transaction_number'])) {
-            $data['transaction_number'] = $this->generateTransactionNumber($data['type'] ?? 'expense');
+        DB::beginTransaction();
+        try {
+            if (empty($data['transaction_number'])) {
+                $data['transaction_number'] = $this->generateTransactionNumber($data['type'] ?? 'expense');
+            }
+            $data['status'] = $data['status'] ?? 'completed';
+            $data['created_by'] = $causer ? $causer->id : auth()->id();
+
+            $transaction = FinanceTransaction::create($data);
+
+            activity()
+                ->causedBy($causer ?? auth()->user())
+                ->performedOn($transaction)
+                ->event('transaction_recorded')
+                ->log(($transaction->type === 'income' ? 'Pemasukan' : 'Pengeluaran') . " [{$transaction->category}] sebesar Rp " . number_format($transaction->amount, 0, ',', '.') . " dicatat: {$transaction->title}");
+
+            DB::commit();
+            return $transaction;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal mencatat transaksi kas: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
         }
-        $data['status'] = $data['status'] ?? 'completed';
-        $data['created_by'] = $causer ? $causer->id : auth()->id();
-
-        $transaction = FinanceTransaction::create($data);
-
-        activity()
-            ->causedBy($causer ?? auth()->user())
-            ->performedOn($transaction)
-            ->event('transaction_recorded')
-            ->log(($transaction->type === 'income' ? 'Pemasukan' : 'Pengeluaran') . " [{$transaction->category}] sebesar Rp " . number_format($transaction->amount, 0, ',', '.') . " dicatat: {$transaction->title}");
-
-        return $transaction;
     }
 
     /**
-     * Delete a miscellaneous finance transaction.
+     * Delete a miscellaneous finance transaction with DB transaction.
      */
     public function deleteTransaction(FinanceTransaction $transaction, ?User $causer = null): bool
     {
-        activity()
-            ->causedBy($causer ?? auth()->user())
-            ->performedOn($transaction)
-            ->event('transaction_deleted')
-            ->log("Transaksi kas {$transaction->transaction_number} ({$transaction->title}) dihapus");
+        DB::beginTransaction();
+        try {
+            $transNumber = $transaction->transaction_number;
+            $title = $transaction->title;
+            $deleted = (bool) $transaction->delete();
 
-        return (bool) $transaction->delete();
+            activity()
+                ->causedBy($causer ?? auth()->user())
+                ->performedOn($transaction)
+                ->event('transaction_deleted')
+                ->log("Transaksi kas {$transNumber} ({$title}) dihapus");
+
+            DB::commit();
+            return $deleted;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal menghapus transaksi kas: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
     }
 }

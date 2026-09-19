@@ -39,7 +39,16 @@ class WebpService
             $data = file_get_contents($file);
         } elseif (is_string($file)) {
             $path = null;
-            $data = $file;
+            if (preg_match('#^data:image/\w+;base64,#i', $file)) {
+                $base64 = preg_replace('#^data:image/\w+;base64,#i', '', $file);
+                $decoded = base64_decode($base64);
+                $data = $decoded !== false ? $decoded : $file;
+            } elseif (strlen($file) > 100 && base64_encode(base64_decode($file, true)) === $file) {
+                $decoded = base64_decode($file);
+                $data = $decoded !== false ? $decoded : $file;
+            } else {
+                $data = $file;
+            }
         } else {
             throw new Exception('Invalid image input provided to WebpService.');
         }

@@ -54,34 +54,60 @@ class PackageController extends Controller
 
     public function store(StorePackageRequest $request): RedirectResponse
     {
-        $package = Package::create($request->validated());
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $package = Package::create($request->validated());
 
-        activity()
-            ->causedBy($request->user())
-            ->performedOn($package)
-            ->event('created')
-            ->log("Paket foto {$package->name} berhasil ditambahkan");
+            activity()
+                ->causedBy($request->user())
+                ->performedOn($package)
+                ->event('created')
+                ->log("Paket foto {$package->name} berhasil ditambahkan");
 
-        return redirect()->back()->with('success', 'Paket berhasil ditambahkan.');
+            \Illuminate\Support\Facades\DB::commit();
+
+            return redirect()->back()->with('success', 'Paket berhasil ditambahkan.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to create package: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     public function update(UpdatePackageRequest $request, Package $package): RedirectResponse
     {
-        $package->update($request->validated());
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $package->update($request->validated());
 
-        activity()
-            ->causedBy($request->user())
-            ->performedOn($package)
-            ->event('updated')
-            ->log("Paket foto {$package->name} diperbarui");
+            activity()
+                ->causedBy($request->user())
+                ->performedOn($package)
+                ->event('updated')
+                ->log("Paket foto {$package->name} diperbarui");
 
-        return redirect()->back()->with('success', 'Paket berhasil diperbarui.');
+            \Illuminate\Support\Facades\DB::commit();
+
+            return redirect()->back()->with('success', 'Paket berhasil diperbarui.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to update package {$package->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     public function destroy(Package $package): RedirectResponse
     {
-        $package->delete();
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $package->delete();
+            \Illuminate\Support\Facades\DB::commit();
 
-        return redirect()->back()->with('success', 'Paket berhasil dihapus.');
+            return redirect()->back()->with('success', 'Paket berhasil dihapus.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to delete package {$package->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 }

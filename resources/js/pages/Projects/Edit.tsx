@@ -1344,6 +1344,14 @@ export default function ProjectsEdit({
                         <ChevronLeft className="w-3.5 h-3.5" />
                         <span>Kembali ke Detail</span>
                     </Link>
+                    <Link
+                        href={`/projects/${project.id}/invoice`}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/90 rounded-xl text-xs font-semibold shadow-2xs transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                        title="Buka lembar invoice untuk project ini"
+                    >
+                        <FileText className="w-3.5 h-3.5 text-indigo-600" />
+                        <span>Lembar Invoice</span>
+                    </Link>
                     <button
                         type="button"
                         onClick={() => handleUpdateSubmit(true)}
@@ -2432,6 +2440,7 @@ export default function ProjectsEdit({
 
                         {/* Right: Pengaturan Pembayaran & Tagihan Termin */}
                         <ProjectPaymentTerminSection
+                            projectId={project.id}
                             totalProject={totalProject}
                             dpPercent={dpPercent}
                             setDpPercent={setDpPercent}

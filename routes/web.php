@@ -30,6 +30,7 @@ use App\Http\Controllers\MasterData\PortfolioController;
 use App\Http\Controllers\MasterData\PromoSlideController;
 use App\Http\Controllers\MasterData\TestimonialController;
 use App\Http\Controllers\ProjectHighlightController;
+use App\Http\Controllers\RegionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -39,34 +40,8 @@ Route::get('/booking', fn () => redirect()->route('client.intake'));
 Route::post('/form-klien', [ClientIntakeController::class, 'store'])->name('client.intake.store');
 
 // Public API: Indonesia Region Cascading (powered by aliziodev/laravel-indonesia-regions)
-Route::get('/api/regions/provinces', function () {
-    $provinces = \Aliziodev\IndonesiaRegions\Models\IndonesiaRegion::whereRaw("code ~ '^[0-9]{2}$'")
-        ->orderBy('name')
-        ->get(['code', 'name'])
-        ->map(fn ($r) => ['code' => $r->code, 'name' => $r->name]);
-    return response()->json($provinces);
-})->name('api.regions.provinces');
-
-Route::get('/api/regions/children', function (Request $request) {
-    $parentCode = $request->query('parent_code', '');
-    if (empty($parentCode)) return response()->json([]);
-
-    // Determine child depth: province (2) → city (2+dot+2), city → district, district → village
-    $dots = substr_count($parentCode, '.');
-    $pattern = '^' . preg_quote($parentCode, '/') . '\.[0-9]+$';
-
-    // For villages (depth 3 → codes like XX.YY.ZZ.NNNN), the pattern changes
-    if ($dots >= 2) {
-        $pattern = '^' . preg_quote($parentCode, '/') . '\.[0-9]+$';
-    }
-
-    $children = \Aliziodev\IndonesiaRegions\Models\IndonesiaRegion::whereRaw("code ~ ?", [$pattern])
-        ->orderBy('name')
-        ->get(['code', 'name', 'postal_code'])
-        ->map(fn ($r) => ['code' => $r->code, 'name' => $r->name, 'postal_code' => $r->postal_code]);
-
-    return response()->json($children);
-})->name('api.regions.children');
+Route::get('/api/regions/provinces', [RegionController::class, 'provinces'])->name('api.regions.provinces');
+Route::get('/api/regions/children', [RegionController::class, 'children'])->name('api.regions.children');
 
 Route::get('/', function () {
     if (auth()->check()) {
@@ -176,6 +151,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/invoices', fn () => redirect()->route('finance.index'));
     Route::post('/finance/payments', [FinanceController::class, 'storePayment'])->name('finance.payments.store');
     Route::post('/finance/invoices', [FinanceController::class, 'storeInvoice'])->name('finance.invoices.store');
+    Route::put('/invoices/{invoice}', [FinanceController::class, 'updateInvoice'])->name('invoices.update');
     Route::post('/finance/transactions', [FinanceController::class, 'storeTransaction'])->name('finance.transactions.store');
     Route::delete('/finance/transactions/{transaction}', [FinanceController::class, 'destroyTransaction'])->name('finance.transactions.destroy');
 

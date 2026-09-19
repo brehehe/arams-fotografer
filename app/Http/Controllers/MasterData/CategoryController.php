@@ -57,15 +57,24 @@ class CategoryController extends Controller
         }
         $validated['image'] = $imagePath;
 
-        $category = Category::create($validated);
+        DB::beginTransaction();
+        try {
+            $category = Category::create($validated);
 
-        activity()
-            ->causedBy($request->user())
-            ->performedOn($category)
-            ->event('created')
-            ->log("Kategori layanan {$category->name} berhasil ditambahkan");
+            activity()
+                ->causedBy($request->user())
+                ->performedOn($category)
+                ->event('created')
+                ->log("Kategori layanan {$category->name} berhasil ditambahkan");
 
-        return redirect()->back()->with('success', 'Kategori berhasil ditambahkan.');
+            DB::commit();
+
+            return redirect()->back()->with('success', 'Kategori berhasil ditambahkan.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to create category: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     public function update(UpdateCategoryRequest $request, Category $category): RedirectResponse
@@ -85,26 +94,44 @@ class CategoryController extends Controller
         }
         $validated['image'] = $imagePath;
 
-        $category->update($validated);
+        DB::beginTransaction();
+        try {
+            $category->update($validated);
 
-        activity()
-            ->causedBy($request->user())
-            ->performedOn($category)
-            ->event('updated')
-            ->log("Kategori layanan {$category->name} diperbarui");
+            activity()
+                ->causedBy($request->user())
+                ->performedOn($category)
+                ->event('updated')
+                ->log("Kategori layanan {$category->name} diperbarui");
 
-        return redirect()->back()->with('success', 'Kategori berhasil diperbarui.');
+            DB::commit();
+
+            return redirect()->back()->with('success', 'Kategori berhasil diperbarui.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to update category {$category->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     public function destroy(Category $category): RedirectResponse
     {
-        if ($category->image) {
-            $this->deleteWebpImage($category->image);
+        DB::beginTransaction();
+        try {
+            if ($category->image) {
+                $this->deleteWebpImage($category->image);
+            }
+
+            $category->delete();
+
+            DB::commit();
+
+            return redirect()->back()->with('success', 'Kategori berhasil dihapus.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to delete category {$category->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
         }
-
-        $category->delete();
-
-        return redirect()->back()->with('success', 'Kategori berhasil dihapus.');
     }
 
     public function reorder(Request $request): RedirectResponse
@@ -114,17 +141,24 @@ class CategoryController extends Controller
             'ids.*' => ['required', 'uuid', 'exists:categories,id'],
         ]);
 
-        DB::transaction(function () use ($validated) {
+        DB::beginTransaction();
+        try {
             foreach ($validated['ids'] as $index => $id) {
                 Category::where('id', $id)->update(['sort_order' => $index + 1]);
             }
-        });
 
-        activity()
-            ->causedBy($request->user())
-            ->event('reordered')
-            ->log('Urutan kategori project diperbarui');
+            activity()
+                ->causedBy($request->user())
+                ->event('reordered')
+                ->log('Urutan kategori project diperbarui');
 
-        return redirect()->back()->with('success', 'Urutan kategori project berhasil diperbarui.');
+            DB::commit();
+
+            return redirect()->back()->with('success', 'Urutan kategori project berhasil diperbarui.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to reorder categories: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 }

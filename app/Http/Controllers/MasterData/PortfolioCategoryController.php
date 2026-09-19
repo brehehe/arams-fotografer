@@ -76,9 +76,17 @@ class PortfolioCategoryController extends Controller
         $validated['is_active'] = $request->boolean('is_active', true);
         $validated['sort_order'] = (int) ($validated['sort_order'] ?? 0);
 
-        PortfolioCategory::create($validated);
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            PortfolioCategory::create($validated);
+            \Illuminate\Support\Facades\DB::commit();
 
-        return redirect()->back()->with('success', 'Kategori portofolio berhasil ditambahkan.');
+            return redirect()->back()->with('success', 'Kategori portofolio berhasil ditambahkan.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to create portfolio category: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     public function update(Request $request, PortfolioCategory $portfolio_category): RedirectResponse
@@ -98,25 +106,49 @@ class PortfolioCategoryController extends Controller
         $validated['is_active'] = $request->has('is_active') ? $request->boolean('is_active') : $portfolio_category->is_active;
         $validated['sort_order'] = (int) ($validated['sort_order'] ?? $portfolio_category->sort_order);
 
-        $portfolio_category->update($validated);
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $portfolio_category->update($validated);
+            \Illuminate\Support\Facades\DB::commit();
 
-        return redirect()->back()->with('success', 'Kategori portofolio berhasil diperbarui.');
+            return redirect()->back()->with('success', 'Kategori portofolio berhasil diperbarui.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to update portfolio category {$portfolio_category->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     public function toggleActive(PortfolioCategory $portfolio_category): RedirectResponse
     {
-        $newStatus = !$portfolio_category->is_active;
-        $portfolio_category->update(['is_active' => $newStatus]);
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $newStatus = !$portfolio_category->is_active;
+            $portfolio_category->update(['is_active' => $newStatus]);
+            \Illuminate\Support\Facades\DB::commit();
 
-        $statusText = $newStatus ? 'ditampilkan (Show)' : 'disembunyikan (Hide)';
-        return redirect()->back()->with('success', "Kategori {$portfolio_category->name} berhasil {$statusText}.");
+            $statusText = $newStatus ? 'ditampilkan (Show)' : 'disembunyikan (Hide)';
+            return redirect()->back()->with('success', "Kategori {$portfolio_category->name} berhasil {$statusText}.");
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to toggle portfolio category active {$portfolio_category->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     public function destroy(PortfolioCategory $portfolio_category): RedirectResponse
     {
-        $name = $portfolio_category->name;
-        $portfolio_category->delete();
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $name = $portfolio_category->name;
+            $portfolio_category->delete();
+            \Illuminate\Support\Facades\DB::commit();
 
-        return redirect()->back()->with('success', "Kategori {$name} berhasil dihapus.");
+            return redirect()->back()->with('success', "Kategori {$name} berhasil dihapus.");
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to delete portfolio category {$portfolio_category->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 }

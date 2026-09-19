@@ -2,13 +2,26 @@
 
 namespace App\Services;
 
+use App\Mail\ClientAccountCreatedMail;
+use App\Models\Category;
 use App\Models\Client;
+use App\Models\ClientSource;
+use App\Models\Package;
 use App\Models\Project;
 use App\Models\User;
+use App\Models\WeddingOrganizer;
+use App\Traits\HasWebpUpload;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Spatie\Permission\Models\Role;
 
 class ClientService
 {
+    use HasWebpUpload;
+
     /**
      * Get paginated clients with filters, stats, and distinct dropdowns.
      */
@@ -151,40 +164,41 @@ class ClientService
     }
 
     /**
-     * Create a new client and log activity.
+     * Create a new client and optionally linked initial draft project with DB transaction.
      */
     public function createClient(array $data, ?User $causer = null): Client
     {
-        if (isset($data['children']) && is_array($data['children'])) {
-            $filtered = array_values(array_filter($data['children'], fn($c) => !empty(trim($c['name'] ?? ''))));
-            $data['children'] = !empty($filtered) ? $filtered : null;
-        }
+        DB::beginTransaction();
+        try {
+            if (isset($data['children']) && is_array($data['children'])) {
+                $filtered = array_values(array_filter($data['children'], fn($c) => !empty(trim($c['name'] ?? ''))));
+                $data['children'] = !empty($filtered) ? $filtered : null;
+            }
 
-        $clientFillable = (new Client())->getFillable();
-        $clientData = array_intersect_key($data, array_flip($clientFillable));
+            $clientFillable = (new Client())->getFillable();
+            $clientData = array_intersect_key($data, array_flip($clientFillable));
 
-        $client = Client::create($clientData);
+            $client = Client::create($clientData);
 
-        activity()
-            ->causedBy($causer ?? auth()->user())
-            ->performedOn($client)
-            ->event('created')
-            ->log("Klien baru {$client->name} berhasil ditambahkan");
+            activity()
+                ->causedBy($causer ?? auth()->user())
+                ->performedOn($client)
+                ->event('created')
+                ->log("Klien baru {$client->name} berhasil ditambahkan");
 
-        // If project / event details are provided, create linked Draft Project
-        if (!empty($data['category_id']) || !empty($data['package_id']) || !empty($data['event_type']) || !empty($data['event_date']) || !empty($data['event_location']) || !empty($data['location'])) {
-            try {
+            // If project / event details are provided, create linked Draft Project
+            if (!empty($data['category_id']) || !empty($data['package_id']) || !empty($data['event_type']) || !empty($data['event_date']) || !empty($data['event_location']) || !empty($data['location'])) {
                 $category = null;
                 if (!empty($data['category_id'])) {
-                    $category = \App\Models\Category::find($data['category_id']);
+                    $category = Category::find($data['category_id']);
                 }
                 if (!$category && !empty($data['event_type'])) {
-                    $category = \App\Models\Category::whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($data['event_type']) . '%'])->first();
+                    $category = Category::whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($data['event_type']) . '%'])->first();
                 }
 
                 $package = null;
                 if (!empty($data['package_id'])) {
-                    $package = \App\Models\Package::find($data['package_id']);
+                    $package = Package::find($data['package_id']);
                 }
 
                 $projectPrice = !empty($data['custom_price']) && is_numeric($data['custom_price'])
@@ -210,52 +224,231 @@ class ClientService
                     'payment_status' => 'unpaid',
                     'category_data' => $data['category_data'] ?? null,
                 ], $causer);
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning("Failed to auto-create project for client {$client->id}: " . $e->getMessage());
             }
-        }
 
-        return $client;
+            DB::commit();
+            return $client;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal menambahkan klien: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
     }
 
     /**
-     * Update client and log activity.
+     * Update client, handle avatar if provided, sync portal avatar, and log activity with DB transaction.
      */
-    public function updateClient(Client $client, array $data, ?User $causer = null): Client
+    public function updateClient(Client $client, array $data, $avatarFile = null, bool $removeAvatar = false, ?User $causer = null): Client
     {
-        if (isset($data['children']) && is_array($data['children'])) {
-            $filtered = array_values(array_filter($data['children'], fn($c) => !empty(trim($c['name'] ?? ''))));
-            $data['children'] = !empty($filtered) ? $filtered : null;
+        DB::beginTransaction();
+        try {
+            if (isset($data['children']) && is_array($data['children'])) {
+                $filtered = array_values(array_filter($data['children'], fn($c) => !empty(trim($c['name'] ?? ''))));
+                $data['children'] = !empty($filtered) ? $filtered : null;
+            }
+
+            if ($avatarFile) {
+                $avatarUrl = $this->uploadThumbnailAsWebp(
+                    $avatarFile,
+                    'clients/avatars',
+                    400,
+                    400,
+                    85,
+                    $client->avatar
+                );
+                $data['avatar'] = $avatarUrl;
+            } elseif ($removeAvatar) {
+                if ($client->avatar) {
+                    $this->deleteWebpImage($client->avatar);
+                }
+                $data['avatar'] = null;
+            }
+
+            $clientFillable = (new Client())->getFillable();
+            $clientData = array_intersect_key($data, array_flip($clientFillable));
+
+            $client->update($clientData);
+
+            if (array_key_exists('avatar', $data)) {
+                $portalUser = User::where('client_id', $client->id)->first();
+                if ($portalUser) {
+                    $portalUser->update(['avatar' => $data['avatar']]);
+                }
+            }
+
+            activity()
+                ->causedBy($causer ?? auth()->user())
+                ->performedOn($client)
+                ->event('updated')
+                ->log("Data klien {$client->name} telah diperbarui");
+
+            DB::commit();
+            return $client;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal memperbarui klien: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
         }
-
-        $clientFillable = (new Client())->getFillable();
-        $clientData = array_intersect_key($data, array_flip($clientFillable));
-
-        $client->update($clientData);
-
-        activity()
-            ->causedBy($causer ?? auth()->user())
-            ->performedOn($client)
-            ->event('updated')
-            ->log("Data klien {$client->name} telah diperbarui");
-
-        return $client;
     }
 
     /**
-     * Delete client and log activity.
+     * Delete client with DB transaction.
      */
     public function deleteClient(Client $client, ?User $causer = null): bool
     {
-        $name = $client->name;
-        $deleted = $client->delete();
+        DB::beginTransaction();
+        try {
+            $name = $client->name;
+            $deleted = $client->delete();
 
-        activity()
-            ->causedBy($causer ?? auth()->user())
-            ->performedOn($client)
-            ->event('deleted')
-            ->log("Klien {$name} dipindahkan ke sampah");
+            activity()
+                ->causedBy($causer ?? auth()->user())
+                ->performedOn($client)
+                ->event('deleted')
+                ->log("Klien {$name} dipindahkan ke sampah");
 
-        return (bool) $deleted;
+            DB::commit();
+            return (bool) $deleted;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal menghapus klien: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Toggle block/active status for client and associated portal user with DB transaction.
+     */
+    public function toggleBlock(Client $client, ?User $causer = null): array
+    {
+        DB::beginTransaction();
+        try {
+            $newStatus = $client->status === 'blocked' ? 'active' : 'blocked';
+            $client->update(['status' => $newStatus]);
+
+            $portalUser = User::where('client_id', $client->id)->first();
+            if ($portalUser) {
+                $portalUser->update([
+                    'status' => $newStatus === 'blocked' ? 'suspended' : 'active',
+                ]);
+            }
+
+            $logMsg = $newStatus === 'blocked'
+                ? "Klien {$client->name} telah diblokir."
+                : "Blokir klien {$client->name} telah dibuka.";
+
+            activity()
+                ->causedBy($causer ?? auth()->user())
+                ->performedOn($client)
+                ->event($newStatus === 'blocked' ? 'client_blocked' : 'client_unblocked')
+                ->log($logMsg);
+
+            DB::commit();
+
+            return [
+                'status' => $newStatus,
+                'message' => $newStatus === 'blocked'
+                    ? "Klien {$client->name} berhasil diblokir."
+                    : "Blokir klien {$client->name} berhasil dibuka.",
+            ];
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal mengubah status blokir klien: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Create or update client portal user account with DB transaction and notify client.
+     */
+    public function createOrUpdateClientAccount(Client $client, array $validated, ?User $causer = null): array
+    {
+        DB::beginTransaction();
+        try {
+            $user = User::where('client_id', $client->id)
+                ->orWhere('email', $validated['email'])
+                ->first();
+
+            if ($user) {
+                $user->update([
+                    'name' => $client->name,
+                    'email' => $validated['email'],
+                    'password' => Hash::make($validated['password']),
+                    'client_id' => $client->id,
+                    'status' => 'active',
+                    'phone' => $client->phone ?? $user->phone,
+                ]);
+            } else {
+                $user = User::create([
+                    'name' => $client->name,
+                    'email' => $validated['email'],
+                    'password' => Hash::make($validated['password']),
+                    'client_id' => $client->id,
+                    'status' => 'active',
+                    'phone' => $client->phone,
+                    'email_verified_at' => now(),
+                ]);
+            }
+
+            $clientRole = Role::findOrCreate('Client');
+            if (!$user->hasRole('Client')) {
+                $user->assignRole($clientRole);
+            }
+
+            if ($client->email !== $validated['email']) {
+                $client->update(['email' => $validated['email']]);
+            }
+
+            activity()
+                ->causedBy($causer ?? auth()->user())
+                ->performedOn($client)
+                ->event('account_created')
+                ->log("Akun portal klien dibuat/diperbarui untuk {$client->name} ({$user->email})");
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal membuat/memperbarui akun klien: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
+
+        // WhatsApp URL and email notification
+        $cleanPhone = preg_replace('/[^0-9]/', '', $client->phone ?? '');
+        if (str_starts_with($cleanPhone, '0')) {
+            $cleanPhone = '62' . substr($cleanPhone, 1);
+        }
+
+        $portalUrl = url('/login');
+        $notes = !empty($validated['message']) ? trim($validated['message']) : 'Silakan login untuk memantau progress project, review foto, dan download file dokumentasi Anda.';
+
+        $finalMsg = "Halo Kak {$client->name},\n\n"
+            . "Berikut informasi akun akses Portal Klien Arams Photography Anda:\n\n"
+            . "🌐 Link Login : {$portalUrl}\n"
+            . "👤 Nama Klien : {$client->name}\n"
+            . "📧 Email      : {$validated['email']}\n"
+            . "🔑 Password   : {$validated['password']}\n\n"
+            . "📝 Keterangan:\n{$notes}\n\n"
+            . "Terima kasih!";
+
+        $waUrl = !empty($cleanPhone) ? "https://wa.me/{$cleanPhone}?text=" . urlencode($finalMsg) : null;
+
+        if (in_array($validated['send_method'] ?? 'email', ['email', 'both'])) {
+            try {
+                Mail::to($validated['email'])->queue(new ClientAccountCreatedMail(
+                    clientName: $client->name,
+                    email: $validated['email'],
+                    password: $validated['password'],
+                    portalUrl: $portalUrl,
+                    notes: $validated['message'] ?? null,
+                ));
+            } catch (\Throwable $e) {
+                Log::error("Gagal antrekan email akun klien: " . $e->getMessage());
+            }
+        }
+
+        return [
+            'user' => $user,
+            'whatsapp_url' => in_array($validated['send_method'] ?? 'both', ['whatsapp', 'both']) ? $waUrl : null,
+        ];
     }
 }

@@ -7,6 +7,8 @@ use App\Models\Project;
 use App\Models\Setting;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class FileLinkService
 {
@@ -96,34 +98,44 @@ class FileLinkService
      */
     public function createFileLink(array $data, $user = null): FileLink
     {
-        $data['created_by'] = $user?->id;
+        DB::beginTransaction();
 
-        // Calculate expiration date
-        if (!empty($data['expires_at'])) {
-            $data['expires_at'] = Carbon::parse($data['expires_at']);
-        } elseif (!empty($data['expiry_days']) && $data['expiry_days'] > 0) {
-            $data['expires_at'] = Carbon::now()->addDays((int) $data['expiry_days']);
-        } else {
-            $defaultDays = (int) Setting::get('link_expiry_days', '0');
-            if ($defaultDays > 0) {
-                $data['expires_at'] = Carbon::now()->addDays($defaultDays);
+        try {
+            $data['created_by'] = $user?->id;
+
+            // Calculate expiration date
+            if (!empty($data['expires_at'])) {
+                $data['expires_at'] = Carbon::parse($data['expires_at']);
+            } elseif (!empty($data['expiry_days']) && $data['expiry_days'] > 0) {
+                $data['expires_at'] = Carbon::now()->addDays((int) $data['expiry_days']);
+            } else {
+                $defaultDays = (int) Setting::get('link_expiry_days', '0');
+                if ($defaultDays > 0) {
+                    $data['expires_at'] = Carbon::now()->addDays($defaultDays);
+                }
             }
+
+            unset($data['expiry_days']);
+
+            $file = FileLink::create($data);
+
+            if ($user) {
+                $project = Project::find($data['project_id']);
+                activity()
+                    ->causedBy($user)
+                    ->performedOn($file)
+                    ->event('file_upload')
+                    ->log("Link file/drive ditambahkan untuk project {$project?->name}" . ($file->expires_at ? " (Expired: {$file->expires_at->format('d M Y')})" : ''));
+            }
+
+            DB::commit();
+
+            return $file;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Failed to create file link: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
         }
-
-        unset($data['expiry_days']);
-
-        $file = FileLink::create($data);
-
-        if ($user) {
-            $project = Project::find($data['project_id']);
-            activity()
-                ->causedBy($user)
-                ->performedOn($file)
-                ->event('file_upload')
-                ->log("Link file/drive ditambahkan untuk project {$project?->name}" . ($file->expires_at ? " (Expired: {$file->expires_at->format('d M Y')})" : ''));
-        }
-
-        return $file;
     }
 
     /**
@@ -131,28 +143,38 @@ class FileLinkService
      */
     public function extendExpiry(FileLink $file, array $data, $user = null): FileLink
     {
-        if (!empty($data['expires_at'])) {
-            $file->expires_at = Carbon::parse($data['expires_at']);
-        } elseif (!empty($data['extend_days'])) {
-            $base = ($file->expires_at && $file->expires_at->isFuture()) ? $file->expires_at : Carbon::now();
-            $file->expires_at = $base->addDays((int) $data['extend_days']);
-        } else {
-            $defaultDays = (int) Setting::get('link_expiry_days', '30');
-            $file->expires_at = Carbon::now()->addDays(max(30, $defaultDays));
+        DB::beginTransaction();
+
+        try {
+            if (!empty($data['expires_at'])) {
+                $file->expires_at = Carbon::parse($data['expires_at']);
+            } elseif (!empty($data['extend_days'])) {
+                $base = ($file->expires_at && $file->expires_at->isFuture()) ? $file->expires_at : Carbon::now();
+                $file->expires_at = $base->addDays((int) $data['extend_days']);
+            } else {
+                $defaultDays = (int) Setting::get('link_expiry_days', '30');
+                $file->expires_at = Carbon::now()->addDays(max(30, $defaultDays));
+            }
+
+            $file->is_hidden = false;
+            $file->save();
+
+            if ($user) {
+                activity()
+                    ->causedBy($user)
+                    ->performedOn($file)
+                    ->event('file_extended')
+                    ->log("Masa aktif link file {$file->name} diperpanjang sampai {$file->expires_at?->format('d M Y')}");
+            }
+
+            DB::commit();
+
+            return $file;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Failed to extend file link {$file->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
         }
-
-        $file->is_hidden = false;
-        $file->save();
-
-        if ($user) {
-            activity()
-                ->causedBy($user)
-                ->performedOn($file)
-                ->event('file_extended')
-                ->log("Masa aktif link file {$file->name} diperpanjang sampai {$file->expires_at?->format('d M Y')}");
-        }
-
-        return $file;
     }
 
     /**
@@ -160,18 +182,28 @@ class FileLinkService
      */
     public function toggleVisibility(FileLink $file, $user = null): FileLink
     {
-        $file->is_hidden = !$file->is_hidden;
-        $file->save();
+        DB::beginTransaction();
 
-        if ($user) {
-            activity()
-                ->causedBy($user)
-                ->performedOn($file)
-                ->event('file_visibility_toggled')
-                ->log("Visibilitas link file {$file->name} diubah menjadi: " . ($file->is_hidden ? 'Tersembunyi' : 'Tampil'));
+        try {
+            $file->is_hidden = !$file->is_hidden;
+            $file->save();
+
+            if ($user) {
+                activity()
+                    ->causedBy($user)
+                    ->performedOn($file)
+                    ->event('file_visibility_toggled')
+                    ->log("Visibilitas link file {$file->name} diubah menjadi: " . ($file->is_hidden ? 'Tersembunyi' : 'Tampil'));
+            }
+
+            DB::commit();
+
+            return $file;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Failed to toggle file link visibility {$file->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
         }
-
-        return $file;
     }
 
     /**
@@ -179,14 +211,24 @@ class FileLinkService
      */
     public function deleteFileLink(FileLink $file, $user = null): void
     {
-        $fileName = $file->name;
-        $file->delete();
+        DB::beginTransaction();
 
-        if ($user) {
-            activity()
-                ->causedBy($user)
-                ->event('file_deleted')
-                ->log("Link file {$fileName} dihapus");
+        try {
+            $fileName = $file->name;
+            $file->delete();
+
+            if ($user) {
+                activity()
+                    ->causedBy($user)
+                    ->event('file_deleted')
+                    ->log("Link file {$fileName} dihapus");
+            }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Failed to delete file link {$file->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
         }
     }
 }

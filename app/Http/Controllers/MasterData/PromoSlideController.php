@@ -82,19 +82,28 @@ class PromoSlideController extends Controller
             $imagePath = $validated['image'];
         }
 
-        PromoSlide::create([
-            'project_id' => $validated['project_id'] ?? null,
-            'title' => $validated['title'],
-            'tag' => $validated['tag'],
-            'description' => $validated['description'] ?? '',
-            'button_text' => $validated['button_text'],
-            'button_url' => $validated['button_url'] ?? '/form-klien',
-            'image' => $imagePath ?? '/images/wedding-couple.jpg',
-            'is_active' => $request->boolean('is_active', true),
-            'sort_order' => (int) ($validated['sort_order'] ?? 0),
-        ]);
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            PromoSlide::create([
+                'project_id' => $validated['project_id'] ?? null,
+                'title' => $validated['title'],
+                'tag' => $validated['tag'],
+                'description' => $validated['description'] ?? '',
+                'button_text' => $validated['button_text'],
+                'button_url' => $validated['button_url'] ?? '/form-klien',
+                'image' => $imagePath ?? '/images/wedding-couple.jpg',
+                'is_active' => $request->boolean('is_active', true),
+                'sort_order' => (int) ($validated['sort_order'] ?? 0),
+            ]);
 
-        return redirect()->back()->with('success', 'Promo Slide berhasil ditambahkan.');
+            \Illuminate\Support\Facades\DB::commit();
+
+            return redirect()->back()->with('success', 'Promo Slide berhasil ditambahkan.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to create promo slide: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     public function update(Request $request, PromoSlide $promo_slide): RedirectResponse
@@ -118,26 +127,43 @@ class PromoSlideController extends Controller
             $imagePath = $request->input('image_url');
         }
 
-        $promo_slide->update([
-            'project_id' => $request->has('project_id') ? $validated['project_id'] : $promo_slide->project_id,
-            'title' => $validated['title'],
-            'tag' => $validated['tag'],
-            'description' => $validated['description'] ?? '',
-            'button_text' => $validated['button_text'],
-            'button_url' => $validated['button_url'] ?? '/form-klien',
-            'image' => $imagePath,
-            'is_active' => $request->boolean('is_active', true),
-            'sort_order' => (int) ($validated['sort_order'] ?? 0),
-        ]);
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $promo_slide->update([
+                'project_id' => $request->has('project_id') ? $validated['project_id'] : $promo_slide->project_id,
+                'title' => $validated['title'],
+                'tag' => $validated['tag'],
+                'description' => $validated['description'] ?? '',
+                'button_text' => $validated['button_text'],
+                'button_url' => $validated['button_url'] ?? '/form-klien',
+                'image' => $imagePath,
+                'is_active' => $request->boolean('is_active', true),
+                'sort_order' => (int) ($validated['sort_order'] ?? 0),
+            ]);
 
-        return redirect()->back()->with('success', 'Promo Slide berhasil diperbarui.');
+            \Illuminate\Support\Facades\DB::commit();
+
+            return redirect()->back()->with('success', 'Promo Slide berhasil diperbarui.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to update promo slide {$promo_slide->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     public function destroy(PromoSlide $promo_slide): RedirectResponse
     {
-        $promo_slide->delete();
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $promo_slide->delete();
+            \Illuminate\Support\Facades\DB::commit();
 
-        return redirect()->back()->with('success', 'Promo Slide berhasil dihapus.');
+            return redirect()->back()->with('success', 'Promo Slide berhasil dihapus.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to delete promo slide {$promo_slide->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     /**
@@ -165,18 +191,27 @@ class PromoSlideController extends Controller
             $imagePath = $project->thumbnail ?: '/images/wedding-couple.jpg';
         }
 
-        $project->promoSlides()->create([
-            'title' => $validated['title'],
-            'tag' => $validated['tag'],
-            'description' => $validated['description'] ?? '',
-            'button_text' => $validated['button_text'],
-            'button_url' => $validated['button_url'] ?? "/client/projects/{$project->id}",
-            'image' => $imagePath,
-            'is_active' => $request->boolean('is_active', true),
-            'sort_order' => (int) ($validated['sort_order'] ?? $project->promoSlides()->count() + 1),
-        ]);
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $project->promoSlides()->create([
+                'title' => $validated['title'],
+                'tag' => $validated['tag'],
+                'description' => $validated['description'] ?? '',
+                'button_text' => $validated['button_text'],
+                'button_url' => $validated['button_url'] ?? "/client/projects/{$project->id}",
+                'image' => $imagePath,
+                'is_active' => $request->boolean('is_active', true),
+                'sort_order' => (int) ($validated['sort_order'] ?? $project->promoSlides()->count() + 1),
+            ]);
 
-        return redirect()->back()->with('success', 'Slide banner project berhasil ditambahkan.');
+            \Illuminate\Support\Facades\DB::commit();
+
+            return redirect()->back()->with('success', 'Slide banner project berhasil ditambahkan.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to store promo slide for project {$project->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     /**
@@ -202,18 +237,27 @@ class PromoSlideController extends Controller
             $imagePath = $request->input('image_url');
         }
 
-        $promo_slide->update([
-            'title' => $validated['title'],
-            'tag' => $validated['tag'],
-            'description' => $validated['description'] ?? '',
-            'button_text' => $validated['button_text'],
-            'button_url' => $validated['button_url'] ?? "/client/projects/{$project->id}",
-            'image' => $imagePath,
-            'is_active' => $request->boolean('is_active', $promo_slide->is_active),
-            'sort_order' => (int) ($validated['sort_order'] ?? $promo_slide->sort_order),
-        ]);
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $promo_slide->update([
+                'title' => $validated['title'],
+                'tag' => $validated['tag'],
+                'description' => $validated['description'] ?? '',
+                'button_text' => $validated['button_text'],
+                'button_url' => $validated['button_url'] ?? "/client/projects/{$project->id}",
+                'image' => $imagePath,
+                'is_active' => $request->boolean('is_active', $promo_slide->is_active),
+                'sort_order' => (int) ($validated['sort_order'] ?? $promo_slide->sort_order),
+            ]);
 
-        return redirect()->back()->with('success', 'Slide banner project berhasil diperbarui.');
+            \Illuminate\Support\Facades\DB::commit();
+
+            return redirect()->back()->with('success', 'Slide banner project berhasil diperbarui.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to update promo slide for project {$project->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     /**
@@ -221,13 +265,22 @@ class PromoSlideController extends Controller
      */
     public function toggleActiveForProject(Request $request, Project $project, PromoSlide $promo_slide): RedirectResponse
     {
-        $promo_slide->update([
-            'is_active' => !$promo_slide->is_active,
-        ]);
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $promo_slide->update([
+                'is_active' => !$promo_slide->is_active,
+            ]);
 
-        $status = $promo_slide->is_active ? 'diaktifkan' : 'dinonaktifkan';
+            $status = $promo_slide->is_active ? 'diaktifkan' : 'dinonaktifkan';
 
-        return redirect()->back()->with('success', "Slide banner project berhasil {$status}.");
+            \Illuminate\Support\Facades\DB::commit();
+
+            return redirect()->back()->with('success', "Slide banner project berhasil {$status}.");
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to toggle promo slide active for project: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     /**
@@ -235,9 +288,17 @@ class PromoSlideController extends Controller
      */
     public function destroyForProject(Project $project, PromoSlide $promo_slide): RedirectResponse
     {
-        $promo_slide->delete();
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $promo_slide->delete();
+            \Illuminate\Support\Facades\DB::commit();
 
-        return redirect()->back()->with('success', 'Slide banner project berhasil dihapus.');
+            return redirect()->back()->with('success', 'Slide banner project berhasil dihapus.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to delete promo slide for project: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 }
 

@@ -87,34 +87,60 @@ class AddonController extends Controller
 
     public function store(StoreAddonRequest $request): RedirectResponse
     {
-        $addon = Addon::create($request->validated());
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $addon = Addon::create($request->validated());
 
-        activity()
-            ->causedBy($request->user())
-            ->performedOn($addon)
-            ->event('created')
-            ->log("Addon {$addon->name} berhasil ditambahkan");
+            activity()
+                ->causedBy($request->user())
+                ->performedOn($addon)
+                ->event('created')
+                ->log("Addon {$addon->name} berhasil ditambahkan");
 
-        return redirect()->back()->with('success', 'Addon berhasil ditambahkan.');
+            \Illuminate\Support\Facades\DB::commit();
+
+            return redirect()->back()->with('success', 'Addon berhasil ditambahkan.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to create addon: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     public function update(UpdateAddonRequest $request, Addon $addon): RedirectResponse
     {
-        $addon->update($request->validated());
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $addon->update($request->validated());
 
-        activity()
-            ->causedBy($request->user())
-            ->performedOn($addon)
-            ->event('updated')
-            ->log("Addon {$addon->name} diperbarui");
+            activity()
+                ->causedBy($request->user())
+                ->performedOn($addon)
+                ->event('updated')
+                ->log("Addon {$addon->name} diperbarui");
 
-        return redirect()->back()->with('success', 'Addon berhasil diperbarui.');
+            \Illuminate\Support\Facades\DB::commit();
+
+            return redirect()->back()->with('success', 'Addon berhasil diperbarui.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to update addon {$addon->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     public function destroy(Addon $addon): RedirectResponse
     {
-        $addon->delete();
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $addon->delete();
+            \Illuminate\Support\Facades\DB::commit();
 
-        return redirect()->back()->with('success', 'Addon berhasil dihapus.');
+            return redirect()->back()->with('success', 'Addon berhasil dihapus.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to delete addon {$addon->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 }

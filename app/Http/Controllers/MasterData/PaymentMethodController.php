@@ -42,34 +42,60 @@ class PaymentMethodController extends Controller
 
     public function store(StorePaymentMethodRequest $request): RedirectResponse
     {
-        $paymentMethod = PaymentMethod::create($request->validated());
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $paymentMethod = PaymentMethod::create($request->validated());
 
-        activity()
-            ->causedBy($request->user())
-            ->performedOn($paymentMethod)
-            ->event('created')
-            ->log("Metode pembayaran {$paymentMethod->name} berhasil ditambahkan");
+            activity()
+                ->causedBy($request->user())
+                ->performedOn($paymentMethod)
+                ->event('created')
+                ->log("Metode pembayaran {$paymentMethod->name} berhasil ditambahkan");
 
-        return redirect()->back()->with('success', 'Metode pembayaran berhasil ditambahkan.');
+            \Illuminate\Support\Facades\DB::commit();
+
+            return redirect()->back()->with('success', 'Metode pembayaran berhasil ditambahkan.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to create payment method: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     public function update(UpdatePaymentMethodRequest $request, PaymentMethod $paymentMethod): RedirectResponse
     {
-        $paymentMethod->update($request->validated());
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $paymentMethod->update($request->validated());
 
-        activity()
-            ->causedBy($request->user())
-            ->performedOn($paymentMethod)
-            ->event('updated')
-            ->log("Metode pembayaran {$paymentMethod->name} diperbarui");
+            activity()
+                ->causedBy($request->user())
+                ->performedOn($paymentMethod)
+                ->event('updated')
+                ->log("Metode pembayaran {$paymentMethod->name} diperbarui");
 
-        return redirect()->back()->with('success', 'Metode pembayaran berhasil diperbarui.');
+            \Illuminate\Support\Facades\DB::commit();
+
+            return redirect()->back()->with('success', 'Metode pembayaran berhasil diperbarui.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to update payment method {$paymentMethod->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     public function destroy(PaymentMethod $paymentMethod): RedirectResponse
     {
-        $paymentMethod->delete();
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $paymentMethod->delete();
+            \Illuminate\Support\Facades\DB::commit();
 
-        return redirect()->back()->with('success', 'Metode pembayaran berhasil dihapus.');
+            return redirect()->back()->with('success', 'Metode pembayaran berhasil dihapus.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to delete payment method {$paymentMethod->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 }

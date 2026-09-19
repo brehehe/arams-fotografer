@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Spatie\Permission\Models\Role;
 
 class UserService
@@ -63,23 +65,31 @@ class UserService
      */
     public function createUser(array $data, ?User $causer = null): User
     {
-        $user = User::create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'phone' => $data['phone'] ?? null,
-            'status' => $data['status'],
-            'password' => Hash::make($data['password']),
-        ]);
+        DB::beginTransaction();
+        try {
+            $user = User::create([
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'phone' => $data['phone'] ?? null,
+                'status' => $data['status'],
+                'password' => Hash::make($data['password']),
+            ]);
 
-        $user->assignRole($data['role']);
+            $user->assignRole($data['role']);
 
-        activity()
-            ->causedBy($causer ?? auth()->user())
-            ->performedOn($user)
-            ->event('created')
-            ->log("Pengguna baru {$user->name} ({$data['role']}) berhasil ditambahkan");
+            activity()
+                ->causedBy($causer ?? auth()->user())
+                ->performedOn($user)
+                ->event('created')
+                ->log("Pengguna baru {$user->name} ({$data['role']}) berhasil ditambahkan");
 
-        return $user;
+            DB::commit();
+            return $user;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal menambahkan pengguna: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
     }
 
     /**
@@ -87,27 +97,35 @@ class UserService
      */
     public function updateUser(User $user, array $data, ?User $causer = null): User
     {
-        $updateData = [
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'phone' => $data['phone'] ?? null,
-            'status' => $data['status'],
-        ];
+        DB::beginTransaction();
+        try {
+            $updateData = [
+                'name' => $data['name'],
+                'email' => $data['email'],
+                'phone' => $data['phone'] ?? null,
+                'status' => $data['status'],
+            ];
 
-        if (! empty($data['password'])) {
-            $updateData['password'] = Hash::make($data['password']);
+            if (! empty($data['password'])) {
+                $updateData['password'] = Hash::make($data['password']);
+            }
+
+            $user->update($updateData);
+            $user->syncRoles([$data['role']]);
+
+            activity()
+                ->causedBy($causer ?? auth()->user())
+                ->performedOn($user)
+                ->event('updated')
+                ->log("Data pengguna {$user->name} telah diperbarui");
+
+            DB::commit();
+            return $user;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal memperbarui pengguna: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
         }
-
-        $user->update($updateData);
-        $user->syncRoles([$data['role']]);
-
-        activity()
-            ->causedBy($causer ?? auth()->user())
-            ->performedOn($user)
-            ->event('updated')
-            ->log("Data pengguna {$user->name} telah diperbarui");
-
-        return $user;
     }
 
     /**
@@ -115,15 +133,23 @@ class UserService
      */
     public function deleteUser(User $user, ?User $causer = null): bool
     {
-        $name = $user->name;
-        $deleted = $user->delete();
+        DB::beginTransaction();
+        try {
+            $name = $user->name;
+            $deleted = $user->delete();
 
-        activity()
-            ->causedBy($causer ?? auth()->user())
-            ->performedOn($user)
-            ->event('deleted')
-            ->log("Pengguna {$name} dihapus");
+            activity()
+                ->causedBy($causer ?? auth()->user())
+                ->performedOn($user)
+                ->event('deleted')
+                ->log("Pengguna {$name} dihapus");
 
-        return (bool) $deleted;
+            DB::commit();
+            return (bool) $deleted;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal menghapus pengguna: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
     }
 }

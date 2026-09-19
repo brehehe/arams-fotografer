@@ -55,12 +55,21 @@ class SecurityController extends Controller
      */
     public function update(PasswordUpdateRequest $request): RedirectResponse
     {
-        $request->user()->update([
-            'password' => $request->password,
-        ]);
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $request->user()->update([
+                'password' => $request->password,
+            ]);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Password updated.')]);
+            \Illuminate\Support\Facades\DB::commit();
 
-        return back();
+            Inertia::flash('toast', ['type' => 'success', 'message' => __('Password updated.')]);
+
+            return back();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to update password for user {$request->user()->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 }

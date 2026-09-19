@@ -78,20 +78,29 @@ class TestimonialController extends Controller
             $avatarPath = $this->uploadThumbnailAsWebp($request->file('avatar_file'), 'avatars', 400, 400, 80);
         }
 
-        Testimonial::create([
-            'client_name' => $validated['client_name'],
-            'package_name' => $validated['package_name'] ?? 'Paket Foto',
-            'project_id' => $validated['project_id'] ?? null,
-            'client_id' => $validated['client_id'] ?? null,
-            'rating' => (int) $validated['rating'],
-            'comment' => $validated['comment'],
-            'avatar' => $avatarPath,
-            'is_featured' => $request->boolean('is_featured', true),
-            'status' => $validated['status'],
-            'sort_order' => (int) ($validated['sort_order'] ?? 0),
-        ]);
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            Testimonial::create([
+                'client_name' => $validated['client_name'],
+                'package_name' => $validated['package_name'] ?? 'Paket Foto',
+                'project_id' => $validated['project_id'] ?? null,
+                'client_id' => $validated['client_id'] ?? null,
+                'rating' => (int) $validated['rating'],
+                'comment' => $validated['comment'],
+                'avatar' => $avatarPath,
+                'is_featured' => $request->boolean('is_featured', true),
+                'status' => $validated['status'],
+                'sort_order' => (int) ($validated['sort_order'] ?? 0),
+            ]);
 
-        return redirect()->back()->with('success', 'Ulasan klien berhasil ditambahkan.');
+            \Illuminate\Support\Facades\DB::commit();
+
+            return redirect()->back()->with('success', 'Ulasan klien berhasil ditambahkan.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to create testimonial: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     public function update(Request $request, Testimonial $testimonial): RedirectResponse
@@ -116,35 +125,60 @@ class TestimonialController extends Controller
             $avatarPath = $request->input('avatar_url');
         }
 
-        $testimonial->update([
-            'client_name' => $validated['client_name'],
-            'package_name' => $validated['package_name'] ?? 'Paket Foto',
-            'project_id' => $validated['project_id'] ?? null,
-            'client_id' => $validated['client_id'] ?? null,
-            'rating' => (int) $validated['rating'],
-            'comment' => $validated['comment'],
-            'avatar' => $avatarPath,
-            'is_featured' => $request->boolean('is_featured', true),
-            'status' => $validated['status'],
-            'sort_order' => (int) ($validated['sort_order'] ?? 0),
-        ]);
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $testimonial->update([
+                'client_name' => $validated['client_name'],
+                'package_name' => $validated['package_name'] ?? 'Paket Foto',
+                'project_id' => $validated['project_id'] ?? null,
+                'client_id' => $validated['client_id'] ?? null,
+                'rating' => (int) $validated['rating'],
+                'comment' => $validated['comment'],
+                'avatar' => $avatarPath,
+                'is_featured' => $request->boolean('is_featured', true),
+                'status' => $validated['status'],
+                'sort_order' => (int) ($validated['sort_order'] ?? 0),
+            ]);
 
-        return redirect()->back()->with('success', 'Ulasan klien berhasil diperbarui.');
+            \Illuminate\Support\Facades\DB::commit();
+
+            return redirect()->back()->with('success', 'Ulasan klien berhasil diperbarui.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to update testimonial {$testimonial->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     public function toggleActive(Testimonial $testimonial): RedirectResponse
     {
-        $newStatus = ($testimonial->status === 'approved') ? 'rejected' : 'approved';
-        $testimonial->update(['status' => $newStatus]);
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $newStatus = ($testimonial->status === 'approved') ? 'rejected' : 'approved';
+            $testimonial->update(['status' => $newStatus]);
+            \Illuminate\Support\Facades\DB::commit();
 
-        $statusText = ($newStatus === 'approved') ? 'ditampilkan di portal klien (Show)' : 'disembunyikan dari portal klien (Hide)';
-        return redirect()->back()->with('success', "Ulasan dari '{$testimonial->client_name}' berhasil {$statusText}.");
+            $statusText = ($newStatus === 'approved') ? 'ditampilkan di portal klien (Show)' : 'disembunyikan dari portal klien (Hide)';
+            return redirect()->back()->with('success', "Ulasan dari '{$testimonial->client_name}' berhasil {$statusText}.");
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to toggle testimonial status {$testimonial->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     public function destroy(Testimonial $testimonial): RedirectResponse
     {
-        $testimonial->delete();
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $testimonial->delete();
+            \Illuminate\Support\Facades\DB::commit();
 
-        return redirect()->back()->with('success', 'Ulasan klien berhasil dihapus.');
+            return redirect()->back()->with('success', 'Ulasan klien berhasil dihapus.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to delete testimonial {$testimonial->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 }

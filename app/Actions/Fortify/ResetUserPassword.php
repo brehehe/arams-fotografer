@@ -22,8 +22,17 @@ class ResetUserPassword implements ResetsUserPasswords
             'password' => $this->passwordRules(),
         ])->validate();
 
-        $user->forceFill([
-            'password' => $input['password'],
-        ])->save();
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $user->forceFill([
+                'password' => $input['password'],
+            ])->save();
+
+            \Illuminate\Support\Facades\DB::commit();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to reset password for user {$user->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 }

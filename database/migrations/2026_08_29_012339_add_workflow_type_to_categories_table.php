@@ -16,8 +16,9 @@ return new class extends Migration
         });
 
         // Set Wedding categories to wedding workflow
+        $likeOp = \Illuminate\Support\Facades\DB::getDriverName() === 'pgsql' ? 'ilike' : 'like';
         \Illuminate\Support\Facades\DB::table('categories')
-            ->where('slug', 'ilike', '%wedding%')
+            ->where('slug', $likeOp, '%wedding%')
             ->where('slug', 'not like', '%prewedding%')
             ->update(['workflow_type' => 'wedding']);
     }

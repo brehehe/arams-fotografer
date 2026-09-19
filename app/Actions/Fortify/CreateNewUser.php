@@ -24,10 +24,21 @@ class CreateNewUser implements CreatesNewUsers
             'password' => $this->passwordRules(),
         ])->validate();
 
-        return User::create([
-            'name' => $input['name'],
-            'email' => $input['email'],
-            'password' => $input['password'],
-        ]);
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $user = User::create([
+                'name' => $input['name'],
+                'email' => $input['email'],
+                'password' => $input['password'],
+            ]);
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return $user;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to create new registered user: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 }

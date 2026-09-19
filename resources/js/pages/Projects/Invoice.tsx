@@ -34,6 +34,13 @@ import {
     FileText,
     ShieldCheck,
     SplitSquareVertical,
+    Trash2,
+    Plus,
+    ExternalLink,
+    Pencil,
+    AlertCircle,
+    DollarSign,
+    User,
 } from 'lucide-react';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
@@ -46,6 +53,8 @@ interface InvoiceItem {
     issue_date: string;
     due_date: string;
     subtotal: number;
+    discount?: number;
+    tax?: number;
     total: number;
     paid_amount: number;
     remaining_amount: number;
@@ -145,13 +154,15 @@ export default function ProjectInvoice({
     const studioWebsite = company_settings?.website || appSettings?.company_website || 'https://www.arams.com';
 
     // Primary invoice data
-    const inv = current_invoice || invoices[0] || {
+    const inv: InvoiceItem = current_invoice || invoices[0] || {
         id: '',
         invoice_number: project?.project_number ? project.project_number.replace('PRJ', 'INV') : 'INV-001',
         issue_date: project?.created_at || '',
         due_date: project?.deadline || '',
         total: Number(project?.total_amount || 0),
         subtotal: Number(project?.total_amount || 0),
+        discount: 0,
+        tax: 0,
         paid_amount: 0,
         remaining_amount: Number(project?.total_amount || 0),
         status: 'unpaid',
@@ -254,6 +265,144 @@ export default function ProjectInvoice({
     const [pageLayoutMode, setPageLayoutMode] = useState<'single' | 'multi'>('single');
     const [isTextModalOpen, setIsTextModalOpen] = useState(false);
     const [prevTerminLabel, setPrevTerminLabel] = useState(invoiceTerminLabel);
+
+    // ── EDIT INVOICE MODAL STATE & HANDLERS ──
+    const [isEditInvoiceModalOpen, setIsEditInvoiceModalOpen] = useState(false);
+    const [isSavingInvoice, setIsSavingInvoice] = useState(false);
+    const [editInvoiceNumber, setEditInvoiceNumber] = useState('');
+    const [editIssueDate, setEditIssueDate] = useState('');
+    const [editDueDate, setEditDueDate] = useState('');
+    const [editNotes, setEditNotes] = useState('');
+    const [editStatus, setEditStatus] = useState('unpaid');
+    const [editItems, setEditItems] = useState<Array<{ id?: string; description: string; qty: number; unit_price: number; total: number }>>([]);
+    const [editDiscount, setEditDiscount] = useState<number>(0);
+    const [editTax, setEditTax] = useState<number>(0);
+    const [editPaidAmount, setEditPaidAmount] = useState<number>(0);
+    const [editClientName, setEditClientName] = useState('');
+    const [editClientPhone, setEditClientPhone] = useState('');
+    const [editClientEmail, setEditClientEmail] = useState('');
+    const [editClientAddress, setEditClientAddress] = useState('');
+    const [editProjectName, setEditProjectName] = useState('');
+
+    const openEditInvoiceModal = () => {
+        setEditInvoiceNumber(inv.invoice_number || '');
+        setEditIssueDate(inv.issue_date ? String(inv.issue_date).split('T')[0] : (project?.created_at ? String(project.created_at).split('T')[0] : ''));
+        setEditDueDate(inv.due_date ? String(inv.due_date).split('T')[0] : (project?.deadline ? String(project.deadline).split('T')[0] : ''));
+        setEditNotes(inv.notes || '');
+        setEditStatus(inv.status || 'unpaid');
+
+        const rawItems = inv.items && inv.items.length > 0 ? inv.items : [];
+        if (rawItems.length > 0) {
+            setEditItems(rawItems.map((it: any) => ({
+                id: it.id || '',
+                description: it.description || '',
+                qty: Number(it.qty ?? (it as any).quantity ?? 1),
+                unit_price: Number(it.unit_price ?? 0),
+                total: Number(it.total ?? (Number(it.qty ?? 1) * Number(it.unit_price ?? 0))),
+            })));
+        } else {
+            setEditItems([{
+                id: '',
+                description: inv.notes ? inv.notes : `Tagihan ${project?.name || ''}`,
+                qty: 1,
+                unit_price: Number(inv.total || currentInvoiceAmount || 0),
+                total: Number(inv.total || currentInvoiceAmount || 0),
+            }]);
+        }
+
+        setEditDiscount(Number(inv.discount || 0));
+        setEditTax(Number(inv.tax || 0));
+        setEditPaidAmount(Number(inv.paid_amount || 0));
+        setEditClientName(client.name || '');
+        setEditClientPhone(client.phone || '');
+        setEditClientEmail(client.email || '');
+        setEditClientAddress(client.address || '');
+        setEditProjectName(project?.name || '');
+        setIsEditInvoiceModalOpen(true);
+    };
+
+    const handleItemChange = (index: number, field: 'description' | 'qty' | 'unit_price', value: any) => {
+        setEditItems((prev) => {
+            const updated = [...prev];
+            const item = { ...updated[index] };
+            if (field === 'description') {
+                item.description = value;
+            } else if (field === 'qty') {
+                item.qty = Math.max(1, parseInt(value, 10) || 1);
+                item.total = item.qty * item.unit_price;
+            } else if (field === 'unit_price') {
+                item.unit_price = Math.max(0, parseFloat(value) || 0);
+                item.total = item.qty * item.unit_price;
+            }
+            updated[index] = item;
+            return updated;
+        });
+    };
+
+    const handleAddItem = () => {
+        setEditItems((prev) => [
+            ...prev,
+            { id: '', description: '', qty: 1, unit_price: 0, total: 0 },
+        ]);
+    };
+
+    const handleRemoveItem = (index: number) => {
+        setEditItems((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const editSubtotal = useMemo(() => {
+        return editItems.reduce((acc, it) => acc + (Number(it.total) || 0), 0);
+    }, [editItems]);
+
+    const editTotal = useMemo(() => {
+        return Math.max(0, editSubtotal - editDiscount + editTax);
+    }, [editSubtotal, editDiscount, editTax]);
+
+    const handleSaveInvoice = (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        if (!editInvoiceNumber.trim()) {
+            toast.error('Nomor invoice wajib diisi');
+            return;
+        }
+        if (!editDueDate) {
+            toast.error('Tanggal jatuh tempo wajib diisi');
+            return;
+        }
+
+        setIsSavingInvoice(true);
+        router.put(`/invoices/${inv.id}`, {
+            invoice_number: editInvoiceNumber.trim(),
+            issue_date: editIssueDate || new Date().toISOString().split('T')[0],
+            due_date: editDueDate,
+            notes: editNotes.trim(),
+            status: editStatus,
+            subtotal: editSubtotal,
+            discount: editDiscount,
+            tax: editTax,
+            total: editTotal,
+            paid_amount: editPaidAmount,
+            items: editItems.filter((it) => it.description.trim()),
+            client: {
+                name: editClientName.trim(),
+                phone: editClientPhone.trim(),
+                email: editClientEmail.trim(),
+                address: editClientAddress.trim(),
+            },
+            project_name: editProjectName.trim(),
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsSavingInvoice(false);
+                setIsEditInvoiceModalOpen(false);
+                toast.success('Data invoice berhasil disimpan dan diperbarui!');
+            },
+            onError: (errs) => {
+                setIsSavingInvoice(false);
+                const firstErr = Object.values(errs)[0];
+                toast.error(typeof firstErr === 'string' ? firstErr : 'Gagal memperbarui invoice');
+            },
+        });
+    };
 
     // Sync subtitle when invoice termin changes during render
     if (prevTerminLabel !== invoiceTerminLabel) {
@@ -1781,6 +1930,27 @@ export default function ProjectInvoice({
                         </button>
                     )}
 
+                    {/* Edit Data Invoice Button */}
+                    <button
+                        type="button"
+                        onClick={openEditInvoiceModal}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all shadow-sm shadow-amber-500/20 cursor-pointer"
+                        title="Edit nomor invoice, tanggal jatuh tempo, catatan, atau rincian item jika ada salah penulisan"
+                    >
+                        <Pencil className="w-3.5 h-3.5" />
+                        <span>Edit Data Invoice</span>
+                    </button>
+
+                    {/* Link to Edit Project */}
+                    <Link
+                        href={`/projects/${project?.id}/edit`}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/90 rounded-xl text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                        title="Buka form edit project lengkap (paket, add-on, jadwal, personel)"
+                    >
+                        <Settings2 className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Edit Project</span>
+                    </Link>
+
                     <button
                         type="button"
                         onClick={() => setIsTextModalOpen(true)}
@@ -2339,6 +2509,48 @@ export default function ProjectInvoice({
 
                 {/* ── RIGHT COLUMN (30% - 4 COLS): SIDEBAR PANELS ────────────────── */}
                 <div className="col-span-12 lg:col-span-4 space-y-4 lg:sticky lg:top-4">
+                    {/* ── CARD: KOREKSI & EDIT DATA INVOICE ────────────────────────── */}
+                    <div className="bg-gradient-to-br from-indigo-50/90 via-white to-purple-50/60 p-5 rounded-3xl border border-indigo-100 shadow-2xs space-y-3">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                                    <Pencil className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-slate-900 text-xs tracking-tight">
+                                        Koreksi Data Invoice
+                                    </h3>
+                                    <p className="text-[10px] text-slate-500 font-medium">
+                                        Perbaiki nomor, tanggal, termin, atau item
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p className="text-[11px] text-slate-600 leading-relaxed">
+                            Terdapat kesalahan penulisan nomor invoice, tanggal, atau rincian item? Anda dapat memperbaikinya secara langsung di sini.
+                        </p>
+
+                        <div className="flex flex-col gap-2 pt-1">
+                            <button
+                                type="button"
+                                onClick={openEditInvoiceModal}
+                                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-2xl shadow-sm shadow-indigo-600/20 transition-all cursor-pointer"
+                            >
+                                <Pencil className="w-3.5 h-3.5" />
+                                <span>Edit Data Invoice Ini</span>
+                            </button>
+
+                            <Link
+                                href={`/projects/${project?.id}/edit`}
+                                className="w-full inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-medium rounded-2xl transition-colors"
+                            >
+                                <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                                <span>Buka Halaman Edit Project</span>
+                            </Link>
+                        </div>
+                    </div>
+
                     {/* ── CARD 1: INFORMASI INVOICE ───────────────────────────────── */}
                     <div className="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-2xs space-y-3">
                         <h3 className="font-bold text-slate-900 text-xs tracking-tight">
@@ -2999,6 +3211,418 @@ export default function ProjectInvoice({
                             >
                                 <Check className="w-3.5 h-3.5" />
                                 <span>Terapkan Perubahan</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── MODAL: EDIT & KOREKSI DATA INVOICE ────────────────────────────── */}
+            {isEditInvoiceModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto bg-slate-900/60 backdrop-blur-xs">
+                    <div
+                        className="fixed inset-0"
+                        onClick={() => !isSavingInvoice && setIsEditInvoiceModalOpen(false)}
+                    />
+                    <div className="relative bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-6 flex flex-col max-h-[92vh] z-10 animate-in fade-in zoom-in-95 duration-200">
+                        {/* Header */}
+                        <div className="p-5 px-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 via-white to-indigo-50/40">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-600/20 shrink-0">
+                                    <Pencil className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h2 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                                        <span>Koreksi & Edit Data Invoice</span>
+                                        <span className="text-xs px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-700 font-mono font-semibold">
+                                            {inv.invoice_number}
+                                        </span>
+                                    </h2>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        Perbaiki nomor, tanggal, nominal, rincian item, atau identitas tertagih
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => !isSavingInvoice && setIsEditInvoiceModalOpen(false)}
+                                className="w-8 h-8 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
+                                aria-label="Tutup modal"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Form Content */}
+                        <form onSubmit={handleSaveInvoice} className="overflow-y-auto p-6 space-y-6 flex-1 text-xs">
+                            {/* Alert Note */}
+                            <div className="p-3.5 bg-indigo-50/70 border border-indigo-100 rounded-2xl flex items-start gap-2.5 text-indigo-950">
+                                <AlertCircle className="w-4 h-4 text-indigo-600 shrink-0 mt-0.5" />
+                                <div className="text-[11px] leading-relaxed">
+                                    Perubahan data di sini akan langsung memperbarui dokumen invoice cetak/PDF dan sinkron ke data keuangan. Jika Anda ingin mengubah jadwal atau nominal termin secara menyeluruh pada project, Anda juga dapat membukanya di{' '}
+                                    <Link
+                                        href={`/projects/${project?.id}/edit`}
+                                        className="font-bold underline text-indigo-700 hover:text-indigo-900 inline-flex items-center gap-0.5"
+                                    >
+                                        Halaman Edit Project <ExternalLink className="w-3 h-3 inline" />
+                                    </Link>.
+                                </div>
+                            </div>
+
+                            {/* Section 1: Data Utama Invoice */}
+                            <div className="space-y-3">
+                                <h3 className="font-bold text-slate-900 text-xs flex items-center gap-2">
+                                    <FileText className="w-4 h-4 text-indigo-600" />
+                                    <span>Informasi Utama Invoice</span>
+                                </h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                                    <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                            Nomor Invoice <span className="text-rose-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={editInvoiceNumber}
+                                            onChange={(e) => setEditInvoiceNumber(e.target.value)}
+                                            placeholder="Contoh: INV-2026-001"
+                                            required
+                                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                            Status Pembayaran <span className="text-rose-500">*</span>
+                                        </label>
+                                        <select
+                                            value={editStatus}
+                                            onChange={(e) => setEditStatus(e.target.value)}
+                                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                                        >
+                                            <option value="unpaid">Belum Dibayar (Unpaid)</option>
+                                            <option value="partially_paid">Dibayar Sebagian (Partially Paid)</option>
+                                            <option value="paid">Lunas (Paid)</option>
+                                            <option value="overdue">Jatuh Tempo (Overdue)</option>
+                                            <option value="cancelled">Dibatalkan (Cancelled)</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                            Tanggal Terbit
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={editIssueDate}
+                                            onChange={(e) => setEditIssueDate(e.target.value)}
+                                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                            Tanggal Jatuh Tempo <span className="text-rose-500">*</span>
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={editDueDate}
+                                            onChange={(e) => setEditDueDate(e.target.value)}
+                                            required
+                                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                        Keterangan Termin / Catatan Tagihan
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={editNotes}
+                                        onChange={(e) => setEditNotes(e.target.value)}
+                                        placeholder="Contoh: Pembayaran DP 50% untuk Wedding Documentation"
+                                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Section 2: Rincian Item Tagihan */}
+                            <div className="space-y-3 pt-3 border-t border-slate-100">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="font-bold text-slate-900 text-xs flex items-center gap-2">
+                                        <DollarSign className="w-4 h-4 text-emerald-600" />
+                                        <span>Rincian Item & Nominal Tagihan</span>
+                                    </h3>
+                                    <button
+                                        type="button"
+                                        onClick={handleAddItem}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+                                    >
+                                        <Plus className="w-3.5 h-3.5" />
+                                        <span>Tambah Baris Item</span>
+                                    </button>
+                                </div>
+
+                                <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-xs">
+                                            <thead className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold text-slate-600">
+                                                <tr>
+                                                    <th className="p-3 pl-4">Deskripsi Item / Layanan</th>
+                                                    <th className="p-3 w-20 text-center">Qty</th>
+                                                    <th className="p-3 w-40 text-right">Harga Satuan (Rp)</th>
+                                                    <th className="p-3 w-40 text-right">Total (Rp)</th>
+                                                    <th className="p-3 w-12 text-center">Aksi</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {editItems.map((item, idx) => (
+                                                    <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                                                        <td className="p-2.5 pl-4">
+                                                            <input
+                                                                type="text"
+                                                                value={item.description}
+                                                                onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
+                                                                placeholder="Deskripsi layanan atau paket..."
+                                                                className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:border-indigo-600"
+                                                            />
+                                                        </td>
+                                                        <td className="p-2.5 text-center">
+                                                            <input
+                                                                type="number"
+                                                                min="1"
+                                                                value={item.qty}
+                                                                onChange={(e) => handleItemChange(idx, 'qty', e.target.value)}
+                                                                className="w-16 px-2 py-1.5 text-center bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-indigo-600"
+                                                            />
+                                                        </td>
+                                                        <td className="p-2.5 text-right">
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                step="1000"
+                                                                value={item.unit_price}
+                                                                onChange={(e) => handleItemChange(idx, 'unit_price', e.target.value)}
+                                                                className="w-full px-2.5 py-1.5 text-right bg-white border border-slate-200 rounded-lg text-xs font-mono font-semibold text-slate-800 focus:outline-none focus:border-indigo-600"
+                                                            />
+                                                        </td>
+                                                        <td className="p-2.5 text-right font-mono font-bold text-slate-900 pr-3">
+                                                            {formatRupiah(item.total)}
+                                                        </td>
+                                                        <td className="p-2.5 text-center">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleRemoveItem(idx)}
+                                                                disabled={editItems.length <= 1}
+                                                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                                                                title="Hapus baris"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                {/* Perhitungan Nominal: Subtotal, Diskon, Pajak, Total, Paid Amount */}
+                                <div className="bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 space-y-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <div>
+                                            <label className="block text-[11px] font-medium text-slate-600 mb-1">
+                                                Potongan / Diskon (Rp)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="1000"
+                                                value={editDiscount}
+                                                onChange={(e) => setEditDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
+                                                className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-mono font-semibold text-slate-900 focus:outline-none focus:border-indigo-600"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[11px] font-medium text-slate-600 mb-1">
+                                                Pajak / PPN (Rp)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="1000"
+                                                value={editTax}
+                                                onChange={(e) => setEditTax(Math.max(0, parseFloat(e.target.value) || 0))}
+                                                className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-mono font-semibold text-slate-900 focus:outline-none focus:border-indigo-600"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[11px] font-medium text-slate-600 mb-1">
+                                                Sudah Dibayar (Rp)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="1000"
+                                                value={editPaidAmount}
+                                                onChange={(e) => setEditPaidAmount(Math.max(0, parseFloat(e.target.value) || 0))}
+                                                className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-mono font-semibold text-slate-900 focus:outline-none focus:border-indigo-600"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-2 border-t border-slate-200/80 flex flex-wrap items-center justify-between gap-4">
+                                        <div className="flex items-center gap-6 text-xs">
+                                            <div>
+                                                <span className="text-slate-500 block text-[10px]">Subtotal:</span>
+                                                <span className="font-mono font-bold text-slate-800">{formatRupiah(editSubtotal)}</span>
+                                            </div>
+                                            {editDiscount > 0 && (
+                                                <div>
+                                                    <span className="text-emerald-600 block text-[10px]">Diskon:</span>
+                                                    <span className="font-mono font-bold text-emerald-700">-{formatRupiah(editDiscount)}</span>
+                                                </div>
+                                            )}
+                                            {editTax > 0 && (
+                                                <div>
+                                                    <span className="text-slate-500 block text-[10px]">Pajak:</span>
+                                                    <span className="font-mono font-bold text-slate-800">+{formatRupiah(editTax)}</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center gap-4">
+                                            <div className="text-right">
+                                                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 block">
+                                                    Total Tagihan
+                                                </span>
+                                                <span className="font-mono text-base font-extrabold text-indigo-700">
+                                                    {formatRupiah(editTotal)}
+                                                </span>
+                                            </div>
+                                            <div className="text-right pl-4 border-l border-slate-200">
+                                                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 block">
+                                                    Sisa Pembayaran
+                                                </span>
+                                                <span className={`font-mono text-sm font-extrabold ${Math.max(0, editTotal - editPaidAmount) === 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                                    {formatRupiah(Math.max(0, editTotal - editPaidAmount))}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section 3: Koreksi Identitas Klien & Project (Opsional) */}
+                            <div className="space-y-3 pt-3 border-t border-slate-100">
+                                <h3 className="font-bold text-slate-900 text-xs flex items-center gap-2">
+                                    <User className="w-4 h-4 text-purple-600" />
+                                    <span>Koreksi Data Klien & Project (Opsional)</span>
+                                </h3>
+                                <p className="text-[11px] text-slate-500">
+                                    Jika terdapat salah ketik pada nama klien, nomor WhatsApp, atau judul project di lembar invoice, Anda dapat memperbaruinya di sini:
+                                </p>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                                    <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                            Nama Klien
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={editClientName}
+                                            onChange={(e) => setEditClientName(e.target.value)}
+                                            placeholder="Nama lengkap klien..."
+                                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-indigo-600"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                            Nomor Telepon / WhatsApp
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={editClientPhone}
+                                            onChange={(e) => setEditClientPhone(e.target.value)}
+                                            placeholder="08xxxxxxxxxx"
+                                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-indigo-600"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                            Email Klien
+                                        </label>
+                                        <input
+                                            type="email"
+                                            value={editClientEmail}
+                                            onChange={(e) => setEditClientEmail(e.target.value)}
+                                            placeholder="klien@email.com"
+                                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-indigo-600"
+                                        />
+                                    </div>
+
+                                    <div className="sm:col-span-2">
+                                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                            Alamat Klien
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={editClientAddress}
+                                            onChange={(e) => setEditClientAddress(e.target.value)}
+                                            placeholder="Alamat domisili/lokasi..."
+                                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-indigo-600"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                                            Nama Project
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={editProjectName}
+                                            onChange={(e) => setEditProjectName(e.target.value)}
+                                            placeholder="Judul/nama acara project..."
+                                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-indigo-600"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+
+                        {/* Footer Buttons */}
+                        <div className="p-4 px-6 border-t border-slate-100 bg-slate-50/60 flex items-center justify-between gap-3">
+                            <button
+                                type="button"
+                                disabled={isSavingInvoice}
+                                onClick={() => setIsEditInvoiceModalOpen(false)}
+                                className="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                                Batal
+                            </button>
+
+                            <button
+                                type="button"
+                                disabled={isSavingInvoice}
+                                onClick={() => handleSaveInvoice()}
+                                className="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/20 transition-all cursor-pointer disabled:opacity-50"
+                            >
+                                {isSavingInvoice ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        <span>Menyimpan Perubahan...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Check className="w-4 h-4" />
+                                        <span>Simpan Perubahan Invoice</span>
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>

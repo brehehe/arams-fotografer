@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use App\Services\ClientPortalService;
+use App\Services\ProjectService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -11,7 +12,8 @@ use Inertia\Response;
 class ClientPortalController extends Controller
 {
     public function __construct(
-        protected ClientPortalService $clientPortalService
+        protected ClientPortalService $clientPortalService,
+        protected ProjectService $projectService
     ) {}
 
     /**
@@ -86,22 +88,31 @@ class ClientPortalController extends Controller
 
         $client = $project->client;
 
-        \App\Models\Testimonial::updateOrCreate(
-            ['project_id' => $project->id],
-            [
-                'client_id' => $client?->id,
-                'client_name' => $client?->name ?? 'Klien Arams',
-                'package_name' => $project->package?->name ?? 'Paket Dokumentasi',
-                'rating' => (int) $validated['rating'],
-                'comment' => $validated['comment'],
-                'event_date' => $project->event_date,
-                'is_featured' => true,
-                'status' => 'approved',
-                'sort_order' => 0,
-            ]
-        );
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            \App\Models\Testimonial::updateOrCreate(
+                ['project_id' => $project->id],
+                [
+                    'client_id' => $client?->id,
+                    'client_name' => $client?->name ?? 'Klien Arams',
+                    'package_name' => $project->package?->name ?? 'Paket Dokumentasi',
+                    'rating' => (int) $validated['rating'],
+                    'comment' => $validated['comment'],
+                    'event_date' => $project->event_date,
+                    'is_featured' => true,
+                    'status' => 'approved',
+                    'sort_order' => 0,
+                ]
+            );
 
-        return redirect()->back()->with('success', 'Terima kasih! Ulasan Anda berhasil disimpan.');
+            \Illuminate\Support\Facades\DB::commit();
+
+            return redirect()->back()->with('success', 'Terima kasih! Ulasan Anda berhasil disimpan.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to submit client review for project {$project->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     /**
@@ -114,16 +125,10 @@ class ClientPortalController extends Controller
             'content' => 'required|string|max:2000',
         ]);
 
-        $title = !empty(trim($validated['title'] ?? '')) ? trim($validated['title']) : 'Catatan Klien';
-        $user = $request->user();
-        $authorName = $user?->name ?? ($project->client?->name ?? 'Klien');
-        $timestamp = now()->isoFormat('D MMM YYYY, HH:mm');
-
-        $newEntry = "--- [{$timestamp}] {$title} (Oleh: {$authorName}) ---\n" . trim($validated['content']);
-
-        $existing = trim($project->notes ?? '');
-        $project->notes = $existing ? ($existing . "\n\n" . $newEntry) : $newEntry;
-        $project->save();
+        $this->projectService->addNote($project, [
+            'title' => !empty(trim($validated['title'] ?? '')) ? trim($validated['title']) : 'Catatan Klien',
+            'content' => $validated['content'],
+        ], $request->user());
 
         return redirect()->back()->with('success', 'Catatan baru berhasil ditambahkan ke project.');
     }

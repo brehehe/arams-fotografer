@@ -60,18 +60,27 @@ class InstagramPostController extends Controller
             return redirect()->back()->withErrors(['image_file' => 'Wajib mengunggah foto atau memasukkan URL gambar.']);
         }
 
-        InstagramPost::create([
-            'image_url' => $imagePath,
-            'caption' => $validated['caption'] ?? '',
-            'post_url' => $validated['post_url'] ?? 'https://instagram.com/aramspictures',
-            'likes_count' => (int) ($validated['likes_count'] ?? rand(100, 300)),
-            'comments_count' => (int) ($validated['comments_count'] ?? rand(5, 25)),
-            'media_type' => $validated['media_type'] ?? 'photo',
-            'is_active' => $request->boolean('is_active', true),
-            'sort_order' => (int) ($validated['sort_order'] ?? 0),
-        ]);
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            InstagramPost::create([
+                'image_url' => $imagePath,
+                'caption' => $validated['caption'] ?? '',
+                'post_url' => $validated['post_url'] ?? 'https://instagram.com/aramspictures',
+                'likes_count' => (int) ($validated['likes_count'] ?? rand(100, 300)),
+                'comments_count' => (int) ($validated['comments_count'] ?? rand(5, 25)),
+                'media_type' => $validated['media_type'] ?? 'photo',
+                'is_active' => $request->boolean('is_active', true),
+                'sort_order' => (int) ($validated['sort_order'] ?? 0),
+            ]);
 
-        return redirect()->back()->with('success', 'Postingan Instagram berhasil ditambahkan.');
+            \Illuminate\Support\Facades\DB::commit();
+
+            return redirect()->back()->with('success', 'Postingan Instagram berhasil ditambahkan.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to create instagram post: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     public function update(Request $request, InstagramPost $instagram_post): RedirectResponse
@@ -94,24 +103,41 @@ class InstagramPostController extends Controller
             $imagePath = $request->input('image_url');
         }
 
-        $instagram_post->update([
-            'image_url' => $imagePath,
-            'caption' => $validated['caption'] ?? '',
-            'post_url' => $validated['post_url'] ?? 'https://instagram.com/aramspictures',
-            'likes_count' => (int) ($validated['likes_count'] ?? $instagram_post->likes_count),
-            'comments_count' => (int) ($validated['comments_count'] ?? $instagram_post->comments_count),
-            'media_type' => $validated['media_type'] ?? 'photo',
-            'is_active' => $request->boolean('is_active', true),
-            'sort_order' => (int) ($validated['sort_order'] ?? 0),
-        ]);
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $instagram_post->update([
+                'image_url' => $imagePath,
+                'caption' => $validated['caption'] ?? '',
+                'post_url' => $validated['post_url'] ?? 'https://instagram.com/aramspictures',
+                'likes_count' => (int) ($validated['likes_count'] ?? $instagram_post->likes_count),
+                'comments_count' => (int) ($validated['comments_count'] ?? $instagram_post->comments_count),
+                'media_type' => $validated['media_type'] ?? 'photo',
+                'is_active' => $request->boolean('is_active', true),
+                'sort_order' => (int) ($validated['sort_order'] ?? 0),
+            ]);
 
-        return redirect()->back()->with('success', 'Postingan Instagram berhasil diperbarui.');
+            \Illuminate\Support\Facades\DB::commit();
+
+            return redirect()->back()->with('success', 'Postingan Instagram berhasil diperbarui.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to update instagram post {$instagram_post->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     public function destroy(InstagramPost $instagram_post): RedirectResponse
     {
-        $instagram_post->delete();
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $instagram_post->delete();
+            \Illuminate\Support\Facades\DB::commit();
 
-        return redirect()->back()->with('success', 'Postingan Instagram berhasil dihapus.');
+            return redirect()->back()->with('success', 'Postingan Instagram berhasil dihapus.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to delete instagram post {$instagram_post->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 }

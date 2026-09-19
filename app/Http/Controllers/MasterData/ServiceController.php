@@ -54,34 +54,60 @@ class ServiceController extends Controller
 
     public function store(StoreServiceRequest $request): RedirectResponse
     {
-        $service = Service::create($request->validated());
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $service = Service::create($request->validated());
 
-        activity()
-            ->causedBy($request->user())
-            ->performedOn($service)
-            ->event('created')
-            ->log("Layanan {$service->name} berhasil ditambahkan");
+            activity()
+                ->causedBy($request->user())
+                ->performedOn($service)
+                ->event('created')
+                ->log("Layanan {$service->name} berhasil ditambahkan");
 
-        return redirect()->back()->with('success', 'Layanan berhasil ditambahkan.');
+            \Illuminate\Support\Facades\DB::commit();
+
+            return redirect()->back()->with('success', 'Layanan berhasil ditambahkan.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to create service: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     public function update(UpdateServiceRequest $request, Service $service): RedirectResponse
     {
-        $service->update($request->validated());
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $service->update($request->validated());
 
-        activity()
-            ->causedBy($request->user())
-            ->performedOn($service)
-            ->event('updated')
-            ->log("Layanan {$service->name} diperbarui");
+            activity()
+                ->causedBy($request->user())
+                ->performedOn($service)
+                ->event('updated')
+                ->log("Layanan {$service->name} diperbarui");
 
-        return redirect()->back()->with('success', 'Layanan berhasil diperbarui.');
+            \Illuminate\Support\Facades\DB::commit();
+
+            return redirect()->back()->with('success', 'Layanan berhasil diperbarui.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to update service {$service->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 
     public function destroy(Service $service): RedirectResponse
     {
-        $service->delete();
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $service->delete();
+            \Illuminate\Support\Facades\DB::commit();
 
-        return redirect()->back()->with('success', 'Layanan berhasil dihapus.');
+            return redirect()->back()->with('success', 'Layanan berhasil dihapus.');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            \Illuminate\Support\Facades\Log::error("Failed to delete service {$service->id}: {$e->getMessage()}", ['exception' => $e]);
+            throw $e;
+        }
     }
 }

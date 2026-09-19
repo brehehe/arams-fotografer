@@ -6,6 +6,8 @@ use App\Models\Project;
 use App\Models\ProjectSchedule;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class CalendarService
 {
@@ -322,5 +324,135 @@ class CalendarService
             'cancelled', 'cancel'                 => 'Cancelled',
             default                               => 'Pending',
         };
+    }
+
+    /**
+     * Create a new project schedule with DB transaction.
+     */
+    public function createSchedule(array $validated, ?string $clientId = null, ?User $causer = null): ProjectSchedule
+    {
+        DB::beginTransaction();
+        try {
+            $projectId = !empty($validated['project_id']) ? $validated['project_id'] : null;
+
+            if (!$projectId && $clientId) {
+                $projectId = Project::where('client_id', $clientId)->latest()->first()?->id;
+            }
+
+            $schedule = ProjectSchedule::create([
+                'project_id' => $projectId,
+                'title'      => $validated['title'],
+                'date'       => $validated['date'],
+                'start_time' => $validated['start_time'] ?? null,
+                'end_time'   => $validated['end_time'] ?? null,
+                'location'   => $validated['location'] ?? null,
+                'type'       => $validated['type'] ?? 'shooting',
+                'status'     => $validated['status'] ?? 'pending',
+                'notes'      => $validated['notes'] ?? null,
+            ]);
+
+            activity()
+                ->causedBy($causer ?? auth()->user())
+                ->performedOn($schedule)
+                ->event('created')
+                ->log("Jadwal '{$schedule->title}' berhasil ditambahkan ke kalender");
+
+            DB::commit();
+            return $schedule;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal menambahkan jadwal kalender: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Delete schedule or clear project schedule reference with DB transaction.
+     */
+    public function deleteSchedule(string $schedule, ?User $causer = null): array
+    {
+        DB::beginTransaction();
+        try {
+            // 1. If it's a project reference (e.g. "p-01a0...")
+            if (str_starts_with($schedule, 'p-')) {
+                $projectId = substr($schedule, 2);
+                $project = Project::find($projectId);
+                if ($project) {
+                    $project->update([
+                        'event_date' => null,
+                        'event_time' => null,
+                        'end_date'   => null,
+                    ]);
+
+                    activity()
+                        ->causedBy($causer ?? auth()->user())
+                        ->performedOn($project)
+                        ->event('updated')
+                        ->log("Jadwal project {$project->name} dihapus dari kalender");
+
+                    DB::commit();
+                    return ['success' => true, 'message' => 'Jadwal project berhasil dihapus dari kalender!'];
+                }
+            }
+
+            // 2. If it's a ProjectSchedule
+            $item = ProjectSchedule::find($schedule);
+            if ($item) {
+                $projectId = $item->project_id;
+                $eventDate = $item->date;
+                $itemTitle = $item->title;
+                $item->delete();
+
+                // Clear project event_date if no other schedule remains and it matched
+                if ($projectId) {
+                    $otherSchedulesCount = ProjectSchedule::where('project_id', $projectId)->count();
+                    if ($otherSchedulesCount === 0) {
+                        $project = Project::find($projectId);
+                        if ($project && $project->event_date && $eventDate && $project->event_date->format('Y-m-d') === (is_string($eventDate) ? substr($eventDate, 0, 10) : $eventDate->format('Y-m-d'))) {
+                            $project->update([
+                                'event_date' => null,
+                                'event_time' => null,
+                                'end_date'   => null,
+                            ]);
+                        }
+                    }
+                }
+
+                activity()
+                    ->causedBy($causer ?? auth()->user())
+                    ->performedOn($item)
+                    ->event('deleted')
+                    ->log("Jadwal '{$itemTitle}' berhasil dihapus dari kalender");
+
+                DB::commit();
+                return ['success' => true, 'message' => 'Jadwal berhasil dihapus!'];
+            }
+
+            // 3. Fallback: maybe $schedule is a raw Project ID
+            $project = Project::find($schedule);
+            if ($project && $project->event_date) {
+                $project->update([
+                    'event_date' => null,
+                    'event_time' => null,
+                    'end_date'   => null,
+                ]);
+
+                activity()
+                    ->causedBy($causer ?? auth()->user())
+                    ->performedOn($project)
+                    ->event('updated')
+                    ->log("Jadwal project {$project->name} dihapus dari kalender");
+
+                DB::commit();
+                return ['success' => true, 'message' => 'Jadwal project berhasil dihapus dari kalender!'];
+            }
+
+            DB::commit();
+            return ['success' => false, 'message' => 'Jadwal tidak ditemukan atau sudah dihapus.'];
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal menghapus jadwal kalender: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
     }
 }

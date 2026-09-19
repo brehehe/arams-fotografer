@@ -7,11 +7,14 @@ use App\Models\Client;
 use App\Models\FileLink;
 use App\Models\Package;
 use App\Models\Project;
+use App\Models\ProjectHighlight;
 use App\Models\ProjectSchedule;
 use App\Models\User;
 use App\Services\FinanceService;
 use App\Traits\HasWebpUpload;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ProjectService
 {
@@ -292,7 +295,7 @@ class ProjectService
 
         // Find all existing project numbers matching prefixPart (including soft deleted)
         $allMatching = Project::withTrashed()
-            ->where('project_number', 'ilike', "{$prefixPart}%")
+            ->where('project_number', 'like', "{$prefixPart}%")
             ->pluck('project_number')
             ->map(function ($num) use ($prefixPart, $suffixPart) {
                 $mid = substr((string) $num, strlen($prefixPart));
@@ -330,7 +333,9 @@ class ProjectService
      */
     public function createProject(array $data, ?User $causer = null): Project
     {
-        $addons = $data['selected_addons'] ?? [];
+        DB::beginTransaction();
+        try {
+            $addons = $data['selected_addons'] ?? [];
         $clientOverrides = $data['client_overrides'] ?? null;
         $teamAssignments = $data['team_assignments'] ?? null;
         $installments = $data['payment_installments'] ?? null;
@@ -450,7 +455,11 @@ class ProjectService
             try {
                 $data['thumbnail'] = $this->uploadAsWebp($data['thumbnail'], 'projects');
             } catch (\Throwable $e) {
-                // Keep data or set null if conversion fails
+                \Illuminate\Support\Facades\Log::error("Failed to upload thumbnail in storeProject: " . $e->getMessage());
+                $data['thumbnail'] = null;
+            }
+            if (!empty($data['thumbnail']) && is_string($data['thumbnail']) && str_starts_with($data['thumbnail'], 'data:image')) {
+                $data['thumbnail'] = null;
             }
         }
 
@@ -562,17 +571,25 @@ class ProjectService
             ->event('created')
             ->log("Project baru {$project->name} ({$project->project_number}) berhasil dibuat");
 
-        $this->syncProjectSchedule($project);
+            $this->syncProjectSchedule($project);
 
-        return $project;
+            DB::commit();
+            return $project;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal membuat project: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
     }
 
     /**
-     * Update project and log activity.
+     * Update project and log activity with DB transaction.
      */
     public function updateProject(Project $project, array $data, ?User $causer = null): Project
     {
-        $addons = $data['selected_addons'] ?? null;
+        DB::beginTransaction();
+        try {
+            $addons = $data['selected_addons'] ?? null;
         $clientOverrides = $data['client_overrides'] ?? null;
         $teamAssignments = $data['team_assignments'] ?? null;
         $installments = $data['payment_installments'] ?? null;
@@ -627,13 +644,18 @@ class ProjectService
                 try {
                     $data['thumbnail'] = $this->uploadAsWebp($data['thumbnail'], 'projects', 80, 1920, null, $project->thumbnail);
                 } catch (\Throwable $e) {
-                    // Fallback
+                    \Illuminate\Support\Facades\Log::error("Failed to upload thumbnail in updateProject: " . $e->getMessage());
+                    $data['thumbnail'] = $project->thumbnail;
                 }
             } elseif (empty($data['thumbnail'])) {
                 if ($project->thumbnail) {
                     $this->deleteWebpImage($project->thumbnail);
                 }
                 $data['thumbnail'] = null;
+            }
+            // Ensure thumbnail is never a base64 data string
+            if (!empty($data['thumbnail']) && is_string($data['thumbnail']) && str_starts_with($data['thumbnail'], 'data:image')) {
+                $data['thumbnail'] = $project->thumbnail;
             }
         }
 
@@ -662,15 +684,124 @@ class ProjectService
             }
         }
 
+        // Sync project invoices if payment_installments passed
+        if ($installments !== null && is_array($installments) && count($installments) > 0) {
+            $this->syncProjectInvoices($project, $installments);
+        }
+
         activity()
             ->causedBy($causer ?? auth()->user())
             ->performedOn($project)
             ->event('updated')
             ->log("Project {$project->name} ({$project->project_number}) berhasil diperbarui");
 
-        $this->syncProjectSchedule($project);
+            $this->syncProjectSchedule($project);
 
-        return $project;
+            DB::commit();
+            return $project;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal memperbarui project: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Synchronize project invoices with updated payment installments.
+     */
+    public function syncProjectInvoices(Project $project, array $installments): void
+    {
+        $financeService = app(\App\Services\FinanceService::class);
+        $existingInvoices = $project->invoices()->orderBy('created_at')->get();
+        $createdAtDate = $project->created_at;
+
+        $retainedInvoiceIds = [];
+
+        foreach ($installments as $idx => $inst) {
+            $instAmount = (float) ($inst['amount'] ?? 0);
+            $instName = $inst['name'] ?? ('Invoice ' . ($idx + 1));
+            $instNotes = !empty($inst['notes']) ? $inst['notes'] : "{$instName} untuk {$project->name}";
+            $instDueDate = !empty($inst['due_date'])
+                ? \Carbon\Carbon::parse($inst['due_date'])
+                : ($createdAtDate ? \Carbon\Carbon::parse($createdAtDate)->addDays(7 * ($idx + 1)) : now()->addDays(7 * ($idx + 1)));
+
+            if (isset($existingInvoices[$idx])) {
+                $existing = $existingInvoices[$idx];
+                $paid = (float) $existing->paid_amount;
+                $rem = max(0, $instAmount - $paid);
+                $status = ($paid >= $instAmount && $instAmount > 0) ? 'paid' : ($paid > 0 ? 'partial' : $existing->status);
+                if ($status === 'draft') $status = 'unpaid';
+
+                $existing->update([
+                    'due_date' => $instDueDate,
+                    'subtotal' => $instAmount,
+                    'total' => $instAmount,
+                    'remaining_amount' => $rem,
+                    'status' => $status,
+                    'notes' => $instNotes,
+                ]);
+
+                // Update or create primary item
+                $item = $existing->items()->first();
+                if ($item) {
+                    $item->update([
+                        'description' => "{$instName} - {$project->name}",
+                        'qty' => 1,
+                        'unit_price' => $instAmount,
+                        'total' => $instAmount,
+                    ]);
+                } else {
+                    \App\Models\InvoiceItem::create([
+                        'invoice_id' => $existing->id,
+                        'description' => "{$instName} - {$project->name}",
+                        'qty' => 1,
+                        'unit_price' => $instAmount,
+                        'total' => $instAmount,
+                    ]);
+                }
+
+                $retainedInvoiceIds[] = $existing->id;
+            } else {
+                // Create new invoice for this installment
+                $invoiceNumber = $financeService->generateInvoiceNumber();
+                $newInv = \App\Models\Invoice::create([
+                    'invoice_number' => $invoiceNumber,
+                    'project_id' => $project->id,
+                    'client_id' => $project->client_id,
+                    'issue_date' => $createdAtDate ? \Carbon\Carbon::parse($createdAtDate) : now(),
+                    'due_date' => $instDueDate,
+                    'subtotal' => $instAmount,
+                    'discount' => 0,
+                    'tax' => 0,
+                    'total' => $instAmount,
+                    'paid_amount' => 0,
+                    'remaining_amount' => $instAmount,
+                    'status' => 'unpaid',
+                    'notes' => $instNotes,
+                ]);
+
+                \App\Models\InvoiceItem::create([
+                    'invoice_id' => $newInv->id,
+                    'description' => "{$instName} - {$project->name}",
+                    'qty' => 1,
+                    'unit_price' => $instAmount,
+                    'total' => $instAmount,
+                ]);
+
+                $retainedInvoiceIds[] = $newInv->id;
+            }
+        }
+
+        // Delete surplus unpaid invoices beyond the updated installment count
+        if (count($retainedInvoiceIds) < $existingInvoices->count()) {
+            foreach ($existingInvoices as $idx => $inv) {
+                if (!in_array($inv->id, $retainedInvoiceIds)) {
+                    if ((float) $inv->paid_amount <= 0 && $inv->payments()->count() === 0) {
+                        $inv->delete();
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -678,30 +809,63 @@ class ProjectService
      */
     public function updateStatus(Project $project, array $data, ?User $causer = null): Project
     {
-        $oldStatus = $project->status;
-        $filtered = array_filter($data, fn ($val) => !is_null($val));
+        DB::beginTransaction();
+        try {
+            $oldStatus = $project->status;
+            $filtered = array_filter($data, fn ($val) => !is_null($val));
 
-        if (isset($filtered['status']) && $filtered['status'] === 'completed' && !isset($filtered['progress'])) {
-            $filtered['progress'] = 100;
-        }
-
-        // Handle FileLink shortcut when completing a step
-        if (!empty($data['drive_link']['drive_url'])) {
-            $url = trim($data['drive_link']['drive_url']);
-            if (!preg_match('~^(?:f|ht)tps?://~i', $url)) {
-                $url = 'https://' . $url;
-            }
-            $stepName = !empty($data['completed_step_name']) ? trim($data['completed_step_name']) : '';
-            $rawName = !empty($data['drive_link']['name']) ? trim($data['drive_link']['name']) : ($stepName ? "Hasil {$stepName}" : 'Hasil Pengerjaan');
-
-            if ($stepName && !str_starts_with($rawName, '[Tahap:')) {
-                $linkName = "[Tahap: {$stepName}] {$rawName}";
-            } else {
-                $linkName = $rawName;
+            if (isset($filtered['status']) && $filtered['status'] === 'completed' && !isset($filtered['progress'])) {
+                $filtered['progress'] = 100;
             }
 
-            // Remove any existing file link for this same step to prevent duplicates
-            if ($stepName) {
+            // Handle FileLink shortcut when completing a step
+            if (!empty($data['drive_link']['drive_url'])) {
+                $url = trim($data['drive_link']['drive_url']);
+                if (!preg_match('~^(?:f|ht)tps?://~i', $url)) {
+                    $url = 'https://' . $url;
+                }
+                $stepName = !empty($data['completed_step_name']) ? trim($data['completed_step_name']) : '';
+                $rawName = !empty($data['drive_link']['name']) ? trim($data['drive_link']['name']) : ($stepName ? "Hasil {$stepName}" : 'Hasil Pengerjaan');
+
+                if ($stepName && !str_starts_with($rawName, '[Tahap:')) {
+                    $linkName = "[Tahap: {$stepName}] {$rawName}";
+                } else {
+                    $linkName = $rawName;
+                }
+
+                // Remove any existing file link for this same step to prevent duplicates
+                if ($stepName) {
+                    FileLink::where('project_id', $project->id)
+                        ->where(function ($q) use ($stepName) {
+                            $q->where('name', 'like', "[Tahap: {$stepName}]%")
+                              ->orWhere('name', 'like', "%{$stepName}%");
+                        })
+                        ->delete();
+                }
+
+                app(\App\Services\FileLinkService::class)->createFileLink([
+                    'project_id' => $project->id,
+                    'name' => $linkName,
+                    'drive_url' => $url,
+                    'file_type' => $data['drive_link']['file_type'] ?? 'gdrive',
+                ], $causer ?? auth()->user());
+            }
+
+            // Handle deleting linked files if workflow step is reverted
+            if (!empty($data['revert_step_names']) && is_array($data['revert_step_names'])) {
+                foreach ($data['revert_step_names'] as $stepName) {
+                    $stepName = trim($stepName);
+                    if (!empty($stepName)) {
+                        FileLink::where('project_id', $project->id)
+                            ->where(function ($q) use ($stepName) {
+                                $q->where('name', 'like', "[Tahap: {$stepName}]%")
+                                  ->orWhere('name', 'like', "%{$stepName}%");
+                            })
+                            ->delete();
+                    }
+                }
+            } elseif (!empty($data['revert_step_name'])) {
+                $stepName = trim($data['revert_step_name']);
                 FileLink::where('project_id', $project->id)
                     ->where(function ($q) use ($stepName) {
                         $q->where('name', 'like', "[Tahap: {$stepName}]%")
@@ -710,64 +874,39 @@ class ProjectService
                     ->delete();
             }
 
-            app(\App\Services\FileLinkService::class)->createFileLink([
-                'project_id' => $project->id,
-                'name' => $linkName,
-                'drive_url' => $url,
-                'file_type' => $data['drive_link']['file_type'] ?? 'gdrive',
-            ], $causer ?? auth()->user());
-        }
+            unset(
+                $filtered['completed_step_name'],
+                $filtered['drive_link'],
+                $filtered['revert_step_name'],
+                $filtered['revert_step_names']
+            );
 
-        // Handle deleting linked files if workflow step is reverted
-        if (!empty($data['revert_step_names']) && is_array($data['revert_step_names'])) {
-            foreach ($data['revert_step_names'] as $stepName) {
-                $stepName = trim($stepName);
-                if (!empty($stepName)) {
-                    FileLink::where('project_id', $project->id)
-                        ->where(function ($q) use ($stepName) {
-                            $q->where('name', 'like', "[Tahap: {$stepName}]%")
-                              ->orWhere('name', 'like', "%{$stepName}%");
-                        })
-                        ->delete();
-                }
+            $project->update($filtered);
+
+            $logMsg = "Project {$project->name} diperbarui.";
+            if (isset($filtered['status'])) {
+                $logMsg .= " Status: {$oldStatus} → {$project->status}.";
             }
-        } elseif (!empty($data['revert_step_name'])) {
-            $stepName = trim($data['revert_step_name']);
-            FileLink::where('project_id', $project->id)
-                ->where(function ($q) use ($stepName) {
-                    $q->where('name', 'like', "[Tahap: {$stepName}]%")
-                      ->orWhere('name', 'like', "%{$stepName}%");
-                })
-                ->delete();
+            if (isset($filtered['workflow_step'])) {
+                $logMsg .= " Tahap: {$project->workflow_step}.";
+            }
+            if (isset($filtered['progress'])) {
+                $logMsg .= " Progres: {$project->progress}%.";
+            }
+
+            activity()
+                ->causedBy($causer ?? auth()->user())
+                ->performedOn($project)
+                ->event('status_change')
+                ->log($logMsg);
+
+            DB::commit();
+            return $project;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal memperbarui status project: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
         }
-
-        unset(
-            $filtered['completed_step_name'],
-            $filtered['drive_link'],
-            $filtered['revert_step_name'],
-            $filtered['revert_step_names']
-        );
-
-        $project->update($filtered);
-
-        $logMsg = "Project {$project->name} diperbarui.";
-        if (isset($filtered['status'])) {
-            $logMsg .= " Status: {$oldStatus} → {$project->status}.";
-        }
-        if (isset($filtered['workflow_step'])) {
-            $logMsg .= " Tahap: {$project->workflow_step}.";
-        }
-        if (isset($filtered['progress'])) {
-            $logMsg .= " Progres: {$project->progress}%.";
-        }
-
-        activity()
-            ->causedBy($causer ?? auth()->user())
-            ->performedOn($project)
-            ->event('status_change')
-            ->log($logMsg);
-
-        return $project;
     }
 
     /**
@@ -1030,5 +1169,344 @@ class ProjectService
         }
 
         return [null, null];
+    }
+
+    /**
+     * Delete project with DB transaction.
+     */
+    public function deleteProject(Project $project, ?User $causer = null): bool
+    {
+        DB::beginTransaction();
+        try {
+            $name = $project->name;
+            $deleted = (bool) $project->delete();
+
+            activity()
+                ->causedBy($causer ?? auth()->user())
+                ->performedOn($project)
+                ->event('deleted')
+                ->log("Project {$name} dihapus");
+
+            DB::commit();
+            return $deleted;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal menghapus project: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Append a new timestamped note entry to the project with DB transaction.
+     */
+    public function addNote(Project $project, array $data, ?User $user = null): Project
+    {
+        DB::beginTransaction();
+        try {
+            $title = !empty(trim($data['title'] ?? '')) ? trim($data['title']) : 'Catatan Project';
+            $authorName = $user?->name ?? ($project->client?->name ?? 'Admin');
+            $roleName = $user?->roles?->first()?->name ?? 'Tim Internal';
+            $timestamp = now()->isoFormat('D MMM YYYY, HH:mm');
+
+            $authorLabel = ($user && method_exists($user, 'roles') && $user->roles()->exists()) ? "{$authorName} - {$roleName}" : $authorName;
+            $newEntry = "--- [{$timestamp}] {$title} (Oleh: {$authorLabel}) ---\n" . trim($data['content']);
+
+            $existing = trim($project->notes ?? '');
+            $project->notes = $existing ? ($existing . "\n\n" . $newEntry) : $newEntry;
+            $project->save();
+
+            activity()
+                ->causedBy($user ?? auth()->user())
+                ->performedOn($project)
+                ->event('updated')
+                ->log("Catatan baru ditambahkan ke project {$project->name}");
+
+            DB::commit();
+            return $project;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal menambahkan catatan project: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Update entire project notes text with DB transaction.
+     */
+    public function updateNote(Project $project, ?string $notes, ?User $user = null): Project
+    {
+        DB::beginTransaction();
+        try {
+            $project->notes = $notes ?? '';
+            $project->save();
+
+            activity()
+                ->causedBy($user ?? auth()->user())
+                ->performedOn($project)
+                ->event('updated')
+                ->log("Catatan project {$project->name} diperbarui");
+
+            DB::commit();
+            return $project;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal memperbarui catatan project: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Update a single note entry by index with DB transaction.
+     */
+    public function updateNoteEntry(Project $project, int $index, array $data, ?User $user = null): Project
+    {
+        DB::beginTransaction();
+        try {
+            $entries = $this->parseProjectNotes($project->notes);
+
+            if (!isset($entries[$index])) {
+                throw new \InvalidArgumentException('Entri catatan tidak ditemukan.');
+            }
+
+            $authorName = $user?->name ?? 'Admin';
+            $roleName = $user?->roles?->first()?->name ?? 'Tim Internal';
+            $timestamp = now()->isoFormat('D MMM YYYY, HH:mm');
+
+            $entries[$index]['title'] = !empty(trim($data['title'] ?? '')) ? trim($data['title']) : 'Catatan Project';
+            $entries[$index]['content'] = trim($data['content']);
+            $entries[$index]['is_initial'] = false;
+            $entries[$index]['timestamp'] = $timestamp . ' (diedit)';
+            $entries[$index]['author'] = "{$authorName} - {$roleName}";
+
+            $project->notes = $this->serializeProjectNotes($entries);
+            $project->save();
+
+            activity()
+                ->causedBy($user ?? auth()->user())
+                ->performedOn($project)
+                ->event('updated')
+                ->log("Entri catatan project {$project->name} diperbarui");
+
+            DB::commit();
+            return $project;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal memperbarui entri catatan project: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Delete a single note entry by index with DB transaction.
+     */
+    public function deleteNoteEntry(Project $project, int $index, ?User $user = null): Project
+    {
+        DB::beginTransaction();
+        try {
+            $entries = $this->parseProjectNotes($project->notes);
+
+            if (!isset($entries[$index])) {
+                throw new \InvalidArgumentException('Entri catatan tidak ditemukan.');
+            }
+
+            array_splice($entries, $index, 1);
+
+            $project->notes = $this->serializeProjectNotes($entries);
+            $project->save();
+
+            activity()
+                ->causedBy($user ?? auth()->user())
+                ->performedOn($project)
+                ->event('updated')
+                ->log("Entri catatan project {$project->name} dihapus");
+
+            DB::commit();
+            return $project;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal menghapus entri catatan project: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Parse raw notes text into array of structured entries.
+     */
+    public function parseProjectNotes(?string $raw): array
+    {
+        $raw = trim($raw ?? '');
+        if ($raw === '') {
+            return [];
+        }
+
+        $pattern = '/---\s*\[(.*?)\]\s*(.*?)\s*\(Oleh:\s*(.*?)\)\s*---\n?(.*?)(?=(?:---\s*\[|$))/s';
+        $entries = [];
+
+        if (preg_match_all($pattern, $raw, $matches, PREG_SET_ORDER)) {
+            $firstDelim = strpos($raw, '--- [');
+            if ($firstDelim !== false && $firstDelim > 0) {
+                $initialText = trim(substr($raw, 0, $firstDelim));
+                if ($initialText !== '') {
+                    $entries[] = [
+                        'is_initial' => true,
+                        'timestamp' => '',
+                        'title' => 'Catatan & Briefing Awal',
+                        'author' => 'Input Awal',
+                        'content' => $initialText,
+                    ];
+                }
+            }
+
+            foreach ($matches as $m) {
+                $entries[] = [
+                    'is_initial' => false,
+                    'timestamp' => trim($m[1]),
+                    'title' => trim($m[2]),
+                    'author' => trim($m[3]),
+                    'content' => trim($m[4]),
+                ];
+            }
+        } else {
+            $entries[] = [
+                'is_initial' => true,
+                'timestamp' => '',
+                'title' => 'Catatan & Briefing Project',
+                'author' => 'Input Awal',
+                'content' => $raw,
+            ];
+        }
+
+        return $entries;
+    }
+
+    /**
+     * Re-serialize array of entries back into notes string.
+     */
+    public function serializeProjectNotes(array $entries): string
+    {
+        $blocks = [];
+        foreach ($entries as $entry) {
+            $content = trim($entry['content'] ?? '');
+            if ($content === '') {
+                continue;
+            }
+
+            if (!empty($entry['is_initial'])) {
+                $blocks[] = $content;
+            } else {
+                $timestamp = !empty($entry['timestamp']) ? $entry['timestamp'] : now()->isoFormat('D MMM YYYY, HH:mm');
+                $title = !empty($entry['title']) ? $entry['title'] : 'Catatan Project';
+                $author = !empty($entry['author']) ? $entry['author'] : 'Admin';
+                $blocks[] = "--- [{$timestamp}] {$title} (Oleh: {$author}) ---\n" . $content;
+            }
+        }
+
+        return implode("\n\n", $blocks);
+    }
+
+    /**
+     * Store project highlight with DB transaction and image upload.
+     */
+    public function storeHighlight(Project $project, array $data, $imageFile = null): ProjectHighlight
+    {
+        DB::beginTransaction();
+        try {
+            $imagePath = $data['image_url'] ?? null;
+            if ($imageFile) {
+                $imagePath = $this->uploadAsWebp($imageFile, "projects/{$project->id}/highlights", 85, 1920);
+            }
+
+            if (empty($imagePath)) {
+                throw new \InvalidArgumentException('Wajib mengunggah foto highlight atau menyertakan URL gambar.');
+            }
+
+            $isCover = (bool) ($data['is_cover'] ?? false);
+            if ($isCover) {
+                $project->highlights()->update(['is_cover' => false]);
+                $project->update(['thumbnail' => $imagePath]);
+            }
+
+            $highlight = $project->highlights()->create([
+                'title' => $data['title'] ?? 'Momen Acara',
+                'caption' => $data['caption'] ?? '',
+                'image_url' => $imagePath,
+                'media_type' => $data['media_type'] ?? 'photo',
+                'is_cover' => $isCover,
+                'sort_order' => (int) ($data['sort_order'] ?? $project->highlights()->count() + 1),
+            ]);
+
+            DB::commit();
+            return $highlight;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal menambahkan highlight project: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Update project highlight with DB transaction.
+     */
+    public function updateHighlight(Project $project, ProjectHighlight $highlight, array $data): ProjectHighlight
+    {
+        DB::beginTransaction();
+        try {
+            $isCover = (bool) ($data['is_cover'] ?? false);
+            if ($isCover && !$highlight->is_cover) {
+                $project->highlights()->update(['is_cover' => false]);
+                $project->update(['thumbnail' => $highlight->image_url]);
+            }
+
+            $highlight->update([
+                'title' => $data['title'] ?? $highlight->title,
+                'caption' => $data['caption'] ?? $highlight->caption,
+                'is_cover' => $isCover,
+                'sort_order' => (int) ($data['sort_order'] ?? $highlight->sort_order),
+            ]);
+
+            DB::commit();
+            return $highlight;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal memperbarui highlight project: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Set highlight as primary cover with DB transaction.
+     */
+    public function setHighlightCover(Project $project, ProjectHighlight $highlight): ProjectHighlight
+    {
+        DB::beginTransaction();
+        try {
+            $project->highlights()->update(['is_cover' => false]);
+            $highlight->update(['is_cover' => true]);
+            $project->update(['thumbnail' => $highlight->image_url]);
+
+            DB::commit();
+            return $highlight;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal mengatur cover project highlight: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Delete project highlight with DB transaction.
+     */
+    public function destroyHighlight(Project $project, ProjectHighlight $highlight): bool
+    {
+        DB::beginTransaction();
+        try {
+            $deleted = (bool) $highlight->delete();
+            DB::commit();
+            return $deleted;
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error("Gagal menghapus highlight project: " . $e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
     }
 }

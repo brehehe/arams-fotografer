@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\User\StoreUserRequest;
+use App\Http\Requests\User\UpdateUserRequest;
 use App\Models\User;
 use App\Services\UserService;
 use Illuminate\Http\RedirectResponse;
@@ -22,50 +24,16 @@ class UserController extends Controller
         return Inertia::render('Users/Index', $data);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreUserRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email|max:255',
-            'phone' => 'nullable|string|max:50',
-            'role' => [
-                'required',
-                'exists:roles,name',
-                function ($attribute, $value, $fail) {
-                    if (strtolower($value) === 'client') {
-                        $fail('Role Client tidak dapat ditugaskan melalui manajemen pengguna internal.');
-                    }
-                },
-            ],
-            'status' => 'required|string|in:active,inactive,suspended',
-            'password' => 'required|string|min:8',
-        ]);
-
-        $this->userService->createUser($validated, auth()->user());
+        $this->userService->createUser($request->validated(), $request->user());
 
         return redirect()->back()->with('success', 'Pengguna berhasil ditambahkan.');
     }
 
-    public function update(Request $request, User $user): RedirectResponse
+    public function update(UpdateUserRequest $request, User $user): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email,'.$user->id,
-            'phone' => 'nullable|string|max:50',
-            'role' => [
-                'required',
-                'exists:roles,name',
-                function ($attribute, $value, $fail) {
-                    if (strtolower($value) === 'client') {
-                        $fail('Role Client tidak dapat ditugaskan melalui manajemen pengguna internal.');
-                    }
-                },
-            ],
-            'status' => 'required|string|in:active,inactive,suspended',
-            'password' => 'nullable|string|min:8',
-        ]);
-
-        $this->userService->updateUser($user, $validated, auth()->user());
+        $this->userService->updateUser($user, $request->validated(), $request->user());
 
         return redirect()->back()->with('success', 'Pengguna berhasil diperbarui.');
     }

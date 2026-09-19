@@ -1,4 +1,5 @@
-import { CreditCard, Plus, Trash2, CheckCircle2, AlertCircle, Sparkles, Split } from 'lucide-react';
+import { CreditCard, Plus, Trash2, CheckCircle2, AlertCircle, Sparkles, Split, ExternalLink } from 'lucide-react';
+import { Link } from '@inertiajs/react';
 import React, { useMemo } from 'react';
 import { FormattedNumberInput } from '@/components/ui/formatted-number-input';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,7 @@ export interface PaymentInstallmentItem {
 }
 
 interface ProjectPaymentTerminSectionProps {
+    projectId?: string;
     totalProject: number;
     dpPercent: number;
     setDpPercent: (val: number) => void;
@@ -34,6 +36,7 @@ interface ProjectPaymentTerminSectionProps {
 }
 
 export function ProjectPaymentTerminSection({
+    projectId,
     totalProject,
     dpPercent,
     setDpPercent,
@@ -343,9 +346,23 @@ return;
                         </p>
                     </div>
 
-                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 self-start sm:self-auto shrink-0">
-                        {paymentInstallments.length} Termin Terjadwal
-                    </span>
+                    <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 flex-wrap">
+                        {projectId && (
+                            <Link
+                                href={`/projects/${projectId}/invoice`}
+                                className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 rounded-full text-[11px] font-bold transition-all shadow-2xs"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Buka lembar cetak invoice di tab baru"
+                            >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                <span>Lihat Lembar Invoice</span>
+                            </Link>
+                        )}
+                        <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">
+                            {paymentInstallments.length} Termin Terjadwal
+                        </span>
+                    </div>
                 </div>
 
                 {/* Preset Termin Buttons & DP Ratio Setting */}
