@@ -24,10 +24,21 @@ trait HasWebpUpload
         string $directory = 'uploads',
         int $quality = 80,
         ?int $maxWidth = 1920,
-        ?int $maxHeight = null,
+        int|string|null $maxHeight = null,
         ?string $oldPath = null,
         string $disk = 'public'
     ): string {
+        // Defensive check: if $maxHeight is passed as a string and not numeric,
+        // it means the caller passed $oldPath as the 5th positional argument
+        if (is_string($maxHeight) && !is_numeric($maxHeight)) {
+            if ($oldPath === null) {
+                $oldPath = $maxHeight;
+            }
+            $maxHeight = null;
+        } elseif ($maxHeight !== null) {
+            $maxHeight = (int) $maxHeight;
+        }
+
         $service = WebpService::make($file)->quality($quality);
 
         if ($maxWidth || $maxHeight) {

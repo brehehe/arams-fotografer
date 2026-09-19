@@ -75,15 +75,15 @@ class PromoSlideController extends Controller
             'sort_order' => 'integer',
         ]);
 
-        $imagePath = $request->input('image_url') ?? null;
-        if ($request->hasFile('image_file')) {
-            $imagePath = $this->uploadAsWebp($request->file('image_file'), 'promo_slides', 85, 1920);
-        } elseif (!empty($validated['image'])) {
-            $imagePath = $validated['image'];
-        }
-
         \Illuminate\Support\Facades\DB::beginTransaction();
         try {
+            $imagePath = $request->input('image_url') ?? null;
+            if ($request->hasFile('image_file')) {
+                $imagePath = $this->uploadAsWebp($request->file('image_file'), 'promo_slides', 85, 1920);
+            } elseif (!empty($validated['image'])) {
+                $imagePath = $validated['image'];
+            }
+
             PromoSlide::create([
                 'project_id' => $validated['project_id'] ?? null,
                 'title' => $validated['title'],
@@ -102,7 +102,8 @@ class PromoSlideController extends Controller
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\DB::rollBack();
             \Illuminate\Support\Facades\Log::error("Failed to create promo slide: {$e->getMessage()}", ['exception' => $e]);
-            throw $e;
+
+            return redirect()->back()->with('error', 'Gagal menambahkan promo slide: ' . $e->getMessage())->withInput();
         }
     }
 
@@ -120,15 +121,15 @@ class PromoSlideController extends Controller
             'sort_order' => 'integer',
         ]);
 
-        $imagePath = $promo_slide->image;
-        if ($request->hasFile('image_file')) {
-            $imagePath = $this->uploadAsWebp($request->file('image_file'), 'promo_slides', 85, 1920, $promo_slide->image);
-        } elseif (!empty($request->input('image_url'))) {
-            $imagePath = $request->input('image_url');
-        }
-
         \Illuminate\Support\Facades\DB::beginTransaction();
         try {
+            $imagePath = $promo_slide->image;
+            if ($request->hasFile('image_file')) {
+                $imagePath = $this->uploadAsWebp($request->file('image_file'), 'promo_slides', 85, 1920, oldPath: $promo_slide->image);
+            } elseif (!empty($request->input('image_url'))) {
+                $imagePath = $request->input('image_url');
+            }
+
             $promo_slide->update([
                 'project_id' => $request->has('project_id') ? $validated['project_id'] : $promo_slide->project_id,
                 'title' => $validated['title'],
@@ -147,7 +148,8 @@ class PromoSlideController extends Controller
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\DB::rollBack();
             \Illuminate\Support\Facades\Log::error("Failed to update promo slide {$promo_slide->id}: {$e->getMessage()}", ['exception' => $e]);
-            throw $e;
+
+            return redirect()->back()->with('error', 'Gagal memperbarui promo slide: ' . $e->getMessage())->withInput();
         }
     }
 
@@ -162,7 +164,8 @@ class PromoSlideController extends Controller
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\DB::rollBack();
             \Illuminate\Support\Facades\Log::error("Failed to delete promo slide {$promo_slide->id}: {$e->getMessage()}", ['exception' => $e]);
-            throw $e;
+
+            return redirect()->back()->with('error', 'Gagal menghapus promo slide: ' . $e->getMessage());
         }
     }
 
@@ -230,15 +233,15 @@ class PromoSlideController extends Controller
             'sort_order' => 'integer',
         ]);
 
-        $imagePath = $promo_slide->image;
-        if ($request->hasFile('image_file')) {
-            $imagePath = $this->uploadAsWebp($request->file('image_file'), "projects/{$project->id}/slides", 85, 1920, $promo_slide->image);
-        } elseif ($request->filled('image_url')) {
-            $imagePath = $request->input('image_url');
-        }
-
         \Illuminate\Support\Facades\DB::beginTransaction();
         try {
+            $imagePath = $promo_slide->image;
+            if ($request->hasFile('image_file')) {
+                $imagePath = $this->uploadAsWebp($request->file('image_file'), "projects/{$project->id}/slides", 85, 1920, oldPath: $promo_slide->image);
+            } elseif ($request->filled('image_url')) {
+                $imagePath = $request->input('image_url');
+            }
+
             $promo_slide->update([
                 'title' => $validated['title'],
                 'tag' => $validated['tag'],
@@ -256,7 +259,8 @@ class PromoSlideController extends Controller
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\DB::rollBack();
             \Illuminate\Support\Facades\Log::error("Failed to update promo slide for project {$project->id}: {$e->getMessage()}", ['exception' => $e]);
-            throw $e;
+
+            return redirect()->back()->with('error', 'Gagal memperbarui slide banner project: ' . $e->getMessage())->withInput();
         }
     }
 

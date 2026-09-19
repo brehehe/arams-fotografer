@@ -51,14 +51,14 @@ class CategoryController extends Controller
             $validated['slug'] = Str::slug($validated['name']);
         }
 
-        $imagePath = $request->input('image_url') ?: ($request->input('image') ?: null);
-        if ($request->hasFile('image_file')) {
-            $imagePath = $this->uploadAsWebp($request->file('image_file'), 'categories', 85, 1920);
-        }
-        $validated['image'] = $imagePath;
-
         DB::beginTransaction();
         try {
+            $imagePath = $request->input('image_url') ?: ($request->input('image') ?: null);
+            if ($request->hasFile('image_file')) {
+                $imagePath = $this->uploadAsWebp($request->file('image_file'), 'categories', 85, 1920);
+            }
+            $validated['image'] = $imagePath;
+
             $category = Category::create($validated);
 
             activity()
@@ -73,7 +73,8 @@ class CategoryController extends Controller
         } catch (\Throwable $e) {
             DB::rollBack();
             \Illuminate\Support\Facades\Log::error("Failed to create category: {$e->getMessage()}", ['exception' => $e]);
-            throw $e;
+
+            return redirect()->back()->with('error', 'Gagal menambahkan kategori: ' . $e->getMessage())->withInput();
         }
     }
 
@@ -84,18 +85,18 @@ class CategoryController extends Controller
             $validated['slug'] = Str::slug($validated['name']);
         }
 
-        $imagePath = $category->image;
-        if ($request->hasFile('image_file')) {
-            $imagePath = $this->uploadAsWebp($request->file('image_file'), 'categories', 85, 1920, $category->image);
-        } elseif ($request->has('image_url')) {
-            $imagePath = $request->input('image_url');
-        } elseif ($request->has('image')) {
-            $imagePath = $request->input('image');
-        }
-        $validated['image'] = $imagePath;
-
         DB::beginTransaction();
         try {
+            $imagePath = $category->image;
+            if ($request->hasFile('image_file')) {
+                $imagePath = $this->uploadAsWebp($request->file('image_file'), 'categories', 85, 1920, oldPath: $category->image);
+            } elseif ($request->has('image_url')) {
+                $imagePath = $request->input('image_url');
+            } elseif ($request->has('image')) {
+                $imagePath = $request->input('image');
+            }
+            $validated['image'] = $imagePath;
+
             $category->update($validated);
 
             activity()
@@ -110,7 +111,8 @@ class CategoryController extends Controller
         } catch (\Throwable $e) {
             DB::rollBack();
             \Illuminate\Support\Facades\Log::error("Failed to update category {$category->id}: {$e->getMessage()}", ['exception' => $e]);
-            throw $e;
+
+            return redirect()->back()->with('error', 'Gagal memperbarui kategori: ' . $e->getMessage())->withInput();
         }
     }
 
@@ -130,7 +132,8 @@ class CategoryController extends Controller
         } catch (\Throwable $e) {
             DB::rollBack();
             \Illuminate\Support\Facades\Log::error("Failed to delete category {$category->id}: {$e->getMessage()}", ['exception' => $e]);
-            throw $e;
+
+            return redirect()->back()->with('error', 'Gagal menghapus kategori: ' . $e->getMessage());
         }
     }
 
@@ -158,7 +161,8 @@ class CategoryController extends Controller
         } catch (\Throwable $e) {
             DB::rollBack();
             \Illuminate\Support\Facades\Log::error("Failed to reorder categories: {$e->getMessage()}", ['exception' => $e]);
-            throw $e;
+
+            return redirect()->back()->with('error', 'Gagal memperbarui urutan kategori: ' . $e->getMessage());
         }
     }
 }

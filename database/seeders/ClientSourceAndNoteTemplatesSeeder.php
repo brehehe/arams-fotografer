@@ -196,24 +196,59 @@ class ClientSourceAndNoteTemplatesSeeder extends Seeder
             ],
         ];
 
-        $createdRina = null;
-        foreach ($sources as $idx => $s) {
+        $woSource = null;
+        foreach ($sources as $s) {
             $source = ClientSource::create($s);
-            if ($idx === 0) {
-                $createdRina = $source;
+            if ($s['name'] === 'WO') {
+                $woSource = $source;
             }
         }
 
-        // 3. Seed Appreciation for Rina Safitri (Gambar 3)
-        if ($createdRina) {
+        // 3. Seed Appreciation for Partner WO Rekanan
+        if ($woSource) {
             ClientSourceAppreciation::create([
-                'client_source_id' => $createdRina->id,
+                'client_source_id' => $woSource->id,
                 'status' => 'given',
                 'date' => Carbon::parse('2026-08-25'),
                 'type' => 'Voucher Belanja',
                 'amount' => 500000,
-                'notes' => 'Terima kasih banyak atas rekomendasi dan kepercayaannya. Semoga hubungan baik kita terus terjalin.',
+                'notes' => 'Terima kasih banyak atas rekomendasi dan kerja sama erat dengan tim wedding organizer. Semoga kemitraan kita terus terjalin dengan baik.',
             ]);
+        }
+
+        // 4. Auto-link existing clients and projects
+        $websiteSource = ClientSource::where('name', 'Website')->first();
+        if ($websiteSource) {
+            DB::table('clients')
+                ->whereNull('deleted_at')
+                ->where(function ($q) {
+                    $q->where('source', 'ilike', '%website%')
+                      ->orWhere('source', 'ilike', '%google%');
+                })
+                ->update(['client_source_id' => $websiteSource->id]);
+        }
+
+        if ($woSource) {
+            DB::table('clients')
+                ->whereNull('deleted_at')
+                ->where(function ($q) {
+                    $q->where('source', 'ilike', '%wedding%')
+                      ->orWhere('source', 'ilike', '%planner%')
+                      ->orWhere('source', 'ilike', '%wo%');
+                })
+                ->update(['client_source_id' => $woSource->id]);
+        }
+
+        $clientSourceMap = DB::table('clients')
+            ->whereNotNull('client_source_id')
+            ->whereNull('deleted_at')
+            ->pluck('client_source_id', 'id');
+
+        foreach ($clientSourceMap as $clientId => $sourceId) {
+            DB::table('projects')
+                ->where('client_id', $clientId)
+                ->whereNull('deleted_at')
+                ->update(['client_source_id' => $sourceId]);
         }
     }
 }

@@ -118,7 +118,7 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
                 </div>
 
                 {/* Center / Lower: Headline shifted downwards */}
-                <div className="relative z-10 space-y-3.5 mt-auto mb-8 pt-14">
+                <div className="relative z-10 space-y-3.5 mt-auto mb-2 xl:mb-4">
                     <span className="text-[10px] tracking-[0.25em] font-extrabold text-rose-200 uppercase block">
                         {loginTagline}
                     </span>
@@ -142,22 +142,24 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
                     </p>
                 </div>
 
-                {/* Bottom: 3 Pillars */}
-                <div className="relative z-10 grid grid-cols-3 gap-3 pt-6 border-t border-white/15">
-                    {[
-                        { icon: Camera, title: pillar1Title, desc: pillar1Desc },
-                        { icon: Shield, title: pillar2Title, desc: pillar2Desc },
-                        { icon: Headphones, title: pillar3Title, desc: pillar3Desc },
-                    ].map(({ icon: Icon, title, desc }) => (
-                        <div key={title} className="space-y-1.5">
-                            <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-rose-200">
-                                <Icon className="w-4 h-4" />
+                {/* [HIDDEN: Bagian 3 Poin Fitur - Disembunyikan, jangan dihapus] */}
+                {false && (
+                    <div className="relative z-10 grid grid-cols-3 gap-3 pt-6 border-t border-white/15">
+                        {[
+                            { icon: Camera, title: pillar1Title, desc: pillar1Desc },
+                            { icon: Shield, title: pillar2Title, desc: pillar2Desc },
+                            { icon: Headphones, title: pillar3Title, desc: pillar3Desc },
+                        ].map(({ icon: Icon, title, desc }) => (
+                            <div key={title} className="space-y-1.5">
+                                <div className="w-9 h-9 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-rose-200">
+                                    <Icon className="w-4 h-4" />
+                                </div>
+                                <h4 className="font-bold text-[11px] text-white">{title}</h4>
+                                <p className="text-[10px] text-rose-200/70 leading-snug">{desc}</p>
                             </div>
-                            <h4 className="font-bold text-[11px] text-white">{title}</h4>
-                            <p className="text-[10px] text-rose-200/70 leading-snug">{desc}</p>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* ── RIGHT COLUMN: Dynamic Themed Form Panel ──────────────── */}

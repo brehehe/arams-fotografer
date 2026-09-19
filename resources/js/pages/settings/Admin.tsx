@@ -2993,42 +2993,44 @@ export default function AdminSettingsPage({
                                         </div>
                                     </div>
 
-                                    {/* 3 Poin Fitur (Pillars) */}
-                                    <div className="space-y-3 pt-2 border-t border-slate-100">
-                                        <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
-                                            <Layers className="w-3.5 h-3.5 text-slate-500" />
-                                            3 Poin Fitur (Bagian Bawah Kolom Kiri)
-                                        </span>
-                                        {([
-                                            { key1: 'login_pillar_1_title' as const, key2: 'login_pillar_1_desc' as const, no: 1 },
-                                            { key1: 'login_pillar_2_title' as const, key2: 'login_pillar_2_desc' as const, no: 2 },
-                                            { key1: 'login_pillar_3_title' as const, key2: 'login_pillar_3_desc' as const, no: 3 },
-                                        ]).map(({ key1, key2, no }) => (
-                                            <div key={no} className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Poin {no}</span>
-                                                <div className="grid grid-cols-2 gap-2">
-                                                    <div>
-                                                        <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Judul</label>
-                                                        <input
-                                                            type="text"
-                                                            value={themeForm[key1]}
-                                                            onChange={(e) => setThemeForm({ ...themeForm, [key1]: e.target.value })}
-                                                            className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-[11px] font-medium text-slate-800 bg-white focus:outline-hidden focus:border-indigo-400"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Deskripsi</label>
-                                                        <input
-                                                            type="text"
-                                                            value={themeForm[key2]}
-                                                            onChange={(e) => setThemeForm({ ...themeForm, [key2]: e.target.value })}
-                                                            className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-[11px] font-medium text-slate-800 bg-white focus:outline-hidden focus:border-indigo-400"
-                                                        />
+                                    {/* [HIDDEN: 3 Poin Fitur (Bagian Bawah Kolom Kiri) - Disembunyikan, jangan dihapus] */}
+                                    {false && (
+                                        <div className="space-y-3 pt-2 border-t border-slate-100">
+                                            <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                                                <Layers className="w-3.5 h-3.5 text-slate-500" />
+                                                3 Poin Fitur (Bagian Bawah Kolom Kiri)
+                                            </span>
+                                            {([
+                                                { key1: 'login_pillar_1_title' as const, key2: 'login_pillar_1_desc' as const, no: 1 },
+                                                { key1: 'login_pillar_2_title' as const, key2: 'login_pillar_2_desc' as const, no: 2 },
+                                                { key1: 'login_pillar_3_title' as const, key2: 'login_pillar_3_desc' as const, no: 3 },
+                                            ]).map(({ key1, key2, no }) => (
+                                                <div key={no} className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                                                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Poin {no}</span>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <div>
+                                                            <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Judul</label>
+                                                            <input
+                                                                type="text"
+                                                                value={themeForm[key1]}
+                                                                onChange={(e) => setThemeForm({ ...themeForm, [key1]: e.target.value })}
+                                                                className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-[11px] font-medium text-slate-800 bg-white focus:outline-hidden focus:border-indigo-400"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-[10px] font-semibold text-slate-600 mb-0.5">Deskripsi</label>
+                                                            <input
+                                                                type="text"
+                                                                value={themeForm[key2]}
+                                                                onChange={(e) => setThemeForm({ ...themeForm, [key2]: e.target.value })}
+                                                                className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-[11px] font-medium text-slate-800 bg-white focus:outline-hidden focus:border-indigo-400"
+                                                            />
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="flex items-center justify-between pt-2">
