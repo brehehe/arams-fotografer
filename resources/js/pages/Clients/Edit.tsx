@@ -850,12 +850,6 @@ setRegionVillages(data);
                         return false;
                     }
 
-                    if (!categoryData.concept_theme?.trim() && !formData.concept_theme?.trim()) {
-                        toast.error('Konsep / Tema Foto wajib dipilih');
-
-                        return false;
-                    }
-
                     if (!categoryData.session_location?.trim() && !formData.event_location?.trim()) {
                         toast.error('Lokasi Sesi Foto wajib diisi');
 
@@ -1032,12 +1026,6 @@ setRegionVillages(data);
 
                     if (!categoryData.event_type?.trim() && !formData.event_type?.trim()) {
                         toast.error('Jenis Acara wajib dipilih');
-
-                        return false;
-                    }
-
-                    if (!categoryData.estimated_guests && !formData.estimated_guests) {
-                        toast.error('Jumlah Tamu wajib diisi');
 
                         return false;
                     }
@@ -1239,18 +1227,14 @@ setRegionVillages(data);
                 return false;
             }
 
-            if (!formData.email?.trim()) {
-                toast.error('Email wajib diisi.');
+            if (formData.email?.trim()) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-                return false;
-            }
+                if (!emailRegex.test(formData.email.trim())) {
+                    toast.error('Format email tidak valid (contoh: nama@gmail.com).');
 
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-            if (!emailRegex.test(formData.email.trim())) {
-                toast.error('Format email tidak valid (contoh: nama@gmail.com).');
-
-                return false;
+                    return false;
+                }
             }
         }
 
@@ -1288,18 +1272,14 @@ e.preventDefault();
             return;
         }
 
-        if (!formData.email.trim()) {
-            toast.error('Email wajib diisi');
+        if (formData.email?.trim()) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-            return;
-        }
+            if (!emailRegex.test(formData.email.trim())) {
+                toast.error('Format email tidak valid');
 
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-        if (!emailRegex.test(formData.email.trim())) {
-            toast.error('Format email tidak valid');
-
-            return;
+                return;
+            }
         }
 
         if (!formData.event_date) {
@@ -1919,7 +1899,7 @@ e.preventDefault();
 
                                         <div>
                                             <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                                                Email <span className="text-red-500">*</span>
+                                                Email
                                             </label>
                                             <div className="relative">
                                                 <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -1929,7 +1909,7 @@ e.preventDefault();
                                                     type="email"
                                                     value={formData.email}
                                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                                    placeholder="contoh@gmail.com"
+                                                    placeholder="contoh@gmail.com (opsional)"
                                                     className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
                                                 />
                                             </div>

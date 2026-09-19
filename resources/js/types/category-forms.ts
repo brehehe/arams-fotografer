@@ -355,12 +355,12 @@ export function getFamilyMemberCount(data: Pick<FamilyCategoryData, 'members_cou
 /** Required category details for project create/edit; optional and legacy fields stay optional. */
 export function getProjectCategoryError(key: CategoryFormKey, data: AnyCategorySpecificData): string | null {
     const required: Partial<Record<CategoryFormKey, Array<[string, string]>>> = {
-        wedding: [['groom_name', 'Nama lengkap CPP'], ['groom_nickname', 'Panggilan CPP'], ['bride_name', 'Nama lengkap CPW'], ['bride_nickname', 'Panggilan CPW'], ['akad_date', 'Tanggal Akad'], ['akad_time', 'Waktu Akad'], ['akad_location', 'Lokasi Akad'], ['reception_date', 'Tanggal Resepsi'], ['reception_time', 'Waktu Resepsi'], ['reception_location', 'Lokasi Resepsi'], ['estimated_guests', 'Estimasi Tamu Undangan'], ['concept_theme', 'Konsep Acara']],
-        prewedding: [['groom_nickname', 'Panggilan CPP'], ['bride_nickname', 'Panggilan CPW'], ['concept_theme', 'Konsep Prewedding'], ['session_location', 'Lokasi Sesi'], ['locations_count', 'Jumlah Lokasi']],
-        engagement: [['groom_name', 'Nama Calon Mempelai Pria'], ['bride_name', 'Nama Calon Mempelai Wanita'], ['engagement_date', 'Tanggal Acara'], ['engagement_time', 'Waktu Acara'], ['estimated_guests', 'Estimasi Tamu'], ['engagement_location', 'Lokasi Acara'], ['concept_theme', 'Konsep / Tema Acara']],
+        wedding: [['groom_name', 'Nama lengkap CPP'], ['groom_nickname', 'Panggilan CPP'], ['bride_name', 'Nama lengkap CPW'], ['bride_nickname', 'Panggilan CPW'], ['akad_date', 'Tanggal Akad'], ['akad_time', 'Waktu Akad'], ['akad_location', 'Lokasi Akad'], ['reception_date', 'Tanggal Resepsi'], ['reception_time', 'Waktu Resepsi'], ['reception_location', 'Lokasi Resepsi']],
+        prewedding: [['groom_nickname', 'Panggilan CPP'], ['bride_nickname', 'Panggilan CPW'], ['session_location', 'Lokasi Sesi'], ['locations_count', 'Jumlah Lokasi']],
+        engagement: [['groom_name', 'Nama Calon Mempelai Pria'], ['bride_name', 'Nama Calon Mempelai Wanita'], ['engagement_date', 'Tanggal Acara'], ['engagement_time', 'Waktu Acara'], ['engagement_location', 'Lokasi Acara']],
         family: [['family_name', 'Nama Keluarga'], ['members_count', 'Jumlah Anggota Keluarga yang Difoto'], ['concept_theme', 'Konsep Sesi'], ['session_location_type', 'Lokasi Sesi']],
         maternity: [['mom_name', 'Nama Calon Ibu'], ['gestational_age_weeks', 'Usia Kandungan'], ['hpl_date', 'Hari Perkiraan Lahir'], ['concept_theme', 'Konsep / Tema'], ['session_location_type', 'Lokasi Sesi']],
-        birthday: [['celebrant_name', 'Nama yang Berulang Tahun'], ['celebrant_age', 'Usia yang Dirayakan'], ['event_type', 'Jenis Acara'], ['estimated_guests', 'Estimasi Tamu'], ['venue_location', 'Venue / Lokasi Acara'], ['birthday_theme', 'Tema Acara']],
+        birthday: [['celebrant_name', 'Nama yang Berulang Tahun'], ['celebrant_age', 'Usia yang Dirayakan'], ['event_type', 'Jenis Acara'], ['venue_location', 'Venue / Lokasi Acara'], ['birthday_theme', 'Tema Acara']],
         komunitas: [['community_name', 'Nama Komunitas'], ['community_type', 'Jenis Komunitas'], ['participants_count', 'Jumlah Peserta Kegiatan'], ['activity_type', 'Jenis Kegiatan'], ['activity_theme', 'Tema Kegiatan'], ['activity_location', 'Lokasi Kegiatan']],
         corporate: [['company_name', 'Nama Perusahaan'], ['event_type', 'Jenis Acara'], ['participants_count', 'Jumlah Peserta'], ['documentation_purpose', 'Tujuan Dokumentasi']],
         commercial: [['brand_name', 'Nama Brand / Bisnis'], ['product_type', 'Jenis Produk'], ['background_type', 'Background'], ['lighting_style', 'Lighting Style'], ['mood_style', 'Mood / Style Foto']],
@@ -418,8 +418,10 @@ export function getProjectCategoryError(key: CategoryFormKey, data: AnyCategoryS
     };
 
     for (const [field, minimum, label] of numericMinimums[key] || []) {
-        if (!Number.isInteger(Number(data[field])) || Number(data[field]) < minimum) {
-            return `${label} minimal ${minimum}.`;
+        if (data[field] != null && String(data[field]).trim() !== '') {
+            if (!Number.isInteger(Number(data[field])) || Number(data[field]) < minimum) {
+                return `${label} minimal ${minimum}.`;
+            }
         }
     }
 

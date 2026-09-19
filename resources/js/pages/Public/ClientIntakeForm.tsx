@@ -954,12 +954,6 @@ setEventEndTime(val);
                     return false;
                 }
 
-                if (!categoryData.concept_theme?.trim()) {
-                    toast.error('Konsep Prewedding wajib dipilih');
-
-                    return false;
-                }
-
                 if (!categoryData.session_location?.trim() && !formData.location?.trim()) {
                     toast.error('Lokasi Sesi Foto wajib diisi');
 
@@ -1100,18 +1094,6 @@ setEventEndTime(val);
                     return false;
                 }
 
-                if (!categoryData.estimated_guests) {
-                    toast.error('Estimasi Tamu wajib diisi');
-
-                    return false;
-                }
-
-                if (!categoryData.concept_theme?.trim()) {
-                    toast.error('Konsep Acara Pernikahan wajib dipilih');
-
-                    return false;
-                }
-
                 return true;
 
             case 'birthday':
@@ -1129,12 +1111,6 @@ setEventEndTime(val);
 
                 if (!categoryData.event_type?.trim()) {
                     toast.error('Jenis Acara Ulang Tahun wajib dipilih');
-
-                    return false;
-                }
-
-                if (!categoryData.estimated_guests) {
-                    toast.error('Estimasi Tamu wajib diisi');
 
                     return false;
                 }
@@ -1201,18 +1177,6 @@ setEventEndTime(val);
 
                 if (!categoryData.engagement_location?.trim()) {
                     toast.error('Lokasi Acara Lamaran wajib diisi');
-
-                    return false;
-                }
-
-                if (!categoryData.estimated_guests) {
-                    toast.error('Estimasi Tamu wajib diisi');
-
-                    return false;
-                }
-
-                if (!categoryData.concept_theme?.trim()) {
-                    toast.error('Konsep / Tema Acara wajib dipilih');
 
                     return false;
                 }
@@ -1397,18 +1361,14 @@ setEventEndTime(val);
             return false;
         }
 
-        if (!formData.email?.trim()) {
-            toast.error('Email wajib diisi.');
+        if (formData.email?.trim()) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-            return false;
-        }
+            if (!emailRegex.test(formData.email.trim())) {
+                toast.error('Format email tidak valid (contoh: nama@gmail.com).');
 
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-        if (!emailRegex.test(formData.email.trim())) {
-            toast.error('Format email tidak valid (contoh: nama@gmail.com).');
-
-            return false;
+                return false;
+            }
         }
 
         return true;
@@ -2114,7 +2074,7 @@ return;
 
                                                 <div>
                                                     <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                        Email <span className="text-red-500">*</span>
+                                                        Email
                                                     </label>
                                                     <div className="relative">
                                                         <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -2122,10 +2082,9 @@ return;
                                                         </span>
                                                         <input
                                                             type="email"
-                                                            required
                                                             value={formData.email}
                                                             onChange={(e) => handleFieldChange('email', e.target.value)}
-                                                            placeholder="contoh@gmail.com"
+                                                            placeholder="contoh@gmail.com (opsional)"
                                                             className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
                                                         />
                                                     </div>

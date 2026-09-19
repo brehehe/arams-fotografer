@@ -610,25 +610,24 @@ export function CategorySpecificForm({
                     {/* Section C: Detail Acara */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <FormLabel label="Estimasi Tamu Undangan" required />
+                            <FormLabel label="Estimasi Tamu Undangan" />
                             <Input
                                 type="number"
-                                min="10"
+                                min="1"
                                 value={data.estimated_guests || ''}
                                 onChange={(e) => onChange('estimated_guests', e.target.value)}
-                                placeholder="Contoh: 500"
+                                placeholder="Contoh: 500 (opsional)"
                                 className="h-[38px] text-xs bg-white"
                             />
                         </div>
                         <SelectWithOther
                             label="Konsep Acara"
-                            required
                             options={WEDDING_CONCEPTS}
                             value={data.concept_theme}
                             otherValue={data.concept_theme_other}
                             onChangeValue={(val) => onChange('concept_theme', val)}
                             onChangeOther={(val) => onChange('concept_theme_other', val)}
-                            placeholder="Pilih konsep pernikahan..."
+                            placeholder="Pilih konsep pernikahan (opsional)..."
                         />
                         <div>
                             <FormLabel label="Wedding Organizer (WO)" />
@@ -657,20 +656,28 @@ export function CategorySpecificForm({
                 <div className="space-y-4">
                     {coupleDetails(true)}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div className="sm:col-span-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div>
+                            <FormLabel label="Tanggal Sesi Foto" required />
+                            <Input
+                                type="date"
+                                value={data.session_date || ''}
+                                onChange={(e) => onChange('session_date', e.target.value)}
+                                className="h-[38px] text-xs bg-white"
+                            />
+                        </div>
+                        <div>
                             <SelectWithOther
                                 label="Konsep Prewedding"
-                                required
                                 options={PREWEDDING_CONCEPTS}
                                 value={data.concept_theme}
                                 otherValue={data.concept_theme_other}
                                 onChangeValue={(val) => onChange('concept_theme', val)}
                                 onChangeOther={(val) => onChange('concept_theme_other', val)}
-                                placeholder="Pilih konsep..."
+                                placeholder="Pilih konsep (opsional)..."
                             />
                         </div>
-                        <div className="sm:col-span-1">
+                        <div>
                             <FormLabel label="Lokasi Sesi" required />
                             <Input
                                 value={data.session_location || ''}
@@ -679,7 +686,7 @@ export function CategorySpecificForm({
                                 className="h-[38px] text-xs bg-white"
                             />
                         </div>
-                        <div className="sm:col-span-1">
+                        <div>
                             <FormLabel label="Jumlah Lokasi" required />
                             <Input
                                 type="number"
@@ -763,13 +770,13 @@ export function CategorySpecificForm({
                             />
                         </div>
                         <div>
-                            <FormLabel label="Estimasi Tamu" required />
+                            <FormLabel label="Estimasi Tamu" />
                             <Input
                                 type="number"
-                                min="10"
+                                min="1"
                                 value={data.estimated_guests || ''}
                                 onChange={(e) => onChange('estimated_guests', e.target.value)}
-                                placeholder="Contoh: 100"
+                                placeholder="Contoh: 100 (opsional)"
                                 className="h-[38px] text-xs bg-white"
                             />
                         </div>
@@ -789,13 +796,12 @@ export function CategorySpecificForm({
                         <div className="sm:col-span-1">
                             <SelectWithOther
                                 label="Konsep / Tema Acara"
-                                required
                                 options={ENGAGEMENT_CONCEPTS}
                                 value={data.concept_theme}
                                 otherValue={data.concept_theme_other}
                                 onChangeValue={(val) => onChange('concept_theme', val)}
                                 onChangeOther={(val) => onChange('concept_theme_other', val)}
-                                placeholder="Pilih konsep..."
+                                placeholder="Pilih konsep (opsional)..."
                             />
                         </div>
                         <div className="sm:col-span-1">
@@ -1044,13 +1050,13 @@ export function CategorySpecificForm({
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
-                            <FormLabel label="Estimasi Tamu" required />
+                            <FormLabel label="Estimasi Tamu" />
                             <Input
                                 type="number"
-                                min="5"
+                                min="1"
                                 value={data.estimated_guests || ''}
                                 onChange={(e) => onChange('estimated_guests', e.target.value)}
-                                placeholder="Contoh: 50"
+                                placeholder="Contoh: 50 (opsional)"
                                 className="h-[38px] text-xs bg-white"
                             />
                         </div>

@@ -1298,11 +1298,7 @@ return prev;
                         return false;
                     }
 
-                    if (!editCategoryData.concept_theme?.trim() && !editFormData.concept_theme?.trim()) {
-                        toast.error('Konsep / Tema Foto wajib dipilih');
 
-                        return false;
-                    }
 
                     if (!editCategoryData.session_location?.trim() && !editFormData.event_location?.trim()) {
                         toast.error('Lokasi Sesi Foto wajib diisi');
@@ -1484,11 +1480,7 @@ return prev;
                         return false;
                     }
 
-                    if (!editCategoryData.estimated_guests) {
-                        toast.error('Jumlah Tamu wajib diisi');
 
-                        return false;
-                    }
 
                     return true;
 

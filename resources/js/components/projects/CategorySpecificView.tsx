@@ -204,7 +204,8 @@ export function CategorySpecificView({ project }: CategorySpecificViewProps) {
                         'bg-pink-50 text-pink-700'
                     )}
                     {renderCouple(true)}
-                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                        {renderItem('Tanggal Sesi Foto', data.session_date ? formatDate(data.session_date) : null, <Calendar className="w-3.5 h-3.5" />)}
                         {renderItem('Konsep Prewedding', data.concept_theme === 'Lainnya' ? (data.concept_theme_other || 'Lainnya') : data.concept_theme)}
                         {renderItem('Lokasi Sesi', data.session_location || data.location, <MapPin className="w-3.5 h-3.5" />)}
                         {renderItem('Jumlah Lokasi', data.locations_count ? `${data.locations_count} Lokasi` : null)}
