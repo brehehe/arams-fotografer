@@ -360,9 +360,72 @@ class AramsSystemTest extends TestCase
         // Verify Project in database
         $this->assertDatabaseHas('projects', [
             'client_id' => $client->id,
-            'event_date' => '2026-12-21 00:00:00',
+            'event_date' => '2026-12-21',
             'status' => 'draft',
         ]);
+
+        // Verify ProjectSchedule was auto-created in database
+        $this->assertDatabaseHas('project_schedules', [
+            'date' => '2026-12-21',
+            'location' => 'The Ritz Carlton Jakarta',
+        ]);
+    }
+
+    public function test_calendar_multi_session_syncing_for_wedding()
+    {
+        $category = Category::firstOrCreate(
+            ['slug' => 'wedding'],
+            ['name' => 'Wedding', 'color' => '#E11D48', 'workflow_type' => 'wedding', 'status' => 'active']
+        );
+
+        $client = Client::create([
+            'name' => 'Tiwi & Rifqy',
+            'bride_name' => 'Nur Pratiwi Dwi Aryanti',
+            'groom_name' => 'Moch. Rifqy',
+            'email' => 'tiwi.rifqy@example.com',
+            'phone' => '081934325450',
+            'status' => 'active',
+        ]);
+
+        $project = Project::create([
+            'project_number' => 'PRJ-TEST-0001',
+            'name' => 'Wedding - Tiwi & Rifqy',
+            'client_id' => $client->id,
+            'category_id' => $category->id,
+            'status' => 'in_progress',
+            'event_date' => '2026-09-17',
+            'location' => 'Sidoarjo',
+            'category_data' => [
+                'akad_date' => '2026-09-17',
+                'akad_time' => '09:00',
+                'akad_location' => 'Jl. Jeruk III D4 No. 158, Wage, Sidoarjo',
+                'reception_date' => '2026-09-19',
+                'reception_time' => '18:30',
+                'reception_location' => 'Gedung Balai Prajurit RM Moedjono',
+            ],
+        ]);
+
+        app(\App\Services\ProjectService::class)->syncProjectSchedule($project);
+
+        // Verify two separate schedules were created
+        $schedules = \App\Models\ProjectSchedule::where('project_id', $project->id)->orderBy('date')->get();
+        $this->assertCount(2, $schedules);
+
+        $this->assertEquals('Akad: Wedding - Tiwi & Rifqy', $schedules[0]->title);
+        $this->assertEquals('2026-09-17', $schedules[0]->date->format('Y-m-d'));
+        $this->assertEquals('09:00:00', $schedules[0]->start_time);
+        $this->assertEquals('Jl. Jeruk III D4 No. 158, Wage, Sidoarjo', $schedules[0]->location);
+
+        $this->assertEquals('Resepsi: Wedding - Tiwi & Rifqy', $schedules[1]->title);
+        $this->assertEquals('2026-09-19', $schedules[1]->date->format('Y-m-d'));
+        $this->assertEquals('18:30:00', $schedules[1]->start_time);
+        $this->assertEquals('Gedung Balai Prajurit RM Moedjono', $schedules[1]->location);
+
+        // Verify CalendarService returns both events formatted
+        $calendarData = app(\App\Services\CalendarService::class)->getCalendarData();
+        $eventTitles = collect($calendarData['events'])->pluck('title')->toArray();
+        $this->assertContains('Akad: Wedding - Tiwi & Rifqy', $eventTitles);
+        $this->assertContains('Resepsi: Wedding - Tiwi & Rifqy', $eventTitles);
     }
 }
 

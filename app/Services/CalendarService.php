@@ -318,10 +318,10 @@ class CalendarService
     private function mapProjectStatus(?string $raw): string
     {
         return match (strtolower($raw ?? '')) {
-            'confirmed', 'in_progress', 'active' => 'Confirmed',
+            'confirmed', 'in_progress', 'active', 'scheduled', 'terjadwal' => 'Confirmed',
             'pending', 'lead'                     => 'Pending',
-            'done', 'completed', 'delivered'      => 'Done',
-            'cancelled', 'cancel'                 => 'Cancelled',
+            'done', 'completed', 'delivered', 'selesai' => 'Done',
+            'cancelled', 'cancel', 'batal'        => 'Cancelled',
             default                               => 'Pending',
         };
     }
@@ -408,7 +408,9 @@ class CalendarService
                     $otherSchedulesCount = ProjectSchedule::where('project_id', $projectId)->count();
                     if ($otherSchedulesCount === 0) {
                         $project = Project::find($projectId);
-                        if ($project && $project->event_date && $eventDate && $project->event_date->format('Y-m-d') === (is_string($eventDate) ? substr($eventDate, 0, 10) : $eventDate->format('Y-m-d'))) {
+                        $projDateStr = $project->event_date instanceof \Carbon\CarbonInterface ? $project->event_date->format('Y-m-d') : substr((string) $project->event_date, 0, 10);
+                        $schedDateStr = $eventDate instanceof \Carbon\CarbonInterface ? $eventDate->format('Y-m-d') : substr((string) $eventDate, 0, 10);
+                        if ($project && $projDateStr && $schedDateStr && $projDateStr === $schedDateStr) {
                             $project->update([
                                 'event_date' => null,
                                 'event_time' => null,

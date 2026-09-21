@@ -72,21 +72,21 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
             <Head title={`Login - ${companyName}`} />
             <Toaster position="top-right" richColors />
 
-            {/* ── LEFT COLUMN: Dark Overlay + Photo ────────────────────── */}
+            {/* ── LEFT COLUMN: Photo + Subtle Neutral Scrim ────────────────────── */}
             <div
-                style={{ background: loginBgGradient || loginBg }}
-                className="hidden lg:flex w-1/2 flex-col justify-between p-10 xl:p-12 text-white shrink-0 relative overflow-hidden"
+                style={{ background: loginBgPhoto ? '#0b0f17' : (loginBgGradient || loginBg) }}
+                className="hidden lg:flex w-1/2 flex-col justify-between p-10 xl:p-12 text-white shrink-0 relative overflow-hidden bg-slate-950"
             >
-                {/* Background photo with subtle, low-opacity warm overlay */}
+                {/* Background photo without red tint, clear & vivid with soft bottom/top text scrim */}
                 <div className="absolute inset-0 z-0">
                     <img
                         src={loginBgPhoto}
                         alt="Arams Couple"
-                        className="w-full h-full object-cover opacity-70 filter brightness-85 contrast-105"
+                        className="w-full h-full object-cover object-center filter brightness-[0.98] contrast-[1.02]"
                     />
                     <div
                         style={{
-                            background: `linear-gradient(to top, rgba(30, 8, 12, 0.70) 0%, rgba(46, 15, 21, 0.45) 50%, rgba(32, 10, 14, 0.28) 100%)`,
+                            background: `linear-gradient(to top, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.45) 24%, rgba(0, 0, 0, 0.08) 46%, transparent 60%, rgba(0, 0, 0, 0.35) 100%)`,
                         }}
                         className="absolute inset-0"
                     />
@@ -108,10 +108,10 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
                         </div>
                     )}
                     <div>
-                        <h2 className="font-extrabold text-sm tracking-[0.18em] text-white uppercase">
+                        <h2 className="font-extrabold text-sm tracking-[0.18em] text-white uppercase drop-shadow-sm">
                             {companyName}
                         </h2>
-                        <p className="text-[9px] tracking-[0.28em] text-rose-200/90 font-bold uppercase mt-0.5">
+                        <p className="text-[9px] tracking-[0.28em] text-amber-200/90 font-bold uppercase mt-0.5 drop-shadow-xs">
                             {appSettings.company_tagline || 'Photografer'}
                         </p>
                     </div>
@@ -119,12 +119,12 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
 
                 {/* Center / Lower: Headline shifted downwards */}
                 <div className="relative z-10 space-y-3.5 mt-auto mb-2 xl:mb-4">
-                    <span className="text-[10px] tracking-[0.25em] font-extrabold text-rose-200 uppercase block">
+                    <span className="text-[10px] tracking-[0.25em] font-extrabold text-amber-200/95 uppercase block drop-shadow-xs">
                         {loginTagline}
                     </span>
                     <h1
                         style={{ fontFamily: `'${fontHeading}', serif` }}
-                        className="text-3xl xl:text-4xl font-black text-white tracking-tight leading-tight drop-shadow-sm"
+                        className="text-3xl xl:text-4xl font-black text-white tracking-tight leading-tight drop-shadow-md"
                     >
                         {loginHeadline.split('\n').map((line: string, i: number, arr: string[]) => (
                             <React.Fragment key={i}>
@@ -135,9 +135,9 @@ export default function Login({ status, canResetPassword = true }: LoginProps) {
                     </h1>
                     <div
                         style={{ backgroundColor: `${loginAccent}80` }}
-                        className="w-12 h-0.5 mt-2 mb-2"
+                        className="w-12 h-0.5 mt-2 mb-2 shadow-xs"
                     />
-                    <p className="text-xs text-rose-100/85 leading-relaxed max-w-sm drop-shadow-xs">
+                    <p className="text-xs text-white/90 leading-relaxed max-w-sm drop-shadow-xs font-medium">
                         {loginDescription}
                     </p>
                 </div>

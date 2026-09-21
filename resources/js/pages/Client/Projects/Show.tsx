@@ -58,7 +58,7 @@ import {
 import React, { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { ClientLayout } from '@/layouts/ClientLayout';
-import { formatRupiah } from '@/lib/formatters';
+import { formatRupiah, formatDate } from '@/lib/formatters';
 import { PackageDeliverablesCard } from '@/components/PackageDeliverablesCard';
 
 interface FileLinkItem {
@@ -201,6 +201,8 @@ interface ClientProjectDetailProps {
         deadline?: string;
         updated_at_formatted?: string;
         location?: string;
+        category_data?: Record<string, any>;
+        category_form_type?: string;
         notes?: string;
         total_amount: number;
         paid_amount: number;
@@ -596,7 +598,7 @@ export default function ClientProjectDetail({
                 {/* ── 1. HERO BANNER - DETAIL PROJECT ─────────────────────── */}
                 <section
                     style={{
-                        background: portalHeroGradient || portalHeroBg,
+                        background: '#1A080B',
                         color: portalHeroText,
                     }}
                     className="relative -mt-6 sm:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 overflow-hidden shadow-md min-h-[380px] sm:min-h-[480px] lg:min-h-[560px] flex items-center transition-colors select-none"
@@ -604,8 +606,8 @@ export default function ClientProjectDetail({
                     {/* Inner Decorative Box Frame (Kotak Bingkai) */}
                     <div className="absolute inset-x-4 top-6 bottom-6 sm:inset-x-6 sm:top-8 sm:bottom-8 lg:inset-x-8 lg:top-10 lg:bottom-10 border border-white/20 rounded-2xl pointer-events-none z-20" />
 
-                    {/* Background Wedding Photo on the Right */}
-                    <div className="absolute inset-0 z-0">
+                    {/* Background Wedding Photo on the Right - crisp and clear matching login screen */}
+                    <div className="absolute inset-0 z-0 bg-[#120508]">
                         <img
                             src={
                                 project?.thumbnail ||
@@ -614,21 +616,28 @@ export default function ClientProjectDetail({
                                 '/images/no-image.svg'
                             }
                             alt={project.name}
-                            className="w-full h-full object-cover object-center sm:object-right opacity-85 sm:opacity-95 filter brightness-95 contrast-[1.05]"
+                            className="w-full h-full object-cover object-center sm:object-right opacity-85 sm:opacity-90 filter brightness-90 contrast-[1.05]"
                         />
-                        {/* Mobile Gradient Overlay */}
+                        {/* Mobile Gradient Overlay (Subtle warm tones matching login page) */}
                         <div
                             style={{
-                                background: `linear-gradient(to bottom, ${hexToRgba(portalHeroBg, 0.95)} 0%, ${hexToRgba(portalHeroBg, 0.70)} 50%, ${hexToRgba(portalHeroBg, 0.95)} 100%)`,
+                                background: `linear-gradient(to top, rgba(26, 8, 11, 0.88) 0%, rgba(46, 15, 21, 0.45) 50%, rgba(26, 8, 11, 0.30) 100%)`,
                             }}
                             className="absolute inset-0 sm:hidden z-10 pointer-events-none"
                         />
-                        {/* Desktop Gradient Overlay */}
+                        {/* Desktop Gradient Overlay (Subtle warm tones matching login page, keeping text readable and couple clearly visible) */}
                         <div
                             style={{
-                                background: `linear-gradient(to right, ${hexToRgba(portalHeroBg, 0.97)} 0%, ${hexToRgba(portalHeroBg, 0.90)} 35%, ${hexToRgba(portalHeroBg, 0.55)} 60%, ${hexToRgba(portalHeroBg, 0.15)} 80%, transparent 100%)`,
+                                background: `linear-gradient(to right, rgba(26, 8, 11, 0.88) 0%, rgba(38, 11, 15, 0.68) 32%, rgba(46, 15, 21, 0.32) 60%, rgba(20, 5, 8, 0.12) 80%, transparent 100%)`,
                             }}
                             className="absolute inset-0 hidden sm:block z-10 pointer-events-none"
+                        />
+                        {/* Subtle bottom vignette for metadata legibility */}
+                        <div
+                            style={{
+                                background: `linear-gradient(to top, rgba(20, 5, 8, 0.60) 0%, transparent 35%)`,
+                            }}
+                            className="absolute inset-0 z-10 pointer-events-none"
                         />
                     </div>
 
@@ -1397,18 +1406,47 @@ export default function ClientProjectDetail({
                                                 <span className="text-stone-500">Paket Layanan:</span>
                                                 <span className="font-bold text-stone-900">{packageDisplayName}</span>
                                             </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-stone-500">Tanggal Acara:</span>
-                                                <span className="font-bold text-stone-900">{project.event_date || 'Tanggal belum ditentukan'}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-stone-500">Waktu Acara:</span>
-                                                <span className="font-bold text-stone-900">{project.event_time ? `${project.event_time} WIB` : 'Menyesuaikan'}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-stone-500">Lokasi / Venue:</span>
-                                                <span className="font-semibold text-stone-900 text-right max-w-[200px]">{project.location || 'Studio Arams Pictures'}</span>
-                                            </div>
+                                            {project.category_data?.akad_date && project.category_data?.reception_date && project.category_data.akad_date !== project.category_data.reception_date ? (
+                                                <>
+                                                    <div className="pt-2 border-t border-stone-200/60 space-y-1.5">
+                                                        <div className="flex justify-between items-center text-xs">
+                                                            <span className="font-semibold text-stone-700">Akad Nikah:</span>
+                                                            <span className="font-bold text-stone-900">{formatDate(project.category_data.akad_date)} {project.category_data.akad_time ? `(${project.category_data.akad_time} WIB)` : ''}</span>
+                                                        </div>
+                                                        {project.category_data.akad_location && (
+                                                            <div className="text-[11px] text-stone-500 text-right leading-tight">
+                                                                📍 {project.category_data.akad_location}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="pt-1.5 space-y-1.5">
+                                                        <div className="flex justify-between items-center text-xs">
+                                                            <span className="font-semibold text-stone-700">Resepsi:</span>
+                                                            <span className="font-bold text-stone-900">{formatDate(project.category_data.reception_date)} {project.category_data.reception_time ? `(${project.category_data.reception_time} WIB)` : ''}</span>
+                                                        </div>
+                                                        {project.category_data.reception_location && (
+                                                            <div className="text-[11px] text-stone-500 text-right leading-tight">
+                                                                📍 {project.category_data.reception_location}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-stone-500">Tanggal Acara:</span>
+                                                        <span className="font-bold text-stone-900">{project.event_date || 'Tanggal belum ditentukan'}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-stone-500">Waktu Acara:</span>
+                                                        <span className="font-bold text-stone-900">{project.event_time ? `${project.event_time} WIB` : 'Menyesuaikan'}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="text-stone-500">Lokasi / Venue:</span>
+                                                        <span className="font-semibold text-stone-900 text-right max-w-[200px]">{project.location || 'Studio Arams Pictures'}</span>
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
 

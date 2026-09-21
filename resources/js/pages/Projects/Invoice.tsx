@@ -208,6 +208,11 @@ export default function ProjectInvoice({
         address: project?.location || '-',
     };
 
+    const clientAddressDisplay = [client.address, client.village, client.district, client.city, client.province]
+        .filter(Boolean)
+        .filter((s: string) => s !== '-')
+        .join(', ') || client.address;
+
     // Default Payment Method
     const defaultPaymentMethod = payment_methods[0] || {
         name: 'BCA',
@@ -316,7 +321,7 @@ export default function ProjectInvoice({
         setEditClientName(client.name || '');
         setEditClientPhone(client.phone || '');
         setEditClientEmail(client.email || '');
-        setEditClientAddress(client.address || '');
+        setEditClientAddress(clientAddressDisplay || client.address || '');
         setEditProjectName(project?.name || '');
         setIsEditInvoiceModalOpen(true);
     };
@@ -1173,9 +1178,9 @@ export default function ProjectInvoice({
                             {client.email}
                         </p>
                     )}
-                    {client.address && client.address !== '-' && (
+                    {clientAddressDisplay && clientAddressDisplay !== '-' && (
                         <p className="text-xs text-slate-500 line-clamp-2">
-                            {client.address}
+                            {clientAddressDisplay}
                         </p>
                     )}
                 </div>

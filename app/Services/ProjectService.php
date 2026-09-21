@@ -353,6 +353,37 @@ class ProjectService
             $data['category_data'] = $catData;
         }
 
+        // Auto-sync event_date, event_time, location from category_data if present
+        $catData = $data['category_data'] ?? [];
+        $derivedEventDate = $catData['akad_date']
+            ?? $catData['session_date']
+            ?? $catData['engagement_date']
+            ?? $catData['departure_date']
+            ?? $catData['event_date']
+            ?? null;
+        if (!empty($derivedEventDate) && (empty($data['event_date']) || empty($data['manual_event_date_override']))) {
+            $data['event_date'] = $derivedEventDate;
+        }
+
+        $derivedEventTime = $catData['akad_time']
+            ?? $catData['session_time']
+            ?? $catData['event_time']
+            ?? $catData['reception_time']
+            ?? null;
+        if (!empty($derivedEventTime) && empty($data['event_time'])) {
+            $data['event_time'] = $derivedEventTime;
+        }
+
+        $derivedLocation = $catData['akad_location']
+            ?? $catData['session_location']
+            ?? $catData['event_location']
+            ?? $catData['venue_location']
+            ?? $catData['location']
+            ?? null;
+        if (!empty($derivedLocation) && empty($data['location'])) {
+            $data['location'] = $derivedLocation;
+        }
+
         $dpAmount = (float) ($data['dp_amount'] ?? ($data['invoice_amount'] ?? 0));
         $invoiceType = $data['invoice_type'] ?? 'dp';
         $invoiceDueDate = $data['invoice_due_date'] ?? null;
@@ -624,6 +655,36 @@ class ProjectService
         if (!empty($installments) && is_array($installments)) {
             $catData['payment_installments'] = $installments;
             $data['category_data'] = $catData;
+        }
+
+        // Auto-sync event_date, event_time, location from category_data if present
+        $derivedEventDate = $catData['akad_date']
+            ?? $catData['session_date']
+            ?? $catData['engagement_date']
+            ?? $catData['departure_date']
+            ?? $catData['event_date']
+            ?? null;
+        if (!empty($derivedEventDate) && (empty($data['event_date']) || empty($data['manual_event_date_override']))) {
+            $data['event_date'] = $derivedEventDate;
+        }
+
+        $derivedEventTime = $catData['akad_time']
+            ?? $catData['session_time']
+            ?? $catData['event_time']
+            ?? $catData['reception_time']
+            ?? null;
+        if (!empty($derivedEventTime) && empty($data['event_time'])) {
+            $data['event_time'] = $derivedEventTime;
+        }
+
+        $derivedLocation = $catData['akad_location']
+            ?? $catData['session_location']
+            ?? $catData['event_location']
+            ?? $catData['venue_location']
+            ?? $catData['location']
+            ?? null;
+        if (!empty($derivedLocation) && empty($data['location'])) {
+            $data['location'] = $derivedLocation;
         }
 
         // Apply client overrides (wedding/newborn info) to Client record
@@ -900,6 +961,8 @@ class ProjectService
                 ->event('status_change')
                 ->log($logMsg);
 
+            $this->syncProjectSchedule($project);
+
             DB::commit();
             return $project;
         } catch (\Throwable $e) {
@@ -1080,11 +1143,9 @@ class ProjectService
      */
     public function syncProjectSchedule(Project $project): void
     {
-        if (empty($project->event_date)) {
-            return;
-        }
-
         $project->loadMissing('category');
+        $catData = is_array($project->category_data) ? $project->category_data : (json_decode($project->category_data ?? '[]', true) ?: []);
+
         $catName = $project->category?->name ?? '';
         $scheduleType = 'shooting';
         if (stripos($catName, 'event') !== false || stripos($catName, 'corporate') !== false) {
@@ -1093,32 +1154,215 @@ class ProjectService
             $scheduleType = 'meeting';
         }
 
-        [$startTime, $endTime] = $this->parseTimeRange($project->event_time);
+        $scheduleStatus = match ($project->status) {
+            'completed', 'selesai' => 'completed',
+            'cancelled', 'batal'   => 'cancelled',
+            'draft', 'pending'     => 'pending',
+            default                => 'scheduled',
+        };
 
-        $existing = ProjectSchedule::where('project_id', $project->id)->first();
-        if ($existing) {
-            $existing->update([
-                'title'      => "Sesi: {$project->name}",
-                'date'       => $project->event_date,
-                'start_time' => $startTime ?: ($existing->start_time ?: '09:00:00'),
-                'end_time'   => $endTime ?: $existing->end_time,
-                'location'   => $project->location,
-                'type'       => $scheduleType,
-                'status'     => $project->status === 'completed' ? 'completed' : 'scheduled',
-                'notes'      => $project->notes,
-            ]);
-        } else {
-            ProjectSchedule::create([
-                'project_id' => $project->id,
-                'title'      => "Sesi: {$project->name}",
-                'date'       => $project->event_date,
-                'start_time' => $startTime ?: '09:00:00',
-                'end_time'   => $endTime,
-                'location'   => $project->location,
-                'type'       => $scheduleType,
-                'status'     => 'scheduled',
-                'notes'      => $project->notes,
-            ]);
+        $expectedSessions = [];
+
+        // 1. Wedding (Akad & Resepsi)
+        $akadDate = !empty($catData['akad_date']) ? substr($catData['akad_date'], 0, 10) : null;
+        $recDate  = !empty($catData['reception_date']) ? substr($catData['reception_date'], 0, 10) : null;
+
+        if ($akadDate || $recDate) {
+            if ($akadDate) {
+                [$aStart, $aEnd] = $this->parseTimeRange($catData['akad_time'] ?? $project->event_time);
+                $expectedSessions[] = [
+                    'session_key' => 'akad',
+                    'title'       => "Akad: {$project->name}",
+                    'date'        => $akadDate,
+                    'start_time'  => $aStart ?: '09:00:00',
+                    'end_time'    => $aEnd,
+                    'location'    => $catData['akad_location'] ?? $project->location,
+                    'type'        => $scheduleType,
+                    'status'      => $scheduleStatus,
+                    'notes'       => 'Sesi Akad Nikah' . ($project->notes ? " - {$project->notes}" : ''),
+                ];
+            }
+
+            if ($recDate) {
+                [$rStart, $rEnd] = $this->parseTimeRange($catData['reception_time'] ?? '18:30');
+                $expectedSessions[] = [
+                    'session_key' => 'reception',
+                    'title'       => "Resepsi: {$project->name}",
+                    'date'        => $recDate,
+                    'start_time'  => $rStart ?: '18:30:00',
+                    'end_time'    => $rEnd,
+                    'location'    => $catData['reception_location'] ?? $project->location,
+                    'type'        => $scheduleType,
+                    'status'      => $scheduleStatus,
+                    'notes'       => 'Sesi Resepsi Pernikahan' . ($project->notes ? " - {$project->notes}" : ''),
+                ];
+            }
+        }
+        // 2. Traveling / Destination Prewedding
+        elseif (!empty($catData['departure_date']) || !empty($catData['return_date'])) {
+            $depDate = !empty($catData['departure_date']) ? substr($catData['departure_date'], 0, 10) : null;
+            $retDate = !empty($catData['return_date']) ? substr($catData['return_date'], 0, 10) : null;
+            if ($depDate) {
+                [$dStart, $dEnd] = $this->parseTimeRange($catData['departure_time'] ?? $project->event_time);
+                $expectedSessions[] = [
+                    'session_key' => 'departure',
+                    'title'       => "Sesi Foto: {$project->name}",
+                    'date'        => $depDate,
+                    'start_time'  => $dStart ?: '09:00:00',
+                    'end_time'    => $dEnd,
+                    'location'    => $catData['destination'] ?? $catData['session_location'] ?? $project->location,
+                    'type'        => $scheduleType,
+                    'status'      => $scheduleStatus,
+                    'notes'       => 'Keberangkatan / Sesi Foto' . ($project->notes ? " - {$project->notes}" : ''),
+                ];
+            }
+            if ($retDate && $retDate !== $depDate) {
+                $expectedSessions[] = [
+                    'session_key' => 'return',
+                    'title'       => "Kepulangan: {$project->name}",
+                    'date'        => $retDate,
+                    'start_time'  => '17:00:00',
+                    'end_time'    => null,
+                    'location'    => $catData['destination'] ?? $project->location,
+                    'type'        => $scheduleType,
+                    'status'      => $scheduleStatus,
+                    'notes'       => 'Jadwal Kepulangan' . ($project->notes ? " - {$project->notes}" : ''),
+                ];
+            }
+        }
+        // 3. Lamaran / Engagement
+        elseif (!empty($catData['engagement_date'])) {
+            $engDate = substr($catData['engagement_date'], 0, 10);
+            [$eStart, $eEnd] = $this->parseTimeRange($catData['engagement_time'] ?? $project->event_time);
+            $expectedSessions[] = [
+                'session_key' => 'engagement',
+                'title'       => "Lamaran: {$project->name}",
+                'date'        => $engDate,
+                'start_time'  => $eStart ?: '09:00:00',
+                'end_time'    => $eEnd,
+                'location'    => $catData['engagement_location'] ?? $project->location,
+                'type'        => $scheduleType,
+                'status'      => $scheduleStatus,
+                'notes'       => 'Sesi Lamaran' . ($project->notes ? " - {$project->notes}" : ''),
+            ];
+        }
+        // 4. Session date or Event date in category_data
+        elseif (!empty($catData['session_date']) || !empty($catData['event_date'])) {
+            $sesDate = substr($catData['session_date'] ?? $catData['event_date'], 0, 10);
+            $sesTime = $catData['session_time'] ?? $catData['event_time'] ?? $catData['event_time_range'] ?? $project->event_time;
+            [$sStart, $sEnd] = $this->parseTimeRange($sesTime);
+            $expectedSessions[] = [
+                'session_key' => 'session',
+                'title'       => "Sesi: {$project->name}",
+                'date'        => $sesDate,
+                'start_time'  => $sStart ?: '09:00:00',
+                'end_time'    => $sEnd,
+                'location'    => $catData['session_location'] ?? $catData['event_location'] ?? $project->location,
+                'type'        => $scheduleType,
+                'status'      => $scheduleStatus,
+                'notes'       => $project->notes,
+            ];
+        }
+        // 5. Fallback to $project->event_date
+        elseif (!empty($project->event_date)) {
+            $projDate = is_string($project->event_date) ? substr($project->event_date, 0, 10) : $project->event_date->format('Y-m-d');
+            [$sStart, $sEnd] = $this->parseTimeRange($project->event_time);
+            $expectedSessions[] = [
+                'session_key' => 'default',
+                'title'       => "Sesi: {$project->name}",
+                'date'        => $projDate,
+                'start_time'  => $sStart ?: '09:00:00',
+                'end_time'    => $sEnd,
+                'location'    => $project->location,
+                'type'        => $scheduleType,
+                'status'      => $scheduleStatus,
+                'notes'       => $project->notes,
+            ];
+        }
+
+        if (empty($expectedSessions)) {
+            return;
+        }
+
+        // Keep project event_date in sync with primary session date
+        $primaryDate = $expectedSessions[0]['date'];
+        $currentDate = $project->event_date ? (is_string($project->event_date) ? substr($project->event_date, 0, 10) : $project->event_date->format('Y-m-d')) : null;
+        if ($currentDate !== $primaryDate) {
+            $project->updateQuietly(['event_date' => $primaryDate]);
+        }
+
+        // Retrieve existing schedules for this project
+        $existingSchedules = ProjectSchedule::where('project_id', $project->id)->get();
+
+        // Identify auto-generated schedules (preserve user-added custom schedules like 'Meeting', 'Fitting', etc.)
+        $autoSchedules = $existingSchedules->filter(function ($s) use ($project) {
+            $title = $s->title ?? '';
+            return str_starts_with($title, 'Akad:')
+                || str_starts_with($title, 'Resepsi:')
+                || str_starts_with($title, 'Sesi:')
+                || str_starts_with($title, 'Lamaran:')
+                || str_starts_with($title, 'Sesi Foto:')
+                || str_starts_with($title, 'Berangkat:')
+                || str_starts_with($title, 'Kepulangan:')
+                || str_contains($title, $project->name);
+        })->values();
+
+        $usedScheduleIds = [];
+        $matchedSchedules = [];
+
+        // Match pass 1: By title prefix (e.g. Akad with Akad, Resepsi with Resepsi)
+        foreach ($expectedSessions as $idx => $session) {
+            $prefix = explode(':', $session['title'])[0] ?? '';
+            $match = $autoSchedules->first(function ($s) use ($prefix, $usedScheduleIds) {
+                return !in_array($s->id, $usedScheduleIds) && str_starts_with($s->title, $prefix . ':');
+            });
+
+            if ($match) {
+                $matchedSchedules[$idx] = $match;
+                $usedScheduleIds[] = $match->id;
+            }
+        }
+
+        // Match pass 2: For remaining unmatched, pick from unused auto schedules
+        foreach ($expectedSessions as $idx => $session) {
+            if (!isset($matchedSchedules[$idx])) {
+                $unused = $autoSchedules->first(function ($s) use ($usedScheduleIds) {
+                    return !in_array($s->id, $usedScheduleIds);
+                });
+                if ($unused) {
+                    $matchedSchedules[$idx] = $unused;
+                    $usedScheduleIds[] = $unused->id;
+                }
+            }
+        }
+
+        // Apply updates or creations
+        foreach ($expectedSessions as $idx => $session) {
+            $payload = [
+                'title'      => $session['title'],
+                'date'       => $session['date'],
+                'start_time' => $session['start_time'],
+                'end_time'   => $session['end_time'],
+                'location'   => $session['location'],
+                'type'       => $session['type'],
+                'status'     => $session['status'],
+                'notes'      => $session['notes'],
+            ];
+
+            if (isset($matchedSchedules[$idx])) {
+                $matchedSchedules[$idx]->update($payload);
+            } else {
+                ProjectSchedule::create(array_merge($payload, [
+                    'project_id' => $project->id,
+                ]));
+            }
+        }
+
+        // Delete any leftover obsolete auto-generated schedules
+        foreach ($autoSchedules as $s) {
+            if (!in_array($s->id, $usedScheduleIds)) {
+                $s->delete();
+            }
         }
     }
 

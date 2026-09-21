@@ -293,9 +293,12 @@ class ProcessClientIntake
                 'category_id' => $category?->id,
                 'package_id' => $packageId,
                 'package_name' => $package?->name,
-                'package_price' => $price,
-                'event_date' => $validated['event_date'] ?? ($catData['session_date'] ?? ($catData['akad_date'] ?? ($catData['event_date'] ?? null))),
-                'event_time' => $validated['event_time'] ?? ($catData['event_time'] ?? null),
+                'event_date' => ($catData['akad_date'] ?? null)
+                    ?? ($catData['session_date'] ?? null)
+                    ?? ($catData['engagement_date'] ?? null)
+                    ?? ($catData['departure_date'] ?? null)
+                    ?? ($catData['event_date'] ?? null)
+                    ?? ($validated['event_date'] ?? null),
                 'location' => $validated['location'] ?? ($catData['session_location'] ?? ($catData['location'] ?? null)),
                 'reception_location' => $validated['reception_location'] ?? null,
                 'primary_contact' => $validated['primary_contact'] ?? null,
@@ -431,12 +434,12 @@ class ProcessClientIntake
                 'package_id' => $packageId,
                 'status' => 'draft',
                 'workflow_step' => 'booking',
-                'progress' => 10,
-                'event_date' => $validated['event_date']
-                    ?? ($catData['event_date'] ?? null)
+                'event_date' => ($catData['akad_date'] ?? null)
                     ?? ($catData['session_date'] ?? null)
-                    ?? ($catData['akad_date'] ?? null)
+                    ?? ($catData['engagement_date'] ?? null)
                     ?? ($catData['departure_date'] ?? null)
+                    ?? ($catData['event_date'] ?? null)
+                    ?? ($validated['event_date'] ?? null)
                     ?? Carbon::now()->addDays(30),
                 'event_time' => $validated['event_time'] ?? ($catData['event_time_range'] ?? ($catData['event_time'] ?? null)),
                 'location' => !empty($validated['reception_location']) && $validated['reception_location'] !== ($validated['location'] ?? '')
@@ -455,6 +458,9 @@ class ProcessClientIntake
                 'category_data' => $validated['category_data'] ?? null,
                 'notes' => $formattedNotes ?: ($validated['notes'] ?? 'Dibuat otomatis via Form Booking Online Klien.'),
             ]);
+
+            // 5.1 Automatically synchronize project schedules into the calendar
+            $this->projectService->syncProjectSchedule($project);
 
             // 6. Log Activity
             activity()

@@ -235,7 +235,7 @@ export default function ClientIntakeForm({
             }
 
             // Auto-sync event date and location with core form fields
-            if (field === 'session_date' || field === 'akad_date' || field === 'event_date' || field === 'departure_date') {
+            if (field === 'session_date' || field === 'akad_date' || field === 'event_date' || field === 'departure_date' || field === 'engagement_date') {
                 if (value) {
                     setFormData((f) => ({ ...f, event_date: value }));
                 }
@@ -542,7 +542,7 @@ setRegionVillages(data);
             package_id: currentPkgExists ? prev.package_id : String(availablePkgs[0]?.id || ''),
             custom_price: '',
             event_type: nextData.event_type || cat?.name || 'Dokumentasi',
-            event_date: nextData.event_date || nextData.session_date || nextData.akad_date || '',
+            event_date: nextData.event_date || nextData.session_date || nextData.akad_date || nextData.engagement_date || nextData.departure_date || '',
             event_time: timeRange,
             location: nextData.event_location || nextData.session_location || nextData.location || '',
         }));
@@ -829,7 +829,7 @@ setEventEndTime(val);
         if (field === 'name') {
             setCategoryData((prev) => ({ ...prev, pic_name: value, client_name: value, name: value }));
         } else if (field === 'event_date') {
-            setCategoryData((prev) => ({ ...prev, event_date: value, session_date: value, akad_date: value }));
+            setCategoryData((prev) => ({ ...prev, event_date: value, session_date: value, akad_date: value, engagement_date: value, departure_date: value }));
         } else if (field === 'event_time') {
             setCategoryData((prev) => ({ ...prev, event_time_range: value, event_time: value, session_time: value, akad_time: value }));
         } else if (field === 'location') {
@@ -1325,30 +1325,6 @@ setEventEndTime(val);
             return false;
         }
 
-        if (!formData.district_code && !formData.district) {
-            toast.error('Kecamatan wajib dipilih.');
-
-            return false;
-        }
-
-        if (!formData.village_code && !formData.village) {
-            toast.error('Kelurahan wajib dipilih.');
-
-            return false;
-        }
-
-        if (!formData.postal_code?.trim()) {
-            toast.error('Kode pos wajib diisi.');
-
-            return false;
-        }
-
-        if (!formData.address?.trim()) {
-            toast.error('Alamat lengkap wajib diisi.');
-
-            return false;
-        }
-
         if (!formData.phone?.trim()) {
             toast.error('Nomor WhatsApp wajib diisi untuk konfirmasi.');
 
@@ -1389,7 +1365,7 @@ setEventEndTime(val);
             return false;
         }
 
-        const eventDate = formData.event_date || (categoryData as any).event_date || (categoryData as any).session_date || (categoryData as any).akad_date;
+        const eventDate = formData.event_date || (categoryData as any).event_date || (categoryData as any).session_date || (categoryData as any).akad_date || (categoryData as any).engagement_date || (categoryData as any).departure_date;
 
         if (!eventDate || !String(eventDate).trim()) {
             toast.error('Tanggal acara / project / sesi wajib diisi.');
@@ -1504,7 +1480,7 @@ return;
             category_id: selectedCategory.id,
             package_id: formData.package_id || null,
             custom_price: null,
-            event_date: formData.event_date || (categoryData as any).event_date || (categoryData as any).session_date || (categoryData as any).akad_date || null,
+            event_date: formData.event_date || (categoryData as any).event_date || (categoryData as any).session_date || (categoryData as any).akad_date || (categoryData as any).engagement_date || (categoryData as any).departure_date || null,
             event_time: formData.event_time || (categoryData as any).event_time_range || (categoryData as any).event_time || (categoryData as any).session_time || null,
             location: formData.location || (categoryData as any).event_location || (categoryData as any).session_location || (categoryData as any).akad_location || (categoryData as any).location || null,
             event_type: formData.event_type || (categoryData as any).event_type || (categoryData as any).needs_type || selectedCategory.name,
@@ -1906,7 +1882,7 @@ return;
                                             </div>
                                             <div>
                                                 <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                    Kecamatan <span className="text-red-500">*</span>
+                                                    Kecamatan <span className="text-slate-400 font-normal">(Opsional)</span>
                                                 </label>
                                                 <SelectSearch
                                                     options={regionDistricts.map((d) => ({ value: d.code, label: d.name }))}
@@ -1920,11 +1896,11 @@ return;
                                                             village_code: '',
                                                         }));
                                                     }}
-                                                    placeholder={formData.city_code ? 'Pilih kecamatan' : 'Pilih kota dahulu'}
+                                                    placeholder={formData.city_code ? 'Pilih kecamatan (opsional)' : 'Pilih kota dahulu'}
                                                     searchPlaceholder="Cari kecamatan..."
                                                     disabled={!formData.city_code}
                                                     isLoading={!!formData.city_code && regionDistricts.length === 0}
-                                                    clearable={false}
+                                                    clearable={true}
                                                 />
                                             </div>
                                         </div>
@@ -1932,7 +1908,7 @@ return;
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div>
                                                 <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                    Kelurahan <span className="text-red-500">*</span>
+                                                    Kelurahan <span className="text-slate-400 font-normal">(Opsional)</span>
                                                 </label>
                                                 <SelectSearch
                                                     options={regionVillages.map((v) => ({ value: v.code, label: v.name }))}
@@ -1946,22 +1922,22 @@ return;
                                                             postal_code: found?.postal_code || prev.postal_code,
                                                         }));
                                                     }}
-                                                    placeholder={formData.district_code ? 'Pilih kelurahan' : 'Pilih kecamatan dahulu'}
+                                                    placeholder={formData.district_code ? 'Pilih kelurahan (opsional)' : 'Pilih kecamatan dahulu'}
                                                     searchPlaceholder="Cari kelurahan..."
                                                     disabled={!formData.district_code}
                                                     isLoading={!!formData.district_code && regionVillages.length === 0}
-                                                    clearable={false}
+                                                    clearable={true}
                                                 />
                                             </div>
                                             <div>
                                                 <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                    Kode Pos <span className="text-red-500">*</span>
+                                                    Kode Pos <span className="text-slate-400 font-normal">(Opsional)</span>
                                                 </label>
                                                 <input
                                                     type="text"
                                                     value={formData.postal_code}
                                                     onChange={(e) => handleFieldChange('postal_code', e.target.value)}
-                                                    placeholder="Masukkan kode pos"
+                                                    placeholder="Masukkan kode pos (opsional)"
                                                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
                                                 />
                                             </div>
@@ -1970,7 +1946,7 @@ return;
                                         <div>
                                             <div className="flex items-center justify-between mb-1">
                                                 <label className="block text-[11px] font-bold text-slate-700">
-                                                    Alamat Lengkap <span className="text-red-500">*</span>
+                                                    Alamat Lengkap <span className="text-slate-400 font-normal">(Opsional)</span>
                                                 </label>
                                                 <span className="text-[10px] text-slate-400">
                                                     {formData.address.length} / 255
@@ -1979,10 +1955,9 @@ return;
                                             <textarea
                                                 rows={3}
                                                 maxLength={255}
-                                                required
                                                 value={formData.address}
                                                 onChange={(e) => handleFieldChange('address', e.target.value)}
-                                                placeholder="Masukkan alamat lengkap (nama jalan, nomor, RT/RW, dll)"
+                                                placeholder="Masukkan alamat lengkap (nama jalan, nomor, RT/RW, dll - opsional)"
                                                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition-all resize-none"
                                             />
                                         </div>
@@ -2371,7 +2346,7 @@ return;
                                                 <input
                                                     type="date"
                                                     required
-                                                    value={formData.event_date || (categoryData as any).event_date || (categoryData as any).session_date || ''}
+                                                    value={formData.event_date || (categoryData as any).event_date || (categoryData as any).session_date || (categoryData as any).akad_date || (categoryData as any).engagement_date || (categoryData as any).departure_date || ''}
                                                     onChange={(e) => handleFieldChange('event_date', e.target.value)}
                                                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
                                                 />
@@ -2840,7 +2815,7 @@ return null;
                                                     <div>
                                                         <span className="text-slate-400 block text-[10px]">Tanggal Project / Sesi</span>
                                                         <span className="font-semibold text-slate-800">
-                                                            {formData.event_date || (categoryData as any).event_date || (categoryData as any).session_date || (categoryData as any).akad_date || '-'}
+                                                            {formData.event_date || (categoryData as any).event_date || (categoryData as any).session_date || (categoryData as any).akad_date || (categoryData as any).engagement_date || (categoryData as any).departure_date || '-'}
                                                         </span>
                                                     </div>
                                                     <div>

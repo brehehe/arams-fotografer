@@ -64,9 +64,9 @@ class Client extends Model
         'tags' => 'array',
         'children' => 'array',
         'category_data' => 'array',
-        'bride_birth_date' => 'date',
-        'groom_birth_date' => 'date',
-        'child_birth_date' => 'date',
+        'bride_birth_date' => 'date:Y-m-d',
+        'groom_birth_date' => 'date:Y-m-d',
+        'child_birth_date' => 'date:Y-m-d',
     ];
 
     public function getActivitylogOptions(): LogOptions

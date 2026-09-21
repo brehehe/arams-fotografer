@@ -1170,7 +1170,7 @@ export default function CalendarIndex({
                                                 <span>{item.start_time || '09:00'} - {item.end_time || 'Selesai'}</span>
                                             </div>
                                             <h4 className="text-xs font-bold text-slate-900 truncate">
-                                                {item.title}{item.client_name ? ` - ${item.client_name}` : ''}
+                                                {item.client_name && !item.title.toLowerCase().includes(item.client_name.toLowerCase()) ? `${item.title} - ${item.client_name}` : item.title}
                                             </h4>
                                             <div className="text-[10.5px] text-slate-400 flex items-center gap-1 truncate">
                                                 <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
@@ -1235,7 +1235,7 @@ export default function CalendarIndex({
                                                 <span>{formatDate(item.date)} - {item.start_time || '09:00'}</span>
                                             </div>
                                             <h4 className="text-xs font-bold text-slate-900 truncate">
-                                                {item.title}{item.client_name ? ` - ${item.client_name}` : ''}
+                                                {item.client_name && !item.title.toLowerCase().includes(item.client_name.toLowerCase()) ? `${item.title} - ${item.client_name}` : item.title}
                                             </h4>
                                             <div className="text-[10.5px] text-slate-400 flex items-center gap-1 truncate">
                                                 <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
@@ -1669,15 +1669,15 @@ export default function CalendarIndex({
                             </div>
 
                             {/* Time Row */}
-                            {/* <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200/60">
+                            <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200/60">
                                 <span className="text-slate-500 font-medium flex items-center gap-1.5">
                                     <Clock className="w-3.5 h-3.5 text-slate-400" />
                                     Waktu:
                                 </span>
                                 <span className="font-bold text-slate-800">
-                                    {selectedItem.start_time || '09:00'} - {selectedItem.end_time || 'Selesai'}
+                                    {selectedItem.start_time ? `${selectedItem.start_time}${selectedItem.end_time ? ` - ${selectedItem.end_time}` : ' WIB'}` : '09:00 WIB'}
                                 </span>
-                            </div> */}
+                            </div>
 
                             {/* Location Row */}
                             <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-200/60">

@@ -288,7 +288,7 @@ class ClientPortalService
                 'total_projects' => $totalProjects,
                 'total_invoices' => $totalInvoices,
                 'total_payments' => $totalPayments,
-                'event_date' => $activeProject?->event_date?->isoFormat('D MMM YYYY') ?? 'Belum Dijadwalkan',
+                'event_date' => $activeProject ? $this->formatProjectEventDate($activeProject, 'short') : 'Belum Dijadwalkan',
                 'event_category' => $activeProject?->category?->name ?? ($activeProject?->package?->name ?? 'Dokumentasi'),
             ],
             'active_project' => $activeProject ? [
@@ -306,9 +306,10 @@ class ClientPortalService
                 'last_updated' => $activeProject->updated_at?->isoFormat('D MMMM YYYY') ?? now()->isoFormat('D MMMM YYYY'),
                 'workflow_step' => $activeProject->workflow_step,
                 'progress' => (int) $activeProject->progress,
-                'event_date' => $activeProject->event_date?->isoFormat('D MMMM YYYY') ?? null,
-                'event_date_short' => $activeProject->event_date?->isoFormat('D MMM YYYY') ?? null,
+                'event_date' => $this->formatProjectEventDate($activeProject, 'long'),
+                'event_date_short' => $this->formatProjectEventDate($activeProject, 'short'),
                 'event_date_raw' => $activeProject->event_date?->format('Y-m-d') ?? null,
+                'category_data' => $activeProject->category_data ?: [],
                 'location' => $activeProject->location ?: 'Studio Arams Pictures',
                 'category_name' => $activeProject->category?->name ?? 'Wedding Photography',
                 'package_name' => $activeProject->package?->name ?? 'Custom Package',
@@ -438,7 +439,10 @@ class ClientPortalService
                 'status' => $p->status,
                 'workflow_step' => $p->workflow_step,
                 'progress' => (int) $p->progress,
-                'event_date' => $p->event_date?->isoFormat('D MMMM YYYY') ?? null,
+                'event_date' => $this->formatProjectEventDate($p, 'long'),
+                'event_date_short' => $this->formatProjectEventDate($p, 'short'),
+                'event_date_raw' => $p->event_date?->format('Y-m-d') ?? null,
+                'category_data' => $p->category_data ?: [],
                 'deadline' => $p->deadline?->isoFormat('D MMMM YYYY') ?? null,
                 'location' => $p->location,
                 'total_amount' => (float) $p->total_amount,
@@ -635,9 +639,12 @@ class ClientPortalService
                 'status' => $project->status,
                 'workflow_step' => $project->workflow_step,
                 'progress' => (int) $project->progress,
-                'event_date' => $project->event_date?->isoFormat('dddd, D MMMM YYYY'),
-                'event_date_raw' => $project->event_date?->format('Y-m-d'),
-                'event_time' => $project->event_time,
+                'event_date' => $this->formatProjectEventDate($project, 'long'),
+                'event_date_short' => $this->formatProjectEventDate($project, 'short'),
+                'event_date_raw' => $project->event_date?->format('Y-m-d') ?: ($project->category_data['akad_date'] ?? null),
+                'event_time' => $project->event_time ?: ($project->category_data['akad_time'] ?? null),
+                'category_data' => $project->category_data ?: [],
+                'category_form_type' => $project->category?->form_type ?? 'wedding',
                 'deadline' => $project->deadline?->isoFormat('D MMMM YYYY'),
                 'updated_at_formatted' => $project->updated_at?->isoFormat('D MMMM YYYY') ?? now()->isoFormat('D MMMM YYYY'),
                 'location' => $project->location,
@@ -1296,5 +1303,50 @@ class ClientPortalService
             ] : null,
             'company' => $companySettings,
         ];
+    }
+
+    /**
+     * Format a smart, human-friendly event date string for projects (handling single date or multi-event dates like Akad & Resepsi).
+     */
+    public function formatProjectEventDate(?Project $project, string $format = 'long'): string
+    {
+        if (!$project) {
+            return 'Belum Dijadwalkan';
+        }
+
+        $catData = $project->category_data ?: [];
+        $akadDate = !empty($catData['akad_date']) ? \Carbon\Carbon::parse($catData['akad_date']) : null;
+        $receptionDate = !empty($catData['reception_date']) ? \Carbon\Carbon::parse($catData['reception_date']) : null;
+
+        if ($akadDate && $receptionDate) {
+            if ($akadDate->isSameDay($receptionDate)) {
+                return $format === 'short'
+                    ? $akadDate->isoFormat('D MMM YYYY')
+                    : $akadDate->isoFormat('dddd, D MMMM YYYY');
+            }
+            if ($akadDate->isSameMonth($receptionDate) && $akadDate->isSameYear($receptionDate)) {
+                return $format === 'short'
+                    ? $akadDate->format('d') . ' & ' . $receptionDate->isoFormat('D MMM YYYY')
+                    : $akadDate->format('d') . ' & ' . $receptionDate->isoFormat('D MMMM YYYY');
+            }
+            return $format === 'short'
+                ? $akadDate->isoFormat('D MMM') . ' & ' . $receptionDate->isoFormat('D MMM YYYY')
+                : $akadDate->isoFormat('D MMMM') . ' & ' . $receptionDate->isoFormat('D MMMM YYYY');
+        }
+
+        $singleDate = $akadDate
+            ?: (!empty($catData['session_date']) ? \Carbon\Carbon::parse($catData['session_date']) : null)
+            ?: (!empty($catData['engagement_date']) ? \Carbon\Carbon::parse($catData['engagement_date']) : null)
+            ?: (!empty($catData['departure_date']) ? \Carbon\Carbon::parse($catData['departure_date']) : null)
+            ?: (!empty($catData['event_date']) ? \Carbon\Carbon::parse($catData['event_date']) : null)
+            ?: $project->event_date;
+
+        if (!$singleDate) {
+            return 'Belum Dijadwalkan';
+        }
+
+        return $format === 'short'
+            ? $singleDate->isoFormat('D MMM YYYY')
+            : $singleDate->isoFormat('dddd, D MMMM YYYY');
     }
 }

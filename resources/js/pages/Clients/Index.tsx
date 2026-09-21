@@ -617,10 +617,10 @@ return;
                 setFormData((f) => ({ ...f, instagram: value.trim() }));
             }
 
-            if (field === 'session_date' || field === 'akad_date' || field === 'event_date' || field === 'departure_date') {
+            if (field === 'session_date' || field === 'akad_date' || field === 'event_date' || field === 'departure_date' || field === 'engagement_date') {
                 if (value) {
-setFormData((f) => ({ ...f, event_date: value }));
-}
+                    setFormData((f) => ({ ...f, event_date: value }));
+                }
             }
 
             if (field === 'event_time_range' || field === 'event_time' || field === 'session_time' || field === 'akad_time') {
@@ -1677,7 +1677,7 @@ return;
             company_name: categoryData.company_name || formData.company_name || null,
             children: validChildren.length > 0 ? validChildren : null,
             event_type: selectedCat?.name || formData.event_type || 'Dokumentasi',
-            event_date: formData.event_date || categoryData.session_date || categoryData.akad_date || categoryData.event_date || categoryData.departure_date || null,
+            event_date: formData.event_date || categoryData.session_date || categoryData.akad_date || categoryData.engagement_date || categoryData.event_date || categoryData.departure_date || null,
             event_time: formData.event_time || categoryData.event_time_range || categoryData.event_time || categoryData.akad_time || null,
             event_location: formData.event_location || categoryData.session_location || categoryData.akad_location || categoryData.event_location || categoryData.location || formData.address || null,
             custom_price: null,
@@ -2728,17 +2728,17 @@ params.set('source', source);
                                         </div>
                                         <div>
                                             <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                Kecamatan <span className="text-red-500">*</span>
+                                                Kecamatan <span className="text-slate-400 font-normal">(Opsional)</span>
                                             </label>
                                             <SelectSearch
                                                 options={districtOptions}
                                                 value={formData.district_code}
                                                 onChange={handleDistrictSelectChange}
-                                                placeholder={formData.city_code ? 'Pilih kecamatan' : 'Pilih kota dahulu'}
+                                                placeholder={formData.city_code ? 'Pilih kecamatan (opsional)' : 'Pilih kota dahulu'}
                                                 searchPlaceholder="Cari kecamatan..."
                                                 disabled={!formData.city_code}
                                                 isLoading={loadingDistricts}
-                                                clearable={false}
+                                                clearable={true}
                                                 className="w-full bg-white"
                                             />
                                         </div>
@@ -2747,29 +2747,29 @@ params.set('source', source);
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                                         <div>
                                             <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                Kelurahan / Desa <span className="text-red-500">*</span>
+                                                Kelurahan / Desa <span className="text-slate-400 font-normal">(Opsional)</span>
                                             </label>
                                             <SelectSearch
                                                 options={villageOptions}
                                                 value={formData.village_code}
                                                 onChange={handleVillageSelectChange}
-                                                placeholder={formData.district_code ? 'Pilih kelurahan' : 'Pilih kecamatan dahulu'}
+                                                placeholder={formData.district_code ? 'Pilih kelurahan (opsional)' : 'Pilih kecamatan dahulu'}
                                                 searchPlaceholder="Cari kelurahan..."
                                                 disabled={!formData.district_code}
                                                 isLoading={loadingVillages}
-                                                clearable={false}
+                                                clearable={true}
                                                 className="w-full bg-white"
                                             />
                                         </div>
                                         <div>
                                             <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                Kode Pos
+                                                Kode Pos <span className="text-slate-400 font-normal">(Opsional)</span>
                                             </label>
                                             <input
                                                 type="text"
                                                 value={formData.postal_code}
                                                 onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
-                                                placeholder="Masukkan kode pos"
+                                                placeholder="Masukkan kode pos (opsional)"
                                                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
                                             />
                                         </div>
@@ -2778,7 +2778,7 @@ params.set('source', source);
                                     <div>
                                         <div className="flex items-center justify-between mb-1">
                                             <label className="block text-[11px] font-bold text-slate-700">
-                                                Alamat Lengkap <span className="text-red-500">*</span>
+                                                Alamat Lengkap <span className="text-slate-400 font-normal">(Opsional)</span>
                                             </label>
                                             <span className="text-[10px] text-slate-400">
                                                 {formData.address.length} / 255
@@ -2789,7 +2789,7 @@ params.set('source', source);
                                             maxLength={255}
                                             value={formData.address}
                                             onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                            placeholder="Masukkan alamat lengkap (nama jalan, nomor rumah, RT/RW, dsb)"
+                                            placeholder="Masukkan alamat lengkap (nama jalan, nomor rumah, RT/RW, dsb - opsional)"
                                             className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445] transition-all resize-none"
                                         />
                                     </div>
@@ -3581,7 +3581,7 @@ return null;
                                                 Tanggal &amp; Waktu
                                             </span>
                                             <span className="font-semibold text-slate-800">
-                                                {formData.event_date || (categoryData as any).event_date || (categoryData as any).session_date || (categoryData as any).akad_date || '-'}
+                                                {formData.event_date || (categoryData as any).event_date || (categoryData as any).session_date || (categoryData as any).akad_date || (categoryData as any).engagement_date || (categoryData as any).departure_date || '-'}
                                                 {(formData.event_time || (categoryData as any).event_time_range || (categoryData as any).event_time || (categoryData as any).session_time)
                                                     ? ` (${formData.event_time || (categoryData as any).event_time_range || (categoryData as any).event_time || (categoryData as any).session_time})`
                                                     : ''}

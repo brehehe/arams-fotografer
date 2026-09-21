@@ -70,6 +70,8 @@ interface ClientItem {
     email?: string | null;
     phone?: string | null;
     city?: string | null;
+    province?: string | null;
+    address?: string | null;
     instagram?: string | null;
     bride_name?: string | null;
     groom_name?: string | null;
@@ -78,6 +80,7 @@ interface ClientItem {
     child_name?: string | null;
     child_birth_date?: string | null;
     child_gender?: string | null;
+    category_data?: Record<string, any> | null;
     children?: Array<{
         name: string;
         nickname?: string;
@@ -85,6 +88,7 @@ interface ClientItem {
         gender?: string;
         [key: string]: any;
     }> | null;
+    [key: string]: any;
 }
 
 interface CategoryItem {
@@ -259,9 +263,17 @@ export default function ProjectsEdit({
     const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
 
     // Initial project dates
-    const initialProjectDate = project.created_at_date || (project.created_at ? project.created_at.substring(0, 10) : '2026-08-27');
-    const initialEventDate = project.event_date ? project.event_date.substring(0, 10) : '';
-    const initialDueDate = project.deadline ? project.deadline.substring(0, 10) : '';
+    const existingCatData = (project.category_data && typeof project.category_data === 'object') ? project.category_data : {};
+    const catEventDate = existingCatData.akad_date
+        || existingCatData.session_date
+        || existingCatData.engagement_date
+        || existingCatData.departure_date
+        || existingCatData.event_date
+        || '';
+
+    const initialProjectDate = project.created_at_date || (project.created_at ? (project.created_at.includes('T') ? project.created_at.substring(0, 10) : project.created_at) : '2026-08-27');
+    const initialEventDate = catEventDate || (project.event_date ? (project.event_date.includes('T') ? project.event_date.substring(0, 10) : project.event_date) : '');
+    const initialDueDate = project.deadline ? (project.deadline.includes('T') ? project.deadline.substring(0, 10) : project.deadline) : '';
 
     // ── STEP 1: FORM STATES ──────────────────────────────────────────────
     const [projectDate, setProjectDate] = useState<string>(initialProjectDate);
@@ -727,11 +739,23 @@ export default function ProjectsEdit({
         return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : projectDate;
     }, [projectDate]);
 
+    const effectiveEventDate = useMemo(() => {
+        return categoryData.akad_date
+            || categoryData.session_date
+            || categoryData.engagement_date
+            || categoryData.departure_date
+            || categoryData.event_date
+            || shootingEventDate
+            || projectDate
+            || '';
+    }, [categoryData, shootingEventDate, projectDate]);
+
     const formattedShootingDate = useMemo(() => {
-        if (!shootingEventDate) return '';
-        const parts = shootingEventDate.split('-');
-        return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : shootingEventDate;
-    }, [shootingEventDate]);
+        if (!effectiveEventDate) return '';
+        const cleanDate = effectiveEventDate.includes('T') ? effectiveEventDate.substring(0, 10) : effectiveEventDate;
+        const parts = cleanDate.split('-');
+        return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : cleanDate;
+    }, [effectiveEventDate]);
 
     const formattedDpDueDate = useMemo(() => {
         if (!dpDueDate) return '-';
@@ -1206,12 +1230,12 @@ export default function ProjectsEdit({
             client_id: clientId,
             client_source_id: referralSourceId || null,
             category_id: categoryId,
-            package_id: selectedPackage?.id || null,
             status: effectiveStatus,
-            event_date: shootingEventDate || projectDate || null,
+            event_date: effectiveEventDate || shootingEventDate || projectDate || null,
+            event_time: categoryData.akad_time || categoryData.session_time || categoryData.event_time || categoryData.reception_time || null,
             created_at_date: projectDate || null,
             deadline: projectDeadline || dpDueDate || null,
-            location: projectLocation || null,
+            location: categoryData.akad_location || categoryData.session_location || categoryData.event_location || categoryData.venue_location || categoryData.location || projectLocation || null,
             supervisor_id: supervisorId || null,
             photographer_name: effectivePhotographerName,
             editor_name: effectiveEditorName,
@@ -2609,13 +2633,23 @@ export default function ProjectsEdit({
                             </h4>
                             <div className="space-y-2 pt-1 text-[11px]">
                                 <div className="flex items-center justify-between gap-2.5">
-                                    <span className="text-slate-400 shrink-0">Tanggal Event:</span>
+                                    <span className="text-slate-400 shrink-0">
+                                        {categoryData.akad_date ? 'Tanggal Akad:' : 'Tanggal Event:'}
+                                    </span>
                                     <span className="font-bold text-slate-800 text-right">{formattedShootingDate}</span>
                                 </div>
+                                {categoryData.reception_date && categoryData.reception_date !== categoryData.akad_date && (
+                                    <div className="flex items-center justify-between gap-2.5">
+                                        <span className="text-slate-400 shrink-0">Tanggal Resepsi:</span>
+                                        <span className="font-bold text-slate-800 text-right">
+                                            {categoryData.reception_date.split('-').reverse().join('/')}
+                                        </span>
+                                    </div>
+                                )}
                                 <div className="flex items-start justify-between gap-2.5">
                                     <span className="text-slate-400 shrink-0">Lokasi:</span>
                                     <span className="font-bold text-slate-800 text-right min-w-0 break-words leading-tight">
-                                        {projectLocation || '-'}
+                                        {categoryData.akad_location || categoryData.session_location || categoryData.location || projectLocation || '-'}
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between gap-2.5">
@@ -2634,7 +2668,7 @@ export default function ProjectsEdit({
                             category_data: categoryData,
                             client: selectedClient,
                             location: projectLocation,
-                            event_date: shootingEventDate || projectDate,
+                            event_date: effectiveEventDate || shootingEventDate || projectDate,
                         }}
                     />
 

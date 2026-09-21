@@ -47,9 +47,9 @@ class Project extends Model
     ];
 
     protected $casts = [
-        'event_date' => 'date',
-        'end_date' => 'date',
-        'deadline' => 'date',
+        'event_date' => 'date:Y-m-d',
+        'end_date' => 'date:Y-m-d',
+        'deadline' => 'date:Y-m-d',
         'progress' => 'integer',
         'price' => 'decimal:2',
         'discount' => 'decimal:2',

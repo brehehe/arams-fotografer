@@ -72,6 +72,8 @@ interface ClientItem {
     email?: string | null;
     phone?: string | null;
     city?: string | null;
+    province?: string | null;
+    address?: string | null;
     instagram?: string | null;
     bride_name?: string | null;
     groom_name?: string | null;
@@ -80,6 +82,7 @@ interface ClientItem {
     child_name?: string | null;
     child_birth_date?: string | null;
     child_gender?: string | null;
+    category_data?: Record<string, any> | null;
     children?: Array<{
         name: string;
         nickname?: string;
@@ -87,6 +90,7 @@ interface ClientItem {
         gender?: string;
         [key: string]: any;
     }> | null;
+    [key: string]: any;
 }
 
 interface CategoryItem {
@@ -305,23 +309,39 @@ export default function ProjectsCreate({
     const defaultPaymentMethod = payment_methods[0] || null;
 
     // ── STEP 1: FORM STATES ──────────────────────────────────────────────
+    const defaultClientCatData = (defaultClient as any)?.category_data || {};
+    const defaultClientEventDate = defaultClientCatData.akad_date
+        || defaultClientCatData.session_date
+        || defaultClientCatData.engagement_date
+        || defaultClientCatData.departure_date
+        || defaultClientCatData.event_date
+        || '';
+    const defaultClientLocation = defaultClientCatData.akad_location
+        || defaultClientCatData.session_location
+        || defaultClientCatData.event_location
+        || defaultClientCatData.venue_location
+        || defaultClientCatData.location
+        || defaultClient?.address
+        || '';
+
     const todayStr = new Date().toISOString().substring(0, 10);
-    const [projectDate, setProjectDate] = useState<string>(todayStr);
+    const [projectDate, setProjectDate] = useState<string>(defaultClientEventDate || todayStr);
     const [projectDeadline, setProjectDeadline] = useState<string>('');
     const [categoryData, setCategoryData] = useState<AnyCategorySpecificData>(() => ({
-        bride_name: defaultClient?.bride_name || '',
-        groom_name: defaultClient?.groom_name || '',
-        partner_1: defaultClient?.bride_name || '',
-        partner_2: defaultClient?.groom_name || '',
-        father_name: defaultClient?.father_name || '',
-        mother_name: defaultClient?.mother_name || '',
-        family_name: (defaultClient as any)?.category_data?.family_name || '',
-        client_name: defaultClient?.name || '',
-        baby_name: defaultClient?.child_name || '',
-        contact_person: defaultClient?.name || '',
-        pic_name: defaultClient?.name || '',
-        pic_phone: defaultClient?.phone || '',
-        pic_email: defaultClient?.email || '',
+        ...defaultClientCatData,
+        bride_name: defaultClientCatData.bride_name || defaultClient?.bride_name || '',
+        groom_name: defaultClientCatData.groom_name || defaultClient?.groom_name || '',
+        partner_1: defaultClientCatData.partner_1 || defaultClient?.bride_name || '',
+        partner_2: defaultClientCatData.partner_2 || defaultClient?.groom_name || '',
+        father_name: defaultClientCatData.father_name || defaultClient?.father_name || '',
+        mother_name: defaultClientCatData.mother_name || defaultClient?.mother_name || '',
+        family_name: defaultClientCatData.family_name || (defaultClient as any)?.category_data?.family_name || '',
+        client_name: defaultClientCatData.client_name || defaultClient?.name || '',
+        baby_name: defaultClientCatData.baby_name || defaultClient?.child_name || '',
+        contact_person: defaultClientCatData.contact_person || defaultClient?.name || '',
+        pic_name: defaultClientCatData.pic_name || defaultClient?.name || '',
+        pic_phone: defaultClientCatData.pic_phone || defaultClient?.phone || '',
+        pic_email: defaultClientCatData.pic_email || defaultClient?.email || '',
         children: defaultClient?.children && defaultClient.children.length > 0
             ? defaultClient.children.map((k) => ({ name: k.name || '', age: '' }))
             : (defaultClient?.child_name ? [{ name: defaultClient.child_name, age: '' }] : []),
@@ -333,7 +353,7 @@ export default function ProjectsCreate({
     const [clientId, setClientId] = useState<string>(initial_client_id || '');
     const [categoryId, setCategoryId] = useState<string>(initial_category_id || defaultCategory?.id || '');
     const [packageId, setPackageId] = useState<string>(initial_package_id || '');
-    const [projectLocation, setProjectLocation] = useState<string>('');
+    const [projectLocation, setProjectLocation] = useState<string>(defaultClientLocation);
     const [projectNotes, setProjectNotes] = useState<string>('');
     const [categoryError, setCategoryError] = useState<string | null>(null);
     const [referralSourceId, setReferralSourceId] = useState<string>(client_sources[0]?.id || '');
@@ -415,7 +435,7 @@ export default function ProjectsCreate({
         { id: 'team-1', type: 'Photografer', name: '' },
         { id: 'team-2', type: 'Editor Foto', name: '' },
     ]);
-    const [shootingEventDate, setShootingEventDate] = useState<string>(todayStr);
+    const [shootingEventDate, setShootingEventDate] = useState<string>(defaultClientEventDate || todayStr);
     const [shootingDuration, setShootingDuration] = useState<string>('12 Jam');
     const [assignmentNotes, setAssignmentNotes] = useState<string>('');
     const [paymentInstallments, setPaymentInstallments] = useState<PaymentInstallmentItem[]>([]);
@@ -795,11 +815,23 @@ export default function ProjectsCreate({
         return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : projectDate;
     }, [projectDate]);
 
+    const effectiveEventDate = useMemo(() => {
+        return categoryData.akad_date
+            || categoryData.session_date
+            || categoryData.engagement_date
+            || categoryData.departure_date
+            || categoryData.event_date
+            || shootingEventDate
+            || projectDate
+            || '';
+    }, [categoryData, shootingEventDate, projectDate]);
+
     const formattedShootingDate = useMemo(() => {
-        if (!shootingEventDate) return '';
-        const parts = shootingEventDate.split('-');
-        return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : shootingEventDate;
-    }, [shootingEventDate]);
+        if (!effectiveEventDate) return '';
+        const cleanDate = effectiveEventDate.includes('T') ? effectiveEventDate.substring(0, 10) : effectiveEventDate;
+        const parts = cleanDate.split('-');
+        return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : cleanDate;
+    }, [effectiveEventDate]);
 
     const formattedDpDueDate = useMemo(() => {
         if (!dpDueDate) return '-';
@@ -932,7 +964,33 @@ export default function ProjectsCreate({
         const cl = clients.find((c) => String(c.id) === String(newClientId));
         const cat = categories.find((c) => String(c.id) === String(categoryId)) || selectedCategory;
         if (cl) {
-            setCategoryData((previous) => ({ ...previous, client_name: cl.name || '' }));
+            const clCatData = (cl as any).category_data || {};
+            const clientDate = clCatData.akad_date
+                || clCatData.session_date
+                || clCatData.engagement_date
+                || clCatData.departure_date
+                || clCatData.event_date
+                || '';
+            if (clientDate) {
+                setProjectDate(clientDate);
+                setShootingEventDate(clientDate);
+            }
+            const clientLocation = clCatData.akad_location
+                || clCatData.session_location
+                || clCatData.event_location
+                || clCatData.venue_location
+                || clCatData.location
+                || cl.address
+                || '';
+            if (clientLocation) {
+                setProjectLocation(clientLocation);
+            }
+            setCategoryData((previous) => ({
+                ...clCatData,
+                ...previous,
+                ...clCatData,
+                client_name: cl.name || '',
+            }));
             setProjectName(generateSuggestedProjectTitle(cat, cl));
             prefillClientInfoEdits(cl);
             if ((cl as any).client_source_id) {
@@ -1396,11 +1454,11 @@ export default function ProjectsCreate({
             client_id: clientId,
             client_source_id: referralSourceId || null,
             category_id: categoryId,
-            package_id: selectedPackage?.id || null,
-            event_date: shootingEventDate || projectDate || null,
+            event_date: effectiveEventDate || shootingEventDate || projectDate || null,
+            event_time: categoryData.akad_time || categoryData.session_time || categoryData.event_time || categoryData.reception_time || null,
             created_at_date: projectDate || null,
             deadline: projectDeadline || dpDueDate || null,
-            location: projectLocation || null,
+            location: categoryData.akad_location || categoryData.session_location || categoryData.event_location || categoryData.venue_location || categoryData.location || projectLocation || null,
             supervisor_id: supervisorId || null,
             photographer_name: effectivePhotographerName,
             editor_name: effectiveEditorName,
@@ -2841,13 +2899,23 @@ export default function ProjectsCreate({
                             </h4>
                             <div className="space-y-2 pt-1 text-[11px]">
                                 <div className="flex items-center justify-between gap-2.5">
-                                    <span className="text-slate-400 shrink-0">Tanggal Event:</span>
+                                    <span className="text-slate-400 shrink-0">
+                                        {categoryData.akad_date ? 'Tanggal Akad:' : 'Tanggal Event:'}
+                                    </span>
                                     <span className="font-bold text-slate-800 text-right">{formattedShootingDate}</span>
                                 </div>
+                                {categoryData.reception_date && categoryData.reception_date !== categoryData.akad_date && (
+                                    <div className="flex items-center justify-between gap-2.5">
+                                        <span className="text-slate-400 shrink-0">Tanggal Resepsi:</span>
+                                        <span className="font-bold text-slate-800 text-right">
+                                            {categoryData.reception_date.split('-').reverse().join('/')}
+                                        </span>
+                                    </div>
+                                )}
                                 <div className="flex items-start justify-between gap-2.5">
                                     <span className="text-slate-400 shrink-0">Lokasi:</span>
                                     <span className="font-bold text-slate-800 text-right min-w-0 break-words leading-tight">
-                                        {projectLocation || '-'}
+                                        {categoryData.akad_location || categoryData.session_location || categoryData.location || projectLocation || '-'}
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between gap-2.5">
@@ -2866,7 +2934,7 @@ export default function ProjectsCreate({
                             category_data: categoryData,
                             client: selectedClient,
                             location: projectLocation,
-                            event_date: shootingEventDate || projectDate,
+                            event_date: effectiveEventDate || shootingEventDate || projectDate,
                         }}
                     />
 

@@ -560,11 +560,10 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
                                 key={preset.id}
                                 type="button"
                                 onClick={() => handleApplyPortalPreset(preset)}
-                                className={`text-left p-3.5 rounded-2xl border transition-all cursor-pointer relative flex flex-col justify-between space-y-2.5 ${
-                                    isSelected
+                                className={`text-left p-3.5 rounded-2xl border transition-all cursor-pointer relative flex flex-col justify-between space-y-2.5 ${isSelected
                                         ? 'border-[#3C0E0E] bg-rose-50/40 ring-2 ring-[#3C0E0E]/20 shadow-xs'
                                         : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
-                                }`}
+                                    }`}
                             >
                                 <div className="flex items-center justify-between">
                                     <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
@@ -996,26 +995,6 @@ export default function PortalKlienPage({ settings = {}, settingsMap = {} }: Por
                         <div className="flex items-center gap-2">
                             <Eye className="w-4 h-4 text-rose-600" />
                             <span className="text-xs font-bold text-slate-800">Preview Live Portal Klien</span>
-                        </div>
-                        <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 text-[10px] font-bold">
-                            <button
-                                type="button"
-                                onClick={() => setPortalPreviewTab('dashboard')}
-                                className={`px-2 py-1 rounded-lg transition-colors cursor-pointer ${
-                                    portalPreviewTab === 'dashboard' ? 'bg-slate-900 text-white' : 'text-slate-500 hover:text-slate-900'
-                                }`}
-                            >
-                                Dashboard
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setPortalPreviewTab('project_detail')}
-                                className={`px-2 py-1 rounded-lg transition-colors cursor-pointer ${
-                                    portalPreviewTab === 'project_detail' ? 'bg-slate-900 text-white' : 'text-slate-500 hover:text-slate-900'
-                                }`}
-                            >
-                                Detail Project
-                            </button>
                         </div>
                     </div>
 

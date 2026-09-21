@@ -371,7 +371,7 @@ clientAvatarInputRef.current.value = '';
         setEditCategoryData((prev) => {
             const next = { ...prev, [field]: value };
 
-            if (field === 'session_date' || field === 'akad_date' || field === 'event_date' || field === 'departure_date') {
+            if (field === 'session_date' || field === 'akad_date' || field === 'event_date' || field === 'departure_date' || field === 'engagement_date') {
                 if (value) {
                     setEditFormData((f) => ({ ...f, event_date: value }));
                 }
@@ -1766,7 +1766,7 @@ return prev;
                 occupation: editFormData.occupation || (editCategoryData as any).bride_occupation || (editCategoryData as any).occupation || null,
                 other_social_media: editFormData.other_social_media || null,
                 event_type: editFormData.event_type || null,
-                event_date: editFormData.event_date || (editCategoryData as any).session_date || (editCategoryData as any).akad_date || (editCategoryData as any).event_date || null,
+                event_date: editFormData.event_date || (editCategoryData as any).session_date || (editCategoryData as any).akad_date || (editCategoryData as any).engagement_date || (editCategoryData as any).event_date || (editCategoryData as any).departure_date || null,
                 event_time: editFormData.event_time || (editCategoryData as any).session_time || (editCategoryData as any).akad_time || null,
                 event_location: editFormData.event_location || (editCategoryData as any).session_location || (editCategoryData as any).akad_location || (editCategoryData as any).location || null,
                 reception_location: editFormData.reception_location || (editCategoryData as any).reception_location || null,
@@ -4209,7 +4209,14 @@ e.preventDefault();
                                                 <div className="flex items-baseline gap-2 flex-1 min-w-0">
                                                     <span className="text-slate-400 shrink-0 hidden sm:inline">:</span>
                                                     <span className="font-bold text-slate-900 leading-snug flex-1 min-w-0 break-words">
-                                                        {rawProjectCandidate?.event_date ? formatDate(rawProjectCandidate.event_date) : '-'}
+                                                        {(() => {
+                                                            const cData = (rawProjectCandidate?.category_data as any) || (client.category_data as any) || {};
+                                                            if (cData.akad_date && cData.reception_date && cData.akad_date !== cData.reception_date) {
+                                                                return `${formatDate(cData.akad_date)} (Akad) & ${formatDate(cData.reception_date)} (Resepsi)`;
+                                                            }
+                                                            const effectiveD = cData.akad_date || cData.session_date || cData.engagement_date || cData.departure_date || cData.event_date || rawProjectCandidate?.event_date;
+                                                            return effectiveD ? formatDate(effectiveD) : '-';
+                                                        })()}
                                                     </span>
                                                 </div>
                                             </div>
@@ -6760,32 +6767,32 @@ return;
 
                                         <div>
                                             <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                Kecamatan
+                                                Kecamatan <span className="text-slate-400 font-normal">(Opsional)</span>
                                             </label>
                                             <SelectSearch
                                                 options={districtOptions}
                                                 value={editFormData.district_code}
                                                 onChange={handleDistrictSelectChange}
-                                                placeholder={loadingDistricts ? 'Memuat kecamatan...' : 'Pilih Kecamatan...'}
+                                                placeholder={loadingDistricts ? 'Memuat kecamatan...' : 'Pilih Kecamatan (opsional)...'}
                                                 searchPlaceholder="Cari kecamatan..."
                                                 disabled={!editFormData.city_code || loadingDistricts}
-                                                clearable={false}
+                                                clearable={true}
                                                 className="w-full bg-white"
                                             />
                                         </div>
 
                                         <div>
                                             <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                Kelurahan / Desa
+                                                Kelurahan / Desa <span className="text-slate-400 font-normal">(Opsional)</span>
                                             </label>
                                             <SelectSearch
                                                 options={villageOptions}
                                                 value={editFormData.village_code}
                                                 onChange={handleVillageSelectChange}
-                                                placeholder={loadingVillages ? 'Memuat kelurahan...' : 'Pilih Kelurahan...'}
+                                                placeholder={loadingVillages ? 'Memuat kelurahan...' : 'Pilih Kelurahan (opsional)...'}
                                                 searchPlaceholder="Cari kelurahan/desa..."
                                                 disabled={!editFormData.district_code || loadingVillages}
-                                                clearable={false}
+                                                clearable={true}
                                                 className="w-full bg-white"
                                             />
                                         </div>
@@ -6794,26 +6801,26 @@ return;
                                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3.5 pt-1">
                                         <div className="sm:col-span-3">
                                             <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                Alamat Lengkap (Jalan, No. Rumah, RT/RW, Patokan)
+                                                Alamat Lengkap <span className="text-slate-400 font-normal">(Opsional)</span>
                                             </label>
                                             <input
                                                 type="text"
                                                 value={editFormData.address}
                                                 onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
-                                                placeholder="Jl. Melati No. 12, RT 02 / RW 05"
+                                                placeholder="Jl. Melati No. 12, RT 02 / RW 05 (opsional)"
                                                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
                                             />
                                         </div>
 
                                         <div>
                                             <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                                                Kode Pos
+                                                Kode Pos <span className="text-slate-400 font-normal">(Opsional)</span>
                                             </label>
                                             <input
                                                 type="text"
                                                 value={editFormData.postal_code}
                                                 onChange={(e) => setEditFormData({ ...editFormData, postal_code: e.target.value })}
-                                                placeholder="12345"
+                                                placeholder="12345 (opsional)"
                                                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#C89445]/20 focus:border-[#C89445]"
                                             />
                                         </div>
