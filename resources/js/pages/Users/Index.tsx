@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import React, { useState, useEffect } from 'react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     Plus,
     Edit2,
@@ -67,6 +67,23 @@ export default function UsersIndex({
     filters = {},
     current_user_id = 0,
 }: UsersIndexProps) {
+    const { props: pageProps } = usePage<any>();
+    const authUser = pageProps?.auth?.user;
+    const authRole: string = authUser?.role ?? '';
+    const authRoles: string[] = authUser?.roles ?? [];
+
+    // ─── Auth role flags ─────────────────────────────────────────────────────
+    const isSuperAdminOrOwner = authRoles.includes('Super Admin') || authRoles.includes('Owner');
+    const isAdminRole = authRoles.includes('Admin') && !isSuperAdminOrOwner;
+    const isSupervisorRole = authUser?.is_supervisor || authRoles.includes('Supervisor');
+
+    // Supervisor tidak boleh akses halaman ini → redirect ke dashboard
+    useEffect(() => {
+        if (isSupervisorRole) {
+            router.visit('/dashboard');
+        }
+    }, [isSupervisorRole]);
+
     const [createModalOpen, setCreateModalOpen] = useState(false);
     const [editUser, setEditUser] = useState<UserItem | null>(null);
     const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id?: number; name?: string }>({
@@ -87,6 +104,25 @@ export default function UsersIndex({
     const displayUsers = rawUsers.filter(
         (u) => !u.roles?.some((r) => r.name.toLowerCase() === 'client')
     );
+
+    // ─── Helper: cek akses per-baris berdasarkan role ───────────────────────
+    // Admin: bisa CRUD semua user KECUALI Super Admin & Owner
+    const isSuperAdminOrOwnerTarget = (user: UserItem): boolean => {
+        const targetRole = user.roles?.[0]?.name?.toLowerCase() ?? '';
+        return ['super admin', 'owner'].includes(targetRole);
+    };
+    const canEditUser = (user: UserItem): boolean => {
+        if (isSuperAdminOrOwner) return true;                     // Super Admin/Owner: edit semua
+        if (isAdminRole) return !isSuperAdminOrOwnerTarget(user); // Admin: tidak boleh edit Super Admin/Owner
+        return false;
+    };
+    const canDeleteUser = (user: UserItem): boolean => {
+        if (user.id === current_user_id) return false;            // tidak bisa hapus diri sendiri
+        if (isSuperAdminOrOwner) return true;                     // Super Admin/Owner: hapus semua
+        if (isAdminRole) return !isSuperAdminOrOwnerTarget(user); // Admin: tidak boleh hapus Super Admin/Owner
+        return false;
+    };
+    const canAddUser = isSuperAdminOrOwner || isAdminRole;        // Admin boleh tambah user
 
     const openCreate = () => {
         setEditUser(null);
@@ -200,14 +236,16 @@ export default function UsersIndex({
                     </p>
                 </div>
 
-                <button
-                    type="button"
-                    onClick={openCreate}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#4F46E5] hover:bg-[#4338CA] text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-500/20 transition-all hover:scale-[1.02] cursor-pointer shrink-0"
-                >
-                    <Plus className="w-4 h-4 text-white" />
-                    <span>Tambah User</span>
-                </button>
+                {canAddUser && (
+                    <button
+                        type="button"
+                        onClick={openCreate}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#4F46E5] hover:bg-[#4338CA] text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-500/20 transition-all hover:scale-[1.02] cursor-pointer shrink-0"
+                    >
+                        <Plus className="w-4 h-4 text-white" />
+                        <span>Tambah User</span>
+                    </button>
+                )}
             </div>
 
             {/* ── USERS TABLE (Gambar 1) ──────────────────────────────────────── */}
@@ -289,57 +327,65 @@ export default function UsersIndex({
 
                                     {/* AKSI */}
                                     <TableCell className="text-center px-6">
-                                        <div className="inline-flex items-center justify-center gap-1.5">
-                                            <button
-                                                type="button"
-                                                onClick={() => openEdit(user)}
-                                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
-                                                title="Edit Pengguna"
-                                            >
-                                                <Edit2 className="w-3.5 h-3.5" />
-                                            </button>
-
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
+                                        {(canEditUser(user) || canDeleteUser(user)) ? (
+                                            <div className="inline-flex items-center justify-center gap-1.5">
+                                                {canEditUser(user) && (
                                                     <button
                                                         type="button"
-                                                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer outline-hidden"
-                                                        title="Menu Lainnya"
-                                                    >
-                                                        <MoreVertical className="w-3.5 h-3.5" />
-                                                    </button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="w-40">
-                                                    <DropdownMenuItem
                                                         onClick={() => openEdit(user)}
-                                                        className="flex items-center gap-2 cursor-pointer"
+                                                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
+                                                        title="Edit Pengguna"
                                                     >
-                                                        <Edit2 className="w-3.5 h-3.5 text-slate-400" />
-                                                        <span>Edit Data</span>
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() => toast.info(`Tautan reset kata sandi telah dikirim ke ${user.email}`)}
-                                                        className="flex items-center gap-2 cursor-pointer"
-                                                    >
-                                                        <KeyRound className="w-3.5 h-3.5 text-slate-400" />
-                                                        <span>Reset Sandi</span>
-                                                    </DropdownMenuItem>
-                                                    {!isSelf && (
-                                                        <>
-                                                            <DropdownMenuSeparator />
+                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                )}
+
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <button
+                                                            type="button"
+                                                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer outline-hidden"
+                                                            title="Menu Lainnya"
+                                                        >
+                                                            <MoreVertical className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="w-40">
+                                                        {canEditUser(user) && (
                                                             <DropdownMenuItem
-                                                                variant="destructive"
-                                                                onClick={() => setConfirmDelete({ isOpen: true, id: user.id, name: user.name })}
+                                                                onClick={() => openEdit(user)}
                                                                 className="flex items-center gap-2 cursor-pointer"
                                                             >
-                                                                <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                                                                <span>Hapus User</span>
+                                                                <Edit2 className="w-3.5 h-3.5 text-slate-400" />
+                                                                <span>Edit Data</span>
                                                             </DropdownMenuItem>
-                                                        </>
-                                                    )}
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
+                                                        )}
+                                                        <DropdownMenuItem
+                                                            onClick={() => toast.info(`Tautan reset kata sandi telah dikirim ke ${user.email}`)}
+                                                            className="flex items-center gap-2 cursor-pointer"
+                                                        >
+                                                            <KeyRound className="w-3.5 h-3.5 text-slate-400" />
+                                                            <span>Reset Sandi</span>
+                                                        </DropdownMenuItem>
+                                                        {canDeleteUser(user) && (
+                                                            <>
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuItem
+                                                                    variant="destructive"
+                                                                    onClick={() => setConfirmDelete({ isOpen: true, id: user.id, name: user.name })}
+                                                                    className="flex items-center gap-2 cursor-pointer"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                                                                    <span>Hapus User</span>
+                                                                </DropdownMenuItem>
+                                                            </>
+                                                        )}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
+                                        ) : (
+                                            <span className="text-xs text-slate-300 italic">—</span>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             );
@@ -597,7 +643,14 @@ export default function UsersIndex({
                             >
                                 {roles && roles.length > 0 ? (
                                     roles
-                                        .filter((r) => r.name.toLowerCase() !== 'client')
+                                        .filter((r) => {
+                                            const name = r.name.toLowerCase();
+                                            // Hapus Client, Photographer, Editor dari semua dropdown
+                                            if (['client', 'photographer', 'editor'].includes(name)) return false;
+                                            // Admin tidak bisa assign Super Admin / Owner
+                                            if (isAdminRole && ['super admin', 'owner'].includes(name)) return false;
+                                            return true;
+                                        })
                                         .map((r) => (
                                             <option key={r.id} value={r.name}>
                                                 {r.name === 'Owner' ? 'Owner (Super Admin)' : r.name}
@@ -605,11 +658,9 @@ export default function UsersIndex({
                                         ))
                                 ) : (
                                     <>
-                                        <option value="Owner">Owner (Super Admin)</option>
+                                        {!isAdminRole && <option value="Owner">Owner (Super Admin)</option>}
                                         <option value="Supervisor">Supervisor</option>
                                         <option value="Admin">Admin</option>
-                                        <option value="Photographer">Photographer</option>
-                                        <option value="Editor">Editor</option>
                                     </>
                                 )}
                                 {formData.role &&

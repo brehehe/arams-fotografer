@@ -257,6 +257,8 @@ export default function ClientDashboard({
     const [isHoveredPromo, setIsHoveredPromo] = useState(false);
     const [currentTestimonialIndex, setCurrentTestimonialIndex] = useState(0);
     const [isHoveredTestimonial, setIsHoveredTestimonial] = useState(false);
+    const [currentPkgIndex, setCurrentPkgIndex] = useState(0);
+    const [isHoveredPkg, setIsHoveredPkg] = useState(false);
 
     // Payment History & Lightbox Modal States
     const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -353,6 +355,17 @@ export default function ClientDashboard({
         }, 4000);
         return () => clearInterval(timer);
     }, [testimonialList.length, isHoveredTestimonial]);
+
+    // Auto-advance Package Carousel every 4 seconds (pauses on hover)
+    useEffect(() => {
+        const pkgCount = (recommended_packages?.length || 0) || (recommended_projects?.length || 0);
+        const pkgMaxIndex = Math.max(0, pkgCount - 5);
+        if (pkgCount <= 5 || isHoveredPkg) return;
+        const timer = setInterval(() => {
+            setCurrentPkgIndex((prev) => (prev >= pkgMaxIndex ? 0 : prev + 1));
+        }, 4000);
+        return () => clearInterval(timer);
+    }, [recommended_packages?.length, recommended_projects?.length, isHoveredPkg]);
 
     // Recommendations
     const packageRecommendations = (recommended_packages && recommended_packages.length > 0)
@@ -1036,22 +1049,26 @@ export default function ClientDashboard({
                     )}
                 </section>
 
-                {/* ── 5. REKOMENDASI PAKET UNTUK ANDA (5 Columns) ─────────── */}
-                {packageRecommendations && packageRecommendations.length > 0 && portal_settings?.show_recommended_packages !== false && (
+                {/* ── 5. REKOMENDASI PAKET UNTUK ANDA (Auto-Sliding Carousel, 5 visible) ─── */}
+                {packageRecommendations && packageRecommendations.length > 0 && portal_settings?.show_recommended_packages !== false && (() => {
+                    const PKG_VISIBLE = 5;
+                    const pkgCount = packageRecommendations.length;
+                    // Calculate max index so we never show empty slots
+                    const pkgMaxIndex = Math.max(0, pkgCount - PKG_VISIBLE);
+                    const safePkgIndex = Math.min(currentPkgIndex, pkgMaxIndex);
+
+                    return (
                     <section
-                        style={{
-                            backgroundColor: '#FFFFFF',
-                            borderColor: COLOR_WARM_CREAM,
-                        }}
+                        style={{ backgroundColor: '#FFFFFF', borderColor: COLOR_WARM_CREAM }}
                         className="rounded-xl border p-5 sm:p-7 shadow-xs hover:shadow-md transition-all duration-300 space-y-5"
+                        onMouseEnter={() => setIsHoveredPkg(true)}
+                        onMouseLeave={() => setIsHoveredPkg(false)}
                     >
+                        {/* Header row */}
                         <div className="flex items-center justify-between">
                             <div>
                                 <h3
-                                    style={{
-                                        fontFamily: `'${portalFontHeading}', serif`,
-                                        color: COLOR_BURGUNDY,
-                                    }}
+                                    style={{ fontFamily: `'${portalFontHeading}', serif`, color: COLOR_BURGUNDY }}
                                     className="text-xs sm:text-sm font-serif font-black uppercase tracking-wider"
                                 >
                                     {portal_settings?.recommended_packages_title || 'Rekomendasi Paket Untuk Anda'}
@@ -1060,72 +1077,127 @@ export default function ClientDashboard({
                                     {portal_settings?.recommended_packages_subtitle || 'Pilihan paket menarik lainnya yang mungkin Anda sukai.'}
                                 </p>
                             </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5 sm:gap-4">
-                            {packageRecommendations.map((pkg, idx) => {
-                                const packageTitle = pkg.title || pkg.name;
-                                const packageWaUrl = packageTitle
-                                    ? `https://wa.me/${waPhone}?text=${encodeURIComponent(
-                                        `Halo Admin Arams Pictures, saya tertarik dan ingin konsultasi/booking untuk paket "${packageTitle}".`
-                                    )}`
-                                    : generalWhatsAppUrl;
-
-                                return (
-                                    <div
-                                        key={pkg.id || idx}
-                                        className="rounded-xl border border-slate-200/80 overflow-hidden flex flex-col justify-between bg-white shadow-2xs hover:shadow-lg hover:shadow-[#3C0E0E]/10 hover:-translate-y-1.5 hover:border-[#3C0E0E]/30 transition-all duration-300 group"
+                            {/* Prev / Next arrows */}
+                            {pkgCount > PKG_VISIBLE && (
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                    <button
+                                        type="button"
+                                        onClick={() => setCurrentPkgIndex((p) => Math.max(0, p - 1))}
+                                        disabled={safePkgIndex === 0}
+                                        className="w-7 h-7 rounded-full border border-[#E8DDD5] bg-[#F4EBE4] flex items-center justify-center text-[#3C0E0E] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] disabled:opacity-35 disabled:cursor-not-allowed transition-all cursor-pointer"
+                                        aria-label="Paket sebelumnya"
                                     >
-                                        <div className="aspect-[4/3] bg-slate-100 overflow-hidden relative">
-                                            <img
-                                                src={pkg.image}
-                                                alt={packageTitle}
-                                                className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
-                                            />
-                                            {pkg.category_name && (
-                                                <span
-                                                    style={{ backgroundColor: 'rgba(15, 23, 42, 0.75)' }}
-                                                    className="absolute top-2 left-2 px-2 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-wider text-white backdrop-blur-xs shadow-xs"
-                                                >
-                                                    {pkg.category_name}
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        <div className="p-3 sm:p-3.5 space-y-2 flex flex-col flex-1 justify-between">
-                                            <div className="space-y-1">
-                                                <h4 className="font-bold text-xs sm:text-sm text-slate-900 leading-snug group-hover:text-[#3C0E0E] transition-colors line-clamp-1">
-                                                    {packageTitle}
-                                                </h4>
-                                                <p className="text-[10.5px] text-slate-500 leading-relaxed line-clamp-2">
-                                                    {pkg.desc || pkg.description}
-                                                </p>
-                                            </div>
-
-                                            <div className="pt-2.5 border-t border-slate-100 space-y-2">
-                                                <p
-                                                    style={{ color: COLOR_BURGUNDY }}
-                                                    className="text-xs sm:text-sm font-black"
-                                                >
-                                                    {pkg.price || (pkg.base_price ? formatRupiah(pkg.base_price) : '')}
-                                                </p>
-                                                <a
-                                                    href={packageWaUrl}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="w-full py-1.5 px-2 rounded-lg border border-[#E8DDD5] bg-[#F4EBE4] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-[10.5px] font-bold text-[#3C0E0E] shadow-2xs transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer group/btn"
-                                                >
-                                                    <MessageCircle className="w-3 h-3 text-[#3C0E0E] group-hover/btn:text-white transition-colors" />
-                                                    <span>Hubungi Admin</span>
-                                                </a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                                        <ChevronLeft className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setCurrentPkgIndex((p) => Math.min(pkgMaxIndex, p + 1))}
+                                        disabled={safePkgIndex >= pkgMaxIndex}
+                                        className="w-7 h-7 rounded-full border border-[#E8DDD5] bg-[#F4EBE4] flex items-center justify-center text-[#3C0E0E] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] disabled:opacity-35 disabled:cursor-not-allowed transition-all cursor-pointer"
+                                        aria-label="Paket selanjutnya"
+                                    >
+                                        <ChevronRight className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            )}
                         </div>
+
+                        {/* Carousel viewport – clips overflow */}
+                        <div className="overflow-hidden">
+                            <div
+                                className="flex transition-transform duration-500 ease-in-out"
+                                style={{
+                                    // Each card = 1/5 of the visible viewport. Track = pkgCount cards wide.
+                                    // We shift left by safePkgIndex card-widths.
+                                    gap: '14px',
+                                    transform: `translateX(calc(-${safePkgIndex} * (20% + 14px * 4 / 5)))`,
+                                }}
+                            >
+                                {packageRecommendations.map((pkg, idx) => {
+                                    const packageTitle = pkg.title || pkg.name;
+                                    const packageWaUrl = packageTitle
+                                        ? `https://wa.me/${waPhone}?text=${encodeURIComponent(
+                                            `Halo Admin Arams Pictures, saya tertarik dan ingin konsultasi/booking untuk paket "${packageTitle}".`
+                                        )}`
+                                        : generalWhatsAppUrl;
+
+                                    return (
+                                        <div
+                                            key={pkg.id || idx}
+                                            style={{ minWidth: 'calc(20% - 11.2px)', maxWidth: 'calc(20% - 11.2px)' }}
+                                            className="rounded-xl border border-slate-200/80 overflow-hidden flex flex-col justify-between bg-white shadow-2xs hover:shadow-lg hover:shadow-[#3C0E0E]/10 hover:-translate-y-1.5 hover:border-[#3C0E0E]/30 transition-all duration-300 group shrink-0"
+                                        >
+                                            <div className="aspect-[4/3] bg-slate-100 overflow-hidden relative">
+                                                <img
+                                                    src={pkg.image}
+                                                    alt={packageTitle}
+                                                    className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500"
+                                                />
+                                                {pkg.category_name && (
+                                                    <span
+                                                        style={{ backgroundColor: 'rgba(15, 23, 42, 0.75)' }}
+                                                        className="absolute top-2 left-2 px-2 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-wider text-white backdrop-blur-xs shadow-xs"
+                                                    >
+                                                        {pkg.category_name}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <div className="p-3 sm:p-3.5 space-y-2 flex flex-col flex-1 justify-between">
+                                                <div className="space-y-1">
+                                                    <h4 className="font-bold text-xs sm:text-sm text-slate-900 leading-snug group-hover:text-[#3C0E0E] transition-colors line-clamp-1">
+                                                        {packageTitle}
+                                                    </h4>
+                                                    <p className="text-[10.5px] text-slate-500 leading-relaxed line-clamp-2">
+                                                        {pkg.desc || pkg.description}
+                                                    </p>
+                                                </div>
+
+                                                <div className="pt-2.5 border-t border-slate-100 space-y-2">
+                                                    <p
+                                                        style={{ color: COLOR_BURGUNDY }}
+                                                        className="text-xs sm:text-sm font-black"
+                                                    >
+                                                        {pkg.price || (pkg.base_price ? formatRupiah(pkg.base_price) : '')}
+                                                    </p>
+                                                    <a
+                                                        href={packageWaUrl}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="w-full py-1.5 px-2 rounded-lg border border-[#E8DDD5] bg-[#F4EBE4] hover:!bg-[#3C0E0E] hover:!text-white hover:!border-[#3C0E0E] text-[10.5px] font-bold text-[#3C0E0E] shadow-2xs transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer group/btn"
+                                                    >
+                                                        <MessageCircle className="w-3 h-3 text-[#3C0E0E] group-hover/btn:text-white transition-colors" />
+                                                        <span>Hubungi Admin</span>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Dot indicators */}
+                        {pkgCount > PKG_VISIBLE && (
+                            <div className="flex items-center justify-center gap-1.5 pt-1">
+                                {Array.from({ length: pkgMaxIndex + 1 }, (_, i) => (
+                                    <button
+                                        key={i}
+                                        type="button"
+                                        onClick={() => setCurrentPkgIndex(i)}
+                                        className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                                            safePkgIndex === i
+                                                ? 'w-5 bg-[#3C0E0E]'
+                                                : 'w-1.5 bg-slate-200 hover:bg-slate-300'
+                                        }`}
+                                        aria-label={`Paket ${i + 1}`}
+                                    />
+                                ))}
+                            </div>
+                        )}
                     </section>
-                )}
+                    );
+                })()}
             </div>
 
             {/* ── MODAL: RINCIAN & RIWAYAT PEMBAYARAN ───────────────────────────── */}

@@ -616,30 +616,31 @@ export default function ClientProjectDetail({
                                 '/images/no-image.svg'
                             }
                             alt={project.name}
-                            className="w-full h-full object-cover object-center sm:object-right opacity-85 sm:opacity-90 filter brightness-90 contrast-[1.05]"
+                            className="w-full h-full object-cover object-center sm:object-right opacity-90 sm:opacity-95 filter brightness-95 contrast-[1.02]"
                         />
-                        {/* Mobile Gradient Overlay (Subtle warm tones matching login page) */}
+                        {/* Mobile Gradient Overlay */}
                         <div
                             style={{
-                                background: `linear-gradient(to top, rgba(26, 8, 11, 0.88) 0%, rgba(46, 15, 21, 0.45) 50%, rgba(26, 8, 11, 0.30) 100%)`,
+                                background: `linear-gradient(to bottom, rgba(26, 8, 11, 0.90) 0%, rgba(46, 15, 21, 0.55) 40%, rgba(26, 8, 11, 0.90) 100%)`,
                             }}
                             className="absolute inset-0 sm:hidden z-10 pointer-events-none"
                         />
-                        {/* Desktop Gradient Overlay (Subtle warm tones matching login page, keeping text readable and couple clearly visible) */}
+                        {/* Desktop Gradient Overlay – left half only, fades to transparent */}
                         <div
                             style={{
-                                background: `linear-gradient(to right, rgba(26, 8, 11, 0.88) 0%, rgba(38, 11, 15, 0.68) 32%, rgba(46, 15, 21, 0.32) 60%, rgba(20, 5, 8, 0.12) 80%, transparent 100%)`,
+                                background: `linear-gradient(to right, rgba(26, 8, 11, 0.92) 0%, rgba(38, 11, 15, 0.80) 30%, rgba(46, 15, 21, 0.42) 52%, rgba(20, 5, 8, 0.10) 70%, transparent 100%)`,
                             }}
                             className="absolute inset-0 hidden sm:block z-10 pointer-events-none"
                         />
                         {/* Subtle bottom vignette for metadata legibility */}
                         <div
                             style={{
-                                background: `linear-gradient(to top, rgba(20, 5, 8, 0.60) 0%, transparent 35%)`,
+                                background: `linear-gradient(to top, rgba(20, 5, 8, 0.45) 0%, transparent 30%)`,
                             }}
                             className="absolute inset-0 z-10 pointer-events-none"
                         />
                     </div>
+
 
                     {/* Hero Content */}
                     <div className="relative z-10 w-full max-w-full px-6 sm:px-12 lg:px-16 py-10 sm:py-16 lg:py-20 space-y-4">

@@ -72,8 +72,7 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
     const COLOR_OFF_WHITE = '#FBF6F0';
 
     const portalPrimaryAccent = appSettings.portal_primary_accent || COLOR_BURGUNDY;
-    const portalHeroBg = appSettings.portal_hero_bg || COLOR_BURGUNDY;
-    const portalHeroGradient = appSettings.portal_hero_gradient || '';
+
     const portalHeroText = appSettings.portal_hero_text_color || '#FFFFFF';
     const portalCardBg = appSettings.portal_card_bg || '#FFFFFF';
     const portalCardBorder = appSettings.portal_card_border || COLOR_WARM_CREAM;
@@ -81,24 +80,7 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
     const portalFontHeading = appSettings.portal_font_heading || 'Plus Jakarta Sans';
     const portalFooterText = appSettings.portal_footer_text || COLOR_WARM_CREAM;
 
-    // Safe hex to rgba converter for smooth transparent gradients
-    const hexToRgba = (hex: string, alpha: number) => {
-        if (!hex || !hex.startsWith('#')) return hex;
-        const clean = hex.replace('#', '');
-        if (clean.length === 3) {
-            const r = parseInt(clean[0] + clean[0], 16);
-            const g = parseInt(clean[1] + clean[1], 16);
-            const b = parseInt(clean[2] + clean[2], 16);
-            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-        }
-        if (clean.length >= 6) {
-            const r = parseInt(clean.substring(0, 2), 16);
-            const g = parseInt(clean.substring(2, 4), 16);
-            const b = parseInt(clean.substring(4, 6), 16);
-            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-        }
-        return hex;
-    };
+
 
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
@@ -149,37 +131,36 @@ export default function ClientProjects({ projects = [] }: ClientProjectsProps) {
             <div className="space-y-6">
                 {/* ── 1. HERO BANNER - PROJECT SAYA ───────────────────────── */}
                 <section
-                    style={{
-                        background: portalHeroGradient || portalHeroBg,
-                        color: portalHeroText,
-                    }}
-                    className="relative -mt-6 sm:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 overflow-hidden shadow-md min-h-[380px] sm:min-h-[480px] lg:min-h-[560px] flex items-center transition-colors select-none"
+                    style={{ color: portalHeroText }}
+                    className="relative -mt-6 sm:-mt-8 -mx-4 sm:-mx-6 lg:-mx-8 overflow-hidden shadow-2xl min-h-[380px] sm:min-h-[480px] lg:min-h-[560px] flex items-center select-none"
                 >
-                    {/* Inner Decorative Box Frame (Kotak Bingkai) */}
-                    <div className="absolute inset-x-4 top-6 bottom-6 sm:inset-x-6 sm:top-8 sm:bottom-8 lg:inset-x-8 lg:top-10 lg:bottom-10 border border-white/20 rounded-2xl pointer-events-none z-20" />
+                    {/* Inner Decorative Box Frame (shadow/depth effect) */}
+                    <div className="absolute inset-x-4 top-6 bottom-6 sm:inset-x-6 sm:top-8 sm:bottom-8 lg:inset-x-8 lg:top-10 lg:bottom-10 border border-white/20 rounded-2xl pointer-events-none z-20 shadow-[inset_0_0_60px_rgba(0,0,0,0.25)]" />
 
-                    {/* Background Overlay */}
-                    <div className="absolute inset-0 z-0">
+                    {/* Background Photo – visible on right side only */}
+                    <div className="absolute inset-0 z-0" style={{ backgroundColor: '#3C0E0E' }}>
                         <img
                             src={displayProjects[0]?.thumbnail || '/images/no-image.svg'}
                             alt="Project Saya Arams Pictures"
-                            className="w-full h-full object-cover object-center sm:object-right opacity-85 sm:opacity-95 filter brightness-95 contrast-[1.05]"
+                            className="w-full h-full object-cover object-right filter brightness-[0.95] contrast-[1.02]"
                         />
-                        {/* Mobile Gradient Overlay */}
+                        {/* Left 30%: fully solid maroon → fades → right 70%: clear photo */}
                         <div
                             style={{
-                                background: `linear-gradient(to bottom, ${hexToRgba(portalHeroBg, 0.95)} 0%, ${hexToRgba(portalHeroBg, 0.70)} 50%, ${hexToRgba(portalHeroBg, 0.95)} 100%)`,
+                                background: `linear-gradient(to right, #3C0E0E 0%, #3C0E0E 30%, rgba(60,14,14,0.85) 38%, rgba(60,14,14,0.40) 48%, rgba(60,14,14,0.08) 58%, transparent 68%)`,
                             }}
-                            className="absolute inset-0 sm:hidden z-10 pointer-events-none"
+                            className="absolute inset-0 pointer-events-none"
                         />
-                        {/* Desktop Gradient Overlay */}
+                        {/* Subtle bottom vignette for text readability */}
                         <div
                             style={{
-                                background: `linear-gradient(to right, ${hexToRgba(portalHeroBg, 0.97)} 0%, ${hexToRgba(portalHeroBg, 0.90)} 35%, ${hexToRgba(portalHeroBg, 0.55)} 60%, ${hexToRgba(portalHeroBg, 0.15)} 80%, transparent 100%)`,
+                                background: `linear-gradient(to top, rgba(60,14,14,0.70) 0%, transparent 30%)`,
                             }}
-                            className="absolute inset-0 hidden sm:block z-10 pointer-events-none"
+                            className="absolute inset-0 pointer-events-none"
                         />
                     </div>
+
+
 
                     {/* Hero Content */}
                     <div className="relative z-10 w-full max-w-full px-6 sm:px-12 lg:px-16 py-10 sm:py-16 lg:py-20">

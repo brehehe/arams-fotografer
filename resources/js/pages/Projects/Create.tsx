@@ -1905,12 +1905,22 @@ export default function ProjectsCreate({
                                 <label className="text-[11px] font-bold text-slate-600 block">
                                     Estimasi Durasi Standby
                                 </label>
-                                <SelectSearch
-                                    options={shootingDurationOptions}
+                                <input
+                                    type="text"
+                                    list="shooting-duration-options"
                                     value={shootingDuration}
-                                    onChange={setShootingDuration}
-                                    clearable={false}
+                                    onChange={(e) => setShootingDuration(e.target.value)}
+                                    placeholder="Contoh: 12 Jam, 6 Jam, Full Day..."
+                                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-900 placeholder:font-normal placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/10 transition-colors"
                                 />
+                                <datalist id="shooting-duration-options">
+                                    <option value="4 Jam" />
+                                    <option value="6 Jam" />
+                                    <option value="8 Jam" />
+                                    <option value="10 Jam" />
+                                    <option value="12 Jam" />
+                                    <option value="Full Day" />
+                                </datalist>
                             </div>
 
                             {/* Foto / Cover Project (Opsional) */}
